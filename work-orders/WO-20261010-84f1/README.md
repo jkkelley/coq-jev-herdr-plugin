@@ -6,5 +6,6 @@ This ticket: [Monitoring: monitor seat, tab group, notifications, status-change 
 
 One level down only. A child of a child is listed in its own directory, not here.
 
-_No children yet. This ticket sits at the top level, so it holds the directory
-on its own until work is filed underneath it._
+| ID | status | pri | waiting on | title |
+|---|---|---|---|---|
+| `WO-20261010-7083` | draft | p0 | - | [Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume](WO-20261010-7083-quiet-window-in-compaction-guard-quiet-json-5-se.md) |
