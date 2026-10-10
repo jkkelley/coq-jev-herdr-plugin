@@ -57,7 +57,8 @@ The bearings page the owner uses runs from ~/.claude/skills/bearings, a Sep 15 s
   - observed `2026-10-10` cases 'dev serve prints a url on a port in the configured range', 'stable serves on its fixed port', 'stable state dir has no dev answers', 'second serve of the same tier -> exit 3 with the url' passed
 - [x] `AC-H4` *(human)* tools/bearings/AGENTS.md opens with a contents list and carries at least three GOOD and three NEVER examples plus the promotion procedure
   - observed `2026-10-10` tools/bearings/AGENTS.md: Contents list first, 4 GOOD and 6 NEVER examples, section 'Promote a change: dev to uat to stable'
-- [ ] `AC-H5` *(human)* the stable tier serves the owner's current questions and answers migrated from ~/.bearings/coq-jev-herdr-plugin-05518e with no answer lost, verified by diffing answers.jsonl
+- [x] `AC-H5` *(human)* the stable tier serves the owner's current questions and answers migrated from ~/.bearings/coq-jev-herdr-plugin-05518e with no answer lost, verified by diffing answers.jsonl
+  - observed `2026-10-10` 2026-10-10 19:57 UTC: old page stopped (pid 22350), make migrate TIER=stable FROM=~/.bearings/coq-jev-herdr-plugin-05518e -> ~/.bearings/coq-stable; diff of answers.jsonl (12 lines) and messages.jsonl identical
 
 ## Test plan
 
@@ -77,6 +78,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-10` UAT-1 decided by this seat (owner 2026-10-10 UTC: this seat is in charge, adding nothing more): the uat page served 20/20 green suite including the attachment case; promote.
 - `2026-10-10` Owner, 2026-10-10 UTC: the work-order skill in dotfiles gains a Degrees of freedom section and a Contents list before further tickets are cut; tracked as its own dotfiles ticket
 
 ## Outcome
