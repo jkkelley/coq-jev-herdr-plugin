@@ -12,6 +12,56 @@
 > are history and are immutable. Written by `checkpoint.sh`, never by hand.
 
 
+
+## Checkpoint 2026-10-10 20:09 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at the sha of this checkpoint: PR #1 and PR #2 merged; commits since: 920807a scripts in git, 2cc69fa schemas on nodes + changelog + step.sh, c79e862 Jenkinsfile, f5649a8 multi-arch lint image, ae67c62 pull policy. No open PRs, no worktrees (slots 1 and 2 destroyed, branches deleted).
+- Main checkout /home/luna/projects/coq-jev-herdr-plugin is the working checkout. Slots 1 and 2 are done (ba08 merged, p0-foundation merged) and are released or to be released with slot.sh. WO-20261010-ba08 is done and archived; UAT-1 was decided by this seat.
+- Owner page is now the stable tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable (12 answers migrated, diff identical). Old page stopped 19:57 UTC, panes p3/p4/p5 closed. No Claude Code Monitors armed.
+- Caves of Qud: Steam app 333640, Windows build installed at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud (D:\SteamLibrary). No Linux build anywhere on disk or in Google Drive (searched). Card Q12 is answered by this: Spike 1 uses the Windows build or the Steam console depot download, not the owner.
+- Jenkins job coq-jev-herdr-plugin (https://jenkins.homelab.local/job/coq-jev-herdr-plugin/) lints every push to main from a clean clone: build 3 SUCCESS 20:07 UTC (builds 1 and 2 failed: amd64 image on arm64 nodes, then a cached tag; fixed by make lint-image-push multi-arch + imagePullPolicy Always). Kube context homelab-admin, nodes arm64. Graph node CMP-jenkins-lint.
+
+#### Toolchain
+
+- herdr 0.9.0 protocol 22. work-order v2.1.0 (`approve --no-lavish --reason`). context-compaction checkpoint.sh. Podman images localhost/coq-lint:1, localhost/coq-bearings-test:1. make lint green at this checkpoint (graph check now validates every node against graph/schema/node.schema.json and every attached data instance against its schema; changelog check included).
+- `make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [TEXT=..] [CP=body.md]` is the only way a step lands: lint, changelog entry, commit, push, checkpoint, `/compact` queued into $COQ_SEAT_PANE (wD3:p2).
+- compaction-guard sensor still reads 0 for this seat; the step script queues `/compact` by `herdr agent prompt` until WO-20261010-7083 lands.
+
+#### Active Tasks
+
+- WO-20261010-8777 - herdr seat scripts: bringup, seat, monitors, recover, retire: ready, p0; start it next: it is what makes agents do the work instead of this seat (architect, worker, tester, reviewer, merger seats in labelled panes, woken by records through routes.json).
+- WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue: ready, p0.
+- WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree: ready, p0 (changelog/ already on the layout).
+- WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume: ready, p0.
+- WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles: ready; the branch is merged, evidence its ACs and close it.
+- WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles: ready; the branch is merged, evidence its ACs (work-order.sh start, evidence, submit needs a PR: use done path on main through a short branch) and close it.
+- Other ready tickets: WO-20261010-eaa3 Spike 1 (Windows build path decided above), WO-20261010-6a3b Spike 11, WO-20261010-c6e9 Spike 9, WO-20261010-d08d Spike 10; full titles in the ticket files.
+
+#### Blockers
+
+- None that need the owner. UAT-1 is decided by this seat; Q12 is answered by the disk search.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-10 19:5x UTC, owner: approval is the architect's job, done only when sure (roles/architect.json must line 2; playbook rendered).
+- 2026-10-10 UTC, owner: "define schemas and attach them to the nodes": graph nodes carry `schema` and `data`, graph.sh attach/check enforce them (graph/schema/node.schema.json). "We should have an integration node in DAG": WFL-integration, owned by ROL-merger.
+- 2026-10-10 UTC, owner: "change log too": changelog/YYYY/MM entries by bin/changelog.sh, CHANGELOG.md generated, lint checks it. "Nothing by hand": bin/step.sh is the step cycle.
+
+#### Lessons Learned
+
+- `**/bin/` in the shared ignore set silently dropped every factory script from PR #1; lint passed only because the worktree had the files. A lint that runs in CI from a clean clone would have caught it, which is why Jenkins is next.
+- A keep line over a few hundred characters arrives as pasted text and the queued `/compact` never fires; the step script sends the one-sentence form.
+
+### Hydration prompt
+
+Run from /home/luna/projects/coq-jev-herdr-plugin on main. Next step: start WO-20261010-8777 - herdr seat scripts: bringup, seat, monitors, recover, retire with `work-order.sh start`; port from the proven ~/tools/bearings-v2/bin/{seat.sh (644 lines), monitors.sh, recover.sh, down.sh, seat-lib.sh} into herdr/bin/ reading roles/*.json (SPEC-04 s-seat RUN-seat-up, s-recovery RUN-recover, s-cleanup RUN-retire), keep each file routing in its first 100 lines, suite under herdr/tests in Podman, AC-H1..H3 in the ticket. Every step lands with `make step ... CP=<body>`; never lint, commit, checkpoint or compact by hand. Decide, do not ask; the owner said this seat is in charge and is adding nothing more.
+
 ## Checkpoint 2026-10-10 20:01 UTC
 
 ### Current state
