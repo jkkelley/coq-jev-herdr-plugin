@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<spec id="SPEC-03" version="1.0.0" title="DAG workflow and node contract" status="proposed" updated="2026-10-10T19:45Z">
+<spec id="SPEC-03" version="1.0.0" title="DAG workflow and node contract" status="proposed" updated="2026-10-10T19:16Z">
   <contents>
     <item ref="s-node" title="The node contract"/>
     <item ref="s-records" title="Records, not prose"/>

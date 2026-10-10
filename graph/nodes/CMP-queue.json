@@ -1,0 +1,20 @@
+{
+  "id": "CMP-queue",
+  "type": "Component",
+  "title": "queue/: directory queue with p0..p3 priority, TTL leases, sweep by the monitor; queue.sh enqueue/dequeue/renew/release/sweep/list/check",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-locks-and-queues"
+    },
+    {
+      "kind": "owned_by",
+      "to": "ROL-orchestrator"
+    }
+  ],
+  "created": "2026-10-10T19:15Z",
+  "updated": "2026-10-10T19:15Z"
+}

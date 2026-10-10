@@ -1,20 +1,82 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<spec id="SPEC-04" version="0.1.0" title="herdr seat lifecycle" status="draft" updated="2026-10-10T19:55Z">
+<spec id="SPEC-04" version="1.0.0" title="herdr seat lifecycle" status="proposed" updated="2026-10-10T19:16Z">
   <contents>
-    <item ref="s-bringup" title="bringup"/>
-    <item ref="s-labels" title="labels"/>
-    <item ref="s-monitors" title="monitors"/>
-    <item ref="s-leases" title="leases"/>
-    <item ref="s-recovery" title="recovery"/>
-    <item ref="s-cleanup" title="cleanup"/>
-    <item ref="s-breakglass" title="breakglass"/>
+    <item ref="s-bringup" title="Bring-up order: system before agents"/>
+    <item ref="s-labels" title="Workspaces, tabs, panes and labels"/>
+    <item ref="s-seat" title="How a seat comes up"/>
+    <item ref="s-monitors" title="Monitors tab group and wakeups"/>
+    <item ref="s-leases" title="Leases"/>
+    <item ref="s-recovery" title="Recovery"/>
+    <item ref="s-cleanup" title="Cleanup and retirement"/>
+    <item ref="s-breakglass" title="Breakglass and exemptions"/>
+    <item ref="s-testing" title="Testing seats in a scratch herdr"/>
+    <item ref="s-examples" title="GOOD and NEVER"/>
   </contents>
-  <purpose>How a seat comes up, is labelled, is watched, is recovered and is retired, all through herdr, with monitoring up before any seat.</purpose>
-  <section id="s-bringup" title="bringup"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
-  <section id="s-labels" title="labels"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
-  <section id="s-monitors" title="monitors"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
-  <section id="s-leases" title="leases"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
-  <section id="s-recovery" title="recovery"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
-  <section id="s-cleanup" title="cleanup"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
-  <section id="s-breakglass" title="breakglass"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+  <purpose>Every process the factory runs is visible in a labelled herdr pane, comes up after the system that watches it, and is recovered or retired by a script, never by hand. This spec is the contract for seat.sh, monitors.sh and recover.sh, ported from bearings-v2 (~/tools/bearings-v2/bin) into this repo's herdr/ directory.</purpose>
+
+  <section id="s-bringup" title="Bring-up order: system before agents">
+    <node id="DEC-system-before-agents" status="locked"><title>Monitoring and the system come up before any agent, so seats start hooked in</title></node>
+    <node id="WFL-bringup" status="proposed"><title>Bring-up DAG: herdr session, control plane, compaction-guard, monitor seat and log tab group, event log, then worker seats; seat.sh refuses a seat when any earlier node is down</title></node>
+    <mermaid>flowchart LR
+  H[herdr session named per tier] --> CP[control plane up, health 200]
+  CP --> G[compaction-guard doctor ok]
+  G --> M[monitor seat + monitors tab group]
+  M --> L[event log tail pane + queue pane]
+  L --> S[seats: architect, workers, tester, reviewer, merger, player]
+  S -- seat.sh --check each tick --> M</mermaid>
+    <text>herdr/bin/bringup.sh runs the DAG in order and records seat.up 100 per node or stops at the first failure with a 500 record and a herdr notification. A seat started by any other path is detected by seat.sh --audit (it reads /proc for every agent process and compares flags against the role) and recorded as seat.stalled 500.</text>
+  </section>
+
+  <section id="s-labels" title="Workspaces, tabs, panes and labels">
+    <text>Workspace label = the repo name (coq), found by label, never by id (ids change on restart). One tab per seat, labelled with the seat name (worker-ba08). Tab group "monitors" holds fixed 3x3 grids: monitors-1 compaction watchers, monitors-2 loop, gate and log, monitors-3 shells. Pane labels: "&lt;MODEL&gt; - &lt;effort&gt; - &lt;ticket&gt; &lt;seat&gt;" for an agent, "MONITOR - &lt;what&gt;" for a watcher, "TOOL - &lt;what&gt;" for a tool, "test - &lt;tool&gt; &lt;ticket&gt;" for a suite, "&lt;tool&gt;-&lt;tier&gt;[-&lt;ticket&gt;]" for a tier server. Every pane carries HERDR_PANE_ID, HERDR_TAB_ID, HERDR_WORKSPACE_ID and HERDR_SOCKET_PATH from herdr; a script that finds them unset refuses to start a process (Rule 18).</text>
+    <text>Layouts are JSON under herdr/layouts/ (grid plus slots: kind agent|monitor|viewer|tool, label, command), rendered into panes by seat.sh; their look is confirmed as wireframes in the SITREP before they are built (DEC-wireframe-gate).</text>
+    <ref node="DEC-wireframe-gate"/>
+  </section>
+
+  <section id="s-seat" title="How a seat comes up">
+    <node id="RUN-seat-up" status="proposed"><title>seat.sh --ticket WO --role R: workspace by label, tab create, panes from layout, pane rename, markers unset, env exported, herdr agent start --kind --pane -- --model --effort --permission-mode --settings, guard bound, brief sent</title></node>
+    <text>Order, each step a herdr command: workspace list (by label) or create; tab create --label &lt;seat&gt; --no-focus; pane split per layout slot; pane rename; pane run for monitor and tool slots; pane wait-output for the shell prompt; pane run "unset CLAUDECODE CLAUDE_CODE_* CLAUDE_PID AI_AGENT; cd &lt;slot&gt;; export COQ_SEAT COQ_TICKET COQ_ROLE_FILE COQ_WORKTREE RAIL_SURFACE"; herdr agent start &lt;seat&gt; --kind &lt;runtime&gt; --pane &lt;p&gt; -- &lt;native flags from the role: model, effort, permission mode, settings file rendered from the role's allow and deny, hooks for the guard and the status line tap&gt;; compaction-guard bind --session; seat.sh --check; herdr agent prompt &lt;seat&gt; "&lt;brief.sh line&gt;" without --wait. Codex seats get -m, reasoning effort and sandbox from the same role file; System One seats are not herdr agents, they are a tool pane of the player.</text>
+    <text>Idempotent: a rerun repairs (keeps a pane with the right label, relabels strays, splits what is missing). Cap: role max_seats; over cap posts 429 and the queue holds the ticket. A seat never starts with a missing status-line tap: the guard's sensor reads 0 without it (RSK-compaction-sensor).</text>
+    <ref node="RSK-compaction-sensor"/>
+  </section>
+
+  <section id="s-monitors" title="Monitors tab group and wakeups">
+    <node id="REQ-status-change-wakeups" status="proposed"><title>A waiting seat is woken through herdr on status change instead of idling</title></node>
+    <text>The monitor seat subscribes to herdr events (pane.agent_status_changed, pane.exited, workspace.closed) and tails events/. On a record it routes through routes.json and wakes the target with herdr agent prompt "&lt;record id&gt;" (one line). On blocked status it reads the pane (herdr agent read) and answers a known dialog or records 500. On events_lost it resubscribes and reconciles from session.snapshot. Owner notifications: herdr notification show "&lt;code&gt; &lt;ticket&gt; - &lt;title&gt;" for code 423 reaching the owner and for any 5xx; nothing else notifies (REQ-owner-notifications). Watcher log contract: one line on change only; ALERT prefix only for an owner decision.</text>
+    <ref node="REQ-owner-notifications"/>
+  </section>
+
+  <section id="s-leases" title="Leases">
+    <text>Slots: treehouse leases keyed by ticket (slot.sh acquire --holder WO-ID), proven by treehouse status, released by slot.sh release which exits 5 if the pool still shows the holder. Tiers: the tier's server.json is the lease; a second start is refused. Tickets: work-order status in-progress plus the branch is the lease; the queue never hands a ticket out twice. Every lease has a ttl in config (herdr/config/leases.json) and the monitor releases an expired one, records seat.stalled 500, and wakes the queue.</text>
+    <ref spec="SPEC-03" anchor="s-locks"/>
+  </section>
+
+  <section id="s-recovery" title="Recovery">
+    <node id="RUN-recover" status="proposed"><title>recover.sh [--check|--apply]: halt flag, herdr reachable, monitors grid, loop heartbeat, every seat seat.sh --check, down if the agent is gone, re-arm the guard per live pane, tickets report; notification at the end</title></node>
+    <text>Dead pane: herdr emits pane.exited; the pane stays with a shell; recovery is seat.sh --ticket again, which re-attaches by label and resumes the agent with the resume argv the integration hook reported (resume_agents_on_restore stays false so nothing resumes silently). Seat silent 900 s: resume up to 3 times, then 423 and seat down. Compaction after failure: SessionStart with source compact injects the checkpoint; the guard re-arms at the next turn end. A manual intervention is recorded with must_become naming the script that replaces it (P-016).</text>
+  </section>
+
+  <section id="s-cleanup" title="Cleanup and retirement">
+    <node id="RUN-retire" status="proposed"><title>retire: agent send-keys esc, agent prompt /exit, poll agent get, answer the exit dialog, ctrl+c twice, close the emptied tab, release the slot, record seat.down 100</title></node>
+    <text>Cleanup is the monitor's responsibility and runs every tick: expired leases, finished tiers (uat after merge), stopped page servers, merged branches (work-order.sh cleanup), stale treehouse worktrees (treehouse prune, dry run then --yes for the disposable set only), test containers older than a day. Nothing is deleted that is leased, dirty or unmerged; those are recorded and left for the owner's card.</text>
+  </section>
+
+  <section id="s-breakglass" title="Breakglass and exemptions">
+    <text>Breakglass is a script (herdr/bin/breakglass.sh &lt;seat&gt; &lt;minutes&gt;): it lifts the guard freeze and the seat audit for that seat for that long, records GOV-5xx with the reason and the owner's card id, and re-arms itself. There is no other way to run something by hand. Exemptions live in herdr/config/exemptions.json (seat, rule, until UTC, card id); an exemption without a card id is invalid at lint.</text>
+  </section>
+
+  <section id="s-testing" title="Testing seats in a scratch herdr">
+    <node id="SPK-11-herdr-scratch-harness" status="proposed"><title>Spike 11: scratch herdr session harness in Podman: start, create, assert, tear down</title></node>
+    <text>herdr server --session t-&lt;id&gt; runs headless; HERDR_SESSION or HERDR_SOCKET_PATH points the CLI at it; HERDR_CONFIG_PATH gives it a private config; teardown is session stop then session delete in a trap. The plugin registry is global, so plugin tests use plugin link and unlink. Panes in the scratch session get a stub claude on PATH so no real agent starts. Unset HERDR_PANE_ID and HERDR_SOCKET_PATH from the calling pane first or --current targets leak into the live session.</text>
+  </section>
+
+  <section id="s-examples" title="GOOD and NEVER">
+    <example kind="GOOD"><text>herdr pane rename wD3:p5 "test - bearings WO-20261010-ba08"; herdr pane run wD3:p5 "make test"; herdr pane wait-output wD3:p5 --regex 'tests: .* failed'.</text></example>
+    <example kind="GOOD"><text>seat.sh --ticket WO-20261010-ba08 --role worker rerun after a crash: same tab, same labels, agent resumed, guard re-bound, one seat.up record.</text></example>
+    <example kind="GOOD"><text>Monitor sees review.passed 201: herdr agent prompt merger "20261010T200101Z-201-k3f9q".</text></example>
+    <example kind="NEVER"><text>claude --permission-mode bypassPermissions typed by hand in a random pane.</text><why>No role, no guard, no audit; seat.sh --audit records it 500.</why></example>
+    <example kind="NEVER"><text>Storing a workspace id in a config file.</text><why>Ids change on restart; labels are the address.</why></example>
+    <example kind="NEVER"><text>treehouse destroy --all --yes in cleanup.</text><why>Cleanup removes only the disposable set; leased and dirty worktrees are the owner's.</why></example>
+    <example kind="NEVER"><text>A seat that polls answers.jsonl in a loop.</text><why>Waiting is the monitor's job; seats are woken.</why></example>
+  </section>
 </spec>

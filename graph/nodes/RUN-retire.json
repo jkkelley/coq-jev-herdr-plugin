@@ -1,0 +1,16 @@
+{
+  "id": "RUN-retire",
+  "type": "Runbook",
+  "title": "retire: agent send-keys esc, agent prompt /exit, poll agent get, answer the exit dialog, ctrl+c twice, close the emptied tab, release the slot, record seat.down 100",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "owned_by",
+      "to": "ROL-monitor"
+    }
+  ],
+  "created": "2026-10-10T19:15Z",
+  "updated": "2026-10-10T19:15Z"
+}

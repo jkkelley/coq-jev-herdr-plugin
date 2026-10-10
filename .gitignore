@@ -95,3 +95,6 @@
 # lock files used by the scaffold tools
 .issues.lock
 .backlog.lock
+
+# runtime work queue state (queue/bin/queue.sh), never committed
+queue/items/

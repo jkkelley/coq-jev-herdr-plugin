@@ -1,0 +1,3 @@
+{ "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "coq/queue/config/queue.schema.json", "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "items_dir", "priorities", "default_priority", "lease_ttl_seconds", "renew_grace_seconds"],
+  "properties": { "schema_version": { "const": "1.0.0" }, "items_dir": { "type": "string" }, "priorities": { "type": "array", "items": { "type": "string", "pattern": "^p[0-3]$" }, "minItems": 1 }, "default_priority": { "type": "string", "pattern": "^p[0-3]$" }, "lease_ttl_seconds": { "type": "integer", "minimum": 60 }, "renew_grace_seconds": { "type": "integer", "minimum": 0 } } }

@@ -1,0 +1,16 @@
+{
+  "id": "WFL-bringup",
+  "type": "Workflow",
+  "title": "Bring-up DAG: herdr session, control plane, compaction-guard, monitor seat and log tab group, event log, then worker seats; seat.sh refuses a seat when any earlier node is down",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-system-before-agents"
+    }
+  ],
+  "created": "2026-10-10T19:15Z",
+  "updated": "2026-10-10T19:15Z"
+}

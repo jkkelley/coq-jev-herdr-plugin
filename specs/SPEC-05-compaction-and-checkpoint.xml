@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-05" version="1.0.0" title="Compaction and checkpoint" status="proposed" updated="2026-10-10T19:16Z">
+  <contents>
+    <item ref="s-rule" title="The rule"/>
+    <item ref="s-install" title="Installed on every seat, before the seat"/>
+    <item ref="s-checkpoint" title="The checkpoint"/>
+    <item ref="s-failure" title="After a failure"/>
+    <item ref="s-monitoring" title="Monitoring the cycle"/>
+    <item ref="s-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose>No seat loses context and no seat compacts itself. compaction-guard owns the cycle; this spec fixes how every seat is wired to it and what the owner sees.</purpose>
+
+  <section id="s-rule" title="The rule">
+    <node id="REQ-compaction-rule" status="locked"><title>Compaction at 30 percent AND task complete, hooked on every seat including after failure</title></node>
+    <node id="CMP-compaction-guard" status="locked"><title>compaction-guard 1.2.8 hooks and status-line tap on every seat</title></node>
+    <text>A Claude seat compacts when its turn has ended and its context is at or over thresholds.compact (30) in its role schema; Codex seats are exempt. The guard's Stop hook writes the checkpoint, freezes tool calls (RES-400), types one /compact into the seat's own pane behind a composer check, and after PostCompact sends the resume card. The seat's only duties: never send /compact, never edit the guard or its settings, answer RES-400 in text and end the turn, reply ACK once to the GOV-100 memo.</text>
+  </section>
+
+  <section id="s-install" title="Installed on every seat, before the seat">
+    <node id="RSK-compaction-sensor" status="locked"><title>compaction-guard reads 0 percent for a session started without its status-line tap</title></node>
+    <text>seat.sh renders the seat's settings file from the role: the five hooks (SessionStart, Stop, PreCompact, PostCompact, PreToolUse) to compaction-guard hook, and statusLine to compaction-guard tap chained to the host line. A seat that starts without the tap has a sensor that reads 0 and never compacts (observed on the discovery session 2026-10-10); seat.sh --check treats ctx_source none as a failed check and the seat is restarted. compaction-guard install --project writes the same hooks into the repo's .claude/settings.json so any session opened in the repo is covered; bind --session names the seat, role, pane and cwd.</text>
+    <ref spec="SPEC-04" anchor="s-seat"/>
+  </section>
+
+  <section id="s-checkpoint" title="The checkpoint">
+    <text>Two artefacts, both script-written. The guard's checkpoint (12 fixed lines, under 500 tokens) is injected at SessionStart after a compaction. The project's CONTEXT_STATE.md (context-compaction skill, checkpoint.sh new) is the stack the next session hydrates from: Current state restated in full, New this checkpoint only new, Hydration prompt last; appended above, never rewritten; verified by checkpoint.sh verify. HYDRATION.md wins over CONTEXT_STATE.md when they disagree. Both ride the ticket's branch.</text>
+  </section>
+
+  <section id="s-failure" title="After a failure">
+    <text>A seat that died mid-cycle comes back through seat.sh (SPEC-04 s-recovery): SessionStart with source compact re-injects the checkpoint, the guard re-binds, the monitor re-arms the watcher for that pane. compaction-guard recover --apply handles a gone pane (CMP-320). A cycle that does not close in the stall window (300 s) releases the freeze with CMP-300 and re-arms at the next turn end; a second merge of the /compact line with typed text stalls the cycle and the monitor records it. Nothing is ever lost: checkpoint and transcript archive are on disk before any compaction runs (PreCompact exit 2 blocks it otherwise).</text>
+  </section>
+
+  <section id="s-monitoring" title="Monitoring the cycle">
+    <text>monitors-1 holds one compaction-guard watch pane per live seat; it logs one line on change, ALERT only for an owner decision. The monitor seat records compaction 100 per closed cycle and CMP-3xx or RES-4xx as 300-level events; a CMP-5xx raises a herdr notification. The SITREP shows per seat: pct, phase, last cycle UTC.</text>
+    <ref node="STC-guard-families"/>
+  </section>
+
+  <section id="s-examples" title="GOOD and NEVER">
+    <example kind="GOOD"><text>Seat settings rendered from roles/worker.json carry hooks.Stop = compaction-guard hook and statusLine.command = compaction-guard tap.</text></example>
+    <example kind="GOOD"><text>A tool call refused with RES-400: the seat replies in text "checkpoint written, ending turn" and stops.</text></example>
+    <example kind="NEVER"><text>An agent sending /compact because it feels full.</text><why>The guard decides; a hand compaction skips the checkpoint and the archive.</why></example>
+    <example kind="NEVER"><text>A seat brought up with claude --settings pointing at a file without the tap.</text><why>Sensor reads 0; it never compacts; seat.sh --check fails it.</why></example>
+  </section>
+</spec>
