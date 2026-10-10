@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "project": "coq",
+  "state_root": "${HOME}/.bearings",
+  "listen_host": "127.0.0.1",
+  "allowed_hosts": ["127.0.0.1", "localhost"],
+  "cookie_name": "bearings_key",
+  "idle_minutes": 240,
+  "settle_ms": 3000,
+  "stop_tries": 3,
+  "stop_try_ms": 5000,
+  "max_body_bytes": 65536,
+  "max_message_chars": 8000,
+  "max_words_chars": 4000,
+  "messages_window": 50,
+  "pane_split": { "direction": "down", "ratio": 0.2 },
+  "tiers": {
+    "stable": {
+      "page": "${project}-stable",
+      "port": 44900,
+      "pane_label": "bearings-stable",
+      "wait_pane_label": "bearings-stable-wait",
+      "checkout": "main"
+    },
+    "uat": {
+      "page": "${project}-uat-${ticket}",
+      "port_range": [44910, 44919],
+      "pane_label": "bearings-uat-${ticket}",
+      "wait_pane_label": "bearings-uat-${ticket}-wait",
+      "checkout": "treehouse slot on the PR branch"
+    },
+    "dev": {
+      "page": "${project}-dev-${ticket}",
+      "port_range": [44920, 44939],
+      "pane_label": "bearings-dev-${ticket}",
+      "wait_pane_label": "bearings-dev-${ticket}-wait",
+      "checkout": "treehouse slot on the feature branch"
+    }
+  }
+}

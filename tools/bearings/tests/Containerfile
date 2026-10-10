@@ -1,0 +1,9 @@
+# Test image for tools/bearings: Node plus Playwright browsers, pinned by digest
+# per Rule 15. Human tag: mcr.microsoft.com/playwright:v1.55.0-noble.
+FROM mcr.microsoft.com/playwright@sha256:b27e719ecbfef153e13fd24e8341736733bf2658b229677eb21ff57ff5d7fb29
+# jq for bearings.sh, the playwright package matching the browsers in the image,
+# and python jsonschema for the config lint. Built once; the tests run with --network=none.
+RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends jq python3-jsonschema >/dev/null \
+ && rm -rf /var/lib/apt/lists/* \
+ && npm install -g --no-audit --no-fund playwright@1.55.0 >/dev/null
+ENV PLAYWRIGHT_GLOBAL_MODULES=/usr/lib/node_modules

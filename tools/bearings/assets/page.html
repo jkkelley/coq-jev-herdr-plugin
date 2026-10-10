@@ -1,0 +1,1244 @@
+<title>Bearings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap"
+/>
+<style>
+  @@THEME@@;
+</style>
+
+<nav class="top">
+  <div class="bar">
+    <span class="left"
+      ><span class="brand">Stable</span
+      ><span class="page" aria-current="page" id="page-title"
+        >Decisions</span
+      ></span
+    ><span class="right"
+      ><span id="navcount"></span
+      ><span class="clock" id="clock" aria-label="Current time in UTC"
+        >--:--:--Z</span
+      ><span class="live" id="live"><i></i>Connecting</span></span
+    >
+  </div>
+</nav>
+
+<main>
+  <header class="lede">
+    <h1>Bearings.</h1>
+    <p>One decision at a time. Pick, queue, next.</p>
+  </header>
+
+  <section class="bearings" aria-live="polite">
+    <div class="bearing in" id="bearing"></div>
+    <div class="segments-row">
+      <div class="segments" id="segments" aria-hidden="true"></div>
+      <span class="segments-meta" id="segments-meta">
+        <span id="segments-count"></span>
+        <span class="seg-pager" id="segments-pager" hidden>
+          <button
+            type="button"
+            id="segments-prev"
+            class="seg-nav"
+            aria-label="Earlier cards"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            id="segments-next"
+            class="seg-nav"
+            aria-label="Later cards"
+          >
+            ›
+          </button>
+        </span>
+      </span>
+    </div>
+    <p class="bad-items-line" id="bad-items-line" hidden></p>
+    <p class="sendline" id="sendline"></p>
+    <div class="undo-row" id="undo-row" hidden></div>
+  </section>
+
+  <section class="composer" id="composer" aria-label="Message Claude">
+    <div class="composer-head">
+      <span class="label">Message Claude</span>
+      <a href="#bearing" class="attn-link" id="attn-link" hidden
+        ><i></i>New decision above</a
+      >
+    </div>
+    <p class="idle-nudge" id="idle-nudge" hidden></p>
+    <div class="thread-wrap">
+      <div class="glow night" id="glow-night"></div>
+      <div class="glow amber" id="glow-amber"></div>
+      <div class="thread" id="thread"></div>
+      <button
+        class="jump"
+        type="button"
+        id="jump"
+        aria-label="Jump to the latest message"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12l7 7 7-7" />
+        </svg>
+        <span class="jump-badge" id="jump-badge" hidden></span>
+      </button>
+    </div>
+    <div
+      class="sr-only"
+      id="live-announcer"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+    <div class="compose">
+      <textarea
+        id="msg-text"
+        rows="1"
+        placeholder="Ask or tell Claude anything"
+        aria-label="Message Claude"
+      ></textarea>
+      <button
+        class="send"
+        type="button"
+        id="msg-send"
+        aria-label="Send to Claude"
+        disabled
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 19V5M5 12l7-7 7 7" />
+        </svg>
+      </button>
+    </div>
+    <div class="session-strip" id="session-strip" hidden>
+      <div class="field">
+        <span class="label">Model</span
+        ><span class="value" id="sess-model"></span>
+      </div>
+      <div class="field">
+        <span class="label">From</span
+        ><span class="value mono" id="sess-cwd"></span>
+      </div>
+      <div class="field">
+        <span class="label">Session</span
+        ><span class="value mono" id="sess-id"></span>
+      </div>
+      <div class="field">
+        <span class="label">Since</span
+        ><span class="value" id="sess-since"></span>
+      </div>
+      <div class="field wide">
+        <span class="label">Working on</span
+        ><span class="value" id="sess-working"></span>
+      </div>
+      <p class="session-hint" id="session-hint">
+        <span
+          >Busy? It waits in line and lands when the current step ends.</span
+        >
+        <span><kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</span>
+      </p>
+    </div>
+  </section>
+
+  <section class="band review" id="review-band">
+    <div class="inner">
+      <h2>Where everything stands.</h2>
+      <div class="marquee" data-slot="marquee">
+        <span class="marquee-dot"></span>Pixel art coming soon. We can't wait.
+      </div>
+      <div class="queue-bar">
+        <div class="queue-tabs" id="queue-tabs" role="tablist">
+          <span class="thumb" id="queue-thumb"></span>
+          <button type="button" role="tab" data-queue="waiting">
+            Waiting on you <b class="n"></b>
+          </button>
+          <button type="button" role="tab" data-queue="answered">
+            Answered <b class="n"></b>
+          </button>
+          <button type="button" role="tab" data-queue="received">
+            Received <b class="n"></b>
+          </button>
+        </div>
+        <div class="page-size" id="page-size">
+          <button type="button" data-size="5">5</button><span>·</span
+          ><button type="button" data-size="10">10</button>
+        </div>
+      </div>
+      <div class="priority-chips" id="priority-chips">
+        <button type="button" class="chip quiet" data-priority="all">
+          All
+        </button>
+        <button type="button" class="chip quiet" data-priority="high">
+          High
+        </button>
+        <button type="button" class="chip quiet" data-priority="normal">
+          Normal
+        </button>
+        <button type="button" class="chip quiet" data-priority="low">
+          Low
+        </button>
+      </div>
+      <div id="review-list" class="review-list"></div>
+      <div class="review-pager" id="review-pager" hidden>
+        <button type="button" id="review-prev" aria-label="Previous page">
+          ‹
+        </button>
+        <span id="review-pager-label"></span>
+        <button type="button" id="review-next" aria-label="Next page">›</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span
+      >Keys: <code>1</code>-<code>4</code> pick · <code>Enter</code> queue</span
+    >
+  </footer>
+</main>
+
+<script>
+  // Polls /state every 2 seconds. Picks, typing, queued answers, and messages are kept in
+  // localStorage until the server has them, so a hard refresh loses nothing.
+  (() => {
+    const $ = (id) => document.getElementById(id);
+    const esc = (s) =>
+      String(s ?? "").replace(
+        /[&<>"]/g,
+        (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+      );
+    const iso = () => new Date().toISOString();
+    const store = {
+      get: (k, fallback = {}) => {
+        try {
+          return JSON.parse(localStorage.getItem(`bearings:${k}`)) ?? fallback;
+        } catch {
+          return fallback;
+        }
+      },
+      set: (k, v) => {
+        try {
+          localStorage.setItem(`bearings:${k}`, JSON.stringify(v));
+        } catch {
+          /* storage blocked: kept in memory */
+        }
+      },
+    };
+    const drafts = store.get("drafts");
+    const outbox = store.get("outbox");
+    const msgbox = store.get("msgbox");
+    const askedAt = store.get("askedAt");
+    const seenCards = store.get("seenCards");
+    let lastLooked = store.get("lastLooked", 0) || Date.now();
+    let state = {
+      questions: { items: [] },
+      error: null,
+      session: null,
+      answers: {},
+      delivered: {},
+      messages: [],
+    };
+    let seen = "";
+    let at = -1;
+    let reviewing = false;
+    let editingId = null;
+    let segWindowStart = 0;
+    const UNDO_MS = 5000;
+    const IDLE_MS = 15 * 60_000;
+    const SEG_WINDOW = 10;
+    const PRIORITIES = ["high", "normal", "low"];
+
+    // Relative age, quiet and short: "just now", "12 min ago", "2 hr 5 min ago".
+    const relAge = (ms) => {
+      const m = Math.max(0, Math.round((Date.now() - ms) / 60_000));
+      if (m < 1) return "just now";
+      if (m < 60) return `${m} min ago`;
+      const h = Math.floor(m / 60);
+      const rem = m % 60;
+      return `${h} hr${rem ? ` ${rem} min` : ""} ago`;
+    };
+
+    const tick = () => {
+      $("clock").textContent = `${iso().slice(11, 19)}Z`;
+      setTimeout(tick, 1000 - (Date.now() % 1000) + 5);
+    };
+    tick();
+    const live = (on) => {
+      $("live").className = "live " + (on ? "on" : "off");
+      $("live").replaceChildren(
+        document.createElement("i"),
+        document.createTextNode(on ? "Live" : "Offline"),
+      );
+    };
+    const say = (text, warn) => {
+      $("sendline").className = "sendline" + (warn ? " warn" : "");
+      $("sendline").textContent = text;
+    };
+
+    const WORD = {
+      waiting: "Waiting on you",
+      queued: "Queued",
+      sent: "Sent",
+      received: "Received by Claude",
+    };
+    const items = () => state.questions?.items || [];
+    // A malformed item (missing id, decide or options) can never be shown or answered; it
+    // draws as a gray segment and is skipped everywhere else instead of throwing.
+    const isValidItem = (b) =>
+      !!b &&
+      typeof b === "object" &&
+      typeof b.id === "string" &&
+      b.id !== "" &&
+      typeof b.decide === "string" &&
+      Array.isArray(b.options) &&
+      b.options.length > 0 &&
+      b.options.every((o) => o && typeof o.label === "string");
+    const badItemCount = () => items().filter((b) => !isValidItem(b)).length;
+    const priorityOf = (b) =>
+      PRIORITIES.includes(b.priority) ? b.priority : "normal";
+    const answerOf = (id) => outbox[id] || state.answers[id];
+    const statusOf = (id) => {
+      const a = answerOf(id);
+      if (!a) return "waiting";
+      if (outbox[id]) return "queued";
+      return state.delivered[id] === a.at ? "received" : "sent";
+    };
+    // waiting: not answered. answered: answered but Claude has not read it yet (queued or
+    // sent). received: Claude has read it.
+    const queueOf = (b) => {
+      const st = statusOf(b.id);
+      if (st === "waiting" || st === "received") return st;
+      return "answered";
+    };
+    const nextOpen = (from = 0) => {
+      for (let i = from; i < items().length; i++) {
+        const b = items()[i];
+        if (isValidItem(b) && !answerOf(b.id)) return i;
+      }
+      return -1;
+    };
+    const pageStart = (idx) =>
+      Math.floor(Math.max(0, idx) / SEG_WINDOW) * SEG_WINDOW;
+    const typing = () =>
+      document.activeElement?.matches?.("#bearing input[type='text']");
+
+    // The asked-at stamp: the server's own "asked" wins, else the first time this browser
+    // saw the id, recorded once and kept.
+    const askedIso = (b) => {
+      if (b.asked) return b.asked;
+      if (!askedAt[b.id]) {
+        askedAt[b.id] = iso();
+        store.set("askedAt", askedAt);
+      }
+      return askedAt[b.id];
+    };
+    const askedLabel = (b) =>
+      `Asked ${askedIso(b).slice(11, 16)}Z · ${relAge(Date.parse(askedIso(b)))}`;
+    const bearingTopHTML = (b) => `
+      <div class="bearing-top">
+        <div class="facts">
+          <span class="label">About</span><span>${esc(b.about)}</span>
+          <span class="label">Decide</span><span class="decide">${esc(b.decide)}</span>
+        </div>
+        <span class="asked" title="${esc(askedIso(b))}">${esc(askedLabel(b))}</span>
+      </div>`;
+    const marqueeHTML = () => `
+      <div class="marquee" data-slot="marquee">
+        <span class="marquee-dot"></span>Pixel art coming soon. We can't wait.
+      </div>`;
+
+    const drawCard = () => {
+      const card = $("bearing");
+      if (state.error) {
+        card.innerHTML = `<div class="facts"><span class="label">Error</span><span class="decide err">${esc(state.error)}</span></div>`;
+        return;
+      }
+      const b = items()[at];
+      if (!b) {
+        card.innerHTML = `
+          <div class="facts"><span class="label">Done</span><span class="decide">Nothing waiting on you.</span></div>
+          ${items().length ? '<button class="btn link" type="button" id="review">Review answers</button>' : ""}
+          ${marqueeHTML()}`;
+        return;
+      }
+      if (!isValidItem(b)) {
+        card.innerHTML = `<div class="facts"><span class="label">Error</span><span class="decide err">This decision could not be read.</span></div>`;
+        return;
+      }
+      const a = answerOf(b.id);
+      const st = statusOf(b.id);
+      // An answered card settles into a quiet DONE summary; clicking the chosen chip
+      // re-opens it for editing (latest answer per id still wins on the server).
+      if (a && editingId !== b.id) {
+        card.innerHTML = `
+          <div class="facts"><span class="label">Done</span><span class="decide">${esc(b.decide)}</span></div>
+          <div class="chosen" id="chosen-toggle" role="button" tabindex="0">
+            <span class="chip pending">${esc(a.choice)}${a.words ? " + note" : ""}</span>
+            <span class="state-word ${st}">${esc(WORD[st])}</span>
+          </div>
+          <button class="btn link" type="button" id="review">Review answers</button>`;
+        return;
+      }
+      const d = drafts[b.id];
+      const pick = d?.pick ?? a?.pick ?? b.rec ?? 0;
+      card.innerHTML = `
+        ${bearingTopHTML(b)}
+        <div class="options" role="radiogroup" aria-label="${esc(b.decide)}">
+          ${b.options
+            .map(
+              (o, i) => `
+            <label class="option" for="opt-${i}">
+              <input type="radio" name="opt" id="opt-${i}" value="${i}" ${i === pick ? "checked" : ""} />
+              <span class="text"><b>${esc(o.label)}</b><span>${esc(o.then)}</span></span>
+              ${i === b.rec ? '<span class="badge">Rec</span>' : ""}
+            </label>`,
+            )
+            .join("")}
+        </div>
+        <input type="text" class="own" id="own" placeholder="or answer in your own words..." aria-label="Answer in your own words" value="${esc(d?.words ?? a?.words ?? "")}" />
+        <div class="actions">
+          <button class="btn" type="button" id="queue-btn">Queue answer</button>
+          <span class="chip ${st === "received" ? "" : "pending"}" ${st === "waiting" ? "hidden" : ""}>${WORD[st]}</span>
+        </div>`;
+    };
+
+    // Thread, grouped like a phone: messages from one side within 3 minutes share a group with the
+    // tail on the last one, a time stamp shows after a 10 minute gap, and your status shows once,
+    // under your latest message. Typing dots show while Claude has your last message and has not
+    // answered yet, for up to 10 minutes. Only unseen bubbles animate in. The thread is append-only:
+    // existing bubbles are patched in place (class, meta, status) and new ones are appended, so a
+    // text selection inside an old bubble survives a new arrival and the 2 second poll never flickers.
+    const shown = new Set();
+    const unread = new Set();
+    const GROUP_MS = 3 * 60_000;
+    const STAMP_MS = 10 * 60_000;
+    const TYPING_MS = 10 * 60_000;
+    const CHAT_WORD = {
+      queued: "Sending",
+      sent: "Delivered",
+      received: "Read",
+    };
+    const bubbleEl = (n) => {
+      const el = document.createElement("div");
+      el.dataset.key = n.key;
+      el.className = n.cls;
+      el.title = n.title;
+      const text = document.createElement("span");
+      text.className = "text";
+      text.textContent = n.text;
+      el.appendChild(text);
+      if (n.meta) {
+        const meta = document.createElement("span");
+        meta.className = "meta" + (n.metaGood ? " good" : "");
+        meta.textContent = n.meta;
+        el.appendChild(meta);
+      }
+      return el;
+    };
+    const patchBubble = (el, n) => {
+      el.className = n.cls;
+      el.title = n.title;
+      let metaEl = el.querySelector(".meta");
+      if (n.meta) {
+        if (!metaEl) {
+          metaEl = document.createElement("span");
+          el.appendChild(metaEl);
+        }
+        metaEl.className = "meta" + (n.metaGood ? " good" : "");
+        metaEl.textContent = n.meta;
+      } else if (metaEl) {
+        metaEl.remove();
+      }
+    };
+    const stampEl = (n) => {
+      const el = document.createElement("div");
+      el.className = "stamp";
+      el.dataset.key = n.key;
+      el.textContent = n.text;
+      return el;
+    };
+    const typingEl = () => {
+      const el = document.createElement("div");
+      el.className = "bubble claude head tail typing";
+      el.dataset.key = "typing";
+      el.setAttribute("role", "status");
+      el.setAttribute("aria-label", "Claude has your message");
+      const text = document.createElement("span");
+      text.className = "text";
+      text.append(
+        document.createElement("i"),
+        document.createElement("i"),
+        document.createElement("i"),
+      );
+      el.appendChild(text);
+      return el;
+    };
+    const drawThread = () => {
+      const server = state.messages || [];
+      const known = new Set(server.map((m) => m.id));
+      const all = [
+        ...server.map((m) => ({
+          ...m,
+          st: state.delivered[m.id] === m.at ? "received" : "sent",
+        })),
+        ...Object.values(msgbox)
+          .filter((m) => !known.has(m.id))
+          .map((m) => ({ ...m, st: "queued" })),
+      ]
+        .sort((x, y) => x.at.localeCompare(y.at))
+        .slice(-50);
+      const side = (m) => (m.from === "claude" ? "claude" : "you");
+      const time = (m) => Date.parse(m.at);
+      const lastMine = [...all].reverse().find((m) => side(m) === "you");
+      const last = all[all.length - 1];
+      const typingNow =
+        last &&
+        side(last) === "you" &&
+        last.st === "received" &&
+        Date.now() - time(last) < TYPING_MS;
+      const nodes = [];
+      all.forEach((m, i) => {
+        const prev = all[i - 1];
+        const next = all[i + 1];
+        if (!prev || time(m) - time(prev) > STAMP_MS)
+          nodes.push({
+            kind: "stamp",
+            key: `stamp:${m.id}`,
+            text: `${m.at.slice(11, 16)}Z`,
+          });
+        const head =
+          !prev || side(prev) !== side(m) || time(m) - time(prev) > GROUP_MS;
+        const tail =
+          !next || side(next) !== side(m) || time(next) - time(m) > GROUP_MS;
+        const cls = [
+          "bubble",
+          side(m),
+          m.st,
+          head && "head",
+          tail && "tail",
+          !shown.has(m.id) && "new",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        nodes.push({
+          kind: "bubble",
+          key: m.id,
+          cls,
+          title: `${m.at.slice(11, 16)}Z`,
+          text: m.text,
+          meta: m === lastMine ? CHAT_WORD[m.st] : "",
+          metaGood: m.st === "received",
+        });
+      });
+      if (typingNow) nodes.push({ kind: "typing", key: "typing" });
+      // Stay pinned to the newest message unless the user scrolled up to read; their own new
+      // message always brings the window down.
+      const box = $("thread");
+      const pinned = box.scrollHeight - box.scrollTop - box.clientHeight < 48;
+      const wasEmpty = !box.childElementCount;
+      const mine = all.some((m) => !shown.has(m.id) && side(m) === "you");
+      const newClaude = all.filter(
+        (m) => side(m) === "claude" && !shown.has(m.id),
+      );
+      // Diff by key: patch matched bubbles in place, drop the old tail past the first
+      // mismatch (only happens once the 50-message cap trims the oldest), append the rest.
+      const oldEls = Array.from(box.children);
+      let i = 0;
+      while (
+        i < oldEls.length &&
+        i < nodes.length &&
+        oldEls[i].dataset.key === nodes[i].key
+      ) {
+        if (nodes[i].kind === "bubble") patchBubble(oldEls[i], nodes[i]);
+        i++;
+      }
+      for (const el of oldEls.slice(i)) el.remove();
+      for (; i < nodes.length; i++) {
+        const n = nodes[i];
+        box.appendChild(
+          n.kind === "stamp"
+            ? stampEl(n)
+            : n.kind === "typing"
+              ? typingEl()
+              : bubbleEl(n),
+        );
+      }
+      all.forEach((m) => shown.add(m.id));
+      if (pinned || mine || wasEmpty)
+        box.scrollTo({
+          top: box.scrollHeight,
+          behavior: wasEmpty ? "auto" : "smooth",
+        });
+      if (newClaude.length) {
+        if (!pinned || document.hidden)
+          newClaude.forEach((m) => unread.add(m.id));
+        $("live-announcer").textContent = newClaude
+          .map((m) => m.text)
+          .join(" ");
+      }
+      updateJumpBadge();
+      renderTitle();
+    };
+
+    const drawBadItemsLine = () => {
+      const n = badItemCount();
+      const el = $("bad-items-line");
+      el.hidden = !n;
+      if (n)
+        el.textContent = `${n} item${n === 1 ? "" : "s"} could not be read.`;
+    };
+
+    // Windowed progress bar: at most SEG_WINDOW segments, sliding by whole pages. The window
+    // only re-syncs to the current card when the card itself actually moved (a hop, an
+    // answer, a new question set), never on an unrelated poll, so a manual page browse via
+    // the ‹ › buttons is never yanked back.
+    let lastAtForWindow = -2;
+    const drawSegments = () => {
+      const all = items();
+      const total = all.length;
+      if (at !== lastAtForWindow) {
+        lastAtForWindow = at;
+        const clamped = Math.max(0, Math.min(at, total - 1));
+        if (total && (at < segWindowStart || at >= segWindowStart + SEG_WINDOW))
+          segWindowStart = pageStart(clamped);
+      }
+      const maxStart = total ? pageStart(total - 1) : 0;
+      segWindowStart = Math.min(Math.max(0, segWindowStart), maxStart);
+      const windowItems = all.slice(
+        segWindowStart,
+        segWindowStart + SEG_WINDOW,
+      );
+      $("segments").innerHTML = windowItems
+        .map((b, i) => {
+          const idx = segWindowStart + i;
+          if (!isValidItem(b))
+            return `<i class="bad ${idx === at ? "active" : ""}" title="unreadable item"></i>`;
+          return `<i class="${answerOf(b.id) ? "done" : ""} ${idx === at ? "active" : ""}"></i>`;
+        })
+        .join("");
+      $("segments-count").textContent = total
+        ? `${Math.min(segWindowStart + SEG_WINDOW, total)} of ${total}`
+        : "";
+      const showPager = total > SEG_WINDOW;
+      $("segments-pager").hidden = !showPager;
+      if (showPager) {
+        $("segments-prev").disabled = segWindowStart <= 0;
+        $("segments-next").disabled = segWindowStart + SEG_WINDOW >= total;
+      }
+    };
+
+    const drawRest = () => {
+      $("page-title").textContent = state.questions?.title || "Decisions";
+      const valid = items().filter(isValidItem);
+      const left = valid.filter((b) => !answerOf(b.id)).length;
+      $("navcount").textContent = left ? `${left} waiting` : "All answered";
+      drawBadItemsLine();
+      drawSegments();
+      drawReview();
+      const answered = valid.filter((b) => answerOf(b.id));
+      if (Object.keys(outbox).length) say("Queued. Sending.");
+      else if (answered.some((b) => statusOf(b.id) === "sent"))
+        say("Sent. Waiting for Claude.");
+      else if (answered.length) say("Claude received every answer.");
+      else say("");
+      drawThread();
+      drawSession();
+      checkAttention();
+      idleLine();
+      drawUndo();
+      renderTitle();
+    };
+
+    // Review band (1.15): a pure function of /state plus two localStorage values (queue,
+    // page size). The same state always draws the same list; the list DOM is only rebuilt
+    // when its computed signature changes, so the 2 second poll never flickers it, resets
+    // its page, or loses a hover.
+    let currentQueue = store.get("reviewQueue", null);
+    let pageSize = [5, 10].includes(store.get("reviewPageSize", 5))
+      ? store.get("reviewPageSize", 5)
+      : 5;
+    let priorityFilter = store.get("reviewPriority", "all");
+    let reviewPage = 1;
+    let reviewSeen = "";
+    let lastQueueForAnim = null;
+    let lastPageForAnim = null;
+    const PRIORITY_RANK = { high: 0, normal: 1, low: 2 };
+
+    const reviewQueues = () => {
+      const byQueue = { waiting: [], answered: [], received: [] };
+      for (const b of items()) if (isValidItem(b)) byQueue[queueOf(b)].push(b);
+      return byQueue;
+    };
+    const effectiveQueue = (byQueue) =>
+      currentQueue || (byQueue.waiting.length ? "waiting" : "received");
+    const sortQueue = (list, name) => {
+      const askedOf = new Map(list.map((b) => [b.id, askedIso(b)]));
+      return [...list].sort((x, y) => {
+        if (name === "waiting") {
+          const pr =
+            PRIORITY_RANK[priorityOf(x)] - PRIORITY_RANK[priorityOf(y)];
+          if (pr) return pr;
+        }
+        const ax = askedOf.get(x.id);
+        const ay = askedOf.get(y.id);
+        if (ax !== ay) return ax < ay ? 1 : -1;
+        return x.id < y.id ? 1 : -1;
+      });
+    };
+    const reviewCardHTML = (b, queue) => {
+      const a = answerOf(b.id);
+      const st = statusOf(b.id);
+      const dot =
+        priorityOf(b) === "high" ? '<span class="priority-dot"></span>' : "";
+      return `
+        <div class="bearing review-card" data-id="${esc(b.id)}">
+          ${bearingTopHTML(b)}
+          <div class="review-meta">
+            <span class="review-id">${dot}${esc(b.id)}</span>
+            ${a ? `<span class="chip pending">${esc(a.choice)}${a.words ? " + note" : ""}</span>` : ""}
+            <span class="state-word ${queue}">${esc(WORD[st])}</span>
+          </div>
+        </div>`;
+    };
+    const renderReviewList = (pageItems, queue) => {
+      const list = $("review-list");
+      list.innerHTML = pageItems.length
+        ? pageItems.map((b) => reviewCardHTML(b, queue)).join("")
+        : `<p class="review-empty">Nothing here yet.</p>`;
+      const kind = queue !== lastQueueForAnim ? "anim-fade" : "anim-slide";
+      list.classList.remove("anim-fade", "anim-slide");
+      void list.offsetWidth;
+      if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
+        list.classList.add(kind);
+    };
+    const positionQueueThumb = () => {
+      const active = $("queue-tabs").querySelector("button.active");
+      const thumb = $("queue-thumb");
+      if (!active) return;
+      thumb.style.transform = `translateX(${active.offsetLeft}px)`;
+      thumb.style.width = `${active.offsetWidth}px`;
+    };
+    const drawReview = () => {
+      const byQueue = reviewQueues();
+      const queue = effectiveQueue(byQueue);
+      const counts = {
+        waiting: byQueue.waiting.length,
+        answered: byQueue.answered.length,
+        received: byQueue.received.length,
+      };
+      const filtered =
+        priorityFilter === "all"
+          ? byQueue[queue]
+          : byQueue[queue].filter((b) => priorityOf(b) === priorityFilter);
+      const sorted = sortQueue(filtered, queue);
+      const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+      reviewPage = Math.min(Math.max(1, reviewPage), pageCount);
+      const pageItems = sorted.slice(
+        (reviewPage - 1) * pageSize,
+        reviewPage * pageSize,
+      );
+
+      $("queue-tabs")
+        .querySelectorAll("button[data-queue]")
+        .forEach((btn) => {
+          const q = btn.dataset.queue;
+          btn.classList.toggle("active", q === queue);
+          btn.querySelector(".n").textContent = `(${counts[q]})`;
+        });
+      positionQueueThumb();
+      $("page-size")
+        .querySelectorAll("button[data-size]")
+        .forEach((btn) =>
+          btn.classList.toggle("active", Number(btn.dataset.size) === pageSize),
+        );
+      $("priority-chips")
+        .querySelectorAll("button[data-priority]")
+        .forEach((btn) =>
+          btn.classList.toggle(
+            "active",
+            btn.dataset.priority === priorityFilter,
+          ),
+        );
+
+      const sig = JSON.stringify({
+        queue,
+        priorityFilter,
+        pageSize,
+        page: reviewPage,
+        rows: pageItems.map((b) => {
+          const a = answerOf(b.id);
+          return [
+            b.id,
+            statusOf(b.id),
+            a?.choice,
+            a?.words,
+            priorityOf(b),
+            askedIso(b),
+          ];
+        }),
+      });
+      if (sig !== reviewSeen) {
+        reviewSeen = sig;
+        renderReviewList(pageItems, queue);
+      }
+      lastQueueForAnim = queue;
+      lastPageForAnim = reviewPage;
+
+      const pager = $("review-pager");
+      pager.hidden = pageCount <= 1;
+      if (pageCount > 1) {
+        $("review-pager-label").textContent = `${reviewPage} of ${pageCount}`;
+        $("review-prev").disabled = reviewPage <= 1;
+        $("review-next").disabled = reviewPage >= pageCount;
+      }
+    };
+
+    // Tab title and the jump button's unread pill: armed while a Claude reply lands off screen
+    // or the tab is hidden, cleared the moment the thread is back at the bottom and visible.
+    let idleWaitingCount = 0;
+    const renderTitle = () => {
+      const base = state.questions?.title || "Bearings";
+      const n = idleWaitingCount || (document.hidden ? unread.size : 0);
+      document.title = n ? `(${n}) ${base}` : base;
+    };
+    const atBottom = () => {
+      const box = $("thread");
+      return box.scrollHeight - box.scrollTop - box.clientHeight < 4;
+    };
+    const updateJumpBadge = () => {
+      const badge = $("jump-badge");
+      if (unread.size) {
+        badge.hidden = false;
+        badge.textContent = unread.size > 9 ? "9+" : String(unread.size);
+      } else {
+        badge.hidden = true;
+      }
+    };
+    const clearUnread = () => {
+      if (!unread.size) return;
+      unread.clear();
+      updateJumpBadge();
+      renderTitle();
+    };
+
+    // Session strip: whatever the agent last wrote to session.json, or hidden entirely.
+    const shortCwd = (p) =>
+      String(p || "").replace(
+        /^(\/home\/[^/]+|\/Users\/[^/]+|\/root)(?=\/|$)/,
+        "~",
+      );
+    const sinceLabel = (startedIso) =>
+      `${startedIso.slice(11, 16)}Z · ${relAge(Date.parse(startedIso))}`;
+    const drawSession = () => {
+      const s = state.session;
+      const strip = $("session-strip");
+      if (!s) {
+        strip.hidden = true;
+        return;
+      }
+      strip.hidden = false;
+      $("sess-model").textContent = s.model || "–";
+      $("sess-cwd").textContent = shortCwd(s.cwd);
+      $("sess-cwd").title = s.cwd || "";
+      $("sess-id").textContent = (s.session || "").slice(0, 8);
+      $("sess-id").title = s.session || "";
+      $("sess-since").textContent = s.started ? sinceLabel(s.started) : "–";
+      $("sess-working").textContent = s.working_on || "–";
+    };
+
+    // Attention glow: the first time an unanswered card's id is seen, the composer warms from
+    // night to amber until any answer is queued.
+    const setAttention = (on) => {
+      $("composer").classList.toggle("attention", on);
+      $("attn-link").hidden = !on;
+    };
+    const checkAttention = () => {
+      let fresh = false;
+      let changed = false;
+      for (const b of items()) {
+        if (seenCards[b.id]) continue;
+        seenCards[b.id] = true;
+        changed = true;
+        if (!answerOf(b.id)) fresh = true;
+      }
+      if (changed) store.set("seenCards", seenCards);
+      if (fresh) setAttention(true);
+    };
+
+    // Idle nudge: a quiet line once 15 minutes pass with unanswered cards and no look.
+    const markLooked = () => {
+      lastLooked = Date.now();
+      store.set("lastLooked", lastLooked);
+    };
+    const idleLine = () => {
+      const el = $("idle-nudge");
+      const left = items().filter((b) => !answerOf(b.id)).length;
+      const idleFor = Date.now() - lastLooked;
+      if (!left || idleFor < IDLE_MS) {
+        el.hidden = true;
+        idleWaitingCount = 0;
+        return;
+      }
+      const mins = Math.floor(idleFor / 60_000);
+      el.hidden = false;
+      el.textContent = `${left} decision${left === 1 ? "" : "s"} waiting · ${mins} min`;
+      idleWaitingCount = left;
+    };
+
+    // Undo: the answer sits in the outbox only, unposted, until UNDO_MS passes.
+    const pendingUndo = () => {
+      const ids = Object.keys(outbox);
+      if (!ids.length) return null;
+      const id = ids.sort((x, y) =>
+        outbox[y].at.localeCompare(outbox[x].at),
+      )[0];
+      const a = outbox[id];
+      const deadline = Date.parse(a.at) + UNDO_MS;
+      return deadline > Date.now() ? { id, a, deadline } : null;
+    };
+    let undoShownFor = null;
+    let undoTicker = null;
+    const drawUndo = () => {
+      const p = pendingUndo();
+      const row = $("undo-row");
+      if (!p) {
+        if (undoShownFor !== null) {
+          row.hidden = true;
+          row.innerHTML = "";
+          undoShownFor = null;
+          if (undoTicker) {
+            clearInterval(undoTicker);
+            undoTicker = null;
+          }
+        }
+        return;
+      }
+      // Only (re)build the row when the pending id changes, so the CSS-driven ring is never
+      // restarted by an unrelated poll.
+      if (undoShownFor === p.id) return;
+      undoShownFor = p.id;
+      row.hidden = false;
+      const remain = p.deadline - Date.now();
+      const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      row.innerHTML = `
+        <span class="chip pending">Queued</span>
+        <button class="undo" type="button" id="undo-btn">
+          ${
+            reduced
+              ? `<span class="count">${Math.ceil(remain / 1000)}</span>`
+              : `<svg class="ring" viewBox="0 0 20 20" aria-hidden="true"><circle class="ring-bg" cx="10" cy="10" r="8.5" /><circle class="ring-fg" cx="10" cy="10" r="8.5" style="animation-delay:-${UNDO_MS - remain}ms" /></svg>`
+          }
+          <span>Undo</span>
+        </button>`;
+      $("undo-btn").addEventListener("click", () => undoAnswer(p.id));
+      if (reduced)
+        undoTicker = setInterval(() => {
+          const still = pendingUndo();
+          const count = row.querySelector(".count");
+          if (!still || !count) return;
+          count.textContent = Math.max(
+            0,
+            Math.ceil((still.deadline - Date.now()) / 1000),
+          );
+        }, 250);
+    };
+    const undoAnswer = (id) => {
+      const a = outbox[id];
+      if (!a) return;
+      delete outbox[id];
+      store.set("outbox", outbox);
+      drafts[id] = { pick: a.pick, words: a.words };
+      store.set("drafts", drafts);
+      undoShownFor = null;
+      drawUndo();
+      const idx = items().findIndex((it) => it.id === id);
+      if (idx >= 0) goTo(idx);
+      drawRest();
+    };
+
+    // Card hopping: jump straight to any card, in any order, with the same rise motion.
+    const goTo = (idx) => {
+      if (idx < 0 || idx >= items().length) return;
+      at = idx;
+      reviewing = true;
+      const card = $("bearing");
+      card.classList.remove("in");
+      void card.offsetWidth;
+      card.classList.add("in");
+      drawCard();
+      drawRest();
+    };
+
+    const saveDraft = () => {
+      const b = items()[at];
+      if (!b) return;
+      const picked = document.querySelector(
+        "#bearing input[type='radio']:checked",
+      );
+      drafts[b.id] = {
+        pick: picked ? Number(picked.value) : b.rec,
+        words: $("own")?.value ?? "",
+      };
+      store.set("drafts", drafts);
+    };
+    $("bearing").addEventListener("input", saveDraft);
+    $("bearing").addEventListener("change", saveDraft);
+
+    // Composer: the draft is saved on every keystroke; the field grows with its text.
+    const msg = $("msg-text");
+    const fit = () => {
+      if (CSS.supports("field-sizing", "content")) return;
+      msg.style.height = "auto";
+      msg.style.height = `${Math.min(msg.scrollHeight, 220)}px`;
+    };
+    const syncSend = () => ($("msg-send").disabled = !msg.value.trim());
+    msg.value = store.get("msgdraft", "");
+    fit();
+    syncSend();
+    msg.addEventListener("input", () => {
+      store.set("msgdraft", msg.value);
+      fit();
+      syncSend();
+    });
+
+    const post = async (path, body) => {
+      const r = await fetch(path, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json();
+    };
+    const flush = async () => {
+      try {
+        for (const [id, a] of Object.entries(outbox)) {
+          // Held back until its undo window has run out.
+          if (Date.now() < Date.parse(a.at) + UNDO_MS) continue;
+          await post("answer", { id, pick: a.pick, words: a.words, at: a.at });
+          delete outbox[id];
+          store.set("outbox", outbox);
+        }
+        for (const m of Object.values(msgbox)) {
+          const saved = await post("message", m);
+          state.messages = [
+            ...(state.messages || []).filter((x) => x.id !== saved.id),
+            saved,
+          ];
+          delete msgbox[m.id];
+          store.set("msgbox", msgbox);
+        }
+      } catch {
+        say("Not sent yet. Saved on this device; retrying.", true);
+      }
+    };
+
+    const poll = async () => {
+      try {
+        await flush();
+        const r = await fetch("state", { cache: "no-store" });
+        if (!r.ok) throw new Error(String(r.status));
+        const s = await r.json();
+        live(true);
+        const text = JSON.stringify(s);
+        if (text !== seen) {
+          const newQuestions =
+            JSON.stringify(s.questions) !== JSON.stringify(state.questions);
+          seen = text;
+          state = s;
+          if (at < 0 || newQuestions)
+            at = nextOpen() < 0 ? items().length : nextOpen();
+          if (!typing()) drawCard();
+          drawRest();
+        }
+      } catch {
+        live(false);
+      }
+      setTimeout(poll, 2000);
+    };
+
+    const queueAnswer = () => {
+      const b = items()[at];
+      if (!b) return;
+      const picked = document.querySelector(
+        "#bearing input[type='radio']:checked",
+      );
+      const pick = picked ? Number(picked.value) : b.rec;
+      outbox[b.id] = {
+        pick,
+        choice: b.options[pick].label,
+        words: $("own").value.trim(),
+        at: iso(),
+      };
+      store.set("outbox", outbox);
+      delete drafts[b.id];
+      store.set("drafts", drafts);
+      markLooked();
+      setAttention(false);
+      let next = nextOpen(at + 1);
+      if (next < 0) next = nextOpen();
+      if (next < 0)
+        next = reviewing && at + 1 < items().length ? at + 1 : items().length;
+      at = next;
+      const card = $("bearing");
+      card.classList.remove("in");
+      void card.offsetWidth;
+      card.classList.add("in");
+      drawCard();
+      drawRest();
+      flush().then(drawRest);
+    };
+
+    const sendMessage = () => {
+      const text = msg.value.trim();
+      if (!text) return;
+      const now = iso();
+      const id = `m-${now.replace(/[^0-9]/g, "")}-${Math.random().toString(36).slice(2, 7)}`;
+      msgbox[id] = { id, text, at: now };
+      store.set("msgbox", msgbox);
+      msg.value = "";
+      store.set("msgdraft", "");
+      fit();
+      syncSend();
+      drawThread();
+      msg.focus();
+      flush().then(drawRest);
+    };
+    $("msg-send").addEventListener("click", sendMessage);
+    msg.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || e.shiftKey) return;
+      e.preventDefault();
+      sendMessage();
+    });
+
+    $("bearing").addEventListener("click", (e) => {
+      if (e.target.id === "queue-btn") queueAnswer();
+      if (e.target.id === "review") {
+        reviewing = true;
+        at = 0;
+        drawCard();
+        drawRest();
+      }
+    });
+    // Card hopping: every segment and every row in "Where everything stands" jumps straight
+    // to that card.
+    $("segments").addEventListener("click", (e) => {
+      const idx = Array.from($("segments").children).indexOf(e.target);
+      if (idx >= 0) goTo(idx);
+    });
+    // 2026-10-10 UTC fix: this copy of the page has no element with id="list"
+    // (the review list is id="review-list"), so $("list") is null and the
+    // addEventListener call threw "Cannot read properties of null" at startup.
+    // That stopped the script before poll() ran, so the page sat on
+    // "Connecting" with no cards even though /state answered 200.
+    // Guarding the optional element is the surgical fix; adding a list
+    // element would change the layout, which needs the owner's approval
+    // (SKILL.md: change the card format only after a sample is approved).
+    // Cost: none, the click-to-jump list stays absent as it was.
+    // Backup: assets/page.html.bak-20261010T1815Z. Session 05518e5b.
+    $("list")?.addEventListener("click", (e) => {
+      const row = e.target.closest(".item");
+      if (!row) return;
+      goTo(items().findIndex((b) => b.id === row.dataset.id));
+    });
+    $("attn-link").addEventListener("click", (e) => {
+      e.preventDefault();
+      $("bearing").scrollIntoView({
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "center",
+      });
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.target.closest?.("#composer")) return;
+      const b = items()[at];
+      if (!b || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (typing()) {
+        if (e.key === "Enter") queueAnswer();
+        return;
+      }
+      if (e.key === "ArrowLeft") return goTo(at - 1);
+      if (e.key === "ArrowRight") return goTo(at + 1);
+      const n = Number(e.key);
+      if (n >= 1 && n <= b.options.length) {
+        $(`opt-${n - 1}`).checked = true;
+        saveDraft();
+      }
+      if (e.key === "Enter" && !e.target.matches("button")) queueAnswer();
+    });
+
+    // Jump to latest: shows once the user is more than a screenful of chat away from the newest
+    // message, and eases back down in about a quarter second. Reaching the bottom also clears
+    // the unread pill and, once the tab is visible again too, the title prefix.
+    const jumpBox = $("thread");
+    const syncJump = () => {
+      $("jump").classList.toggle(
+        "show",
+        jumpBox.scrollHeight - jumpBox.scrollTop - jumpBox.clientHeight > 120,
+      );
+      if (atBottom()) clearUnread();
+    };
+    jumpBox.addEventListener("scroll", syncJump, { passive: true });
+
+    $("jump").addEventListener("click", () => {
+      const from = jumpBox.scrollTop;
+      const to = jumpBox.scrollHeight - jumpBox.clientHeight;
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches)
+        return (jumpBox.scrollTop = to);
+      const start = performance.now();
+      const step = (now) => {
+        const t = Math.min(1, (now - start) / 260);
+        jumpBox.scrollTop = from + (to - from) * (1 - Math.pow(1 - t, 3));
+        if (t < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      renderTitle();
+      if (!document.hidden && atBottom()) clearUnread();
+    });
+
+    // Idle nudge: a look counts whether it lands from answering or from the card itself
+    // scrolling at least half into view.
+    new IntersectionObserver(
+      (entries) => entries[0].isIntersecting && markLooked(),
+      {
+        threshold: 0.5,
+      },
+    ).observe($("bearing"));
+
+    // Relative-age labels (asked-at, session since, idle minutes) and the undo ring's window
+    // are time-based, not state-based, so they get their own tickers alongside the 2 second poll.
+    // Only the small label text is touched, never the card itself, so an open pick or a draft
+    // in progress is never disturbed.
+    setInterval(drawUndo, 250);
+    setInterval(() => {
+      const b = items()[at];
+      const askedEl = b && $("bearing").querySelector(".asked");
+      if (askedEl) askedEl.textContent = askedLabel(b);
+      drawSession();
+      idleLine();
+      renderTitle();
+    }, 60_000);
+
+    drawThread();
+    poll();
+  })();
+</script>
