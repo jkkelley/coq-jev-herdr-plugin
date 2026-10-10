@@ -82,7 +82,13 @@ pass() {
       one "$p" "$n"
     done
     # The architect seat is hand-started and exempt (herdr/config/exemptions.json), so it has no seat record.
-    while IFS=$'\t' read -r p n; do [ -n "$p" ] && one "$p" "$n"; done < <(jq -r '.exemptions[] | select(.pane? and .until > now_iso) | [.pane, (.seat // .pane)] | @tsv' --arg now_iso "$(sl_now)" "$SL_HERDR/config/exemptions.json" 2>/dev/null | sort -u)
+    # BREADCRUMB 2026-10-10 - WO-20261010-8fa8. What broke: this filter read `.until > now_iso`, a call to a jq function
+    #   that does not exist (the --arg variable is $now_iso), so jq failed to compile, 2>/dev/null hid it, and --all and
+    #   --watch never visited the hand-started architect pane wD3:p2, the one seat that froze on 2026-10-10 (this file's
+    #   header). Why this fix: $now_iso is the one-character repair and case 06 now freezes an exempt pane and expects it
+    #   released. Rejected: dropping the 2>/dev/null, which would print a jq error on every 30 second tick if
+    #   exemptions.json is ever malformed. Cost: none; the stderr stays hidden, so case 06 is what proves this loop works.
+    while IFS=$'\t' read -r p n; do [ -n "$p" ] && one "$p" "$n"; done < <(jq -r --arg now_iso "$(sl_now)" '.exemptions[] | select(.pane? and .until > $now_iso) | [.pane, (.seat // .pane)] | @tsv' "$SL_HERDR/config/exemptions.json" 2>/dev/null | sort -u)
   else one "$(pane_of "$target")" "$target"; fi
   return "$LEFT"
 }
