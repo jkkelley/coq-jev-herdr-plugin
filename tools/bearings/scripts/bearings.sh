@@ -85,7 +85,7 @@ pane_for() {
   printf '%s\n' "$p"
 }
 wait_for_server() {
-  local i; for i in $(seq 1 60); do server_alive && [ -n "$(jq -r '.url // empty' <<<"$(server_json)")" ] && return 0; sleep 0.25; done
+  local _; for _ in $(seq 1 60); do server_alive && [ -n "$(jq -r '.url // empty' <<<"$(server_json)")" ] && return 0; sleep 0.25; done
   return 1
 }
 

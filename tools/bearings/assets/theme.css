@@ -263,7 +263,7 @@ nav.top .live.off i {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.facts .decide.err {
+.decide.err {
   color: var(--bad);
 }
 .bearing.in {
@@ -831,6 +831,7 @@ code {
   height: min(440px, 60vh);
   padding: 20px 20px 18px;
   overflow-y: auto;
+  overflow-anchor: none;
   overscroll-behavior: contain;
   border-radius: 28px;
   background: transparent;
@@ -1027,31 +1028,22 @@ code {
   background: var(--imsg-blue);
   transition: opacity 220ms ease;
 }
-/* The tail: the classic two-pseudo-element cutout, no image or mask, so it holds at any zoom
-   and on either theme. ::before is a rounded blob in the bubble's own color that pokes out past
-   the corner; ::after, in the thread's own ground color, curves a bite out of it. The tail never
-   pushes the text: padding and radius stay put, only the tailed corner loses its rounding. */
-.bubble.tail .text {
-  border-bottom-right-radius: 8px;
-}
-.bubble.tail .text::before,
+/* The tail: a curved notch in the bubble's own color, drawn with a mask so it works on any ground. */
 .bubble.tail .text::after {
   content: "";
   position: absolute;
   bottom: 0;
-  right: -8px;
+  right: -9px;
   width: 20px;
-  height: 20px;
-}
-.bubble.tail .text::before {
+  height: 22px;
   background: inherit;
-  border-bottom-left-radius: 16px;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 22'%3E%3Cpath d='M0 0h9c0 11 3.5 18.5 11 21.2-2.8 1-6.5 1-9.5.8H0z'/%3E%3C/svg%3E")
+    no-repeat center / 100% 100%;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 22'%3E%3Cpath d='M0 0h9c0 11 3.5 18.5 11 21.2-2.8 1-6.5 1-9.5.8H0z'/%3E%3C/svg%3E")
+    no-repeat center / 100% 100%;
 }
-.bubble.tail .text::after {
-  right: -10px;
-  width: 10px;
-  background: color-mix(in srgb, var(--alt) 45%, var(--ground));
-  border-bottom-left-radius: 10px;
+.bubble.tail .text {
+  border-bottom-right-radius: 8px;
 }
 .bubble.queued .text {
   opacity: 0.55;
@@ -1069,18 +1061,10 @@ code {
   border-bottom-right-radius: 19px;
   border-bottom-left-radius: 8px;
 }
-.bubble.claude.tail .text::before,
 .bubble.claude.tail .text::after {
   right: auto;
-  border-bottom-left-radius: 0;
-}
-.bubble.claude.tail .text::before {
-  left: -8px;
-  border-bottom-right-radius: 16px;
-}
-.bubble.claude.tail .text::after {
-  left: -10px;
-  border-bottom-right-radius: 10px;
+  left: -9px;
+  transform: scaleX(-1);
 }
 .bubble .meta {
   margin: 3px 4px 2px;
@@ -1136,15 +1120,149 @@ code {
   }
 }
 
-/* Composer field: frosted glass, neon glow on focus, gradient send. 16px of clear space below
-   its own outer edge, distinct from the composer's normal 12px rhythm, so it never reads as
-   pinned to whatever sits under it as the textarea grows. */
+/* Attachment chip, shown above the composer while a file uploads or sits attached: the same
+   night glass as .compose, never taller than one row so it never crowds the field below it. */
+.attach-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 4px 8px;
+  padding: 6px 10px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
+  background: color-mix(in srgb, var(--alt) 75%, transparent);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  animation: pop 220ms var(--ease) both;
+}
+.attach-chip.error {
+  border-color: color-mix(in srgb, var(--bad) 45%, transparent);
+}
+.attach-chip.error .attach-name {
+  color: var(--bad);
+}
+.attach-thumb,
+.attach-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  flex: none;
+}
+.attach-thumb {
+  object-fit: cover;
+}
+.attach-icon {
+  display: grid;
+  place-items: center;
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.attach-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.attach-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.attach-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.attach-size {
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.attach-x {
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  flex: none;
+  color: var(--ink-2);
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+  cursor: pointer;
+  transition:
+    background 160ms ease,
+    color 160ms ease;
+}
+.attach-x:hover {
+  background: color-mix(in srgb, var(--bad) 16%, transparent);
+  color: var(--bad);
+}
+.attach-x svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* An attachment inside a sent bubble: a small thumbnail or a name chip above the text, never
+   wider than the bubble itself, one click away from the full file. Built once and left alone
+   by every later patch, same reason the bubble's own text is (server.mjs, R1): what a message
+   carries never changes once sent. */
+.bubble-attach {
+  display: block;
+  margin-bottom: 4px;
+}
+.bubble-attach-img {
+  display: block;
+  max-width: 220px;
+  max-height: 220px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+.bubble-attach.chip-file {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 16px;
+  text-decoration: none;
+  max-width: 220px;
+  background: var(--imsg-blue);
+  color: #ffffff;
+}
+.bubble.claude .bubble-attach.chip-file {
+  background: var(--bubble-in);
+  color: var(--bubble-in-ink);
+}
+.bubble-attach.chip-file svg {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+/* WK-20260916-070: name plus a type/size line, the same two-row shape as .attach-info above the
+   composer, so a non-image attachment reads as deliberate rather than a bare filename fallback. */
+.bubble-attach-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.bubble-attach-name {
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bubble-attach-meta {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* Composer field: frosted glass, neon glow on focus, gradient send. */
 .compose {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: end;
   gap: 8px;
-  margin-bottom: 16px;
   padding: 7px 7px 7px 20px;
   border-radius: 26px;
   border: 1px solid color-mix(in srgb, var(--ink) 10%, transparent);
@@ -1166,7 +1284,7 @@ code {
 .compose textarea {
   width: 100%;
   min-height: 0;
-  max-height: 40vh;
+  max-height: 220px;
   margin: 0;
   padding: 9px 0;
   border: 0;

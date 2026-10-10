@@ -32,31 +32,7 @@
 
   <section class="bearings" aria-live="polite">
     <div class="bearing in" id="bearing"></div>
-    <div class="segments-row">
-      <div class="segments" id="segments" aria-hidden="true"></div>
-      <span class="segments-meta" id="segments-meta">
-        <span id="segments-count"></span>
-        <span class="seg-pager" id="segments-pager" hidden>
-          <button
-            type="button"
-            id="segments-prev"
-            class="seg-nav"
-            aria-label="Earlier cards"
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            id="segments-next"
-            class="seg-nav"
-            aria-label="Later cards"
-          >
-            ›
-          </button>
-        </span>
-      </span>
-    </div>
-    <p class="bad-items-line" id="bad-items-line" hidden></p>
+    <div class="segments" id="segments" aria-hidden="true"></div>
     <p class="sendline" id="sendline"></p>
     <div class="undo-row" id="undo-row" hidden></div>
   </section>
@@ -99,6 +75,45 @@
       aria-live="polite"
       aria-atomic="true"
     ></div>
+    <div class="attach-chip" id="attach-chip" hidden>
+      <img class="attach-thumb" id="attach-thumb" alt="" hidden />
+      <span class="attach-icon" id="attach-icon" aria-hidden="true" hidden
+        ><svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path
+            d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"
+          />
+          <path d="M14 2v6h6" /></svg
+      ></span>
+      <span class="attach-info">
+        <span class="attach-name" id="attach-name"></span>
+        <span class="attach-size" id="attach-size"></span>
+      </span>
+      <button
+        type="button"
+        class="attach-x"
+        id="attach-remove"
+        aria-label="Remove attachment"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.4"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
     <div class="compose">
       <textarea
         id="msg-text"
@@ -156,52 +171,10 @@
     </div>
   </section>
 
-  <section class="band review" id="review-band">
+  <section class="band">
     <div class="inner">
       <h2>Where everything stands.</h2>
-      <div class="marquee" data-slot="marquee">
-        <span class="marquee-dot"></span>Pixel art coming soon. We can't wait.
-      </div>
-      <div class="queue-bar">
-        <div class="queue-tabs" id="queue-tabs" role="tablist">
-          <span class="thumb" id="queue-thumb"></span>
-          <button type="button" role="tab" data-queue="waiting">
-            Waiting on you <b class="n"></b>
-          </button>
-          <button type="button" role="tab" data-queue="answered">
-            Answered <b class="n"></b>
-          </button>
-          <button type="button" role="tab" data-queue="received">
-            Received <b class="n"></b>
-          </button>
-        </div>
-        <div class="page-size" id="page-size">
-          <button type="button" data-size="5">5</button><span>·</span
-          ><button type="button" data-size="10">10</button>
-        </div>
-      </div>
-      <div class="priority-chips" id="priority-chips">
-        <button type="button" class="chip quiet" data-priority="all">
-          All
-        </button>
-        <button type="button" class="chip quiet" data-priority="high">
-          High
-        </button>
-        <button type="button" class="chip quiet" data-priority="normal">
-          Normal
-        </button>
-        <button type="button" class="chip quiet" data-priority="low">
-          Low
-        </button>
-      </div>
-      <div id="review-list" class="review-list"></div>
-      <div class="review-pager" id="review-pager" hidden>
-        <button type="button" id="review-prev" aria-label="Previous page">
-          ‹
-        </button>
-        <span id="review-pager-label"></span>
-        <button type="button" id="review-next" aria-label="Next page">›</button>
-      </div>
+      <div id="list"></div>
     </div>
   </section>
 
@@ -256,12 +229,8 @@
     let seen = "";
     let at = -1;
     let reviewing = false;
-    let editingId = null;
-    let segWindowStart = 0;
     const UNDO_MS = 5000;
     const IDLE_MS = 15 * 60_000;
-    const SEG_WINDOW = 10;
-    const PRIORITIES = ["high", "normal", "low"];
 
     // Relative age, quiet and short: "just now", "12 min ago", "2 hr 5 min ago".
     const relAge = (ms) => {
@@ -297,20 +266,6 @@
       received: "Received by Claude",
     };
     const items = () => state.questions?.items || [];
-    // A malformed item (missing id, decide or options) can never be shown or answered; it
-    // draws as a gray segment and is skipped everywhere else instead of throwing.
-    const isValidItem = (b) =>
-      !!b &&
-      typeof b === "object" &&
-      typeof b.id === "string" &&
-      b.id !== "" &&
-      typeof b.decide === "string" &&
-      Array.isArray(b.options) &&
-      b.options.length > 0 &&
-      b.options.every((o) => o && typeof o.label === "string");
-    const badItemCount = () => items().filter((b) => !isValidItem(b)).length;
-    const priorityOf = (b) =>
-      PRIORITIES.includes(b.priority) ? b.priority : "normal";
     const answerOf = (id) => outbox[id] || state.answers[id];
     const statusOf = (id) => {
       const a = answerOf(id);
@@ -318,22 +273,11 @@
       if (outbox[id]) return "queued";
       return state.delivered[id] === a.at ? "received" : "sent";
     };
-    // waiting: not answered. answered: answered but Claude has not read it yet (queued or
-    // sent). received: Claude has read it.
-    const queueOf = (b) => {
-      const st = statusOf(b.id);
-      if (st === "waiting" || st === "received") return st;
-      return "answered";
-    };
     const nextOpen = (from = 0) => {
-      for (let i = from; i < items().length; i++) {
-        const b = items()[i];
-        if (isValidItem(b) && !answerOf(b.id)) return i;
-      }
+      for (let i = from; i < items().length; i++)
+        if (!answerOf(items()[i].id)) return i;
       return -1;
     };
-    const pageStart = (idx) =>
-      Math.floor(Math.max(0, idx) / SEG_WINDOW) * SEG_WINDOW;
     const typing = () =>
       document.activeElement?.matches?.("#bearing input[type='text']");
 
@@ -349,18 +293,6 @@
     };
     const askedLabel = (b) =>
       `Asked ${askedIso(b).slice(11, 16)}Z · ${relAge(Date.parse(askedIso(b)))}`;
-    const bearingTopHTML = (b) => `
-      <div class="bearing-top">
-        <div class="facts">
-          <span class="label">About</span><span>${esc(b.about)}</span>
-          <span class="label">Decide</span><span class="decide">${esc(b.decide)}</span>
-        </div>
-        <span class="asked" title="${esc(askedIso(b))}">${esc(askedLabel(b))}</span>
-      </div>`;
-    const marqueeHTML = () => `
-      <div class="marquee" data-slot="marquee">
-        <span class="marquee-dot"></span>Pixel art coming soon. We can't wait.
-      </div>`;
 
     const drawCard = () => {
       const card = $("bearing");
@@ -372,32 +304,21 @@
       if (!b) {
         card.innerHTML = `
           <div class="facts"><span class="label">Done</span><span class="decide">Nothing waiting on you.</span></div>
-          ${items().length ? '<button class="btn link" type="button" id="review">Review answers</button>' : ""}
-          ${marqueeHTML()}`;
-        return;
-      }
-      if (!isValidItem(b)) {
-        card.innerHTML = `<div class="facts"><span class="label">Error</span><span class="decide err">This decision could not be read.</span></div>`;
+          ${items().length ? '<button class="btn link" type="button" id="review">Review answers</button>' : ""}`;
         return;
       }
       const a = answerOf(b.id);
-      const st = statusOf(b.id);
-      // An answered card settles into a quiet DONE summary; clicking the chosen chip
-      // re-opens it for editing (latest answer per id still wins on the server).
-      if (a && editingId !== b.id) {
-        card.innerHTML = `
-          <div class="facts"><span class="label">Done</span><span class="decide">${esc(b.decide)}</span></div>
-          <div class="chosen" id="chosen-toggle" role="button" tabindex="0">
-            <span class="chip pending">${esc(a.choice)}${a.words ? " + note" : ""}</span>
-            <span class="state-word ${st}">${esc(WORD[st])}</span>
-          </div>
-          <button class="btn link" type="button" id="review">Review answers</button>`;
-        return;
-      }
       const d = drafts[b.id];
       const pick = d?.pick ?? a?.pick ?? b.rec ?? 0;
+      const st = statusOf(b.id);
       card.innerHTML = `
-        ${bearingTopHTML(b)}
+        <div class="bearing-top">
+          <div class="facts">
+            <span class="label">About</span><span>${esc(b.about)}</span>
+            <span class="label">Decide</span><span class="decide">${esc(b.decide)}</span>
+          </div>
+          <span class="asked" title="${esc(askedIso(b))}">${esc(askedLabel(b))}</span>
+        </div>
         <div class="options" role="radiogroup" aria-label="${esc(b.decide)}">
           ${b.options
             .map(
@@ -433,15 +354,87 @@
       sent: "Delivered",
       received: "Read",
     };
+    // 2.4/WK-20260916-066: the attachment a message carries never changes once sent, so it is
+    // built once here and left alone by every later patch, same as the text itself already is.
+    // An image mime (checked against the server's own inline allowlist, not guessed) gets a
+    // small thumbnail linked to the full file; anything else gets a chip with its name.
+    const INLINE_MIME_TYPES = new Set([
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+    ]);
+    const FILE_ICON_SVG =
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+    const fileUrl = (id) => `file/${id}${location.search}`;
+    const humanSize = (n) => {
+      if (n < 1024) return `${n} B`;
+      if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+      return `${(n / 1024 / 1024).toFixed(1)} MB`;
+    };
+    // WK-20260916-070: bubbleAttachEl's non-image branch carried only a filename, nothing telling
+    // the owner what kind of file it was or how big, so the acceptance line calling for "enough of
+    // the type and size for the owner to see what is attached" only held for the compose-time
+    // preview chip, never for the one actually left in the thread. Most attachments are not images
+    // (the brief's own point), so that bare-filename chip read as the squeezed-in fallback case it
+    // was told not to be. Fixed by deriving a short label from the mime the upload response itself
+    // reported (post R1/B2 correction, so a lying declared type never leaks into the label) rather
+    // than adding a second name-to-label lookup table: a curated map is exactly the second
+    // client-side list the brief says will drift from the server's, just for display text instead
+    // of for the accept/reject decision. Cost: an unusual or vendor mime with no readable subtype
+    // (e.g. "application/x-something-odd") shows that raw subtype rather than a polished word.
+    const shortType = (mime) => {
+      const sub = String(mime || "")
+        .toLowerCase()
+        .split("/")[1];
+      if (!sub || sub === "octet-stream") return "File";
+      const KNOWN = { plain: "Text", "x-zip-compressed": "Zip" };
+      return KNOWN[sub] || sub.replace(/^x-/, "").toUpperCase();
+    };
+    const bubbleAttachEl = (f) => {
+      const a = document.createElement("a");
+      a.className = "bubble-attach";
+      a.href = fileUrl(f.id);
+      a.target = "_blank";
+      a.rel = "noopener";
+      if (INLINE_MIME_TYPES.has(f.mime)) {
+        const img = document.createElement("img");
+        img.className = "bubble-attach-img";
+        img.src = fileUrl(f.id);
+        img.alt = f.name || "Attached image";
+        a.appendChild(img);
+      } else {
+        a.classList.add("chip-file");
+        const icon = document.createElement("span");
+        icon.innerHTML = FILE_ICON_SVG;
+        const info = document.createElement("span");
+        info.className = "bubble-attach-info";
+        const name = document.createElement("span");
+        name.className = "bubble-attach-name";
+        name.textContent = f.name || "file";
+        const meta = document.createElement("span");
+        meta.className = "bubble-attach-meta";
+        meta.textContent =
+          typeof f.size === "number"
+            ? `${shortType(f.mime)} · ${humanSize(f.size)}`
+            : shortType(f.mime);
+        info.append(name, meta);
+        a.append(icon.firstChild, info);
+      }
+      return a;
+    };
     const bubbleEl = (n) => {
       const el = document.createElement("div");
       el.dataset.key = n.key;
       el.className = n.cls;
       el.title = n.title;
-      const text = document.createElement("span");
-      text.className = "text";
-      text.textContent = n.text;
-      el.appendChild(text);
+      if (n.files?.[0]) el.appendChild(bubbleAttachEl(n.files[0]));
+      if (n.text) {
+        const text = document.createElement("span");
+        text.className = "text";
+        text.textContent = n.text;
+        el.appendChild(text);
+      }
       if (n.meta) {
         const meta = document.createElement("span");
         meta.className = "meta" + (n.metaGood ? " good" : "");
@@ -453,6 +446,8 @@
     const patchBubble = (el, n) => {
       el.className = n.cls;
       el.title = n.title;
+      if (n.files?.[0] && !el.querySelector(".bubble-attach"))
+        el.insertBefore(bubbleAttachEl(n.files[0]), el.firstChild);
       let metaEl = el.querySelector(".meta");
       if (n.meta) {
         if (!metaEl) {
@@ -541,6 +536,7 @@
           cls,
           title: `${m.at.slice(11, 16)}Z`,
           text: m.text,
+          files: m.files || null,
           meta: m === lastMine ? CHAT_WORD[m.st] : "",
           metaGood: m.st === "received",
         });
@@ -579,11 +575,21 @@
         );
       }
       all.forEach((m) => shown.add(m.id));
-      if (pinned || mine || wasEmpty)
-        box.scrollTo({
-          top: box.scrollHeight,
-          behavior: wasEmpty ? "auto" : "smooth",
-        });
+      if (pinned || mine || wasEmpty) {
+        const pinLatest = () => {
+          box.scrollTop = box.scrollHeight;
+        };
+        if (wasEmpty) {
+          pinLatest();
+          requestAnimationFrame(() => {
+            pinLatest();
+            requestAnimationFrame(pinLatest);
+          });
+          document.fonts?.ready.then(pinLatest);
+        } else {
+          box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
+        }
+      }
       if (newClaude.length) {
         if (!pinned || document.hidden)
           newClaude.forEach((m) => unread.add(m.id));
@@ -595,62 +601,29 @@
       renderTitle();
     };
 
-    const drawBadItemsLine = () => {
-      const n = badItemCount();
-      const el = $("bad-items-line");
-      el.hidden = !n;
-      if (n)
-        el.textContent = `${n} item${n === 1 ? "" : "s"} could not be read.`;
-    };
-
-    // Windowed progress bar: at most SEG_WINDOW segments, sliding by whole pages. The window
-    // only re-syncs to the current card when the card itself actually moved (a hop, an
-    // answer, a new question set), never on an unrelated poll, so a manual page browse via
-    // the ‹ › buttons is never yanked back.
-    let lastAtForWindow = -2;
-    const drawSegments = () => {
-      const all = items();
-      const total = all.length;
-      if (at !== lastAtForWindow) {
-        lastAtForWindow = at;
-        const clamped = Math.max(0, Math.min(at, total - 1));
-        if (total && (at < segWindowStart || at >= segWindowStart + SEG_WINDOW))
-          segWindowStart = pageStart(clamped);
-      }
-      const maxStart = total ? pageStart(total - 1) : 0;
-      segWindowStart = Math.min(Math.max(0, segWindowStart), maxStart);
-      const windowItems = all.slice(
-        segWindowStart,
-        segWindowStart + SEG_WINDOW,
-      );
-      $("segments").innerHTML = windowItems
-        .map((b, i) => {
-          const idx = segWindowStart + i;
-          if (!isValidItem(b))
-            return `<i class="bad ${idx === at ? "active" : ""}" title="unreadable item"></i>`;
-          return `<i class="${answerOf(b.id) ? "done" : ""} ${idx === at ? "active" : ""}"></i>`;
-        })
-        .join("");
-      $("segments-count").textContent = total
-        ? `${Math.min(segWindowStart + SEG_WINDOW, total)} of ${total}`
-        : "";
-      const showPager = total > SEG_WINDOW;
-      $("segments-pager").hidden = !showPager;
-      if (showPager) {
-        $("segments-prev").disabled = segWindowStart <= 0;
-        $("segments-next").disabled = segWindowStart + SEG_WINDOW >= total;
-      }
-    };
-
     const drawRest = () => {
       $("page-title").textContent = state.questions?.title || "Decisions";
-      const valid = items().filter(isValidItem);
-      const left = valid.filter((b) => !answerOf(b.id)).length;
+      $("segments").innerHTML = items()
+        .map(
+          (b, i) =>
+            `<i class="${answerOf(b.id) ? "done" : ""} ${i === at ? "active" : ""}"></i>`,
+        )
+        .join("");
+      const left = items().filter((b) => !answerOf(b.id)).length;
       $("navcount").textContent = left ? `${left} waiting` : "All answered";
-      drawBadItemsLine();
-      drawSegments();
-      drawReview();
-      const answered = valid.filter((b) => answerOf(b.id));
+      $("list").innerHTML = [...items()]
+        .reverse()
+        .map((b) => {
+          const st = statusOf(b.id);
+          const a = answerOf(b.id);
+          const word = a
+            ? `${a.choice}${a.words ? " + note" : ""} · ${WORD[st]}`
+            : WORD[st];
+          const cls = { waiting: "active", received: "good" }[st] || "";
+          return `<div class="item" data-id="${esc(b.id)}"><div><span class="k">${esc(b.id)}</span>${esc(b.decide)}</div><span class="state ${cls}">${esc(word)}</span></div>`;
+        })
+        .join("");
+      const answered = items().filter((b) => answerOf(b.id));
       if (Object.keys(outbox).length) say("Queued. Sending.");
       else if (answered.some((b) => statusOf(b.id) === "sent"))
         say("Sent. Waiting for Claude.");
@@ -662,150 +635,6 @@
       idleLine();
       drawUndo();
       renderTitle();
-    };
-
-    // Review band (1.15): a pure function of /state plus two localStorage values (queue,
-    // page size). The same state always draws the same list; the list DOM is only rebuilt
-    // when its computed signature changes, so the 2 second poll never flickers it, resets
-    // its page, or loses a hover.
-    let currentQueue = store.get("reviewQueue", null);
-    let pageSize = [5, 10].includes(store.get("reviewPageSize", 5))
-      ? store.get("reviewPageSize", 5)
-      : 5;
-    let priorityFilter = store.get("reviewPriority", "all");
-    let reviewPage = 1;
-    let reviewSeen = "";
-    let lastQueueForAnim = null;
-    let lastPageForAnim = null;
-    const PRIORITY_RANK = { high: 0, normal: 1, low: 2 };
-
-    const reviewQueues = () => {
-      const byQueue = { waiting: [], answered: [], received: [] };
-      for (const b of items()) if (isValidItem(b)) byQueue[queueOf(b)].push(b);
-      return byQueue;
-    };
-    const effectiveQueue = (byQueue) =>
-      currentQueue || (byQueue.waiting.length ? "waiting" : "received");
-    const sortQueue = (list, name) => {
-      const askedOf = new Map(list.map((b) => [b.id, askedIso(b)]));
-      return [...list].sort((x, y) => {
-        if (name === "waiting") {
-          const pr =
-            PRIORITY_RANK[priorityOf(x)] - PRIORITY_RANK[priorityOf(y)];
-          if (pr) return pr;
-        }
-        const ax = askedOf.get(x.id);
-        const ay = askedOf.get(y.id);
-        if (ax !== ay) return ax < ay ? 1 : -1;
-        return x.id < y.id ? 1 : -1;
-      });
-    };
-    const reviewCardHTML = (b, queue) => {
-      const a = answerOf(b.id);
-      const st = statusOf(b.id);
-      const dot =
-        priorityOf(b) === "high" ? '<span class="priority-dot"></span>' : "";
-      return `
-        <div class="bearing review-card" data-id="${esc(b.id)}">
-          ${bearingTopHTML(b)}
-          <div class="review-meta">
-            <span class="review-id">${dot}${esc(b.id)}</span>
-            ${a ? `<span class="chip pending">${esc(a.choice)}${a.words ? " + note" : ""}</span>` : ""}
-            <span class="state-word ${queue}">${esc(WORD[st])}</span>
-          </div>
-        </div>`;
-    };
-    const renderReviewList = (pageItems, queue) => {
-      const list = $("review-list");
-      list.innerHTML = pageItems.length
-        ? pageItems.map((b) => reviewCardHTML(b, queue)).join("")
-        : `<p class="review-empty">Nothing here yet.</p>`;
-      const kind = queue !== lastQueueForAnim ? "anim-fade" : "anim-slide";
-      list.classList.remove("anim-fade", "anim-slide");
-      void list.offsetWidth;
-      if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
-        list.classList.add(kind);
-    };
-    const positionQueueThumb = () => {
-      const active = $("queue-tabs").querySelector("button.active");
-      const thumb = $("queue-thumb");
-      if (!active) return;
-      thumb.style.transform = `translateX(${active.offsetLeft}px)`;
-      thumb.style.width = `${active.offsetWidth}px`;
-    };
-    const drawReview = () => {
-      const byQueue = reviewQueues();
-      const queue = effectiveQueue(byQueue);
-      const counts = {
-        waiting: byQueue.waiting.length,
-        answered: byQueue.answered.length,
-        received: byQueue.received.length,
-      };
-      const filtered =
-        priorityFilter === "all"
-          ? byQueue[queue]
-          : byQueue[queue].filter((b) => priorityOf(b) === priorityFilter);
-      const sorted = sortQueue(filtered, queue);
-      const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
-      reviewPage = Math.min(Math.max(1, reviewPage), pageCount);
-      const pageItems = sorted.slice(
-        (reviewPage - 1) * pageSize,
-        reviewPage * pageSize,
-      );
-
-      $("queue-tabs")
-        .querySelectorAll("button[data-queue]")
-        .forEach((btn) => {
-          const q = btn.dataset.queue;
-          btn.classList.toggle("active", q === queue);
-          btn.querySelector(".n").textContent = `(${counts[q]})`;
-        });
-      positionQueueThumb();
-      $("page-size")
-        .querySelectorAll("button[data-size]")
-        .forEach((btn) =>
-          btn.classList.toggle("active", Number(btn.dataset.size) === pageSize),
-        );
-      $("priority-chips")
-        .querySelectorAll("button[data-priority]")
-        .forEach((btn) =>
-          btn.classList.toggle(
-            "active",
-            btn.dataset.priority === priorityFilter,
-          ),
-        );
-
-      const sig = JSON.stringify({
-        queue,
-        priorityFilter,
-        pageSize,
-        page: reviewPage,
-        rows: pageItems.map((b) => {
-          const a = answerOf(b.id);
-          return [
-            b.id,
-            statusOf(b.id),
-            a?.choice,
-            a?.words,
-            priorityOf(b),
-            askedIso(b),
-          ];
-        }),
-      });
-      if (sig !== reviewSeen) {
-        reviewSeen = sig;
-        renderReviewList(pageItems, queue);
-      }
-      lastQueueForAnim = queue;
-      lastPageForAnim = reviewPage;
-
-      const pager = $("review-pager");
-      pager.hidden = pageCount <= 1;
-      if (pageCount > 1) {
-        $("review-pager-label").textContent = `${reviewPage} of ${pageCount}`;
-        $("review-prev").disabled = reviewPage <= 1;
-        $("review-next").disabled = reviewPage >= pageCount;
-      }
     };
 
     // Tab title and the jump button's unread pill: armed while a Claude reply lands off screen
@@ -1006,18 +835,133 @@
       msg.style.height = "auto";
       msg.style.height = `${Math.min(msg.scrollHeight, 220)}px`;
     };
-    const syncSend = () => ($("msg-send").disabled = !msg.value.trim());
+    const syncSend = () =>
+      ($("msg-send").disabled = !msg.value.trim() && !pendingAttachment);
     msg.value = store.get("msgdraft", "");
     fit();
-    syncSend();
     msg.addEventListener("input", () => {
       store.set("msgdraft", msg.value);
       fit();
       syncSend();
     });
 
+    // 2.4/WK-20260916-066: paste or drop, image or any other file, uploads ahead of the message
+    // text it rides in with; the chip shows what is about to send. One attachment per message
+    // this round (a scope call, not a limit of the storage: files.jsonl and a message's own
+    // files array are both already plural). FILE_MAX_BYTES mirrors server.mjs's own cap so an
+    // oversized paste is refused before a byte leaves the browser.
+    const FILE_MAX_BYTES = 25 * 1024 * 1024;
+    let pendingAttachment = null;
+    let attachUploadId = null;
+    let attachObjectUrl = null;
+    const setAttachPreview = (kind) => {
+      $("attach-thumb").hidden = kind !== "image";
+      $("attach-icon").hidden = kind !== "file";
+    };
+    const clearAttachment = () => {
+      pendingAttachment = null;
+      attachUploadId = null;
+      $("attach-chip").hidden = true;
+      $("attach-chip").classList.remove("error");
+      if (attachObjectUrl) URL.revokeObjectURL(attachObjectUrl);
+      attachObjectUrl = null;
+      $("attach-thumb").removeAttribute("src");
+      $("attach-name").textContent = "";
+      $("attach-size").textContent = "";
+      syncSend();
+    };
+    const showAttachError = (text) => {
+      $("attach-chip").hidden = false;
+      $("attach-chip").classList.add("error");
+      $("attach-name").textContent = text;
+      $("attach-size").textContent = "";
+      setAttachPreview("none");
+      setTimeout(clearAttachment, 2000);
+    };
+    const uploadAttachment = async (blob, rawName) => {
+      if (!blob.size) return showAttachError("Empty file");
+      if (blob.size > FILE_MAX_BYTES) return showAttachError("File over 25 MB");
+      const thisUpload = Symbol();
+      attachUploadId = thisUpload;
+      $("attach-chip").hidden = false;
+      $("attach-chip").classList.remove("error");
+      $("attach-name").textContent = "Uploading…";
+      $("attach-size").textContent = "";
+      if (attachObjectUrl) URL.revokeObjectURL(attachObjectUrl);
+      attachObjectUrl = null;
+      // An instant local preview from what the browser claims the type is; replaced below by
+      // whatever the server actually decides once the upload response names the real type.
+      if (INLINE_MIME_TYPES.has(blob.type)) {
+        attachObjectUrl = URL.createObjectURL(blob);
+        $("attach-thumb").src = attachObjectUrl;
+        setAttachPreview("image");
+      } else {
+        setAttachPreview("file");
+      }
+      try {
+        const r = await fetch(`file${location.search}`, {
+          method: "POST",
+          headers: {
+            "content-type": blob.type || "application/octet-stream",
+            "x-file-name": encodeURIComponent(rawName || "file"),
+          },
+          body: blob,
+        });
+        if (attachUploadId !== thisUpload) return; // removed or replaced meanwhile
+        if (!r.ok) {
+          const body = await r.json().catch(() => ({}));
+          return showAttachError(
+            r.status === 413 ? "File too large" : body.error || "Upload failed",
+          );
+        }
+        const out = await r.json();
+        if (attachUploadId !== thisUpload) return;
+        pendingAttachment = {
+          id: out.id,
+          name: out.name,
+          mime: out.mime,
+          size: out.size,
+        };
+        $("attach-name").textContent = out.name;
+        $("attach-size").textContent = humanSize(out.size);
+        // R1/B2: the server may have corrected a lying declared type; its answer wins over the
+        // instant local preview above.
+        if (INLINE_MIME_TYPES.has(out.mime)) {
+          setAttachPreview("image");
+        } else {
+          if (attachObjectUrl) URL.revokeObjectURL(attachObjectUrl);
+          attachObjectUrl = null;
+          setAttachPreview("file");
+        }
+        syncSend();
+      } catch {
+        if (attachUploadId === thisUpload) showAttachError("Upload failed");
+      }
+    };
+    const fileFromClipboardOrDrop = (dt) => {
+      for (const item of dt?.items || []) {
+        if (item.kind === "file") return item.getAsFile();
+      }
+      return dt?.files?.[0] || null;
+    };
+    msg.addEventListener("paste", (e) => {
+      const f = fileFromClipboardOrDrop(e.clipboardData);
+      if (!f) return;
+      e.preventDefault();
+      uploadAttachment(f, f.name);
+    });
+    $("composer").addEventListener("dragover", (e) => e.preventDefault());
+    $("composer").addEventListener("drop", (e) => {
+      const f = fileFromClipboardOrDrop(e.dataTransfer);
+      if (!f) return;
+      e.preventDefault();
+      uploadAttachment(f, f.name);
+    });
+    $("attach-remove").addEventListener("click", clearAttachment);
+    syncSend();
+
     const post = async (path, body) => {
-      const r = await fetch(path, {
+      const r = await fetch(path + location.search, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(body),
@@ -1051,7 +995,7 @@
     const poll = async () => {
       try {
         await flush();
-        const r = await fetch("state", { cache: "no-store" });
+        const r = await fetch("state" + location.search, { cache: "no-store" });
         if (!r.ok) throw new Error(String(r.status));
         const s = await r.json();
         live(true);
@@ -1106,13 +1050,19 @@
 
     const sendMessage = () => {
       const text = msg.value.trim();
-      if (!text) return;
+      if (!text && !pendingAttachment) return;
       const now = iso();
       const id = `m-${now.replace(/[^0-9]/g, "")}-${Math.random().toString(36).slice(2, 7)}`;
-      msgbox[id] = { id, text, at: now };
+      msgbox[id] = {
+        id,
+        text,
+        at: now,
+        ...(pendingAttachment ? { files: [pendingAttachment] } : {}),
+      };
       store.set("msgbox", msgbox);
       msg.value = "";
       store.set("msgdraft", "");
+      clearAttachment();
       fit();
       syncSend();
       drawThread();
@@ -1141,17 +1091,7 @@
       const idx = Array.from($("segments").children).indexOf(e.target);
       if (idx >= 0) goTo(idx);
     });
-    // 2026-10-10 UTC fix: this copy of the page has no element with id="list"
-    // (the review list is id="review-list"), so $("list") is null and the
-    // addEventListener call threw "Cannot read properties of null" at startup.
-    // That stopped the script before poll() ran, so the page sat on
-    // "Connecting" with no cards even though /state answered 200.
-    // Guarding the optional element is the surgical fix; adding a list
-    // element would change the layout, which needs the owner's approval
-    // (SKILL.md: change the card format only after a sample is approved).
-    // Cost: none, the click-to-jump list stays absent as it was.
-    // Backup: assets/page.html.bak-20261010T1815Z. Session 05518e5b.
-    $("list")?.addEventListener("click", (e) => {
+    $("list").addEventListener("click", (e) => {
       const row = e.target.closest(".item");
       if (!row) return;
       goTo(items().findIndex((b) => b.id === row.dataset.id));

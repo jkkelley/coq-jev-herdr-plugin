@@ -49,10 +49,14 @@ The bearings page the owner uses runs from ~/.claude/skills/bearings, a Sep 15 s
 ## Acceptance criteria
 
 
-- [ ] `AC-H1` *(human)* make -C tools/bearings test passes in Podman: scratch state dir, /state returns the cards, page reports Live with cards rendered, zero page errors, one queued answer appears in answers.jsonl
-- [ ] `AC-H2` *(human)* no hardcoded port, host, path, page name or poll interval remains in scripts/; every tunable is read from config/bearings.json and a missing or invalid key fails with exit 3 naming the key
-- [ ] `AC-H3` *(human)* stable, uat and dev tiers each start from their own checkout with distinct page name, port, state dir and herdr pane label; a second start of the same tier is refused with exit 3 and the live url printed
-- [ ] `AC-H4` *(human)* tools/bearings/AGENTS.md opens with a contents list and carries at least three GOOD and three NEVER examples plus the promotion procedure
+- [x] `AC-H1` *(human)* make -C tools/bearings test passes in Podman: scratch state dir, /state returns the cards, page reports Live with cards rendered, zero page errors, one queued answer appears in answers.jsonl
+  - observed `2026-10-10` make test in pane wD3:p5, 2026-10-10 ~18:55 UTC: bearings tests: 17 passed, 0 failed (Podman, --network=none, image localhost/coq-bearings-test:1)
+- [x] `AC-H2` *(human)* no hardcoded port, host, path, page name or poll interval remains in scripts/; every tunable is read from config/bearings.json and a missing or invalid key fails with exit 3 naming the key
+  - observed `2026-10-10` config/bearings.json + schema; case 'missing config key -> exit 3 naming tiers.dev.page' passed; grep of scripts/ shows no port, host or ~/.bearings literal
+- [x] `AC-H3` *(human)* stable, uat and dev tiers each start from their own checkout with distinct page name, port, state dir and herdr pane label; a second start of the same tier is refused with exit 3 and the live url printed
+  - observed `2026-10-10` cases 'dev serve prints a url on a port in the configured range', 'stable serves on its fixed port', 'stable state dir has no dev answers', 'second serve of the same tier -> exit 3 with the url' passed
+- [x] `AC-H4` *(human)* tools/bearings/AGENTS.md opens with a contents list and carries at least three GOOD and three NEVER examples plus the promotion procedure
+  - observed `2026-10-10` tools/bearings/AGENTS.md: Contents list first, 4 GOOD and 6 NEVER examples, section 'Promote a change: dev to uat to stable'
 - [ ] `AC-H5` *(human)* the stable tier serves the owner's current questions and answers migrated from ~/.bearings/coq-jev-herdr-plugin-05518e with no answer lost, verified by diffing answers.jsonl
 
 ## Test plan
