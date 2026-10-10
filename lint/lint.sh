@@ -28,6 +28,11 @@ step "graph: check + specs agree"; if (cd "$R/graph" && bin/graph.sh check >/dev
 step "configs: schema"; ok=1
 while IFS= read -r c; do s="${c%.json}.schema.json"; [ -f "$s" ] || continue; python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" "$c" "$s" || ok=0; done < <(find "$R" -path '*/config/*.json' -not -name '*.schema.json' 2>/dev/null)
 if [ "$ok" = 1 ]; then echo ok; else echo FAIL; FAIL=1; fi
+step "roles: schema + playbooks in sync"; ok=1
+for f in "$R"/roles/*.json; do python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" "$f" "$R/roles/schema/role.schema.json" 2>/dev/null || { echo "invalid role $f" >&2; ok=0; }; done
+bash "$R/roles/bin/render-playbook.sh" "$R/roles" "$R/playbooks" --check || ok=0
+if [ "$ok" = 1 ]; then echo ok; else echo FAIL; FAIL=1; fi
+step "events: every file valid"; if (cd "$R/events" && bin/event.sh check >/dev/null); then echo ok; else echo FAIL; FAIL=1; fi
 step "shell: shellcheck"; mapfile -t SH < <(find "$R" -name '*.sh' -not -path '*/node_modules/*' -not -path '*/.claude/*' -not -path '*/report/*')
 if shellcheck -S warning "${SH[@]}" 2>/tmp/sc; then echo ok; else echo FAIL; head -40 /tmp/sc >&2; FAIL=1; fi
 step "markdown: contents list in sync"; ok=1; for m in "$R"/AGENTS.md "$R"/tools/*/AGENTS.md; do [ -f "$m" ] || continue; bash "$R/bin/md-contents.sh" --check "$m" || ok=0; done; if [ "$ok" = 1 ]; then echo ok; else echo FAIL; FAIL=1; fi
