@@ -5,6 +5,8 @@
 - What this repository is
 - Golden rule: checkpoint every step, compact early
 - Hard rule: the first 100 lines route
+- Hard rule: dated entry files, one file per entry
+- Law: the bus is NATS JetStream, the control plane is gRPC, status codes drive it
 - Law: herdr-first, never background processes
 - Law: automation leads, never by hand
 - Law: Google Drive first
@@ -12,7 +14,6 @@
 - Law: scope small, integrate in CI
 - Law: testing
 - Law: the architect model chain
-- Hard rule: entry trees are one file per entry
 - Hard rule: read the window, not the history
 - Hard rule: no PII
 - Hard rule: documentation goes where its lifetime says it goes
@@ -63,6 +64,42 @@ A file that cannot route in 100 lines is two files; split it rather than hoping 
 
 GOOD: a 240 line AGENTS.md whose contents list, golden rule and this rule are all inside the first 60 lines.
 NEVER: a rule added at the bottom of a long file with no contents entry, because "it is in the file".
+
+## Hard rule: dated entry files, one file per entry
+
+Owner order, 2026-10-10 UTC: every scripted entry is a new file on one layout, never an overwrite, so nothing is lost and every entry is visible.
+This covers logs, issues, backlog items, checkpoints, index entries, context files, and anything else an agent records more than once.
+
+```text
+<tree>/YYYY/MM/YYYYMMDD-<descriptive-name>.<ext>
+```
+
+`YYYY`, `MM` and `YYYYMMDD` are the UTC date the entry was written.
+`<descriptive-name>` says what the entry is, in under 50 characters, lowercase, words joined by `-`.
+Every entry opens with frontmatter that carries at least `title`, `at` (UTC, ISO 8601, `Z` suffix) and `type`; the owning script writes it.
+Two entries on the same day with the same name are two files: the script adds a short suffix, never a second write to the first.
+Two concurrent agents must never need to touch the same path, and distinct paths mean merges never meet.
+
+Never hand-write an entry.
+A tree has one script that owns its format; the scripts live in `.claude/scripts/` and `bin/`, and every one takes `--json` and uses the exit codes 0 ok, 2 usage, 3 validation, 4 io, 6 id not found.
+Branch on the code, not on the message text.
+A fix for an earlier issue is a new entry carrying `resolves: <suffix>`, never an edit of the old one.
+
+`issues/` and `backlog/` still write `YYYY/MM/<UTC-timestamp>-<suffix>.md`, and `CONTEXT_STATE.md` still stacks checkpoints in one file.
+Moving them onto the layout above is WO-20261010-d354 in `work-orders/INDEX.md` (search "dated entry files"); until it lands, read both shapes and write only through the scripts.
+
+GOOD: `events/2026/10/20261010-uat-tier-started.md` with frontmatter, written by `bin/event.sh`.
+NEVER: appending a line to a shared `LOG.md`, or editing yesterday's entry to say what happened today.
+
+## Law: the bus is NATS JetStream, the control plane is gRPC, status codes drive it
+
+Owner decision, 2026-10-10 UTC: the producer-consumer model runs on NATS JetStream, gRPC carries only the synchronous control plane, and routing is by status code (SPEC-01 s-codes, SPEC-03 routes.json).
+Every component is a black box behind a subject: it consumes messages, emits a record with a code, and never reaches into another component.
+Adding behaviour is a routes row and a consumer.
+The file queue in `queue/` is the offline fallback only, until WO-20261010-539f lands the bus (graph node DEC-nats-jetstream-grpc).
+
+GOOD: a seat waits as a durable pull consumer and is woken by the publish, with no polling loop.
+NEVER: a second broker, gRPC streaming for events, or a component that reads another component's state directory to decide what to do.
 
 ## Law: herdr-first, never background processes
 
@@ -149,24 +186,6 @@ It starts from the previous model's checkpoint and continues on the same worktre
 Nothing is restarted from scratch, and nothing waits for a human to notice the stall.
 
 Seat roles are declared against `agent-role-v1.1.0.schema.json`.
-
-## Hard rule: entry trees are one file per entry
-
-`issues/` and `backlog/` are directories of one file per entry, never a single shared file.
-Two concurrent agents must never need to touch the same path, and distinct paths mean merges never meet.
-This is this project's own convention, not a Drive standard.
-
-Never hand-write an entry.
-Both trees have scripts that own their format:
-
-```sh
-.claude/scripts/log-issue.sh --project . --help
-.claude/scripts/backlog.sh   --help
-```
-
-A fix for an earlier issue is a new entry carrying `resolves: <suffix>`, never an edit of the old one.
-Both scripts take `--json` and use documented exit codes: 0 ok, 2 usage, 3 validation, 4 io, 6 id not found.
-Branch on the code, not on the message text.
 
 ## Hard rule: read the window, not the history
 

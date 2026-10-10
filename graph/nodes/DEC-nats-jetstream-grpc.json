@@ -1,0 +1,38 @@
+{
+  "id": "DEC-nats-jetstream-grpc",
+  "type": "Decision",
+  "title": "NATS JetStream is the producer-consumer bus, gRPC is the control plane, and status codes drive routing: every component is a black box behind a subject",
+  "status": "locked",
+  "text": "Owner, chat 2026-10-10 ~20:05 UTC: 'NATS JetStream for producer consumer model on gRPC, be smart'; 'that is really how we black box shit'; 'drive the system by status codes, so easy'. Design: records and queue entries are JetStream messages on subjects factory.<kind>.<priority>, each carrying the STC-http-shaped status code; durable pull consumers per seat role, explicit ack, nak with AckWait replaces the lease TTL for queue work, max deliver then a dead-letter subject the monitor records as 500. gRPC (protos under factory/proto/) is the synchronous control plane only: orchestrator, monitor, seat bring-up and health; nothing asynchronous rides gRPC streaming. routes.json (SCH-routes) matches on the code in the message, so adding behaviour is a table row and a consumer, never a change inside another component: that is the black box. The file queue in SPEC-03 s-locks stays only as the offline fallback. Ticket WO-20261010-539f amends SPEC-03 and stands up the bus.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T20"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "supersedes",
+      "to": "REQ-locks-and-queues"
+    },
+    {
+      "kind": "depends_on",
+      "to": "STC-http-shaped"
+    },
+    {
+      "kind": "depends_on",
+      "to": "SCH-routes"
+    },
+    {
+      "kind": "implements",
+      "to": "REQ-status-change-wakeups"
+    },
+    {
+      "kind": "implements",
+      "to": "DEC-system-before-agents"
+    }
+  ],
+  "created": "2026-10-10T19:44Z",
+  "updated": "2026-10-10T19:44Z"
+}
