@@ -15,6 +15,56 @@
 
 
 
+
+## Checkpoint 2026-10-10 19:45 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin: main protected; origin/main = local main (tickets WO-20261010-d354 and WO-20261010-539f pushed, 2c3ce00). PR #1 = feat/p0-foundation (slot 2, pushed, lint all ok). Bearings branch feat/vendor-bearings-into-tools-bearings-with-stable- pushed (9805ff0), no PR yet.
+- Main checkout /home/luna/projects/coq-jev-herdr-plugin on main: 30 tickets; INDEX.md is the router.
+- Slot 1 /home/luna/.treehouse/coq-jev-herdr-plugin-81af2c/1/coq-jev-herdr-plugin (WO-20261010-ba08): attachment port wired, suite 20/20 green in Podman, stop fix (herdr pane list has no --tab). uat page http://localhost:44910/?key=f18907f3a02cec0412ad14fa027bda0f served by the PORTED code (pid 188179), server pane wD3:pA, wait loop pane wD3:pB; card UAT-1 open.
+- Slot 2 (this checkout) feat/p0-foundation: SPEC-05 1.1.0 with s-quiet, graph 96 nodes (DEC-nats-jetstream-grpc added), AGENTS.md routes in its first 100 lines: contents, golden rule, hard rule the first 100 lines route, hard rule dated entry files, law NATS JetStream bus + gRPC control plane + status codes. Pushed.
+- Owner page (old skill copy) http://localhost:44967/?key=6e636c7db73a36c5a802bf2fd5df5928, server pane wD3:p3, wait loop pane wD3:p4.
+- Claude Code Monitors on panes wD3:p4 (bc2qfx1dd) and wD3:pB (br4niuv3u) are STOPPED for the quiet window; re-arm both on resume after reading each pane for ANSWER/MESSAGE lines newer than 20:10 UTC. Card Q12 (where is the DRM-free Qud Linux build) is open on the owner page. The owner is around in chat but told this seat it is in charge.
+- Test pane wD3:p5 free after lint. Memory: checkpoint-discipline.md holds the checkpoint orders. The owner said the dated-entry-file rule must NOT live in memory: it lives in AGENTS.md and WO-20261010-d354 only.
+- SITREP 002: https://claude.ai/artifact/PnNrFEYTqaqsg2xx2MVc9d
+
+#### Toolchain
+
+- herdr 0.9.0 protocol 22. treehouse v2.3.0 + slot.sh. work-order v2.1.0+#103. project-scaffold v1.6.0. compaction-guard 1.2.8 (sensor reads 0 for this session, so compaction is queued by hand via herdr agent prompt wD3:p2 until WO-20261010-7083 lands). Podman images localhost/coq-bearings-test:1, localhost/coq-lint:1.
+
+#### Active Tasks
+
+- WO-20261010-fbad - Land the P0 foundation branch: PR #1 lint green; merge it (step of its own, next), then approve it and the P0 epic.
+- WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume: draft p0; approve and start after the merge.
+- WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree: draft p0 under WO-20261010-329d - P0 foundation: specs, knowledge graph, factory scripts. Owner order 2026-10-10 UTC.
+- WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue: draft p0 under WO-20261010-329d. Owner decision 2026-10-10 UTC; graph node DEC-nats-jetstream-grpc supersedes REQ-locks-and-queues.
+- WO-20261010-ba08 - Vendor bearings into tools/bearings with stable, uat and dev tiers: step D when UAT-1 is answered: evidence AC5 via `make migrate`, submit PR, done, merge, `make upgrade` on the main checkout, stop the old server (panes wD3:p3, p4), release slot 1.
+- Then from INDEX.md: WO-20261010-6a3b Spike 11, WO-20261010-8777 herdr seat scripts, WO-20261010-c6e9 Spike 9, WO-20261010-eaa3 Spike 1 (needs the owner's Qud Linux build), WO-20261010-d08d Spike 10 coq-term variant A, wireframes ticket under 98ea, handoff WO-20261010-3593.
+
+#### Blockers
+
+- UAT-1 unanswered.
+- Spike 1 needs the Qud Linux build from the owner (card Q12).
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-10 ~20:00 UTC, owner: every scripted entry is a new file at <tree>/YYYY/MM/YYYYMMDD-<name under 50 chars>.<ext> with frontmatter and UTC; never overwrite. AGENTS.md hard rule (line 68), ticket WO-20261010-d354. Not in memory, by owner order.
+- 2026-10-10 ~20:05 UTC, owner: NATS JetStream is the producer-consumer bus, gRPC the control plane, status codes drive routing, every component a black box behind a subject. AGENTS.md law (line 94), DEC-nats-jetstream-grpc locked, ticket WO-20261010-539f.
+
+#### Lessons Learned
+
+- A rule the owner gives in chat goes into the repo (AGENTS.md inside the first 100 lines, graph, ticket) in the same step; the owner does not want it to depend on this seat's memory.
+- A stale Monitor (bzlo9put6 on the closed pane wD3:p7) survived two compactions; list and stop every Monitor before a compact, not only the ones named in the checkpoint.
+
+### Hydration prompt
+
+Re-arm Monitor watches on panes wD3:p4 and wD3:pB (grep ^ANSWER|^MESSAGE|^STOPPED, 30 min, re-arm on expiry) after `herdr pane read` of each for lines newer than this checkpoint; act on any UAT-1 answer (WO-20261010-ba08 step D). Next step otherwise: merge PR #1 (`gh pr merge 1 --squash` from the main checkout), then approve and start WO-20261010-7083. One commit and one checkpoint per step, then queue `/compact` via `herdr agent prompt wD3:p2` with the keep line; stop every Monitor first. The owner said this seat is in charge: decide, do not ask; anything done by hand a second time becomes a script.
+
 ## Checkpoint 2026-10-10 19:40 UTC
 
 ### Current state
