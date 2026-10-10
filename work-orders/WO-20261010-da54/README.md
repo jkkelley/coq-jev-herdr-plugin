@@ -11,7 +11,7 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261010-d08d` | ready | p0 | WO-20261010-4beb | [Spike 10: coq-term variant A, Rust pane program with the pane.graphics.set backend](WO-20261010-d08d-spike-10-coq-term-variant-a-rust-pane-program-wi.md) |
 | `WO-20261010-eaa3` | ready | p0 | - | [Spike 1: native Linux Qud runs in WSL2 under Xvfb or WSLg](WO-20261010-eaa3-spike-1-native-linux-qud-runs-in-wsl2-under-xvfb.md) |
 | `WO-20261010-d58d` | draft | p0 | WO-20261010-eaa3 | [Spike 2: Harmony mod exports state per turn and consumes actions](WO-20261010-d58d-spike-2-harmony-mod-exports-state-per-turn-and-c.md) |
-| `WO-20261010-c6e9` | ready | p0 | WO-20261010-8777 | [Spike 9: Haiku 5.5 seat with bypassPermissions, remote-control, hooks and compaction-guard](WO-20261010-c6e9-spike-9-haiku-5-5-seat-with-bypasspermissions-re.md) |
+| `WO-20261010-c6e9` | ready | p0 | - | [Spike 9: Haiku 5.5 seat with bypassPermissions, remote-control, hooks and compaction-guard](WO-20261010-c6e9-spike-9-haiku-5-5-seat-with-bypasspermissions-re.md) |
 | `WO-20261010-6a3b` | ready | p1 | - | [Spike 11: scratch herdr session harness in Podman](WO-20261010-6a3b-spike-11-scratch-herdr-session-harness-in-podman.md) |
 | `WO-20261010-6624` | draft | p1 | WO-20261010-d58d | [Spike 3: file IPC vs socket for the adapter](WO-20261010-6624-spike-3-file-ipc-vs-socket-for-the-adapter.md) |
 | `WO-20261010-0651` | draft | p1 | WO-20261010-d58d | [Spike 4: Haiku 5.5 on the text map vs a screenshot](WO-20261010-0651-spike-4-haiku-5-5-on-the-text-map-vs-a-screensho.md) |

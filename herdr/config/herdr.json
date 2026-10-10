@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "session": "stable",
+  "workspace_label": "coq",
+  "state_dir": "~/.local/state/coq",
+  "prompt_regex": "[$%>❯] *$",
+  "prompt_timeout_ms": 15000,
+  "agent_start_timeout_ms": 30000,
+  "down_wait_seconds": 3,
+  "retire_poll_seconds": 10,
+  "max_agents": 8,
+  "bringup_gate": true,
+  "require_guard": true,
+  "monitor_seat": "monitor",
+  "runtime_bin": {
+    "claude": "claude",
+    "codex": "codex"
+  },
+  "keys": {
+    "interrupt": "C-c",
+    "escape": "Escape",
+    "down": "Down",
+    "enter": "Enter"
+  },
+  "control_plane": {
+    "health_url": null
+  },
+  "halt_flag": "${state_dir}/HALT",
+  "monitor_task": "watch the event log, the seats and the guard; wake a waiting seat on status change with one line; raise owner notifications for 423 and any 5xx; run cleanup every tick"
+}

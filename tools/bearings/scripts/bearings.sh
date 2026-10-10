@@ -8,7 +8,7 @@
 #
 #   bearings.sh <tier> serve    [--ticket ID] [--config P] [--session S] [--model M] [--working-on TEXT] [--no-herdr]
 #   bearings.sh <tier> stop     [--ticket ID] [--config P]
-#   bearings.sh <tier> wait     [--ticket ID] [--config P] [--no-herdr]
+#   bearings.sh <tier> wait     [--ticket ID] [--config P] [--to PANE] [--no-herdr]   each wake is prompted into PANE (default COQ_SEAT_PANE, else the calling pane)
 #   bearings.sh <tier> reply    [--ticket ID] [--config P] --to <message-id> "text"
 #   bearings.sh <tier> status   [--ticket ID] [--config P] [--json]
 #   bearings.sh <tier> url      [--ticket ID] [--config P]
@@ -127,12 +127,29 @@ case $VERB in
     fi
     ;;
   wait)
-    LOOP="while [ ! -f $(printf '%q' "$DIR/stopped.json") ]; do node $(printf '%q' "$HERE/wait.mjs") $(printf '%q ' "${COMMON[@]}"); sleep 1; done"
+    # Breadcrumb 2026-10-10 20:3x UTC (owner, chat: "when you come back from compaction, you need to turn the
+    # bearings back on, wtf, i dropped a message there"). What broke: the loop below printed every ANSWER and
+    # MESSAGE line into the wait pane (wD3:pD) and marked it delivered; the seat that asked was never woken,
+    # so a message dropped while the seat was busy or just compacted sat in a pane nobody reads. Why this fix:
+    # every wake is forwarded whole, as one `herdr agent prompt <pane>`, into the seat's pane (herdr queues a
+    # prompt to a busy agent and lands it at the end of its turn, the same path bin/step.sh uses for /compact),
+    # and it still prints into the wait pane so it stays visible. Rejected: a background wait inside the seat's
+    # own shell, which dies with every compaction and hides a process under an agent (owner rule). Cost: the
+    # wait needs a target pane; without one it prints only and says so.
+    WAKE_PANE=${TO:-${COQ_SEAT_PANE:-${HERDR_PANE_ID:-}}}
+    [ -n "$WAKE_PANE" ] || note "wait: no --to pane and no COQ_SEAT_PANE or HERDR_PANE_ID; wakes print only"
+    FWD=""; [ -z "$WAKE_PANE" ] || FWD="[ -z \"\$out\" ] || herdr agent prompt $(printf '%q' "$WAKE_PANE") \"\$out\" >/dev/null 2>&1 || printf 'bearings: wake not delivered to %s\\n' $(printf '%q' "$WAKE_PANE");"
+    LOOP="while [ ! -f $(printf '%q' "$DIR/stopped.json") ]; do out=\$(node $(printf '%q' "$HERE/wait.mjs") $(printf '%q ' "${COMMON[@]}")); printf '%s\\n' \"\$out\"; $FWD sleep 1; done"
     if in_herdr && [ "$NO_HERDR" = 0 ]; then
       need herdr
       P=$(pane_for "$WAIT_LABEL")
+      # A loop already running in that pane is stopped first, so the new one is never typed into it.
+      if herdr pane process-info --pane "$P" 2>/dev/null | jq -e '.result.process_info | .foreground_process_group_id != null and .shell_pid != null and .foreground_process_group_id != .shell_pid' >/dev/null 2>&1; then
+        herdr pane send-keys "$P" C-c >/dev/null 2>&1 || true; sleep 1; herdr pane send-keys "$P" C-c >/dev/null 2>&1 || true
+        herdr pane wait-output "$P" --regex '[$%>❯] *$' --timeout 10000 >/dev/null 2>&1 || die "$EX_IO" "pane $P did not come back to a prompt; read it with: herdr pane read $P"
+      fi
       herdr pane run "$P" "$LOOP" >/dev/null
-      note "wait loop in pane $P ($WAIT_LABEL)"; printf '%s\n' "$P"
+      note "wait loop in pane $P ($WAIT_LABEL), waking ${WAKE_PANE:-nobody}"; printf '%s\n' "$P"
     elif [ "$NO_HERDR" = 1 ]; then
       exec node "$HERE/wait.mjs" "${COMMON[@]}"
     else

@@ -1,0 +1,18 @@
+{
+  "id": "seat-1x2",
+  "grid": "1x2",
+  "panes": [
+    {
+      "slot": "a",
+      "kind": "agent",
+      "label": "${MODEL} - ${effort} - ${ticket} ${seat}",
+      "command": ""
+    },
+    {
+      "slot": "b",
+      "kind": "monitor",
+      "label": "MONITOR - ${name}",
+      "command": "while :; do clear; ${repo}/events/bin/event.sh tail; sleep 15; done"
+    }
+  ]
+}

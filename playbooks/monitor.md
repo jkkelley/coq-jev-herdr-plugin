@@ -17,7 +17,7 @@ Every line below is a command or a record. Nothing else is yours to decide. Read
 
 ## Runtime and model
 
-Runtime claude (allowed: claude, codex). Model claude-haiku-5-5, effort low. Compaction at 30 percent and task complete. Seat label `monitor`, layout `monitors-3x3`, at most 1 seats.
+Runtime claude (allowed: claude, codex). Model claude-haiku-5-5, effort low. Compaction at 30 percent and task complete. Seat label `monitor`, layout `seat-1x2`, at most 1 seats.
 
 ## Permissions
 

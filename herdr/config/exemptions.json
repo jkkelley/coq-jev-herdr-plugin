@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "description": "SPEC-04 s-breakglass: an exemption lifts one rule for one seat or pane until a UTC time, and carries the owner's card id. An entry without a card id fails lint. The architect seat of 2026-10-10 is the owner's own hand-started session and is exempt from the audit until the factory seats it through seat.sh.",
+  "exemptions": [
+    {
+      "pane": "wD3:p2",
+      "rule": "seat.audit",
+      "until": "2026-10-17T00:00:00Z",
+      "card_id": "owner-2026-10-10-go-be-free",
+      "why": "the owner's architect seat started by hand before herdr/bin existed; owner 2026-10-10 UTC: this seat is in charge"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "schema_version": "1.0.0",
+  "description": "The three fixed 3x3 monitoring tabs of the coq workspace (SPEC-04 s-labels). herdr/bin/monitors.sh draws them once from this map and afterwards only relabels, runs and cleans a pane; it never splits after grid and never closes a pane or a tab. Slot positions read N.R.C: tab, row, column.",
+  "layout": "monitors-3x3",
+  "neutral_cwd": "${repo}",
+  "tabs": [
+    {
+      "n": 1,
+      "label": "monitors 1 - compaction watchers",
+      "kind": "watcher",
+      "noun": "compaction watcher",
+      "reserved": [
+        {
+          "pos": "1.1.1",
+          "name": "monitor",
+          "what": "monitor seat compaction watcher"
+        },
+        {
+          "pos": "1.1.2",
+          "name": "architect",
+          "what": "architect compaction watcher"
+        },
+        {
+          "pos": "1.1.3",
+          "name": "orchestrator",
+          "what": "orchestrator compaction watcher"
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "label": "monitors 2 - loop, events and queue",
+      "kind": "monitor",
+      "noun": "monitor",
+      "reserved": [
+        {
+          "pos": "2.1.1",
+          "name": "events",
+          "what": "event log tail",
+          "command": "while :; do clear; ${repo}/events/bin/event.sh tail; sleep 15; done"
+        },
+        {
+          "pos": "2.1.2",
+          "name": "queue",
+          "what": "queue list",
+          "command": "while :; do clear; ${repo}/queue/bin/queue.sh list; sleep 15; done"
+        },
+        {
+          "pos": "2.1.3",
+          "name": "audit",
+          "what": "seat audit"
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "label": "monitors 3 - shells",
+      "kind": "shell",
+      "noun": "shell",
+      "reserved": []
+    }
+  ]
+}

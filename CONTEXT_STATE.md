@@ -13,6 +13,101 @@
 
 
 
+
+
+## Checkpoint 2026-10-10 20:47 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at bb4a55f + checkpoint d07d56a. Working branch feat/herdr-seat-scripts-bringup-seat-monitors-recover in the main checkout /home/luna/projects/coq-jev-herdr-plugin. No open PRs.
+- Owner page is the stable bearings tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable. The wait loop now forwards every wake into this seat with `herdr agent prompt wD3:p2` (tools/bearings/scripts/bearings.sh wait --to), so nothing has to be turned on after a compaction. Open card: Q12b (where is the DRM-free Qud Linux build); Q12 carries a probe answer, ignore it.
+- This seat: pane wD3:p2, labelled "claude-fable-5-1 - high - WO-20261010-8777 architect", tab "architect", left third of the tab; right two thirds are a 3x2 grid: test pane wD3:pF ("test - herdr WO-20261010-8777"), bearings server wD3:pC, wait wD3:pD, three "OPEN - any tool" cells. Owner asked for the 3x3 grid shape on 2026-10-10 20:4x UTC.
+- Jenkins job coq-jev-herdr-plugin lints every push to main (ghcr.io/jkkelley/coq-lint:1). The feature branch lints locally through make step.
+- Caves of Qud: Steam Windows build at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud; no Linux build on disk or Drive.
+
+#### Toolchain
+
+- herdr 0.9.0: headless under a private XDG_CONFIG_HOME (short socket path), lowercase agent names, stub claude with the ✳ OSC title reads idle. `pane move` within the same tab is a no-op: move the pane to another tab and back with --split/--target-pane/--ratio to re-place it.
+- herdr/ on the branch: bin/seat-lib.sh, seat.sh, retire.sh, monitors.sh (grid, take, release, status; never splits after grid, never closes), bringup.sh (WFL-bringup chain: herdr, control plane, guard, monitors grid, monitor seat, reserved panes events and queue; --check), config/{herdr,leases,exemptions,monitors}.json with schemas (herdr.json gained halt_flag and monitor_task; monitors.json reserved slots carry the command bringup plugs in), layouts, tests/run.sh with cases 01 seat, 02 audit, 03 gate and caps, 04 bringup and monitors. The suite runs in the labelled test pane wD3:pF, never in the seat's shell.
+- `make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [CP=body.md]` is the only way a step lands.
+
+#### Active Tasks
+
+- WO-20261010-8777 - herdr seat scripts: bringup, seat, monitors, recover, retire, ported from bearings-v2: step 2 landed (monitors, bringup, case 04, bearings wake fix). Remaining, delegated from here on: recover.sh (--check|--apply) with its case, lint/lint.sh validating herdr/layouts, graph nodes RUN-seat-up, RUN-retire, RUN-recover, WFL-bringup, SPK-11 attached to their schemas and data, AC-H1..H3 evidenced, submit --pr, done, merge, cleanup. Then cancel WO-20261010-6a3b - Spike 11: scratch herdr session harness in Podman as superseded by 8777.
+- Owner order 2026-10-10 20:4x UTC: this seat delegates through herdr seats and only reviews. Next: merge the seat branch so workers build on it, run bringup.sh on the live stable session, cut the remaining work as tickets and seat workers with seat.sh.
+- Then WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles (merged; evidence and close), WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue, WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree, WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume.
+
+#### Blockers
+
+- Q12b on the owner page: the DRM-free Qud Linux build location (Spike 1 only).
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-10 20:4x UTC, owner (chat): "aren't you supposed to delegate?" This seat stops hand-writing scripts; the work is cut into tickets and seated through seat.sh, this seat reviews and approves. Agent-tool subagents stay banned (nothing runs under an agent).
+- 2026-10-10 20:4x UTC, owner (chat): the architect pane is the left third of its tab and the rest is a grid ("think 3x3 grid"); every pane and tab carries a label.
+- 2026-10-10 20:3x UTC, this seat: the bearings wait loop forwards each wake whole into the asking seat's pane with herdr agent prompt; a wait that only prints into a pane loses every message dropped during a compaction (owner: "i dropped a message there").
+
+#### Lessons Learned
+
+- `status | grep -q` under pipefail reports the producer's SIGPIPE as a failure once grep exits on its first match; read the status into a variable and grep from there (bringup.sh, case 04 first run).
+- `rc=${PIPESTATUS[0]}` after a command substitution does not carry the exit code of the pipeline inside it; write the output to a file and take $? from the command.
+- The Playwright probe answers the first open card on whatever page it is pointed at; never point it at the owner's live page (it answered Q12 with "probe words").
+- A message the owner drops on a stopped page (uat, stopped 19:59 UTC) is refused by the browser and never reaches any file; the stable page is the only one that stays up.
+
+### Hydration prompt
+
+Run from /home/luna/projects/coq-jev-herdr-plugin on branch feat/herdr-seat-scripts-bringup-seat-monitors-recover. WO-20261010-8777 - herdr seat scripts: bringup, seat, monitors, recover, retire, ported from bearings-v2 is at step 2 (monitors.sh, bringup.sh, case 04 landed; suite 4 passed, 0 failed). Owner order: delegate, do not hand-write. Next: submit the PR for the branch (`work-order.sh submit --pr N`), merge it so workers build on it, run `herdr/bin/bringup.sh` on the live stable session, cut tickets for recover.sh with its case, lint wiring of herdr/layouts, graph attachments (RUN-seat-up, RUN-retire, RUN-recover, WFL-bringup, SPK-11) and evidence, then seat workers with `herdr/bin/seat.sh --ticket WO-.. --role worker`; review their PRs. The bearings wait forwards wakes into wD3:p2; answer owner page messages first, on the page, with tools/bearings/scripts/reply.mjs. Every step lands with `make step ... CP=<body>`; never lint, commit, checkpoint or compact by hand.
+
+## Checkpoint 2026-10-10 20:30 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at bb4a55f + checkpoint d07d56a. Working branch feat/herdr-seat-scripts-bringup-seat-monitors-recover in the main checkout /home/luna/projects/coq-jev-herdr-plugin (work-order start, no worktree slot). No open PRs.
+- Owner page is the stable bearings tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable. This seat is pane wD3:p2.
+- Jenkins job coq-jev-herdr-plugin lints every push to main (build 3 green 20:07 UTC; multi-arch ghcr.io/jkkelley/coq-lint:1, imagePullPolicy Always). The feature branch is not built by Jenkins; lint runs locally through make step.
+- Caves of Qud: Steam Windows build at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud; no Linux build on disk or Drive.
+- A live seat.sh --audit on the host found two hand-started agents besides this seat: a codex (pid 10907) and a claude in pane wD3:pE. This seat is exempt by herdr/config/exemptions.json (pane wD3:p2, until 2026-10-17); the others are the owner's and are left alone.
+
+#### Toolchain
+
+- herdr 0.9.0: runs headless under a private XDG_CONFIG_HOME (socket path must stay short), agent names must be lowercase, a stub claude whose OSC title starts with ✳ is detected idle, `agent start` returns in about 5 s. The suite image localhost/coq-herdr-test:1 bind-mounts the host herdr binary read-only.
+- herdr/ tree on the branch: bin/seat-lib.sh, bin/seat.sh (--ticket/--task doors, --check, --down, --audit), bin/retire.sh (RUN-retire), config/{herdr,leases,exemptions}.json with schemas, layouts/{seat-1x2,player-1x3,monitors-3x3}.json with layout.schema.json, tests/run.sh (Podman, --network=none, scratch session per case, asserts no session left), tests/cases 01 seat up/check/down, 02 audit, 03 gate and caps, Makefile (test, image, lint, up, check, down, audit, bringup, recover, monitors). `make -C herdr test` is green: 3 passed, 0 failed.
+- events/schema kind enum and events/bin/event.sh KINDS gained seat.stalled. roles/monitor.json pane_layout is seat-1x2 (monitors.sh owns the 3x3 tabs); playbook re-rendered.
+- `make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [CP=body.md]` is the only way a step lands. Checkpoint bodies live in the scratchpad as cpN.md.
+
+#### Active Tasks
+
+- WO-20261010-8777 - herdr seat scripts: bringup, seat, monitors, recover, retire, ported from bearings-v2: in-progress on its branch. Done: seat, retire, config, layouts, suite. Next: bin/monitors.sh (grid/take/release/status, config/monitors.json), bin/bringup.sh (WFL-bringup order, --check), bin/recover.sh (--check|--apply), case 04 for them, lint/lint.sh step for herdr lint, graph nodes attached (RUN-seat-up, RUN-retire, RUN-recover, WFL-bringup, SPK-11 with evidence), AC-H1..H3 evidenced, submit --pr, done, merge, cleanup. Then cancel WO-20261010-6a3b - Spike 11: scratch herdr session harness in Podman as superseded by 8777 (the harness is herdr/tests/run.sh).
+- Then WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles (merged; evidence and close), WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue, WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree, WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume.
+
+#### Blockers
+
+- None that need the owner.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-10 20:2x UTC, this seat: the seat suite runs the real herdr binary headless in Podman with a stub claude, not a herdr stub (bearings-v2's stub guessed two JSON shapes wrong). Spike 11 is answered by herdr/tests/run.sh and will be closed as superseded by WO-20261010-8777.
+- 2026-10-10 UTC, this seat: the bring-up gate is in seat.sh (a non-monitor seat is refused while the monitor seat is down, DEC-system-before-agents), lifted per seat only through herdr/config/exemptions.json with a card id.
+- 2026-10-10 UTC, this seat: seat names are the role label with the ticket id lowercased (herdr requires lowercase agent names): worker-wo-20261010-8777.
+
+#### Lessons Learned
+
+- `jq -e` exits 1 on a boolean false, so a config reader built on it reports a false key as missing; sl_cfg tests for null only.
+- Closing a seat's tab that is the workspace's last closes the workspace too; assertions after --down must accept workspace_not_found.
+- A ticket id that is not in work-orders/ made seat.sh die after the agent was already up; door 1 now refuses before building, and a brief failure is non-fatal.
+
+### Hydration prompt
+
+Run from /home/luna/projects/coq-jev-herdr-plugin on branch feat/herdr-seat-scripts-bringup-seat-monitors-recover. Next step of WO-20261010-8777 - herdr seat scripts: bringup, seat, monitors, recover, retire, ported from bearings-v2: write herdr/bin/monitors.sh (port of ~/tools/bearings-v2/bin/monitors.sh: grid, take, release, status; config herdr/config/monitors.json + schema; layout monitors-3x3), herdr/bin/bringup.sh (session, control plane if health_url, guard doctor if require_guard, monitor seat via seat.sh --role monitor --task, monitors grid, events tail and queue list panes via monitors.sh take; --check), herdr/bin/recover.sh (--check|--apply per RUN-recover), case 04, then wire `make -C herdr lint` into lint/lint.sh, attach schemas and data to graph nodes, evidence AC-H1..H3, submit, done, merge. Every step lands with `make step ... CP=<body>`; never lint, commit, checkpoint or compact by hand.
+
 ## Checkpoint 2026-10-10 20:09 UTC
 
 ### Current state

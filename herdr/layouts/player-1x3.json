@@ -1,0 +1,24 @@
+{
+  "id": "player-1x3",
+  "grid": "1x3",
+  "panes": [
+    {
+      "slot": "a",
+      "kind": "agent",
+      "label": "${MODEL} - ${effort} - ${ticket} ${seat}",
+      "command": ""
+    },
+    {
+      "slot": "b",
+      "kind": "tool",
+      "label": "TOOL - game ${name}",
+      "command": ""
+    },
+    {
+      "slot": "c",
+      "kind": "monitor",
+      "label": "MONITOR - ${name}",
+      "command": "while :; do clear; ${repo}/events/bin/event.sh tail; sleep 15; done"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Every exclusive thing is a lease with a ttl (SPEC-03 s-locks, SPEC-04 s-leases). The monitor releases an expired one, records seat.stalled 500 and wakes the queue.",
+  "leases": {
+    "slot": {
+      "ttl_seconds": 14400,
+      "proof": "treehouse status shows the holder",
+      "acquire": "slot.sh acquire --holder WO-ID",
+      "release": "slot.sh release"
+    },
+    "tier": {
+      "ttl_seconds": 86400,
+      "proof": "tools/<tool>/state/<tier>/server.json",
+      "acquire": "make -C tools/<tool> serve TIER=<tier>",
+      "release": "make -C tools/<tool> stop TIER=<tier>"
+    },
+    "ticket": {
+      "ttl_seconds": 7200,
+      "proof": "work-order status in-progress plus its branch",
+      "acquire": "queue.sh dequeue --holder SEAT",
+      "release": "queue.sh release --ticket WO-ID --holder SEAT"
+    },
+    "seat": {
+      "ttl_seconds": 900,
+      "proof": "herdr agent get <name> answers and the seat record has no ended_at",
+      "acquire": "herdr/bin/seat.sh --ticket WO-ID --role R",
+      "release": "herdr/bin/seat.sh --down <name>"
+    }
+  }
+}
