@@ -4,7 +4,7 @@
   "slug": "vendor-bearings-into-tools-bearings-with-stable-",
   "title": "Vendor bearings into tools/bearings with stable, uat and dev tiers",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-10",
   "updated": "2026-10-10",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "architect: sure of it; owner 2026-10-10 UTC: approval is the architect's job, Lavish is prohibited for this project",
+    "at": "2026-10-10"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],

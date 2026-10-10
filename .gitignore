@@ -18,7 +18,11 @@
 **/target/
 
 # Binary / compiled
-**/bin/
+# **/bin/ was here from the shared ignore set (compiled output). In this repo every
+# tree keeps its scripts in bin/ (graph/bin/graph.sh, events/bin/event.sh,
+# queue/bin/queue.sh, roles/bin/render-playbook.sh, bin/). The line silently kept
+# all of them out of PR #1: main had no scripts and `make lint` could not run.
+# Removed 2026-10-10 UTC. Compiled output goes under dist/ or target/, never bin/.
 **/__pycache__/
 **/*.pyc
 

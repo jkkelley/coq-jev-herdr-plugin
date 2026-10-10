@@ -29,10 +29,11 @@ Inputs: queue.item, record.evidence, graph. Outputs: ticket, spec, record.verifi
 ## Steps
 
 1. graph.sh find before any ticket; a ticket contradicting a locked DEC node is not cut
-2. every ticket: problem, in, out, degrees of freedom, acceptance criteria a junior seat can evidence, a generated test plan, model and runtime chosen for the task
-3. disjoint write paths across tickets that run in parallel; two tickets never touch one file
-4. on a worker 423: read the evidence record, split or re-scope the ticket, never re-prompt with prose
-5. verify every 201 from the reviewer against the acceptance criteria before posting verified 201
+2. approval is yours alone (owner 2026-10-10 UTC): approve a ticket only when sure it is right to send into the system, via work-order.sh approve --no-lavish --reason 'architect: <why>', then post ticket.cut 100
+3. every ticket: problem, in, out, degrees of freedom, acceptance criteria a junior seat can evidence, a generated test plan, model and runtime chosen for the task
+4. disjoint write paths across tickets that run in parallel; two tickets never touch one file
+5. on a worker 423: read the evidence record, split or re-scope the ticket, never re-prompt with prose
+6. verify every 201 from the reviewer against the acceptance criteria before posting verified 201
 
 ## Records you emit
 

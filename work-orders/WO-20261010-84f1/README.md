@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261010-7083` | draft | p0 | - | [Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume](WO-20261010-7083-quiet-window-in-compaction-guard-quiet-json-5-se.md) |
+| `WO-20261010-7083` | ready | p0 | - | [Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume](WO-20261010-7083-quiet-window-in-compaction-guard-quiet-json-5-se.md) |

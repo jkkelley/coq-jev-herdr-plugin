@@ -4,7 +4,7 @@
   "slug": "nats-jetstream-is-the-producer-consumer-bus-and-",
   "title": "NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p0",
   "created": "2026-10-10",
   "updated": "2026-10-10",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "architect: sure of it; owner 2026-10-10 UTC: approval is the architect's job, Lavish is prohibited for this project",
+    "at": "2026-10-10"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],

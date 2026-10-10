@@ -4,7 +4,7 @@
   "slug": "p0-foundation-specs-knowledge-graph-factory-scri",
   "title": "P0 foundation: specs, knowledge graph, factory scripts",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p0",
   "created": "2026-10-10",
   "updated": "2026-10-10",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "architect: sure of it; owner 2026-10-10 UTC: approval is the architect's job, Lavish is prohibited for this project",
+    "at": "2026-10-10"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],

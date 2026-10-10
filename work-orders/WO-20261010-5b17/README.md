@@ -8,5 +8,5 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261010-8e3b` | draft | p0 | - | [Create the public GitHub repo and push main with branch protection](WO-20261010-8e3b-create-the-public-github-repo-and-push-main-with.md) |
+| `WO-20261010-8e3b` | ready | p0 | - | [Create the public GitHub repo and push main with branch protection](WO-20261010-8e3b-create-the-public-github-repo-and-push-main-with.md) |
 | `WO-20261010-beba` | draft | p2 | - | [README that humans want to read](WO-20261010-beba-readme-that-humans-want-to-read.md) |
