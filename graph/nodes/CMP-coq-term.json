@@ -11,6 +11,10 @@
       "to": "DEC-own-game-terminal"
     },
     {
+      "kind": "decided_by",
+      "to": "DEC-spike5-passed"
+    },
+    {
       "kind": "depends_on",
       "to": "CMP-herdr-browser-prior-art"
     },
@@ -24,5 +28,5 @@
     }
   ],
   "created": "2026-10-10T19:06Z",
-  "updated": "2026-10-10T19:06Z"
+  "updated": "2026-10-10T19:23Z"
 }
