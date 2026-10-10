@@ -15,6 +15,50 @@
 
 
 
+
+## Checkpoint 2026-10-10 20:52 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at a22ad1c (PR #3 squash-merged: seat, retire, monitors, bringup, config, layouts, Podman suite). Main checkout /home/luna/projects/coq-jev-herdr-plugin is on main. No open PRs.
+- Live herdr session stable, workspace wD3 now labelled coq: tabs "Cave's of Qud herdr plugin" (owner shell), "architect" (this seat wD3:p2 left third; right 3x2 grid: test pane wD3:pF, bearings server wD3:pC, wait wD3:pD, three OPEN tool cells), "haiku-5-5" (owner's claude wD3:pE), "monitors 1 - compaction watchers", "monitors 2 - loop, events and queue" (2.1.1 event log tail, 2.1.2 queue list running), "monitors 3 - shells", "monitor" (monitor seat, claude-haiku-5-5 dontAsk, pane wD3:p1E, record ~/.local/state/coq/seats/monitor/seat.json). bringup.sh --check exits 0.
+- Owner page stable tier http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748; the wait loop forwards every wake into wD3:p2 (proven: ANSWER Q12 arrived in this seat). Open card Q12b: the owner is fetching the DRM-free Qud build and drops it in /home/luna/games/downloads/; unpack to /home/luna/games/caves-of-qud/.
+- Jenkins lints every push to main. Caves of Qud Steam Windows build at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud.
+
+#### Toolchain
+
+- herdr/bin: seat-lib.sh, seat.sh (pre-trusts the worktree in ~/.claude.json before agent start), retire.sh, monitors.sh, bringup.sh; config herdr, leases, exemptions, monitors with schemas; layouts; tests/run.sh cases 01-04 green (4 passed, 0 failed), run from the labelled test pane wD3:pF.
+- Graph: RUN-seat-up and RUN-retire attached to herdr.schema.json + herdr.json, WFL-bringup to monitors.schema.json + monitors.json, RUN-recover to exemptions.schema.json + exemptions.json, SPK-11 to layout.schema.json + herdr/layouts.
+- `make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [CP=body.md]` is the only way a step lands. Worker seats: `herdr/bin/seat.sh --ticket WO-.. --role worker --worktree DIR` after `work-order.sh start` and a git worktree for the branch.
+
+#### Active Tasks
+
+- WO-20261010-c274 - recover.sh --check|--apply per RUN-recover with its Podman case: ready (approved by the architect, no lavish). Next: start it, git worktree for its branch, seat a worker on it, review its PR.
+- WO-20261010-8777 - herdr seat scripts: bringup, seat, monitors, recover, retire, ported from bearings-v2: done and merged (PR #3). WO-20261010-6a3b - Spike 11: scratch herdr session harness in Podman: cancelled, superseded by 8777.
+- Then WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles (merged; evidence and close), WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue, WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree, WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume. Each goes to a worker seat; this seat reviews.
+
+#### Blockers
+
+- None that need the owner (Q12b is in flight on their side).
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-10 20:5x UTC, this seat: seat.sh writes projects.<worktree>.hasTrustDialogAccepted into ~/.claude.json before `agent start`; the first live monitor seat sat in Claude Code's trust dialog and agent start timed out.
+- 2026-10-10 20:5x UTC, this seat: the live workspace wD3 is labelled coq (config workspace_label), tabs and panes carry SPEC-04 labels; bring-up ran on the live session and the monitor seat is up before any worker.
+
+#### Lessons Learned
+
+- herdr `pane move` inside the same tab is a no-op; move the pane to another tab and back with --split, --target-pane and --ratio to re-place it.
+- A real Claude Code in a fresh checkout path shows the trust dialog and never reads idle; the stub in the suite cannot catch that, so the first live run of every door is watched in its pane.
+
+### Hydration prompt
+
+Run from /home/luna/projects/coq-jev-herdr-plugin on main. The live system is up (bringup.sh --check exits 0). Owner order: delegate through seats, review only. Next: `work-order.sh start --id WO-20261010-c274` (WO-20261010-c274 - recover.sh --check|--apply per RUN-recover with its Podman case), add a git worktree for its branch under /home/luna/worktrees/WO-20261010-c274, switch the main checkout back to main, then `herdr/bin/seat.sh --ticket WO-20261010-c274 --role worker --worktree /home/luna/worktrees/WO-20261010-c274`; review the PR it opens. Answer owner page wakes first (they arrive as ANSWER/MESSAGE lines; reply with tools/bearings/scripts/reply.mjs). Every step lands with `make step ... CP=<body>`; never lint, commit, checkpoint or compact by hand.
+
 ## Checkpoint 2026-10-10 20:47 UTC
 
 ### Current state
