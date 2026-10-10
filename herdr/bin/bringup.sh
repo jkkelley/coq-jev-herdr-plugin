@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+# bringup.sh - WFL-bringup (SPEC-04 s-bringup): the system comes up before any agent, in this order, each node a check
+# and, when it fails, one repair: herdr session -> control plane -> compaction-guard -> monitors grid -> monitor seat ->
+# the reserved monitor panes (event log tail, queue list). Worker seats come later, through seat.sh, which refuses while
+# the monitor seat is down (DEC-system-before-agents, locked).
+#   bringup.sh [--worktree DIR]     repair what is down, in order; stops at the first failure with a 500 record and a notification
+#   bringup.sh --check              report only; no record, no notification
+# Prints one line per node: ok | fixed (what) | skipped (why) | FAILED (why). Exit 0 when every node is up, 1 otherwise.
+set -uo pipefail
+. "$(dirname "$(readlink -f "$0")")/seat-lib.sh"
+sl_require jq herdr
+
+mode=apply; wt="$SL_REPO"
+while [ $# -gt 0 ]; do case "$1" in
+  --check) mode=check; shift ;; --worktree) wt="${2:?--worktree needs a directory}"; shift 2 ;;
+  -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2 ;; *) sl_die "unknown argument $1" ;; esac; done
+fixed=0
+okln() { printf 'ok %s\n' "$1"; }
+skipln() { printf 'skipped %s (%s)\n' "$1" "$2"; }
+fixedln() { printf 'fixed %s (%s)\n' "$1" "$2"; fixed=$((fixed + 1)); sl_record note 100 bringup --note "bringup: $1 $2"; }
+# The first failure ends the run: every later node needs this one (the DAG is a chain).
+failln() {
+  printf 'FAILED %s (%s)\n' "$1" "$2"
+  if [ "$mode" = apply ]; then
+    sl_record note 500 bringup --note "bringup: $1 failed: $2"
+    sl_h notification show "500 bringup: $1 failed: $2" >/dev/null 2>&1 || true
+  fi
+  exit 1
+}
+
+# 1. herdr session. Never started here: on the host systemd owns it, in the suite the world does; a seat that started a
+#    server would hide a process under an agent (owner rule 2026-10-10).
+sl_h workspace list >/dev/null 2>&1 || failln herdr "session $HS is not running; start the herdr server for it first (systemd unit herdr-$HS)"
+okln herdr
+
+# 2. control plane, only when configured.
+url="$(sl_cfg '.control_plane.health_url // ""')"
+if [ -z "$url" ]; then skipln control-plane "no control_plane.health_url configured"
+else
+  code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 "$url" 2>/dev/null || echo 000)"
+  [ "$code" = 200 ] && okln control-plane || failln control-plane "health $url answered $code, not 200"
+fi
+
+# 3. compaction-guard doctor, only when seats require the guard.
+if [ "$(sl_cfg .require_guard)" = true ]; then
+  if ! command -v compaction-guard >/dev/null 2>&1; then failln compaction-guard "not on PATH"
+  elif compaction-guard doctor 2>/dev/null | jq -e '.ok == true' >/dev/null 2>&1; then okln compaction-guard
+  else failln compaction-guard "doctor is not ok: $(compaction-guard doctor 2>&1 | tr -d '\n' | head -c 200)"; fi
+else skipln compaction-guard "require_guard is false"; fi
+
+# 4. monitors grid: the fixed tabs, drawn or repaired by monitors.sh grid.
+MON="$SL_HERE/monitors.sh"
+# Status is read into a variable once and grepped from there: `status | grep -q` closes the pipe on the first match and
+# pipefail then reports monitors.sh's SIGPIPE as a failure (case 04, first run: every rerun "fixed" a pane already there).
+mon_why() { grep -m1 -E 'missing|not built|unlabeled|no workspace|left alone' <<<"$1" | sed -E 's/^[[:space:]]+//; s/^monitors.sh: //'; }
+st="$("$MON" status 2>&1)" && st_rc=0 || st_rc=$?
+if [ "$st_rc" = 0 ]; then okln monitors
+elif [ "$mode" = check ]; then failln monitors "$(mon_why "$st")"
+elif "$MON" grid >/dev/null 2>&1 && st="$("$MON" status 2>&1)"; then fixedln monitors "grid drawn"
+else failln monitors "grid did not leave every slot in place: $(mon_why "$st")"; fi
+
+# 5. the monitor seat (door 2 of seat.sh). A seat check that fails for any reason but "agent not running" is a drift
+#    seat.sh repairs on its rerun, so the rerun is the one repair for both.
+mseat="$(sl_cfg .monitor_seat)"; SEAT="$SL_HERE/seat.sh"
+mrec="$(sl_seat_record "$mseat")"
+if [ -f "$mrec" ] && [ -z "$(jq -r '.ended_at // empty' "$mrec")" ] && out="$("$SEAT" --check "$mseat" 2>&1)"; then okln monitor-seat
+elif [ "$mode" = check ]; then failln monitor-seat "${out:-no live seat record}"
+else
+  [ ! -f "$mrec" ] || [ -z "$(jq -r '.ended_at // empty' "$mrec")" ] || rm -f "$mrec"   # a downed record is history; door 2 writes a new one
+  if out="$("$SEAT" --role monitor --task "$(sl_cfg .monitor_task)" --worktree "$wt" 2>&1)"; then
+    fixedln monitor-seat "seat.sh --role monitor, started $(jq -r .started <<<"$out")"
+  else failln monitor-seat "seat.sh: $(tail -n 1 <<<"$out")"; fi
+fi
+
+# 6. the reserved monitor panes that carry a command in herdr/config/monitors.json (event log tail, queue list).
+MC="${COQ_MONITORS_CONFIG:-$SL_HERDR/config/monitors.json}"
+while IFS=$'\t' read -r name what cmd; do
+  cmd="${cmd//\$\{repo\}/$SL_REPO}"
+  st="$("$MON" status 2>/dev/null)"
+  if grep -qF " $what - $name  [" <<<"$st"; then okln "pane-$name"
+  elif [ "$mode" = check ]; then failln "pane-$name" "slot $name is not running $what"
+  elif "$MON" take "$name" "$name" -- "$cmd" >/dev/null 2>&1; then fixedln "pane-$name" "$what plugged in"
+  else failln "pane-$name" "monitors.sh take $name failed"; fi
+done < <(jq -r '.tabs[].reserved[] | select(.command != null) | [.name, .what, .command] | @tsv' "$MC")
+
+[ "$mode" = check ] || [ "$fixed" = 0 ] || sl_h notification show "bringup: $fixed node(s) repaired, system up" >/dev/null 2>&1 || true
+exit 0

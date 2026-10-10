@@ -21,10 +21,14 @@
     "monitor_seat",
     "runtime_bin",
     "keys",
-    "control_plane"
+    "control_plane",
+    "halt_flag",
+    "monitor_task"
   ],
   "properties": {
-    "schema_version": { "const": "1.0.0" },
+    "schema_version": {
+      "const": "1.0.0"
+    },
     "session": {
       "type": "string",
       "minLength": 1,
@@ -45,9 +49,18 @@
       "minLength": 1,
       "description": "shell prompt a pane must show before anything is typed into it"
     },
-    "prompt_timeout_ms": { "type": "integer", "minimum": 100 },
-    "agent_start_timeout_ms": { "type": "integer", "minimum": 1000 },
-    "down_wait_seconds": { "type": "integer", "minimum": 0 },
+    "prompt_timeout_ms": {
+      "type": "integer",
+      "minimum": 100
+    },
+    "agent_start_timeout_ms": {
+      "type": "integer",
+      "minimum": 1000
+    },
+    "down_wait_seconds": {
+      "type": "integer",
+      "minimum": 0
+    },
     "retire_poll_seconds": {
       "type": "integer",
       "minimum": 1,
@@ -74,30 +87,62 @@
     },
     "runtime_bin": {
       "type": "object",
-      "additionalProperties": { "type": "string" },
-      "required": ["claude"]
+      "additionalProperties": {
+        "type": "string"
+      },
+      "required": [
+        "claude"
+      ]
     },
     "keys": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["interrupt", "escape", "down", "enter"],
+      "required": [
+        "interrupt",
+        "escape",
+        "down",
+        "enter"
+      ],
       "properties": {
-        "interrupt": { "type": "string" },
-        "escape": { "type": "string" },
-        "down": { "type": "string" },
-        "enter": { "type": "string" }
+        "interrupt": {
+          "type": "string"
+        },
+        "escape": {
+          "type": "string"
+        },
+        "down": {
+          "type": "string"
+        },
+        "enter": {
+          "type": "string"
+        }
       }
     },
     "control_plane": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["health_url"],
+      "required": [
+        "health_url"
+      ],
       "properties": {
         "health_url": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "description": "null until WO-20261010-539f stands the bus up; bringup.sh then requires a 200"
         }
       }
+    },
+    "halt_flag": {
+      "type": "string",
+      "minLength": 1,
+      "description": "recover.sh changes nothing while this file exists; ${state_dir} is state_dir. Only the owner or the monitor seat removes it."
+    },
+    "monitor_task": {
+      "type": "string",
+      "minLength": 1,
+      "description": "the task text bringup.sh hands the monitor seat (door 2 of seat.sh)"
     }
   }
 }

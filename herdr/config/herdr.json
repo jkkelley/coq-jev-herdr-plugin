@@ -12,12 +12,19 @@
   "bringup_gate": true,
   "require_guard": true,
   "monitor_seat": "monitor",
-  "runtime_bin": { "claude": "claude", "codex": "codex" },
+  "runtime_bin": {
+    "claude": "claude",
+    "codex": "codex"
+  },
   "keys": {
     "interrupt": "C-c",
     "escape": "Escape",
     "down": "Down",
     "enter": "Enter"
   },
-  "control_plane": { "health_url": null }
+  "control_plane": {
+    "health_url": null
+  },
+  "halt_flag": "${state_dir}/HALT",
+  "monitor_task": "watch the event log, the seats and the guard; wake a waiting seat on status change with one line; raise owner notifications for 423 and any 5xx; run cleanup every tick"
 }

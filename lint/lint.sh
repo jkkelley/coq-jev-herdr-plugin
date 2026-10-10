@@ -28,6 +28,9 @@ step "graph: check + specs agree"; if (cd "$R/graph" && bin/graph.sh check >/dev
 step "configs: schema"; ok=1
 while IFS= read -r c; do s="${c%.json}.schema.json"; [ -f "$s" ] || continue; python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" "$c" "$s" || ok=0; done < <(find "$R" -path '*/config/*.json' -not -name '*.schema.json' 2>/dev/null)
 if [ "$ok" = 1 ]; then echo ok; else echo FAIL; FAIL=1; fi
+step "herdr: layouts against layout.schema.json"; ok=1
+for l in "$R"/herdr/layouts/*.json; do case $l in *.schema.json) continue;; esac; python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" "$l" "$R/herdr/layouts/layout.schema.json" 2>/dev/null || { echo "invalid layout $l" >&2; ok=0; }; done
+if [ "$ok" = 1 ]; then echo ok; else echo FAIL; FAIL=1; fi
 step "roles: schema + playbooks in sync"; ok=1
 for f in "$R"/roles/*.json; do python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" "$f" "$R/roles/schema/role.schema.json" 2>/dev/null || { echo "invalid role $f" >&2; ok=0; }; done
 bash "$R/roles/bin/render-playbook.sh" "$R/roles" "$R/playbooks" --check || ok=0

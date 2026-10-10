@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/herdr/config/monitors.schema.json",
+  "title": "monitoring tabs",
+  "description": "The map herdr/bin/monitors.sh draws the fixed monitoring tabs from. Every tab is one grid of the named layout; a reserved slot has one owner (its name) and is handed to that owner alone; every other slot is open to any job of the tab's kind.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "description",
+    "layout",
+    "neutral_cwd",
+    "tabs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "description": {
+      "type": "string"
+    },
+    "layout": {
+      "type": "string",
+      "pattern": "^[a-z0-9-]+$",
+      "description": "herdr/layouts/<layout>.json; only its grid is read"
+    },
+    "neutral_cwd": {
+      "type": "string",
+      "minLength": 1,
+      "description": "where a released pane's shell goes back to; ${repo} is the checkout"
+    },
+    "tabs": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "n",
+          "label",
+          "kind",
+          "noun",
+          "reserved"
+        ],
+        "properties": {
+          "n": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "watcher",
+              "monitor",
+              "shell"
+            ]
+          },
+          "noun": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reserved": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "pos",
+                "name",
+                "what"
+              ],
+              "properties": {
+                "pos": {
+                  "type": "string",
+                  "pattern": "^[1-9][0-9]*\\.[1-9]\\.[1-9]$"
+                },
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+                },
+                "what": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "command": {
+                  "type": "string",
+                  "minLength": 1,
+                  "description": "when present, bringup.sh plugs this command into the slot (${repo} is the checkout); absent means the slot waits for its owner"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

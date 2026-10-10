@@ -88,6 +88,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-10` step 2: monitors.sh, bringup.sh, monitors config, case 04 (suite in the labelled test pane), lint of herdr/layouts, bearings wait forwards wakes into the seat; remaining work delegated to worker seats
 - `2026-10-10` seat.sh, retire.sh, seat-lib.sh, config, layouts and the Podman suite (3 cases, real headless herdr + stub claude) landed; make -C herdr test green
 
 ## Outcome
