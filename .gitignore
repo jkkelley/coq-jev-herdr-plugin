@@ -1,0 +1,97 @@
+# Upstream: github.com/<your-github-username>/claudes-markdown-12-rules/.gitignore
+# Everything above the scaffold block below is that file, verbatim. Re-pull it
+# rather than hand-editing here, so one project's fix reaches every project.
+
+# Dependencies
+**/node_modules/
+
+# Lock files (never change, never need context)
+**/package-lock.json
+**/go.sum
+**/poetry.lock
+**/Cargo.lock
+
+# Build output
+**/dist/
+**/.next/
+**/build/
+**/target/
+
+# Binary / compiled
+**/bin/
+**/__pycache__/
+**/*.pyc
+
+# Stale branches
+**/.worktrees/
+
+# IDE / cache
+**/.superpowers/
+**/.claude/agents/
+**/.vscode/
+**/.idea/
+**/node_modules/.cache
+
+# Test coverage / reports
+**/coverage/
+**/.nyc_output/
+**/htmlcov/
+**/.pytest_cache/
+
+# Env files (security + noise)
+**/.env*
+!**/.env.example
+
+# Logs
+**/*.log
+**/logs/
+
+# Terraform state / cache / secrets
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.backup
+**/*.tfvars
+!**/*.tfvars.example
+
+# Docker layer cache
+**/.dockercache/
+
+# Python venvs
+**/.venv/
+**/venv/
+
+# Temp / scratch
+**/tmp/
+**/temp/
+
+# Vim swap files
+**/*.swp
+**/*.swo
+**/*.un~
+
+# OS noise
+**/.DS_Store
+**/Thumbs.db
+
+# --- project-scaffold ------------------------------------------------------
+# Not upstream's concern: the files this skill's tools create.
+
+# installed skills - copies, owned by skill-sync, replaced on every session start
+#
+# The blanket mirrors `**/.claude/agents/` in the upstream block above, and lives
+# down here rather than beside it on purpose: everything above this line is
+# re-pulled verbatim, so a line added there is dropped by the next re-pull with
+# no conflict and no warning. This is the only thing stopping a skill copy from
+# being committed, and a project that commits one gets a copy that never updates
+# again while `registry.json` moves on without it.
+**/.claude/skills/
+
+# agent cache - derived, rebuildable, never authoritative
+.claude/cache/
+
+# local settings - machine-specific paths, recreated by scaffold.sh
+.claude/settings.local.json
+
+# lock files used by the scaffold tools
+.issues.lock
+.backlog.lock

@@ -1,0 +1,6 @@
+# treehouse pool for this repo. The pool lives at the user-level root
+# (~/.treehouse/<repo>-<hash>/), never in-project: an in-repo pool is bound
+# into every container, taken as build context by `podman build .`, and staged
+# by `git add -A` (AGENTS.md, "Where your workspace comes from").
+max_trees = 8
+root = ""

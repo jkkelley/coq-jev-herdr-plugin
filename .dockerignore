@@ -1,0 +1,77 @@
+# Upstream: github.com/<your-github-username>/claudes-markdown-12-rules/.dockerignore
+# That file, verbatim except for leading indentation, which was stripped.
+# Re-pull it rather than hand-editing here.
+
+# Dependencies
+**/node_modules/
+**/.venv/
+**/venv/
+
+# Lock files
+**/package-lock.json
+**/go.sum
+**/poetry.lock
+**/Cargo.lock
+
+# Build output
+**/dist/
+**/.next/
+**/build/
+**/target/
+
+# Binary / compiled
+**/bin/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# IDE / cache
+**/.vscode/
+**/.idea/
+**/.superpowers/
+**/.claude/
+
+# Test coverage / reports
+**/coverage/
+**/.nyc_output/
+**/htmlcov/
+**/.pytest_cache/
+
+# Env files (never bake secrets into image)
+**/.env*
+!**/.env.example
+
+# Logs
+**/*.log
+**/logs/
+
+# Terraform state / secrets
+**/.terraform/
+**/*.tfstate
+**/*.tfstate.backup
+**/*.tfvars
+!**/*.tfvars.example
+
+# Docker layer cache
+**/.dockercache/
+
+# Git
+**/.git/
+**/.gitignore
+**/.worktrees/
+
+# Docs / specs (not needed in image)
+**/docs/
+**/README.md
+
+# Temp / scratch
+**/tmp/
+**/temp/
+
+# OS noise
+**/.DS_Store
+**/Thumbs.db
+
+# Vim swap
+**/*.swp
+**/*.swo

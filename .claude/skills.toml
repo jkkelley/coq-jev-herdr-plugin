@@ -1,0 +1,32 @@
+# .claude/skills.toml - what this project uses.
+#
+# This file is declared intent and it is committed. The directories it produces,
+# `.claude/skills/`, are copies and are gitignored: `skill-sync` pulls them fresh
+# from upstream at every session start, so nothing here pins a version and there
+# is no version to hand-maintain. A version table written here would be wrong
+# within a week, and a stale one is worse than none because agents believe it.
+#
+# Hand-editable. Add a name, start a session, and it is installed; remove a name
+# and the next sync removes the directory it installed. Sync only ever removes
+# what its own receipt says it put there, so a hand-authored skill sitting beside
+# the managed ones is never its business.
+
+[skills]
+use = [
+  "work-order",
+  "living-docs",
+  "container-sandbox",
+  "context-compaction",
+]
+
+# Agents are the half of the library with no loop at all: they carry no version,
+# no registry row and no update path, and `setup.sh` installs them at machine
+# level. So `skill-sync` reads this section only to be sure a name in it never
+# reaches the skills set, and installs nothing from it.
+#
+# The section is here, and empty rather than absent, so that this project's
+# declared intent is written down in one file rather than two - and so that the
+# day agents do get a loop, the manifests already say what each project wanted.
+[agents]
+use = [
+]

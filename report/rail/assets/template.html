@@ -1,0 +1,710 @@
+<title>__TITLE__</title>
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap"
+/>
+<style>
+  :root {
+    --ground: #edf1f5;
+    --surface: #ffffff;
+    --surface-2: #dfe6ee;
+    --ink: #131a22;
+    --ink-2: #445260;
+    --ink-3: #74828f;
+    --line: #c9d3dd;
+    --frost: #2d6fa3;
+    --frost-soft: #dce8f3;
+    --frost-glow: rgba(45, 111, 163, 0.25);
+    --gate: #a65e0b;
+    --gate-soft: #f5e7d0;
+    --done: #2e7d5b;
+    --done-soft: #d9eee3;
+    --hold: #8c2f39;
+    --hold-soft: #f3dcdf;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0f151b;
+      --surface: #171f28;
+      --surface-2: #1f2933;
+      --ink: #e4eaf0;
+      --ink-2: #aeb9c4;
+      --ink-3: #7b8794;
+      --line: #2c3843;
+      --frost: #7cb8e8;
+      --frost-soft: #1b2e40;
+      --frost-glow: rgba(124, 184, 232, 0.28);
+      --gate: #e0a04a;
+      --gate-soft: #3a2c16;
+      --done: #62c093;
+      --done-soft: #17302a;
+      --hold: #e07a86;
+      --hold-soft: #3a1c21;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0f151b;
+    --surface: #171f28;
+    --surface-2: #1f2933;
+    --ink: #e4eaf0;
+    --ink-2: #aeb9c4;
+    --ink-3: #7b8794;
+    --line: #2c3843;
+    --frost: #7cb8e8;
+    --frost-soft: #1b2e40;
+    --frost-glow: rgba(124, 184, 232, 0.28);
+    --gate: #e0a04a;
+    --gate-soft: #3a2c16;
+    --done: #62c093;
+    --done-soft: #17302a;
+    --hold: #e07a86;
+    --hold-soft: #3a1c21;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.45;
+    padding-inline: 18px;
+  }
+  :focus-visible {
+    outline: 2px solid var(--frost);
+    outline-offset: 2px;
+  }
+  .mono {
+    font-family: "JetBrains Mono", Consolas, monospace;
+  }
+  h1,
+  h2 {
+    font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
+    line-height: 1.02;
+    margin: 0;
+    text-wrap: balance;
+  }
+  h1 {
+    font-size: clamp(2.2rem, 7vw, 3.2rem);
+    font-weight: 700;
+  }
+  h2 {
+    font-size: 1.45rem;
+    font-weight: 600;
+  }
+  p {
+    margin: 0;
+    max-width: 60ch;
+  }
+  .eyebrow {
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.8rem;
+    color: var(--ink-3);
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    display: grid;
+    gap: 28px;
+    padding-block: 28px 64px;
+  }
+  @media (min-width: 1000px) {
+    .wrap {
+      max-width: 960px;
+    }
+  }
+
+  header {
+    display: grid;
+    gap: 8px;
+  }
+  .built {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--ink-3);
+  }
+
+  /* NOW card: the one thing to read */
+  .now {
+    background: var(--surface);
+    border-left: 4px solid var(--frost);
+    padding: 16px 18px;
+    display: grid;
+    gap: 10px;
+  }
+  .now .top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .now .stepid {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 500;
+    font-size: 1rem;
+    color: var(--frost);
+  }
+  .now .title {
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    line-height: 1.05;
+  }
+  .now .line {
+    font-size: 1.02rem;
+  }
+  .now .meta {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.76rem;
+    color: var(--ink-3);
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .now.await {
+    border-left-color: var(--gate);
+  }
+  .now.await .stepid {
+    color: var(--gate);
+  }
+  .chip {
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 0.74rem;
+    padding: 3px 9px;
+    border-radius: 3px;
+  }
+  .chip.started {
+    background: var(--frost-soft);
+    color: var(--frost);
+  }
+  .chip.complete {
+    background: var(--done-soft);
+    color: var(--done);
+  }
+  .chip.blocked,
+  .chip.issue {
+    background: var(--hold-soft);
+    color: var(--hold);
+  }
+  .chip.question,
+  .chip.awaiting {
+    background: var(--gate-soft);
+    color: var(--gate);
+  }
+  .chip.checkpoint {
+    background: var(--surface-2);
+    color: var(--frost);
+  }
+  .chip.pending {
+    background: var(--surface-2);
+    color: var(--ink-3);
+  }
+
+  /* progress */
+  .progress {
+    display: grid;
+    gap: 8px;
+  }
+  .progress .bar {
+    height: 8px;
+    background: var(--surface-2);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress .fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--done), var(--frost));
+    width: 0;
+    transition: width 600ms ease;
+    border-radius: 4px;
+  }
+  .progress .num {
+    display: flex;
+    justify-content: space-between;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* rail */
+  .rail {
+    display: grid;
+    gap: 0;
+  }
+  .node {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 14px;
+    position: relative;
+    padding-block: 0;
+  }
+  .node .dot {
+    position: relative;
+    display: grid;
+    justify-items: center;
+  }
+  .node .dot::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 13px;
+    width: 2px;
+    background: var(--line);
+  }
+  .node:first-child .dot::before {
+    top: 14px;
+  }
+  .node:last-child .dot::before {
+    bottom: calc(100% - 14px);
+  }
+  .node .dot i {
+    position: relative;
+    z-index: 1;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    margin-top: 7px;
+    background: var(--ground);
+    border: 2px solid var(--line);
+    display: block;
+  }
+  .node.complete .dot i {
+    background: var(--done);
+    border-color: var(--done);
+  }
+  .node.complete .dot::before {
+    background: var(--done);
+  }
+  .node.started .dot i {
+    background: var(--frost);
+    border-color: var(--frost);
+    box-shadow: 0 0 0 5px var(--frost-glow);
+  }
+  .node.blocked .dot i,
+  .node.issue .dot i {
+    background: var(--hold);
+    border-color: var(--hold);
+  }
+  .node.checkpoint .dot i {
+    background: var(--surface-2);
+    border-color: var(--frost);
+  }
+  .node.question .dot i {
+    background: var(--gate);
+    border-color: var(--gate);
+    box-shadow: 0 0 0 5px var(--gate-soft);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .node.started .dot i {
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,
+      100% {
+        box-shadow: 0 0 0 4px var(--frost-glow);
+      }
+      50% {
+        box-shadow: 0 0 0 9px transparent;
+      }
+    }
+  }
+  .node .card {
+    padding: 8px 0 18px;
+    display: grid;
+    gap: 4px;
+  }
+  .node .head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .node .id {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.82rem;
+    color: var(--ink-3);
+  }
+  .node.started .id,
+  .node.complete .id {
+    color: var(--frost);
+  }
+  .node .t {
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 600;
+    font-size: 1.22rem;
+    line-height: 1.1;
+  }
+  .node.pending .t {
+    color: var(--ink-2);
+  }
+  .node .who {
+    font-size: 0.84rem;
+    color: var(--ink-3);
+  }
+  .node .last {
+    font-size: 0.92rem;
+    color: var(--ink-2);
+  }
+  .gate {
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    color: var(--gate);
+    border: 1px solid var(--gate);
+    padding: 1px 7px;
+    border-radius: 2px;
+  }
+  .owner .t::after {
+    content: " · you";
+    color: var(--gate);
+    font-weight: 500;
+  }
+
+  /* wide: rail left, side column right */
+  @media (min-width: 1000px) {
+    .cols {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 36px;
+      align-items: start;
+    }
+    .side {
+      position: sticky;
+      top: 16px;
+      display: grid;
+      gap: 22px;
+    }
+  }
+  .side {
+    display: grid;
+    gap: 22px;
+  }
+
+  .ledger {
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--line);
+  }
+  .row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    align-items: baseline;
+  }
+  .row .k {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.74rem;
+    color: var(--ink-3);
+    white-space: nowrap;
+    display: grid;
+    gap: 2px;
+  }
+  .row .k b {
+    color: var(--ink-2);
+    font-weight: 500;
+  }
+  .row .v {
+    font-size: 0.94rem;
+    display: grid;
+    gap: 3px;
+  }
+  .row .v .chip {
+    justify-self: start;
+  }
+  .empty {
+    color: var(--ink-3);
+    font-size: 0.94rem;
+    padding: 10px 0;
+  }
+
+  details {
+    background: var(--surface);
+    border: 1px solid var(--line);
+  }
+  summary {
+    cursor: pointer;
+    padding: 10px 14px;
+    font-family: "Barlow Condensed", sans-serif;
+    font-weight: 600;
+    font-size: 1.05rem;
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+  }
+  summary::after {
+    content: "+";
+    color: var(--ink-3);
+  }
+  details[open] summary::after {
+    content: "–";
+  }
+  details .in {
+    padding: 4px 14px 14px;
+    display: grid;
+    gap: 10px;
+    border-top: 1px solid var(--line);
+  }
+  details .in p {
+    font-size: 0.94rem;
+    color: var(--ink-2);
+  }
+  details .in .pc {
+    display: grid;
+    gap: 2px;
+  }
+  details .in .pc b {
+    font-weight: 600;
+  }
+  details .in .pc .f {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.74rem;
+    color: var(--ink-3);
+  }
+  ul.rules {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 6px;
+    font-size: 0.94rem;
+    color: var(--ink-2);
+  }
+  footer {
+    border-top: 1px solid var(--line);
+    padding-block: 14px;
+    color: var(--ink-3);
+    font-size: 0.82rem;
+    display: grid;
+    gap: 3px;
+  }
+
+  /* 2026-09-21T19:47:40Z owner: mobile first means the owner's iPhone 16 Pro Max (430 x 932 CSS px, 3x). Tighter gutter, larger tap
+     targets, type that reads at arm's length, safe-area padding for the home indicator. v1.0.1 of the Rail. */
+  @media (max-width: 480px) {
+    body { padding-inline: 16px; font-size: 17px; }
+    .wrap { gap: 22px; padding-block: 20px calc(48px + env(safe-area-inset-bottom, 0px)); }
+    h1 { font-size: 2.35rem; }
+    .now { padding: 16px 16px; }
+    .now .title { font-size: 1.4rem; }
+    .chip { font-size: 0.8rem; padding: 5px 11px; }
+    .node { grid-template-columns: 24px 1fr; gap: 12px; }
+    .node .card { padding: 10px 0 20px; }
+    details summary { padding-block: 12px; min-height: 44px; display: flex; align-items: center; }
+    a, button, summary { -webkit-tap-highlight-color: transparent; }
+  }
+
+  /* 2026-09-21T19:48:02Z owner screenshot, iPhone 16 Pro Max: the page ran wider than the viewport and the left edge was cut off.
+     Cause: long unbreakable strings (file paths in refs, the built line) in grid children whose min-width defaults
+     to auto. Fix: every string may break anywhere, every grid child may shrink, and the body can never scroll
+     sideways. Rejected: shortening refs in the build, which hides the path the reader may need. */
+  html, body { max-width: 100%; overflow-x: hidden; }
+  body { overflow-wrap: anywhere; word-break: break-word; }
+  .wrap, .wrap > *, .node > *, .node .card, .node .card > *, .now > *, .now .meta > * { min-width: 0; max-width: 100%; }
+  pre, code { white-space: pre-wrap; }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">__EYEBROW__</div>
+    <h1>__TITLE__</h1>
+    <div class="built">
+      page built <span id="built">__BUILT_AT__</span> · ledger rows
+      <span id="rowcount">0</span> · all times UTC
+    </div>
+  </header>
+
+  <section class="now" id="now"></section>
+
+  <section class="progress">
+    <div class="num">
+      <span id="pdone">0 of 10 complete</span><span id="pnext"></span>
+    </div>
+    <div class="bar"><div class="fill" id="pfill"></div></div>
+  </section>
+
+  <div class="cols">
+    <section>
+      <div class="eyebrow" style="margin-bottom: 10px">The plan</div>
+      <div class="rail" id="rail"></div>
+    </section>
+
+    <aside class="side">
+      <section>
+        <div class="eyebrow" style="margin-bottom: 8px">
+          Ledger, newest first
+        </div>
+        <div class="ledger" id="ledger"></div>
+      </section>
+      __SIDE_HTML__
+    </aside>
+  </div>
+
+  <footer>
+    <span>__SOURCE__</span>
+  </footer>
+</div>
+
+<script id="plan" type="application/json">__PLAN_JSON__</script>
+<script id="ledger-data" type="application/json">
+  __LEDGER_JSON__
+</script>
+<script id="meta" type="application/json">
+  {"approved": __APPROVED__}
+</script>
+<script>
+  (function () {
+    var plan = JSON.parse(document.getElementById("plan").textContent);
+    var rows = JSON.parse(document.getElementById("ledger-data").textContent);
+    var meta = JSON.parse(document.getElementById("meta").textContent);
+    var esc = function (s) {
+      return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+      });
+    };
+    var short = function (t) {
+      return t ? t.replace("T", " ").replace(/:\d\dZ$/, "Z") : "";
+    };
+
+    // state per step: the last ledger row for that step wins
+    var last = {};
+    rows.forEach(function (r) {
+      last[r.step] = r;
+    });
+    var stateOf = function (id) {
+      return last[id] ? last[id].status : "pending";
+    };
+
+    var doneCount = plan.filter(function (s) {
+      return stateOf(s.id) === "complete";
+    }).length;
+    var current = plan.find(function (s) {
+      return stateOf(s.id) !== "complete";
+    });
+
+    // NOW card
+    var now = document.getElementById("now");
+    if (!meta.approved) {
+      now.className = "now await";
+      now.innerHTML =
+        '<div class="top"><span class="stepid">WAITING</span><span class="chip awaiting">awaiting __SIGNAL__</span></div>' +
+        '<div class="title">Nothing runs until you say __SIGNAL__</div>' +
+        '<p class="line">The plan is locked and the ledger is open. The first step is ' +
+        esc(plan[0].id) +
+        ", " +
+        esc(plan[0].t.toLowerCase()) +
+        ".</p>";
+    } else if (current) {
+      var st = stateOf(current.id);
+      var r = last[current.id];
+      now.className = "now";
+      now.innerHTML =
+        '<div class="top"><span class="stepid">' +
+        esc(current.id) +
+        '</span><span class="chip ' +
+        esc(st) +
+        '">' +
+        esc(st) +
+        "</span>" +
+        (current.gate ? '<span class="gate">gate</span>' : "") +
+        "</div>" +
+        '<div class="title">' +
+        esc(current.t) +
+        "</div>" +
+        (r
+          ? '<p class="line">' +
+            esc(r.text) +
+            '</p><div class="meta"><span>' +
+            esc(short(r.at_utc)) +
+            "</span><span>" +
+            esc(r.by) +
+            "</span>" +
+            (r.ref ? "<span>" + esc(r.ref) + "</span>" : "") +
+            "</div>"
+          : '<p class="line">Not started. Next in order.</p>');
+    } else {
+      now.className = "now";
+      now.innerHTML =
+        '<div class="top"><span class="stepid">DONE</span><span class="chip complete">complete</span></div><div class="title">Every step in the plan is complete</div>';
+    }
+
+    // progress
+    document.getElementById("pdone").textContent =
+      doneCount + " of " + plan.length + " complete";
+    document.getElementById("pnext").textContent = current
+      ? "next " + current.id
+      : "";
+    document.getElementById("pfill").style.width =
+      (doneCount / plan.length) * 100 + "%";
+    document.getElementById("rowcount").textContent = rows.length;
+
+    // rail
+    var rail = document.getElementById("rail");
+    rail.innerHTML = plan
+      .map(function (s) {
+        var st = stateOf(s.id);
+        var r = last[s.id];
+        return (
+          '<div class="node ' +
+          esc(st) +
+          (s.owner ? " owner" : "") +
+          '"><div class="dot"><i></i></div><div class="card">' +
+          '<div class="head"><span class="id">' +
+          esc(s.id) +
+          '</span><span class="t">' +
+          esc(s.t) +
+          "</span>" +
+          (s.gate ? '<span class="gate">gate</span>' : "") +
+          "</div>" +
+          '<div class="who">' +
+          esc(s.who) +
+          (st !== "pending"
+            ? ' · <span class="chip ' + esc(st) + '">' + esc(st) + "</span>"
+            : "") +
+          "</div>" +
+          (r ? '<div class="last">' + esc(r.text) + "</div>" : "") +
+          "</div></div>"
+        );
+      })
+      .join("");
+
+    // ledger newest first
+    var led = document.getElementById("ledger");
+    if (!rows.length) {
+      led.innerHTML = '<div class="empty">No rows yet.</div>';
+    } else {
+      led.innerHTML = rows
+        .slice()
+        .reverse()
+        .map(function (r) {
+          return (
+            '<div class="row"><div class="k"><b>' +
+            esc(r.step) +
+            "</b><span>" +
+            esc(short(r.at_utc)) +
+            "</span></div>" +
+            '<div class="v"><span class="chip ' +
+            esc(r.status) +
+            '">' +
+            esc(r.status) +
+            "</span><span>" +
+            esc(r.text) +
+            "</span></div></div>"
+          );
+        })
+        .join("");
+    }
+  })();
+</script>
