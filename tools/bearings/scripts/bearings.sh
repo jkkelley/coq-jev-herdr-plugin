@@ -72,7 +72,15 @@ in_herdr() { [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_PANE_ID:-}" ]; }
 
 # Find a pane by label in the current tab, or split one off the current pane.
 pane_by_label() {
-  herdr pane list --tab "$HERDR_TAB_ID" 2>/dev/null | jq -r --arg l "$1" '.result.panes[]? | select(.label == $l) | .pane_id' | head -1
+  # Breadcrumb 2026-10-10 UTC (WO-20261010-ba08): this used `herdr pane list --tab "$HERDR_TAB_ID"`.
+  # herdr 0.9.0 `pane list` only takes --workspace, so it exited 2 (usage); 2>/dev/null hid the
+  # message, pipefail carried the 2 into the command substitution and errexit killed the script
+  # inside `stop`, after the server was stopped and before any pane was closed. Every stop left
+  # its two labelled panes behind and `make stop` reported Error 2. Filtering tab_id in jq is
+  # the fix because it needs no flag the CLI may not have; the alternative, --workspace plus a
+  # tab filter, still breaks on a CLI without --workspace. Cost: one unfiltered list per lookup.
+  herdr pane list 2>/dev/null | jq -r --arg l "$1" --arg t "${HERDR_TAB_ID:-}" \
+    '.result.panes[]? | select(.label == $l and ($t == "" or .tab_id == $t)) | .pane_id' | head -1 || true
 }
 pane_for() {
   local label=$1 p
