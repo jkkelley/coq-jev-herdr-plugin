@@ -8,4 +8,8 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
+| `WO-20261010-3593` | draft | p0 | WO-20261010-ba08 | [Handoff to the interface agent: page state, transcript, memory, hydration](WO-20261010-3593-handoff-to-the-interface-agent-page-state-transc.md) |
+| `WO-20261010-090c` | draft | p0 | WO-20261010-7c55 | [SITREP site: Go server, websocket owner channel, wireframe viewer, link to the factory dashboard](WO-20261010-090c-sitrep-site-go-server-websocket-owner-channel-wi.md) |
+| `WO-20261010-7c55` | draft | p0 | - | [Wireframes: herdr tab and pane layouts, SITREP site, factory dashboard, game pane](WO-20261010-7c55-wireframes-herdr-tab-and-pane-layouts-sitrep-sit.md) |
+| `WO-20261010-c180` | draft | p1 | WO-20261010-090c | [Factory dashboard: live view of the queue, seats, records and leases, Factorio feel](WO-20261010-c180-factory-dashboard-live-view-of-the-queue-seats-r.md) |
 | `WO-20261010-ba08` | draft | p1 | - | [Vendor bearings into tools/bearings with stable, uat and dev tiers](WO-20261010-ba08-vendor-bearings-into-tools-bearings-with-stable-.md) |
