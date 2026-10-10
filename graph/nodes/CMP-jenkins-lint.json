@@ -1,0 +1,26 @@
+{
+  "id": "CMP-jenkins-lint",
+  "type": "Component",
+  "title": "Jenkins job coq-jev-herdr-plugin: lint/lint.sh on every push to main in ghcr.io/jkkelley/coq-lint:1 (amd64+arm64), from the Jenkinsfile",
+  "status": "locked",
+  "text": "Owner 2026-10-10 UTC: nothing by hand. Kubernetes agent pod on the arm64 homelab cluster, imagePullPolicy Always, imagePullSecret ghcr-pull-secret, triggers githubPush and pollSCM H/10. Build 3 green 20:07 UTC. make lint-image-push rebuilds and pushes the image.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T20"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "DEC-system-before-agents"
+    },
+    {
+      "kind": "depends_on",
+      "to": "CMP-knowledge-graph"
+    }
+  ],
+  "created": "2026-10-10T20:08Z",
+  "updated": "2026-10-10T20:08Z"
+}

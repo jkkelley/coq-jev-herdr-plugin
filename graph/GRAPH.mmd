@@ -9,6 +9,7 @@ flowchart LR
   CMP-herdr-browser-prior-art["CMP-herdr-browser-prior-art<br/>Prior art: ogulcancelik/herdr-browser re"]
   CMP-herdr-ecosystem-reuse["CMP-herdr-ecosystem-reuse<br/>Reusable herdr plugins: furkankly/zoetro"]
   CMP-herdr-plugin["CMP-herdr-plugin<br/>herdr-plugin.toml: actions, panes, event"]
+  CMP-jenkins-lint["CMP-jenkins-lint<br/>Jenkins job coq-jev-herdr-plugin: lint/l"]
   CMP-knowledge-graph["CMP-knowledge-graph<br/>graph/: one JSON node per file, graph.sh"]
   CMP-monitor-seat["CMP-monitor-seat<br/>Monitor seat and herdr tab group for the"]
   CMP-pane-renderer["CMP-pane-renderer<br/>Pane renderer TUI: map, transcript and d"]
@@ -113,6 +114,8 @@ flowchart LR
   CMP-herdr-browser-prior-art -- verified_by --> SPK-05-pane-graphics
   CMP-herdr-browser-prior-art -- risks --> RSK-pixels-in-pane
   CMP-herdr-ecosystem-reuse -- implements --> REQ-owner-notifications
+  CMP-jenkins-lint -- implements --> DEC-system-before-agents
+  CMP-jenkins-lint -- depends_on --> CMP-knowledge-graph
   CMP-knowledge-graph -- decided_by --> DEC-xml-specs-bounded
   CMP-monitor-seat -- implements --> REQ-event-log
   CMP-monitor-seat -- decided_by --> DEC-system-before-agents
