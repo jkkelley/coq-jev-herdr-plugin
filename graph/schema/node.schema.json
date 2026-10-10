@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/graph/schema/node.schema.json",
+  "title": "knowledge graph node",
+  "description": "One node under graph/nodes/<id>.json. Owner order 2026-10-10 UTC: define schemas and attach them to the nodes. A node that describes a thing with a shape names that shape in `schema` and the instances in `data`; graph.sh check validates each instance against the schema, so the graph and the thing it describes cannot drift apart silently.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "type", "title", "status", "text", "sources", "edges", "created", "updated"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^(DEC|REQ|CMP|IFC|SCH|WFL|NOD|ROL|SPK|RSK|STC|RUN)-[a-z0-9][a-z0-9-]{1,47}$" },
+    "type": { "enum": ["Decision", "Requirement", "Component", "Interface", "Schema", "Workflow", "Node", "Role", "Spike", "Risk", "StatusCode", "Runbook"] },
+    "title": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["draft", "proposed", "locked", "superseded"] },
+    "text": { "type": "string" },
+    "sources": { "type": "array", "items": { "type": "object", "required": ["kind", "id"], "properties": { "kind": { "type": "string" }, "id": { "type": "string" }, "at": { "type": ["string", "null"] } } } },
+    "edges": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["kind", "to"], "properties": { "kind": { "enum": ["depends_on", "implements", "decided_by", "verified_by", "risks", "owned_by", "defined_in", "supersedes"] }, "to": { "type": "string" } } } },
+    "schema": { "type": "string", "pattern": "^[a-z][a-z0-9/_.-]*\\.schema\\.json$", "description": "repo-relative path of the JSON schema that governs what this node describes" },
+    "data": { "type": "array", "items": { "type": "string", "pattern": "^[a-z][A-Za-z0-9/_.-]*$" }, "description": "repo-relative paths of instances that must validate against `schema`; a directory means every *.json under it" },
+    "created": { "type": "string" },
+    "updated": { "type": "string" }
+  },
+  "dependentRequired": { "data": ["schema"] }
+}

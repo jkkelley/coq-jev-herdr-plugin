@@ -16,5 +16,9 @@
     }
   ],
   "created": "2026-10-10T19:15Z",
-  "updated": "2026-10-10T19:15Z"
+  "updated": "2026-10-10T19:54Z",
+  "schema": "queue/config/queue.schema.json",
+  "data": [
+    "queue/config/queue.json"
+  ]
 }

@@ -12,5 +12,9 @@
     }
   ],
   "created": "2026-10-10T18:55Z",
-  "updated": "2026-10-10T18:55Z"
+  "updated": "2026-10-10T19:54Z",
+  "schema": "graph/schema/node.schema.json",
+  "data": [
+    "graph/nodes"
+  ]
 }

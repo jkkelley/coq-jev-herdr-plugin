@@ -1,0 +1,38 @@
+{
+  "id": "WFL-integration",
+  "type": "Workflow",
+  "title": "Integration: the merger rebases the PR on main, runs lint and test on the merged tree, squash-merges, cleans up; merged 200 or merge.conflict 409",
+  "status": "locked",
+  "text": "Owner, chat 2026-10-10 UTC: 'we should have an integration node in DAG'. The node between review.passed 201 and verified 201 in WFL-sdlc. Input: review.passed 201 with the pr. Steps: fetch main, rebase the branch, make lint and make test on the merged tree, gh pr merge --squash, work-order.sh cleanup, slot.sh release. Output: merged 200 (routes to the architect for verify) or merge.conflict 409 (routes to the worker with the record). Never merges a PR whose tests did not run on the merged tree.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "owned_by",
+      "to": "ROL-merger"
+    },
+    {
+      "kind": "depends_on",
+      "to": "SCH-routes"
+    },
+    {
+      "kind": "depends_on",
+      "to": "STC-http-shaped"
+    },
+    {
+      "kind": "implements",
+      "to": "WFL-sdlc"
+    }
+  ],
+  "created": "2026-10-10T19:54Z",
+  "updated": "2026-10-10T19:54Z",
+  "schema": "factory/config/routes.schema.json",
+  "data": [
+    "factory/config/routes.json"
+  ]
+}

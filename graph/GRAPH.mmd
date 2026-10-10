@@ -14,6 +14,7 @@ flowchart LR
   CMP-pane-renderer["CMP-pane-renderer<br/>Pane renderer TUI: map, transcript and d"]
   CMP-player-seat["CMP-player-seat<br/>Player seat: runtime-pluggable (claude, "]
   CMP-qud-adapter["CMP-qud-adapter<br/>Qud adapter: Harmony C# mod exporting st"]
+  CMP-queue["CMP-queue<br/>queue/: directory queue with p0..p3 prio"]
   CMP-rust-terminal["CMP-rust-terminal<br/>Rust terminal with Kitty graphics: fallb"]
   CMP-sitrep-site["CMP-sitrep-site<br/>SITREP site: Go server, websocket owner "]
   DEC-bearings-vendored-tiers["DEC-bearings-vendored-tiers<br/>Bearings is vendored into tools/bearings"]
@@ -25,17 +26,22 @@ flowchart LR
   DEC-makefiles-entry-point["DEC-makefiles-entry-point<br/>Makefiles are the entry point of every r"]
   DEC-monorepo-apache2["DEC-monorepo-apache2<br/>One public monorepo under Apache-2.0"]
   DEC-mvp-player-haiku["DEC-mvp-player-haiku<br/>First MVP player model is Haiku 5.5; pla"]
+  DEC-nats-jetstream-grpc["DEC-nats-jetstream-grpc<br/>NATS JetStream is the producer-consumer "]
   DEC-no-hardcode-config-s3["DEC-no-hardcode-config-s3<br/>Nothing hardcoded: every tunable in vers"]
   DEC-no-process-under-agent["DEC-no-process-under-agent<br/>No process or subagent under an agent; e"]
   DEC-own-game-terminal["DEC-own-game-terminal<br/>Build our own pane program (Rust) that r"]
   DEC-p0-by-discovery-session["DEC-p0-by-discovery-session<br/>The discovery session writes the whole P"]
   DEC-page-only-owner-channel["DEC-page-only-owner-channel<br/>The owner decides and talks only through"]
+  DEC-per-package-cicd-semver["DEC-per-package-cicd-semver<br/>Each package in the monorepo has its own"]
   DEC-permissions-by-role["DEC-permissions-by-role<br/>bypassPermissions for working roles; int"]
   DEC-qud-drm-free["DEC-qud-drm-free<br/>Spikes use a DRM-free GOG or itch Qud bu"]
   DEC-rust-terminal-parallel["DEC-rust-terminal-parallel<br/>A Rust terminal with Kitty graphics is s"]
   DEC-sitrep-local-first["DEC-sitrep-local-first<br/>SITREP client/server runs locally in WSL"]
+  DEC-spike5-passed["DEC-spike5-passed<br/>Spike 5 passed 2026-10-10: a PNG pushed "]
   DEC-system-before-agents["DEC-system-before-agents<br/>Monitoring and the system come up before"]
   DEC-templates-over-handwriting["DEC-templates-over-handwriting<br/>Test plans, harnesses and records are ge"]
+  DEC-tiers-everywhere["DEC-tiers-everywhere<br/>stable, uat and dev tiers for every runn"]
+  DEC-variants-parallel["DEC-variants-parallel<br/>Several coq-term variants are designed a"]
   DEC-wireframe-gate["DEC-wireframe-gate<br/>Nothing visual is built before its figma"]
   DEC-xml-specs-bounded["DEC-xml-specs-bounded<br/>Specs are XML, each under 1000 lines, po"]
   IFC-herdr-socket["IFC-herdr-socket<br/>herdr socket API (protocol 22): workspac"]
@@ -43,6 +49,8 @@ flowchart LR
   IFC-player-contract["IFC-player-contract<br/>Player contract: structured game state i"]
   REQ-agents-md-portable["REQ-agents-md-portable<br/>Every AGENTS.md and markdown file is run"]
   REQ-any-steam-game["REQ-any-steam-game<br/>Any Steam game the owner has can be play"]
+  REQ-checkpoint-every-step["REQ-checkpoint-every-step<br/>Every task is cut into steps that each e"]
+  REQ-compaction-quiet-window["REQ-compaction-quiet-window<br/>Nothing may stop a compaction and nothin"]
   REQ-compaction-rule["REQ-compaction-rule<br/>Compaction at 30 percent AND task comple"]
   REQ-event-log["REQ-event-log<br/>One git-tracked event log dir, one file "]
   REQ-factory-node-contract["REQ-factory-node-contract<br/>Every factory node: schema in, schema ou"]
@@ -65,6 +73,12 @@ flowchart LR
   RSK-proton-wsl["RSK-proton-wsl<br/>Proton in WSL2 is unproven; the ARM64 cl"]
   RSK-steam-tos["RSK-steam-tos<br/>Steam Subscriber Agreement 4.C bans bots"]
   RUN-bearings-promote["RUN-bearings-promote<br/>Promote a bearings change: dev slot, mak"]
+  RUN-kickback["RUN-kickback<br/>Kickback: events/bin/event.sh add --kind"]
+  RUN-recover["RUN-recover<br/>recover.sh --check|--apply: halt flag, h"]
+  RUN-retire["RUN-retire<br/>retire: agent send-keys esc, agent promp"]
+  RUN-seat-up["RUN-seat-up<br/>seat.sh --ticket WO --role R: workspace "]
+  SCH-factory-record["SCH-factory-record<br/>factory/schema/record.schema.json: id, a"]
+  SCH-routes["SCH-routes<br/>factory/config/routes.json: first matchi"]
   SPK-01-qud-on-wsl["SPK-01-qud-on-wsl<br/>Spike 1: native Linux Qud runs in WSL2 u"]
   SPK-02-harmony-mod["SPK-02-harmony-mod<br/>Spike 2: Harmony mod exports state per t"]
   SPK-03-ipc["SPK-03-ipc<br/>Spike 3: file IPC vs socket; pass = unde"]
@@ -79,12 +93,16 @@ flowchart LR
   SPK-11-herdr-scratch-harness["SPK-11-herdr-scratch-harness<br/>Spike 11: scratch herdr session harness "]
   STC-guard-families["STC-guard-families<br/>compaction-guard families GOV, CMP, RES,"]
   STC-http-shaped["STC-http-shaped<br/>HTTP-shaped status codes from rime: 100 "]
+  WFL-bringup["WFL-bringup<br/>Bring-up DAG: herdr session, control pla"]
+  WFL-integration["WFL-integration<br/>Integration: the merger rebases the PR o"]
+  WFL-sdlc["WFL-sdlc<br/>SDLC DAG: request to ticket to work to t"]
   CMP-bearings-tool -- decided_by --> DEC-bearings-vendored-tiers
   CMP-bearings-tool -- owned_by --> ROL-interface-agent
   CMP-compaction-guard -- implements --> REQ-compaction-rule
   CMP-compaction-guard -- risks --> RSK-compaction-sensor
   CMP-control-plane -- depends_on --> STC-http-shaped
   CMP-coq-term -- decided_by --> DEC-own-game-terminal
+  CMP-coq-term -- decided_by --> DEC-spike5-passed
   CMP-coq-term -- depends_on --> CMP-herdr-browser-prior-art
   CMP-coq-term -- depends_on --> SPK-05-result-socket-accepts
   CMP-coq-term -- implements --> REQ-north-star
@@ -105,12 +123,29 @@ flowchart LR
   CMP-qud-adapter -- decided_by --> DEC-game-host-linux-native
   CMP-qud-adapter -- implements --> IFC-player-contract
   CMP-qud-adapter -- verified_by --> SPK-02-harmony-mod
+  CMP-queue -- implements --> REQ-locks-and-queues
+  CMP-queue -- owned_by --> ROL-orchestrator
   CMP-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
   CMP-sitrep-site -- decided_by --> DEC-sitrep-local-first
   CMP-sitrep-site -- depends_on --> IFC-owner-channel
+  DEC-nats-jetstream-grpc -- supersedes --> REQ-locks-and-queues
+  DEC-nats-jetstream-grpc -- depends_on --> STC-http-shaped
+  DEC-nats-jetstream-grpc -- depends_on --> SCH-routes
+  DEC-nats-jetstream-grpc -- implements --> REQ-status-change-wakeups
+  DEC-nats-jetstream-grpc -- implements --> DEC-system-before-agents
   DEC-own-game-terminal -- supersedes --> DEC-rust-terminal-parallel
+  DEC-per-package-cicd-semver -- decided_by --> DEC-monorepo-apache2
+  DEC-spike5-passed -- supersedes --> RSK-pixels-in-pane
+  DEC-spike5-passed -- implements --> SPK-05-pane-graphics
+  DEC-tiers-everywhere -- supersedes --> DEC-bearings-vendored-tiers
+  DEC-variants-parallel -- decided_by --> DEC-own-game-terminal
   IFC-owner-channel -- decided_by --> DEC-page-only-owner-channel
   IFC-player-contract -- decided_by --> DEC-layla-system-one
+  REQ-checkpoint-every-step -- depends_on --> REQ-compaction-rule
+  REQ-checkpoint-every-step -- implements --> DEC-system-before-agents
+  REQ-compaction-quiet-window -- depends_on --> REQ-compaction-rule
+  REQ-compaction-quiet-window -- depends_on --> CMP-compaction-guard
+  REQ-compaction-quiet-window -- implements --> DEC-system-before-agents
   REQ-compaction-rule -- implements --> DEC-system-before-agents
   REQ-locks-and-queues -- implements --> REQ-factory-node-contract
   REQ-north-star -- decided_by --> DEC-game-host-linux-native
@@ -126,6 +161,14 @@ flowchart LR
   RSK-proton-wsl -- decided_by --> DEC-game-host-linux-native
   RSK-steam-tos -- decided_by --> DEC-qud-drm-free
   RUN-bearings-promote -- defined_in --> CMP-bearings-tool
+  RUN-kickback -- defined_in --> SCH-factory-record
+  RUN-recover -- depends_on --> RUN-seat-up
+  RUN-retire -- owned_by --> ROL-monitor
+  RUN-seat-up -- depends_on --> WFL-bringup
+  RUN-seat-up -- implements --> DEC-no-process-under-agent
+  SCH-factory-record -- implements --> REQ-factory-node-contract
+  SCH-routes -- implements --> REQ-factory-node-contract
+  SCH-routes -- owned_by --> ROL-orchestrator
   SPK-02-harmony-mod -- depends_on --> SPK-01-qud-on-wsl
   SPK-03-ipc -- depends_on --> SPK-02-harmony-mod
   SPK-04-text-vs-vision -- depends_on --> SPK-02-harmony-mod
@@ -136,3 +179,10 @@ flowchart LR
   SPK-08-memory-loop -- depends_on --> SPK-04-text-vs-vision
   SPK-10-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
   SPK-10-rust-terminal -- implements --> CMP-coq-term
+  WFL-bringup -- decided_by --> DEC-system-before-agents
+  WFL-integration -- owned_by --> ROL-merger
+  WFL-integration -- depends_on --> SCH-routes
+  WFL-integration -- depends_on --> STC-http-shaped
+  WFL-integration -- implements --> WFL-sdlc
+  WFL-sdlc -- depends_on --> SCH-routes
+  WFL-sdlc -- depends_on --> SCH-factory-record

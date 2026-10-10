@@ -16,5 +16,9 @@
     }
   ],
   "created": "2026-10-10T19:10Z",
-  "updated": "2026-10-10T19:10Z"
+  "updated": "2026-10-10T19:54Z",
+  "schema": "factory/config/routes.schema.json",
+  "data": [
+    "factory/config/routes.json"
+  ]
 }

@@ -3,11 +3,13 @@
 # agents add nodes at once with no lock and no merge conflict. Specs point at
 # nodes by id; the Architect queries here before cutting a ticket.
 #
-#   graph.sh add  --id DEC-xxx --type Decision --title T [--status locked] [--text T] [--source kind:id[:utc]]... [--edge kind:NODE]...
+#   graph.sh add  --id DEC-xxx --type Decision --title T [--status locked] [--text T] [--source kind:id[:utc]]... [--edge kind:NODE]... [--schema P] [--data P]...
+#   graph.sh attach --id NODE --schema P [--data P]...   attach the schema that governs the node's thing, and its instances
 #   graph.sh edge --from NODE --kind depends_on --to NODE
 #   graph.sh get  <id> [--json]
 #   graph.sh find --type T | --text substring | --edge-to NODE
-#   graph.sh check                         every edge resolves, ids valid, no dupes; exit 3 names each offender
+#   graph.sh check                         every edge resolves, ids valid, no dupes, every node fits graph/schema/node.schema.json,
+#                                          every attached schema and data path exists and each instance validates; exit 3 names each offender
 #   graph.sh index                         writes graph/INDEX.md (table) and graph/GRAPH.mmd (mermaid)
 #   graph.sh sync-specs <specs-dir>        every <node> in the XML specs exists here with the same title; exit 3 on drift
 #
@@ -25,13 +27,29 @@ TYPES='{"DEC":"Decision","REQ":"Requirement","CMP":"Component","IFC":"Interface"
 now() { date -u +%Y-%m-%dT%H:%MZ; }
 vid() { [[ $1 =~ $ID_RE ]] || die 3 "bad node id $1 (prefix-slug, e.g. DEC-game-host-wsl)"; }
 f() { printf '%s/%s.json\n' "$NODES" "$1"; }
+REPO=$(cd "$ROOT/.." && pwd)
+# attach_schema NODE SCHEMA [DATA...]: paths are repo-relative and must exist now; check re-validates them every run.
+attach_schema() { local id=$1 schema=$2; shift 2; local d
+  [ -f "$REPO/$schema" ] || die 6 "no schema file $schema (repo-relative)"
+  for d in "$@"; do [ -z "$d" ] && continue; [ -e "$REPO/$d" ] || die 6 "no data path $d (repo-relative)"; done
+  local dj; dj=$(printf '%s\n' "$@" | { grep -v '^$' || true; } | jq -R . | jq -s .)
+  jq --arg s "$schema" --argjson d "$dj" --arg at "$(now)" '.schema=$s | (if ($d|length)>0 then .data=$d else . end) | .updated=$at' "$(f "$id")" > "$(f "$id").tmp" && mv "$(f "$id").tmp" "$(f "$id")"; }
+# validate INSTANCE SCHEMA: python3 + jsonschema when present (the lint container has both); otherwise a shape check only, and says so once.
+validate() { python3 - "$1" "$2" <<'PY' 2>&1
+import json,sys
+try: import jsonschema
+except ImportError: print('jsonschema not installed: shape not validated for '+sys.argv[1]); sys.exit(0)
+try: jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))
+except jsonschema.ValidationError as e: print(f'{sys.argv[1]}: {e.message}'); sys.exit(3)
+PY
+}
 VERB=${1:-}; shift || true
 case $VERB in
   add)
-    id=""; type=""; title=""; status=draft; text=""; sources=(); edges=()
+    id=""; type=""; title=""; status=draft; text=""; sources=(); edges=(); schema=""; data=()
     while [ $# -gt 0 ]; do case $1 in
       --id) id=$2; shift 2;; --type) type=$2; shift 2;; --title) title=$2; shift 2;; --status) status=$2; shift 2;; --text) text=$2; shift 2;;
-      --source) sources+=("$2"); shift 2;; --edge) edges+=("$2"); shift 2;; *) die 2 "unknown flag $1";; esac; done
+      --source) sources+=("$2"); shift 2;; --edge) edges+=("$2"); shift 2;; --schema) schema=$2; shift 2;; --data) data+=("$2"); shift 2;; *) die 2 "unknown flag $1";; esac; done
     [ -n "$id" ] && [ -n "$title" ] || die 2 "add needs --id and --title"; vid "$id"
     pre=${id%%-*}; want=$(jq -r --arg p "$pre" '.[$p]' <<<"$TYPES"); [ -z "$type" ] && type=$want
     [ "$type" = "$want" ] || die 3 "id prefix $pre means type $want, not $type"
@@ -44,7 +62,13 @@ case $VERB in
     for e in "${edges[@]:-}"; do [ -z "$e" ] && continue; [[ ${e%%:*} =~ $EDGE_RE ]] || die 3 "bad edge kind ${e%%:*}"; vid "${e#*:}"; done
     jq -n --arg id "$id" --arg type "$type" --arg title "$title" --arg status "$status" --arg text "$text" --arg at "$(now)" --argjson sources "$src" --argjson edges "$edg" \
       '{id:$id, type:$type, title:$title, status:$status, text:$text, sources:$sources, edges:$edges, created:$at, updated:$at}' > "$(f "$id").tmp" && mv "$(f "$id").tmp" "$(f "$id")"
+    [ -n "$schema" ] && attach_schema "$id" "$schema" "${data[@]:-}"
     printf '%s\n' "$id" ;;
+  attach)
+    id=""; schema=""; data=()
+    while [ $# -gt 0 ]; do case $1 in --id) id=$2; shift 2;; --schema) schema=$2; shift 2;; --data) data+=("$2"); shift 2;; *) die 2 "unknown flag $1";; esac; done
+    [ -n "$id" ] && [ -n "$schema" ] || die 2 "attach needs --id and --schema"; vid "$id"; [ -e "$(f "$id")" ] || die 6 "no node $id"
+    attach_schema "$id" "$schema" "${data[@]:-}" ;;
   edge)
     from=""; kind=""; to=""
     while [ $# -gt 0 ]; do case $1 in --from) from=$2; shift 2;; --kind) kind=$2; shift 2;; --to) to=$2; shift 2;; *) die 2 "unknown flag $1";; esac; done
@@ -62,6 +86,15 @@ case $VERB in
       id=$(jq -r .id "$fpath"); [ "$(basename "$fpath" .json)" = "$id" ] || { echo "filename/id mismatch: $fpath" >&2; bad=1; }
       [[ $id =~ $ID_RE ]] || { echo "bad id: $id" >&2; bad=1; }
       for to in $(jq -r '.edges[].to' "$fpath"); do grep -qx "$to" <<<"$ids" || { echo "$id -> $to: no such node" >&2; bad=1; }; done
+      out=$(validate "$fpath" "$ROOT/schema/node.schema.json") || { echo "$out" >&2; bad=1; }
+      schema=$(jq -r '.schema // empty' "$fpath"); [ -z "$schema" ] && continue
+      [ -f "$REPO/$schema" ] || { echo "$id: schema $schema missing" >&2; bad=1; continue; }
+      for d in $(jq -r '.data[]? // empty' "$fpath"); do
+        [ -e "$REPO/$d" ] || { echo "$id: data $d missing" >&2; bad=1; continue; }
+        for inst in $( [ -d "$REPO/$d" ] && find "$REPO/$d" -name '*.json' -not -name '*.schema.json' | sort || echo "$REPO/$d" ); do
+          out=$(validate "$inst" "$REPO/$schema") || { echo "$id: $out" >&2; bad=1; }
+        done
+      done
     done
     [ "$(printf '%s\n' "$ids" | uniq -d | wc -l)" = 0 ] || { echo "duplicate ids" >&2; bad=1; }
     [ "$bad" = 0 ] && echo "graph ok: $(printf '%s\n' "$ids" | grep -c . ) nodes" || exit 3 ;;

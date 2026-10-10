@@ -32,6 +32,7 @@ step "roles: schema + playbooks in sync"; ok=1
 for f in "$R"/roles/*.json; do python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" "$f" "$R/roles/schema/role.schema.json" 2>/dev/null || { echo "invalid role $f" >&2; ok=0; }; done
 bash "$R/roles/bin/render-playbook.sh" "$R/roles" "$R/playbooks" --check || ok=0
 if [ "$ok" = 1 ]; then echo ok; else echo FAIL; FAIL=1; fi
+step "changelog: entries + CHANGELOG.md rendered"; if bash "$R/bin/changelog.sh" check >/dev/null 2>&1; then echo ok; else bash "$R/bin/changelog.sh" check >&2 || true; echo FAIL; FAIL=1; fi
 step "events: every file valid"; if (cd "$R/events" && bin/event.sh check >/dev/null); then echo ok; else echo FAIL; FAIL=1; fi
 step "shell: shellcheck"; mapfile -t SH < <(find "$R" -name '*.sh' -not -path '*/node_modules/*' -not -path '*/.claude/*' -not -path '*/report/*')
 if shellcheck -S warning "${SH[@]}" 2>/tmp/sc; then echo ok; else echo FAIL; head -40 /tmp/sc >&2; FAIL=1; fi

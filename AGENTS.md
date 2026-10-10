@@ -22,14 +22,6 @@
 - Where your workspace comes from
 - General guidelines
 
-This file tells every agent working in this repository how to work here, whatever model or runtime it runs on.
-It is complete on its own.
-`CLAUDE.md` is a pointer to it and holds nothing else.
-
-Where a law below cites a Drive document, the document is binding and this file is the summary.
-Documents are cited by name and version only.
-Ask the knowledge-steward seat for the current copy rather than working from memory of it.
-
 ## What this repository is
 
 TODO: FILL THIS IN
@@ -47,6 +39,8 @@ After a step lands, raise your compact request and end the turn.
 A watcher compacts the seat once it is idle; never send `/compact` yourself.
 Nothing may stop a compaction and nothing is lost: the watcher opens a quiet window, posts a system message with a five second countdown, watchers pause and queue their wake signals, and the queue drains into the first turn after the resume card (SPEC-05 s-quiet).
 Small scope compacts sooner and costs fewer tokens per step, which is what the owner is paying for.
+A step lands through `make step MSG=.. TYPE=.. TITLE=.. CP=body.md` (`bin/step.sh`): lint, changelog entry, commit, push, checkpoint, compact request, in that order, and a lint failure commits nothing.
+Owner, 2026-10-10 UTC: nothing in this cycle is run by hand, the same way nobody at AWS deploys by hand.
 
 GOOD: a port of three functions lands as one commit and one checkpoint, the seat compacts, then the suite case is the next step.
 GOOD: a checkpoint written while the suite runs in its pane, so a compaction mid-run loses nothing.
@@ -89,6 +83,7 @@ A fix for an earlier issue is a new entry carrying `resolves: <suffix>`, never a
 Moving them onto the layout above is WO-20261010-d354 in `work-orders/INDEX.md` (search "dated entry files"); until it lands, read both shapes and write only through the scripts.
 
 GOOD: `events/2026/10/20261010-uat-tier-started.md` with frontmatter, written by `bin/event.sh`.
+GOOD: `changelog/2026/10/20261010-commit-the-factory-scripts.md` written by `bin/changelog.sh add`, and `CHANGELOG.md` rendered from the tree, never edited.
 NEVER: appending a line to a shared `LOG.md`, or editing yesterday's entry to say what happened today.
 
 ## Law: the bus is NATS JetStream, the control plane is gRPC, status codes drive it
