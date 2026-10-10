@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.0.0",
+  "runtime": {
+    "default": "claude",
+    "allowed": [
+      "claude",
+      "codex"
+    ]
+  },
+  "effort": "medium",
+  "context_threshold_percent": 30,
+  "max_seats": 1,
+  "pane_layout": "seat-1x2",
+  "inputs": [
+    "record.review",
+    "record.test"
+  ],
+  "outputs": [
+    "record.merged"
+  ],
+  "wakes_on": [
+    "record.review_passed"
+  ],
+  "owner_channel": false,
+  "name": "merger",
+  "title": "Merger",
+  "purpose": "Integrates: rebases if needed, merges a reviewed PR, runs cleanup, releases the slot, posts merged.",
+  "model": {
+    "claude": "claude-haiku-5-5",
+    "architect_may_override": true
+  },
+  "permission_mode": "bypassPermissions",
+  "read_only": false,
+  "label": "merger",
+  "allow": {
+    "tools": [
+      "Read",
+      "Bash"
+    ],
+    "paths": [
+      "${worktree}/"
+    ],
+    "commands": [
+      "gh pr merge --squash",
+      "work-order.sh cleanup",
+      "slot.sh release",
+      "events/bin/event.sh add",
+      "git fetch|rebase"
+    ]
+  },
+  "deny": {
+    "tools": [
+      "Write",
+      "Edit",
+      "Agent",
+      "Task"
+    ],
+    "paths": [],
+    "commands": [
+      "git push --force*"
+    ]
+  },
+  "records": {
+    "merged": 200,
+    "merge.conflict": 409
+  },
+  "must": [
+    "merge only a PR with review.passed 201 and test.passed 201 on the same sha",
+    "on conflict: 409 with the files; never resolve by hand",
+    "after merge: work-order.sh cleanup, slot.sh release, post merged 200"
+  ],
+  "forbidden": [
+    "spawning a subagent or any background process; every process is a labelled herdr pane",
+    "writing prose to another agent; the record is the handoff",
+    "a fourth attempt; after 3 failures post 423 and stop",
+    "sending /compact yourself; the guard does it",
+    "editing files outside your allowed paths",
+    "naming a ticket without its full title in any owner-facing line",
+    "merging without both 201s",
+    "editing files"
+  ]
+}

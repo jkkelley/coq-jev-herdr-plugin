@@ -1,0 +1,17 @@
+{
+  "id": "DEC-functional-style",
+  "type": "Decision",
+  "title": "Functional programming mindset: pure functions, side effects at the edges, easy to test, frameworks and the right tool for the job, Makefile targets",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:59Z",
+  "updated": "2026-10-10T18:59Z"
+}

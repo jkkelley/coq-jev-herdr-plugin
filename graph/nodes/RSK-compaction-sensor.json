@@ -1,0 +1,11 @@
+{
+  "id": "RSK-compaction-sensor",
+  "type": "Risk",
+  "title": "compaction-guard reads 0 percent for a session started without its status-line tap",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

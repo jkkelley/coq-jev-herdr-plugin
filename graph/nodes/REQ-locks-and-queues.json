@@ -1,0 +1,22 @@
+{
+  "id": "REQ-locks-and-queues",
+  "type": "Requirement",
+  "title": "Locks are leases with a TTL and automatic release; work is a priority queue with smart dequeue; nothing blocks on a human except an owner decision card",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-factory-node-contract"
+    }
+  ],
+  "created": "2026-10-10T19:04Z",
+  "updated": "2026-10-10T19:04Z"
+}

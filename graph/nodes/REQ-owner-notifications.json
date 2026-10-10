@@ -1,0 +1,17 @@
+{
+  "id": "REQ-owner-notifications",
+  "type": "Requirement",
+  "title": "Decision-needed and failure events raise herdr notifications; routine events do not",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "m-20261010183842144-2jl9w",
+      "at": "2026-10-10T18"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "RUN-bearings-promote",
+  "type": "Runbook",
+  "title": "Promote a bearings change: dev slot, make test, uat page, owner confirms, PR, merge, make upgrade on main",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "defined_in",
+      "to": "CMP-bearings-tool"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

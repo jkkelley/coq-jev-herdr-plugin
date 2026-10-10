@@ -1,0 +1,17 @@
+{
+  "id": "DEC-xml-specs-bounded",
+  "type": "Decision",
+  "title": "Specs are XML, each under 1000 lines, pointing at graph nodes and other specs by id",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T17"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

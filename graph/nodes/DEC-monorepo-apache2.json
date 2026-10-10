@@ -1,0 +1,17 @@
+{
+  "id": "DEC-monorepo-apache2",
+  "type": "Decision",
+  "title": "One public monorepo under Apache-2.0",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "Q4",
+      "at": "2026-10-10T18"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

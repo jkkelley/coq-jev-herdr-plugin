@@ -1,0 +1,16 @@
+{
+  "id": "SPK-03-ipc",
+  "type": "Spike",
+  "title": "Spike 3: file IPC vs socket; pass = under 50 ms round trip, no torn JSON",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "SPK-02-harmony-mod"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

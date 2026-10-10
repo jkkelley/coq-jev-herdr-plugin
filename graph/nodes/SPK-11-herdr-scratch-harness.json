@@ -1,0 +1,11 @@
+{
+  "id": "SPK-11-herdr-scratch-harness",
+  "type": "Spike",
+  "title": "Spike 11: scratch herdr session harness in Podman: start, create, assert, tear down",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

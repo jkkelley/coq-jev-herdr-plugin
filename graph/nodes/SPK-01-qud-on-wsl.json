@@ -1,0 +1,11 @@
+{
+  "id": "SPK-01-qud-on-wsl",
+  "type": "Spike",
+  "title": "Spike 1: native Linux Qud runs in WSL2 under Xvfb or WSLg; pass = non-black title screen captured",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

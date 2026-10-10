@@ -1,0 +1,22 @@
+{
+  "id": "CMP-herdr-ecosystem-reuse",
+  "type": "Component",
+  "title": "Reusable herdr plugins: furkankly/zoetrope (live agent flow graph in a pane), devswha/herdr-web-ui and AltanS/collie (web and push alerts), kryptamine/herdr-auto-title (pane naming), smarzban/tsk (shared task board TUI)",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "research",
+      "id": "github-topic-herdr-plugin",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-owner-notifications"
+    }
+  ],
+  "created": "2026-10-10T19:01Z",
+  "updated": "2026-10-10T19:01Z"
+}

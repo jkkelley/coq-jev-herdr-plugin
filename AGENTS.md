@@ -1,5 +1,25 @@
 # AGENTS.md
 
+## Contents
+
+- What this repository is
+- Law: herdr-first, never background processes
+- Law: automation leads, never by hand
+- Law: Google Drive first
+- Law: the surface follows the runtime
+- Law: scope small, integrate in CI
+- Law: testing
+- Law: the architect model chain
+- Law: compaction
+- Hard rule: entry trees are one file per entry
+- Hard rule: read the window, not the history
+- Hard rule: no PII
+- Hard rule: documentation goes where its lifetime says it goes
+- The close-out flow
+- Skills
+- Where your workspace comes from
+- General guidelines
+
 This file tells every agent working in this repository how to work here, whatever model or runtime it runs on.
 It is complete on its own.
 `CLAUDE.md` is a pointer to it and holds nothing else.

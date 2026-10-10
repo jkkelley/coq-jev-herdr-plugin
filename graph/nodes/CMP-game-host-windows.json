@@ -1,0 +1,16 @@
+{
+  "id": "CMP-game-host-windows",
+  "type": "Component",
+  "title": "Game host, Windows: capture plus input microservice on the host for any Steam game",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "verified_by",
+      "to": "SPK-06-windows-host"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "IFC-owner-channel",
+  "type": "Interface",
+  "title": "Owner channel: websocket, schema JSON frames, generic client/server",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-page-only-owner-channel"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

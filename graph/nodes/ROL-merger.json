@@ -1,0 +1,16 @@
+{
+  "id": "ROL-merger",
+  "type": "Role",
+  "title": "Merger (Sonnet or Haiku): integrates, merges, cleans up",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-permissions-by-role"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

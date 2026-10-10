@@ -1,0 +1,11 @@
+{
+  "id": "SPK-09-seat-flags",
+  "type": "Spike",
+  "title": "Spike 9: Haiku 5.5 seat with bypassPermissions, remote-control, hooks and compaction-guard; pass = up, compacts at 30, survives restart",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

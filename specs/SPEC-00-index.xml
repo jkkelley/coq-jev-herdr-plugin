@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-00" version="1.0.0" title="Index and knowledge graph" status="locked" updated="2026-10-10T19:20Z">
+  <contents>
+    <item ref="s-map" title="Spec map"/>
+    <item ref="s-graph" title="The knowledge graph"/>
+    <item ref="s-pointers" title="Pointers between specs"/>
+    <item ref="s-rules" title="Rules every spec obeys"/>
+    <item ref="s-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose>Route an agent to the right spec and the right graph node in one read. This file defines no system behaviour; it defines where behaviour is defined.</purpose>
+
+  <section id="s-map" title="Spec map">
+    <text>One spec per concern, each under 1000 lines. A spec that needs more is two specs. Status: locked means the owner decided; proposed means written and awaiting the owner's card; draft means being written.</text>
+    <node id="CMP-knowledge-graph" status="locked"><title>graph/: one JSON node per file, graph.sh add/edge/find/check/index/sync-specs</title><text>The graph is the source; specs cite it. See s-graph.</text></node>
+    <text>SPEC-00 index and knowledge graph (this file). SPEC-01 conventions: naming, UTC, contents lists, GOOD and NEVER, config and variables, status codes, event log. SPEC-02 roles and permissions. SPEC-03 DAG workflow and node contract. SPEC-04 herdr seat lifecycle. SPEC-05 compaction and checkpoint. SPEC-06 control plane. SPEC-07 SITREP site and factory dashboard. SPEC-08 player contract and runtimes. SPEC-09 game adapters (Qud, Cities Skylines 2). SPEC-10 game hosts. SPEC-11 pane renderer and plugin manifest, SPEC-11.B Rust terminal. SPEC-12 delivery. SPEC-13 testing and lint. SPEC-14 skills. SPEC-15 SDLC DAG end to end.</text>
+    <ref spec="SPEC-01" anchor="s-naming"/>
+  </section>
+
+  <section id="s-graph" title="The knowledge graph">
+    <text>graph/nodes/&lt;id&gt;.json, one file per node, written only by graph/bin/graph.sh. N agents add nodes at once: distinct files, no lock, no merge conflict. The Architect runs graph.sh find before cutting any ticket; a ticket that contradicts a locked Decision node is refused by the reviewer.</text>
+    <text>Node id = PREFIX-slug. Prefixes: DEC Decision, REQ Requirement, CMP Component, IFC Interface, SCH Schema, WFL Workflow, NOD DAG node, ROL Role, SPK Spike, RSK Risk, STC StatusCode, RUN Runbook. Status: draft, proposed, locked, superseded. A locked node is never edited; a change is a new node with a supersedes edge.</text>
+    <text>Edge kinds: depends_on, implements, decided_by, verified_by, risks, owned_by, defined_in, supersedes. Every edge target must exist (graph.sh check, exit 3 names the offender). graph.sh index renders graph/INDEX.md and graph/GRAPH.mmd; both are generated and never edited.</text>
+    <text>Sources on a node name where it came from: owner:&lt;card or message id&gt;:&lt;UTC&gt;, research:&lt;url&gt;, spec:&lt;SPEC-NN&gt;. A Decision node without an owner source is a defect.</text>
+    <mermaid>flowchart LR
+  OWNER[Owner card or message] -- source --> DEC[DEC node, locked]
+  DEC -- decided_by --> CMP[CMP, IFC, ROL nodes]
+  CMP -- verified_by --> SPK[SPK spike]
+  CMP -- risks --> RSK[RSK risk]
+  SPEC[SPEC-NN.xml] -- ref node --> CMP
+  ARCH[Architect] -- graph.sh find --> DEC
+  ARCH -- cuts --> WO[work-order ticket]</mermaid>
+  </section>
+
+  <section id="s-pointers" title="Pointers between specs">
+    <text>A spec never restates another spec. It points: ref spec="SPEC-NN" anchor="section-id" for a section, ref node="PREFIX-slug" for a graph node. make lint resolves every pointer; a dangling one fails the build. A spec section that would exceed its budget becomes a new SPEC-NN.X file with a pointer left behind.</text>
+    <ref spec="SPEC-01" anchor="s-contents"/>
+  </section>
+
+  <section id="s-rules" title="Rules every spec obeys">
+    <text>Valid against specs/schema/spec.xsd (make lint, xmllint in Podman). contents first, every section listed in order. Under 1000 lines. UTC in updated. One owner source per locked Decision. Every node declared in a spec exists in graph/ with the same title (graph.sh sync-specs). No em dash anywhere. No prose addressed to another agent: a spec speaks to whoever reads it, in definitions.</text>
+  </section>
+
+  <section id="s-examples" title="GOOD and NEVER">
+    <example kind="GOOD"><text>ref node="DEC-game-host-linux-native" inside SPEC-10 instead of re-explaining why Qud runs under Xvfb.</text><why>One place to change when the decision changes.</why></example>
+    <example kind="GOOD"><text>graph.sh add --id DEC-port-ranges --status locked --source owner:Q12:2026-10-11T09:00Z before the spec that uses it is edited.</text><why>Graph first, then spec, then ticket.</why></example>
+    <example kind="GOOD"><text>A 1200-line SPEC-06 split into SPEC-06 (services) and SPEC-06.A (status codes and receipts) with a pointer.</text></example>
+    <example kind="NEVER"><text>A Decision node added by an agent with source agent:reasoning.</text><why>Decisions come from the owner's page; an agent proposes with status proposed and waits.</why></example>
+    <example kind="NEVER"><text>Editing graph/INDEX.md or a locked node by hand.</text><why>Generated and immutable respectively; graph.sh check and sync-specs catch it, the PR fails.</why></example>
+    <example kind="NEVER"><text>"See the discussion in the chat on Friday" in a spec.</text><why>A spec cites ids, never a conversation.</why></example>
+  </section>
+</spec>

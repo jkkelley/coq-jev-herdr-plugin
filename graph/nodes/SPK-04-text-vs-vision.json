@@ -1,0 +1,16 @@
+{
+  "id": "SPK-04-text-vs-vision",
+  "type": "Spike",
+  "title": "Spike 4: Haiku 5.5 on text map vs screenshot; pass = text wins under 3K tokens per turn",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "SPK-02-harmony-mod"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "DEC-qud-drm-free",
+  "type": "Decision",
+  "title": "Spikes use a DRM-free GOG or itch Qud build; the Steam client is never in the runtime loop",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "Q5",
+      "at": "2026-10-10T18"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

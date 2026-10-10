@@ -1,0 +1,17 @@
+{
+  "id": "DEC-no-process-under-agent",
+  "type": "Decision",
+  "title": "No process or subagent under an agent; every long process runs in a labelled herdr pane",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "m-20261010182948830-bust8",
+      "at": "2026-10-10T18"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

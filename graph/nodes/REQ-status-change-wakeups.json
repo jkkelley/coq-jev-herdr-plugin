@@ -1,0 +1,17 @@
+{
+  "id": "REQ-status-change-wakeups",
+  "type": "Requirement",
+  "title": "A waiting seat is woken through herdr on status change instead of idling",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "m-20261010183923749-x90s1",
+      "at": "2026-10-10T18"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

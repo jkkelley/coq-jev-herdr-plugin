@@ -1,0 +1,17 @@
+{
+  "id": "DEC-local-fast-ci-full",
+  "type": "Decision",
+  "title": "Speed is king: locally run only the cases that prove the change; CI/CD runs the full suites and lint on every PR",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:59Z",
+  "updated": "2026-10-10T18:59Z"
+}

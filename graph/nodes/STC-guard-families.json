@@ -1,0 +1,11 @@
+{
+  "id": "STC-guard-families",
+  "type": "StatusCode",
+  "title": "compaction-guard families GOV, CMP, RES, RCV, OPS: 1xx-2xx normal, 3xx controller, 4xx pushback, 5xx recovery",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "REQ-mod-adapter-family",
+  "type": "Requirement",
+  "title": "Game adapters are in-game mods; Qud and Cities Skylines 2 share one adapter shape",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "m-20261010182650361-y80ij",
+      "at": "2026-10-10T18"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

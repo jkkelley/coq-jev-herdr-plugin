@@ -1,0 +1,11 @@
+{
+  "id": "STC-http-shaped",
+  "type": "StatusCode",
+  "title": "HTTP-shaped status codes from rime: 100 ACCEPTED, 200 DONE, 201 PASSED, 300 ROUTED, 412 GATE_FAILED, 422 FAILED, 423 BLOCKED, 429, 500",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

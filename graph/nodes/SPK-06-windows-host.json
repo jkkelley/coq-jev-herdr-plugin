@@ -1,0 +1,11 @@
+{
+  "id": "SPK-06-windows-host",
+  "type": "Spike",
+  "title": "Spike 6: Windows capture plus SendInput service from WSL; pass = under 30 ms frame, keys land",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

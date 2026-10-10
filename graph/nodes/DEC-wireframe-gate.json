@@ -1,0 +1,17 @@
+{
+  "id": "DEC-wireframe-gate",
+  "type": "Decision",
+  "title": "Nothing visual is built before its figma-wireframe is confirmed on the SITREP; herdr layouts first",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T17"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-01" version="1.0.0" title="Conventions" status="proposed" updated="2026-10-10T19:20Z">
+  <contents>
+    <item ref="s-naming" title="Naming"/>
+    <item ref="s-time" title="Time"/>
+    <item ref="s-contents" title="Contents lists and examples in every markdown file"/>
+    <item ref="s-config" title="Config and variables"/>
+    <item ref="s-entry" title="Entry points"/>
+    <item ref="s-codes" title="Status codes"/>
+    <item ref="s-log" title="Event log"/>
+    <item ref="s-prose" title="No agent prose to agent prose"/>
+    <item ref="s-code" title="Code style"/>
+    <item ref="s-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose>The rules every file, script, seat and record in this repo follows, so an agent never has to ask how to name, time, log or configure something.</purpose>
+
+  <section id="s-naming" title="Naming">
+    <text>Tickets: WO-YYYYMMDD-xxxx, always written with their full title in any reply. Branches: feat/&lt;slug&gt;, chore/&lt;slug&gt;, fix/&lt;slug&gt;. Graph nodes: PREFIX-slug (SPEC-00). Specs: SPEC-NN-&lt;slug&gt;.xml. herdr workspace label = repo name; tab label = seat name or tab group name; pane label = &lt;kind&gt; - &lt;what&gt; [ticket], for example "test - bearings WO-20261010-ba08", "bearings-uat-WO-20261010-ba08", "MONITOR - event-log". Seat names: &lt;role&gt;-&lt;ticket&gt; lowercased, under 32 chars. Pages: &lt;project&gt;-&lt;tier&gt;[-&lt;ticket&gt;].</text>
+    <node id="REQ-agents-md-portable" status="locked"><title>Every AGENTS.md and markdown file is runtime-agnostic, opens with a contents list, carries GOOD and NEVER examples</title></node>
+  </section>
+
+  <section id="s-time" title="Time">
+    <text>UTC everywhere an agent writes: logs, filenames, tickets, ledgers, checkpoints, graph nodes, specs. Format YYYY-MM-DDTHH:MMZ in attributes and filenames; ISO 8601 with seconds in JSON records. Only the owner's Windows clock stays local.</text>
+  </section>
+
+  <section id="s-contents" title="Contents lists and examples in every markdown file">
+    <text>Every AGENTS.md, README, runbook, SOP, playbook and spec opens with a Contents list of its H2 headings in order. Every rule carries at least two GOOD and two NEVER examples. Instructions name roles and runtimes generically: "the worker seat", "a Claude runtime", "a Codex runtime", "a System One runtime (Jev, Layla)"; a file that only works for one runtime says so in its first line. AGENTS.md is the binding file; CLAUDE.md is a pointer to it and nothing else.</text>
+  </section>
+
+  <section id="s-config" title="Config and variables">
+    <node id="DEC-no-hardcode-config-s3" status="locked"><title>Nothing hardcoded: every tunable in versioned schema-validated config, S3-portable, variables resolved at load</title></node>
+    <text>Every tunable (model id, effort, port, path, label, threshold, retry count, timeout, URL) lives in a JSON or YAML file with a schema_version field and a JSON schema beside it. Strings may carry ${HOME}, ${project}, ${tier}, ${ticket}, ${ENV:NAME}; the loader resolves them and fails with exit 3 naming an unknown one. No absolute path or hostname inside a config file, so the file can be lifted into S3 unchanged. No script carries a default: a missing key is exit 3 naming the key. Secrets come from Vault through ${ENV:NAME}, never from a file in git.</text>
+    <ref node="CMP-bearings-tool"/>
+  </section>
+
+  <section id="s-entry" title="Entry points">
+    <node id="DEC-makefiles-entry-point" status="locked"><title>Makefiles are the entry point of every repo in this project</title></node>
+    <text>Every directory with executable code has a Makefile; make help lists targets. Standard targets: build, lint, test, image, serve, stop, status, clean. A target is a thin call into a script; logic lives in the script so the same thing runs from a pane, a Jenkinsfile and a container. Skills in dotfiles keep their justfile (dotfiles Rule 17).</text>
+  </section>
+
+  <section id="s-codes" title="Status codes">
+    <node id="STC-http-shaped" status="locked"><title>HTTP-shaped status codes from rime: 100 ACCEPTED, 200 DONE, 201 PASSED, 300 ROUTED, 412 GATE_FAILED, 422 FAILED, 423 BLOCKED, 429, 500</title></node>
+    <node id="STC-guard-families" status="locked"><title>compaction-guard families GOV, CMP, RES, RCV, OPS: 1xx-2xx normal, 3xx controller, 4xx pushback, 5xx recovery</title></node>
+    <text>Every record a node, seat, gate or monitor emits carries one code. Factory records use the HTTP-shaped set; governance records use the guard families. 3 attempts then 423 BLOCKED; a 423 goes to the architect once; a second 423 on the same ticket is an owner card. A code is machine-routed (SPEC-03); a human-readable note is at most 240 chars and never the thing a script branches on.</text>
+  </section>
+
+  <section id="s-log" title="Event log">
+    <node id="REQ-event-log" status="proposed"><title>One git-tracked event log dir, one file per entry, status code and UTC only, multi-agent safe</title></node>
+    <text>events/YYYY/MM/&lt;UTC&gt;-&lt;code&gt;-&lt;suffix&gt;.json, one file per entry, written by one script (events/bin/event.sh add --code 423 --seat worker-ba08 --ticket WO-... --note "..."). Distinct filenames mean N writers never collide and git never conflicts. Only important items: a code at or above 300, a seat up or down, a gate result, a merge, a compaction. Routine progress is a ledger line, not an event. events/bin/event.sh check validates every file; the monitor seat tails the directory in its own tab group (SPEC-04). Nothing in an entry is prose from one agent to another.</text>
+  </section>
+
+  <section id="s-prose" title="No agent prose to agent prose">
+    <node id="REQ-factory-node-contract" status="locked"><title>Every factory node: schema in, schema out, 3 retries, black box, no agent prose to agent prose</title></node>
+    <text>A seat hands the next seat a record (ticket id, status code, evidence paths, observations array), never a paragraph. The only prose in the system goes to the owner, on the page, one or two lines plus a link. Briefs to a seat are one line naming the ticket and the playbook to read. Kickback on error is a script: evidence.sh --ticket --code --observed --repro --screenshot, which writes the record and wakes the architect.</text>
+  </section>
+
+  <section id="s-code" title="Code style">
+    <node id="DEC-functional-style" status="locked"><title>Functional programming mindset: pure functions, side effects at the edges, easy to test, frameworks and the right tool for the job, Makefile targets</title></node>
+    <node id="DEC-templates-over-handwriting" status="locked"><title>Test plans, harnesses and records are generated by scripts from templates; hand-writing them is not token efficient</title></node>
+    <text>Logic is pure where it can be: a function takes values and returns values, and the file system, network, herdr socket and clock are touched only in a thin outer layer that a test can replace. Every verb is a script with an input and an output, testable from a Makefile target in Podman. Use the framework that already solves the problem (Playwright for browsers, jsonschema for config, gRPC for machine-to-machine, Harmony for Unity mods) instead of a hand-rolled substitute. Anything written more than once is a template rendered by a script: test suites, test plans, tickets, seat briefs, event records.</text>
+    <ref node="RUN-bearings-promote"/>
+  </section>
+
+  <section id="s-examples" title="GOOD and NEVER">
+    <example kind="GOOD"><text>Pane label "test - bearings WO-20261010-ba08" running make test, read with pane wait-output.</text></example>
+    <example kind="GOOD"><text>config/bearings.json has "port": 44900 under tiers.stable; scripts read it through lib/config.mjs.</text></example>
+    <example kind="GOOD"><text>events/2026/10/20261010T1855Z-201-k3f9q.json {"code":201,"seat":"tester-ba08","ticket":"WO-20261010-ba08","evidence":["..."]}.</text></example>
+    <example kind="GOOD"><text>Reply to the owner: "17 of 17 green, uat page: http://localhost:44910/?key=... Confirm there."</text></example>
+    <example kind="NEVER"><text>node server.mjs ... &amp; inside an agent's shell.</text><why>Hidden process, blocks compaction, invisible in herdr.</why></example>
+    <example kind="NEVER"><text>const PORT = 44967 in a script.</text><why>Belongs in config; S3-portable files have no literals.</why></example>
+    <example kind="NEVER"><text>"Hey reviewer, I think this is probably fine but take a look at the retry logic" in a handoff.</text><why>Prose between agents; the record is the handoff.</why></example>
+    <example kind="NEVER"><text>A ticket mentioned as "the blocked one" in a reply.</text><why>ID and full title, every time.</why></example>
+    <example kind="NEVER"><text>Local time in a filename.</text></example>
+    <example kind="NEVER"><text>A 300-line bash script that both parses config and talks to herdr in the same function.</text><why>Untestable; split the pure part from the socket call.</why></example>
+    <example kind="GOOD"><text>new-podman-suite.sh --target tools/x --name x, then only inside.sh cases are written by hand.</text></example>
+  </section>
+</spec>

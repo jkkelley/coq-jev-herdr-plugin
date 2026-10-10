@@ -1,0 +1,16 @@
+{
+  "id": "IFC-player-contract",
+  "type": "Interface",
+  "title": "Player contract: structured game state in, typed action with confidence out",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-layla-system-one"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

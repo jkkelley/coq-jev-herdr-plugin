@@ -1,0 +1,16 @@
+{
+  "id": "ROL-reviewer",
+  "type": "Role",
+  "title": "Reviewer (Sonnet or Haiku): verifies evidence against acceptance criteria",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-permissions-by-role"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

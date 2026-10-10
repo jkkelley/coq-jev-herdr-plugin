@@ -1,0 +1,17 @@
+{
+  "id": "DEC-game-host-linux-native",
+  "type": "Decision",
+  "title": "Qud MVP runs Linux-native inside WSL2 under Xvfb or WSLg with a Harmony mod",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "Q1",
+      "at": "2026-10-10T18"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

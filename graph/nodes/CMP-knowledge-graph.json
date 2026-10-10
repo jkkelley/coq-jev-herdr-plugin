@@ -1,0 +1,16 @@
+{
+  "id": "CMP-knowledge-graph",
+  "type": "Component",
+  "title": "graph/: one JSON node per file, graph.sh add/edge/find/check/index/sync-specs",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-xml-specs-bounded"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

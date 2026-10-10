@@ -1,0 +1,16 @@
+{
+  "id": "REQ-north-star",
+  "type": "Requirement",
+  "title": "A model plays Caves of Qud inside a labelled herdr pane with a visible decision trace",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-game-host-linux-native"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

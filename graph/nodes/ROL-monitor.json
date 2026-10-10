@@ -1,0 +1,16 @@
+{
+  "id": "ROL-monitor",
+  "type": "Role",
+  "title": "Monitor: watches the event log and system health, wakes seats on status change",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-permissions-by-role"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

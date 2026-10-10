@@ -1,0 +1,138 @@
+flowchart LR
+  CMP-bearings-tool["CMP-bearings-tool<br/>tools/bearings: owner decision page with"]
+  CMP-compaction-guard["CMP-compaction-guard<br/>compaction-guard 1.2.8 hooks and status-"]
+  CMP-control-plane["CMP-control-plane<br/>Go gRPC control plane: inventory, status"]
+  CMP-coq-term["CMP-coq-term<br/>coq-term: Rust pane program. Backends: h"]
+  CMP-factory-dashboard["CMP-factory-dashboard<br/>Factory dashboard with a Factorio feel, "]
+  CMP-game-host-linux["CMP-game-host-linux<br/>Game host, Linux-native: Qud under Xvfb "]
+  CMP-game-host-windows["CMP-game-host-windows<br/>Game host, Windows: capture plus input m"]
+  CMP-herdr-browser-prior-art["CMP-herdr-browser-prior-art<br/>Prior art: ogulcancelik/herdr-browser re"]
+  CMP-herdr-ecosystem-reuse["CMP-herdr-ecosystem-reuse<br/>Reusable herdr plugins: furkankly/zoetro"]
+  CMP-herdr-plugin["CMP-herdr-plugin<br/>herdr-plugin.toml: actions, panes, event"]
+  CMP-knowledge-graph["CMP-knowledge-graph<br/>graph/: one JSON node per file, graph.sh"]
+  CMP-monitor-seat["CMP-monitor-seat<br/>Monitor seat and herdr tab group for the"]
+  CMP-pane-renderer["CMP-pane-renderer<br/>Pane renderer TUI: map, transcript and d"]
+  CMP-player-seat["CMP-player-seat<br/>Player seat: runtime-pluggable (claude, "]
+  CMP-qud-adapter["CMP-qud-adapter<br/>Qud adapter: Harmony C# mod exporting st"]
+  CMP-rust-terminal["CMP-rust-terminal<br/>Rust terminal with Kitty graphics: fallb"]
+  CMP-sitrep-site["CMP-sitrep-site<br/>SITREP site: Go server, websocket owner "]
+  DEC-bearings-vendored-tiers["DEC-bearings-vendored-tiers<br/>Bearings is vendored into tools/bearings"]
+  DEC-functional-style["DEC-functional-style<br/>Functional programming mindset: pure fun"]
+  DEC-game-host-linux-native["DEC-game-host-linux-native<br/>Qud MVP runs Linux-native inside WSL2 un"]
+  DEC-interface-agent-owns-bearings["DEC-interface-agent-owns-bearings<br/>Only the interface agent runs the bearin"]
+  DEC-layla-system-one["DEC-layla-system-one<br/>Layla is a second TypeSafe System One mo"]
+  DEC-local-fast-ci-full["DEC-local-fast-ci-full<br/>Speed is king: locally run only the case"]
+  DEC-makefiles-entry-point["DEC-makefiles-entry-point<br/>Makefiles are the entry point of every r"]
+  DEC-monorepo-apache2["DEC-monorepo-apache2<br/>One public monorepo under Apache-2.0"]
+  DEC-mvp-player-haiku["DEC-mvp-player-haiku<br/>First MVP player model is Haiku 5.5; pla"]
+  DEC-no-hardcode-config-s3["DEC-no-hardcode-config-s3<br/>Nothing hardcoded: every tunable in vers"]
+  DEC-no-process-under-agent["DEC-no-process-under-agent<br/>No process or subagent under an agent; e"]
+  DEC-own-game-terminal["DEC-own-game-terminal<br/>Build our own pane program (Rust) that r"]
+  DEC-p0-by-discovery-session["DEC-p0-by-discovery-session<br/>The discovery session writes the whole P"]
+  DEC-page-only-owner-channel["DEC-page-only-owner-channel<br/>The owner decides and talks only through"]
+  DEC-permissions-by-role["DEC-permissions-by-role<br/>bypassPermissions for working roles; int"]
+  DEC-qud-drm-free["DEC-qud-drm-free<br/>Spikes use a DRM-free GOG or itch Qud bu"]
+  DEC-rust-terminal-parallel["DEC-rust-terminal-parallel<br/>A Rust terminal with Kitty graphics is s"]
+  DEC-sitrep-local-first["DEC-sitrep-local-first<br/>SITREP client/server runs locally in WSL"]
+  DEC-system-before-agents["DEC-system-before-agents<br/>Monitoring and the system come up before"]
+  DEC-templates-over-handwriting["DEC-templates-over-handwriting<br/>Test plans, harnesses and records are ge"]
+  DEC-wireframe-gate["DEC-wireframe-gate<br/>Nothing visual is built before its figma"]
+  DEC-xml-specs-bounded["DEC-xml-specs-bounded<br/>Specs are XML, each under 1000 lines, po"]
+  IFC-herdr-socket["IFC-herdr-socket<br/>herdr socket API (protocol 22): workspac"]
+  IFC-owner-channel["IFC-owner-channel<br/>Owner channel: websocket, schema JSON fr"]
+  IFC-player-contract["IFC-player-contract<br/>Player contract: structured game state i"]
+  REQ-agents-md-portable["REQ-agents-md-portable<br/>Every AGENTS.md and markdown file is run"]
+  REQ-any-steam-game["REQ-any-steam-game<br/>Any Steam game the owner has can be play"]
+  REQ-compaction-rule["REQ-compaction-rule<br/>Compaction at 30 percent AND task comple"]
+  REQ-event-log["REQ-event-log<br/>One git-tracked event log dir, one file "]
+  REQ-factory-node-contract["REQ-factory-node-contract<br/>Every factory node: schema in, schema ou"]
+  REQ-locks-and-queues["REQ-locks-and-queues<br/>Locks are leases with a TTL and automati"]
+  REQ-mod-adapter-family["REQ-mod-adapter-family<br/>Game adapters are in-game mods; Qud and "]
+  REQ-north-star["REQ-north-star<br/>A model plays Caves of Qud inside a labe"]
+  REQ-owner-notifications["REQ-owner-notifications<br/>Decision-needed and failure events raise"]
+  REQ-status-change-wakeups["REQ-status-change-wakeups<br/>A waiting seat is woken through herdr on"]
+  ROL-architect["ROL-architect<br/>Architect (Opus): reads the graph, cuts "]
+  ROL-interface-agent["ROL-interface-agent<br/>Interface agent: read only, the owner's "]
+  ROL-merger["ROL-merger<br/>Merger (Sonnet or Haiku): integrates, me"]
+  ROL-monitor["ROL-monitor<br/>Monitor: watches the event log and syste"]
+  ROL-orchestrator["ROL-orchestrator<br/>Orchestrator: read only gate between the"]
+  ROL-player["ROL-player<br/>Player (Haiku 5.5 first): plays the game"]
+  ROL-reviewer["ROL-reviewer<br/>Reviewer (Sonnet or Haiku): verifies evi"]
+  ROL-tester["ROL-tester<br/>Tester (Sonnet or Haiku): runs exactly t"]
+  ROL-worker["ROL-worker<br/>Worker (Opus or Sonnet by task): impleme"]
+  RSK-compaction-sensor["RSK-compaction-sensor<br/>compaction-guard reads 0 percent for a s"]
+  RSK-pixels-in-pane["RSK-pixels-in-pane<br/>Pixels in a pane exist only via Kitty gr"]
+  RSK-proton-wsl["RSK-proton-wsl<br/>Proton in WSL2 is unproven; the ARM64 cl"]
+  RSK-steam-tos["RSK-steam-tos<br/>Steam Subscriber Agreement 4.C bans bots"]
+  RUN-bearings-promote["RUN-bearings-promote<br/>Promote a bearings change: dev slot, mak"]
+  SPK-01-qud-on-wsl["SPK-01-qud-on-wsl<br/>Spike 1: native Linux Qud runs in WSL2 u"]
+  SPK-02-harmony-mod["SPK-02-harmony-mod<br/>Spike 2: Harmony mod exports state per t"]
+  SPK-03-ipc["SPK-03-ipc<br/>Spike 3: file IPC vs socket; pass = unde"]
+  SPK-04-text-vs-vision["SPK-04-text-vs-vision<br/>Spike 4: Haiku 5.5 on text map vs screen"]
+  SPK-05-pane-graphics["SPK-05-pane-graphics<br/>Spike 5: sixel, kitty or half-block visi"]
+  SPK-05-result-socket-accepts["SPK-05-result-socket-accepts<br/>Spike 5 step 1: herdr 0.9.0 pane.graphic"]
+  SPK-06-windows-host["SPK-06-windows-host<br/>Spike 6: Windows capture plus SendInput "]
+  SPK-07-deterministic-share["SPK-07-deterministic-share<br/>Spike 7: share of turns a deterministic "]
+  SPK-08-memory-loop["SPK-08-memory-loop<br/>Spike 8: memory across permadeath; pass "]
+  SPK-09-seat-flags["SPK-09-seat-flags<br/>Spike 9: Haiku 5.5 seat with bypassPermi"]
+  SPK-10-rust-terminal["SPK-10-rust-terminal<br/>Spike 10: Rust terminal rendering Kitty "]
+  SPK-11-herdr-scratch-harness["SPK-11-herdr-scratch-harness<br/>Spike 11: scratch herdr session harness "]
+  STC-guard-families["STC-guard-families<br/>compaction-guard families GOV, CMP, RES,"]
+  STC-http-shaped["STC-http-shaped<br/>HTTP-shaped status codes from rime: 100 "]
+  CMP-bearings-tool -- decided_by --> DEC-bearings-vendored-tiers
+  CMP-bearings-tool -- owned_by --> ROL-interface-agent
+  CMP-compaction-guard -- implements --> REQ-compaction-rule
+  CMP-compaction-guard -- risks --> RSK-compaction-sensor
+  CMP-control-plane -- depends_on --> STC-http-shaped
+  CMP-coq-term -- decided_by --> DEC-own-game-terminal
+  CMP-coq-term -- depends_on --> CMP-herdr-browser-prior-art
+  CMP-coq-term -- depends_on --> SPK-05-result-socket-accepts
+  CMP-coq-term -- implements --> REQ-north-star
+  CMP-factory-dashboard -- depends_on --> CMP-control-plane
+  CMP-game-host-linux -- decided_by --> DEC-game-host-linux-native
+  CMP-game-host-linux -- verified_by --> SPK-01-qud-on-wsl
+  CMP-game-host-windows -- verified_by --> SPK-06-windows-host
+  CMP-herdr-browser-prior-art -- verified_by --> SPK-05-pane-graphics
+  CMP-herdr-browser-prior-art -- risks --> RSK-pixels-in-pane
+  CMP-herdr-ecosystem-reuse -- implements --> REQ-owner-notifications
+  CMP-knowledge-graph -- decided_by --> DEC-xml-specs-bounded
+  CMP-monitor-seat -- implements --> REQ-event-log
+  CMP-monitor-seat -- decided_by --> DEC-system-before-agents
+  CMP-pane-renderer -- risks --> RSK-pixels-in-pane
+  CMP-pane-renderer -- verified_by --> SPK-05-pane-graphics
+  CMP-player-seat -- decided_by --> DEC-mvp-player-haiku
+  CMP-player-seat -- implements --> IFC-player-contract
+  CMP-qud-adapter -- decided_by --> DEC-game-host-linux-native
+  CMP-qud-adapter -- implements --> IFC-player-contract
+  CMP-qud-adapter -- verified_by --> SPK-02-harmony-mod
+  CMP-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
+  CMP-sitrep-site -- decided_by --> DEC-sitrep-local-first
+  CMP-sitrep-site -- depends_on --> IFC-owner-channel
+  DEC-own-game-terminal -- supersedes --> DEC-rust-terminal-parallel
+  IFC-owner-channel -- decided_by --> DEC-page-only-owner-channel
+  IFC-player-contract -- decided_by --> DEC-layla-system-one
+  REQ-compaction-rule -- implements --> DEC-system-before-agents
+  REQ-locks-and-queues -- implements --> REQ-factory-node-contract
+  REQ-north-star -- decided_by --> DEC-game-host-linux-native
+  ROL-architect -- decided_by --> DEC-permissions-by-role
+  ROL-interface-agent -- decided_by --> DEC-permissions-by-role
+  ROL-merger -- decided_by --> DEC-permissions-by-role
+  ROL-monitor -- decided_by --> DEC-permissions-by-role
+  ROL-orchestrator -- decided_by --> DEC-permissions-by-role
+  ROL-player -- decided_by --> DEC-permissions-by-role
+  ROL-reviewer -- decided_by --> DEC-permissions-by-role
+  ROL-tester -- decided_by --> DEC-permissions-by-role
+  ROL-worker -- decided_by --> DEC-permissions-by-role
+  RSK-proton-wsl -- decided_by --> DEC-game-host-linux-native
+  RSK-steam-tos -- decided_by --> DEC-qud-drm-free
+  RUN-bearings-promote -- defined_in --> CMP-bearings-tool
+  SPK-02-harmony-mod -- depends_on --> SPK-01-qud-on-wsl
+  SPK-03-ipc -- depends_on --> SPK-02-harmony-mod
+  SPK-04-text-vs-vision -- depends_on --> SPK-02-harmony-mod
+  SPK-05-pane-graphics -- depends_on --> CMP-herdr-browser-prior-art
+  SPK-05-result-socket-accepts -- implements --> SPK-05-pane-graphics
+  SPK-05-result-socket-accepts -- risks --> RSK-pixels-in-pane
+  SPK-07-deterministic-share -- depends_on --> SPK-02-harmony-mod
+  SPK-08-memory-loop -- depends_on --> SPK-04-text-vs-vision
+  SPK-10-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
+  SPK-10-rust-terminal -- implements --> CMP-coq-term

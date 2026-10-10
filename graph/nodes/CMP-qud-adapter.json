@@ -1,0 +1,24 @@
+{
+  "id": "CMP-qud-adapter",
+  "type": "Component",
+  "title": "Qud adapter: Harmony C# mod exporting structured state per turn and executing typed actions",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-game-host-linux-native"
+    },
+    {
+      "kind": "implements",
+      "to": "IFC-player-contract"
+    },
+    {
+      "kind": "verified_by",
+      "to": "SPK-02-harmony-mod"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}
