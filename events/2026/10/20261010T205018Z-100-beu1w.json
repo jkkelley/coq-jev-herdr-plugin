@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261010T205018Z-100-beu1w",
+  "at": "2026-10-10T20:50:18Z",
+  "code": 100,
+  "seat": "bringup",
+  "kind": "note",
+  "ticket": null,
+  "pane": null,
+  "note": "bringup: monitors grid drawn",
+  "evidence": [],
+  "observations": []
+}

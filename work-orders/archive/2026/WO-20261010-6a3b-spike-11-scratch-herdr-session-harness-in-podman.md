@@ -4,7 +4,7 @@
   "slug": "spike-11-scratch-herdr-session-harness-in-podman",
   "title": "Spike 11: scratch herdr session harness in Podman",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-10",
   "updated": "2026-10-10",
@@ -12,7 +12,7 @@
   "parent": "WO-20261010-da54",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-10",
   "approval": {
     "via": "override",
     "reason": "architect: sure of it; owner 2026-10-10 UTC: approval is the architect's job, Lavish is prohibited for this project",
@@ -23,7 +23,8 @@
   "depends_on": [],
   "blocks": [
     "WO-20261010-8777"
-  ]
+  ],
+  "superseded_by": "WO-20261010-8777"
 }
 ---
 
@@ -84,4 +85,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-10` - nothing shipped.
+
+- reason: answered by herdr/tests/run.sh: the suite runs the real herdr binary headless in Podman with a stub claude, one scratch session per case, torn down and asserted gone
+- superseded by: `WO-20261010-8777`
+
+No branch, no PR and no merge commit exist for this work order.
+

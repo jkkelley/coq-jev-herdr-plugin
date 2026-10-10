@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261010T205022Z-500-8f0bv",
+  "at": "2026-10-10T20:50:22Z",
+  "code": 500,
+  "seat": "bringup",
+  "kind": "note",
+  "ticket": null,
+  "pane": null,
+  "note": "bringup: monitor-seat failed: seat.sh: seat.sh: herdr agent start monitor failed in pane wD3:p1E",
+  "evidence": [],
+  "observations": []
+}

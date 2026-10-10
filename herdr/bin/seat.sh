@@ -284,6 +284,18 @@ if [ "$DRY" != 1 ]; then
     && mv "$seat_file.tmp" "$seat_file"
 fi
 
+# BREADCRUMB 2026-10-10 20:5x UTC - first live bring-up: the monitor seat's claude opened the "Is this a project you trust?"
+#   dialog in its pane (the main checkout had no entry in ~/.claude.json), never reached idle, and `herdr agent start`
+#   failed after agent_start_timeout_ms. Claude Code keeps the answer per project path in ~/.claude.json as
+#   projects.<path>.hasTrustDialogAccepted, so the seat writes that flag for its worktree before the start, which is the
+#   same answer the owner would give for a worktree of this repo. Rejected: answering the dialog with send-keys (a race
+#   against agent start, and one more dialog shape to recognise). Cost: one jq pass over ~/.claude.json per seat start.
+ensure_trust() {
+  local f="$HOME/.claude.json"; [ "$runtime" = claude ] || return 0
+  [ -f "$f" ] || printf '{}\n' > "$f"
+  jq -e --arg p "$wt" '.projects[$p].hasTrustDialogAccepted == true' "$f" >/dev/null 2>&1 && return 0
+  jq --arg p "$wt" '.projects[$p] = ((.projects[$p] // {}) + {hasTrustDialogAccepted: true})' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+}
 started=0
 if [ "$DRY" != 1 ] && sl_agent_live "$name"; then sl_log "seat $name: agent already running, left as is"
 else
@@ -298,6 +310,7 @@ else
   sl_mut pane wait-output "$a" --regex "$SL_PROMPT_RE" --timeout "$(sl_cfg .prompt_timeout_ms)" >/dev/null 2>&1 \
     || { [ "$DRY" = 1 ] || { SL_EXIT=4 sl_die "pane $a showed no shell prompt within $(sl_cfg .prompt_timeout_ms) ms; rerun to repair"; }; }
   sl_mut pane run "$a" "$line" >/dev/null
+  [ "$DRY" = 1 ] || ensure_trust
   case "$runtime" in
     claude) flags=(--model "$MODEL" --effort "$effort" --permission-mode "$pmode" --settings "$settings") ;;
     codex) flags=(-m "$MODEL" -c "model_reasoning_effort=\"$effort\"") ;;
