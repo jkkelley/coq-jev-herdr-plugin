@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/herdr/layouts/layout.schema.json",
+  "title": "pane layout",
+  "description": "A grid of slots seat.sh renders into one herdr tab (SPEC-04 s-labels). Labels and commands take ${MODEL} ${effort} ${ticket} ${seat} ${name} ${state_dir} ${worktree} ${repo}. One slot of kind agent per seat layout; none in a monitors layout.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "grid", "panes"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+    "grid": {
+      "type": "string",
+      "pattern": "^[1-9]x[1-9]$",
+      "description": "rows x columns, row major"
+    },
+    "panes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["slot", "kind", "label", "command"],
+        "properties": {
+          "slot": { "type": "string", "pattern": "^[a-z]$" },
+          "kind": { "enum": ["agent", "monitor", "viewer", "tool"] },
+          "label": { "type": "string", "minLength": 1 },
+          "command": {
+            "type": "string",
+            "description": "run once in a fresh pane; empty for the agent slot and for a shell"
+          }
+        }
+      }
+    }
+  }
+}

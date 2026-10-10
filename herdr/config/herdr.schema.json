@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/herdr/config/herdr.schema.json",
+  "title": "herdr seat configuration",
+  "description": "Every tunable the seat scripts read (SPEC-04). No script carries its own default; a missing key is a hard error. COQ_HERDR_CONFIG points at another file (tests), COQ_HERDR_SESSION and COQ_STATE override session and state_dir.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "session",
+    "workspace_label",
+    "state_dir",
+    "prompt_regex",
+    "prompt_timeout_ms",
+    "agent_start_timeout_ms",
+    "down_wait_seconds",
+    "retire_poll_seconds",
+    "max_agents",
+    "bringup_gate",
+    "require_guard",
+    "monitor_seat",
+    "runtime_bin",
+    "keys",
+    "control_plane"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "session": {
+      "type": "string",
+      "minLength": 1,
+      "description": "herdr session name every seat lives in; a tier or a test names its own"
+    },
+    "workspace_label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "workspace found by label, never by id (ids change on restart)"
+    },
+    "state_dir": {
+      "type": "string",
+      "minLength": 1,
+      "description": "seat records and rendered settings: <state_dir>/seats/<name>/"
+    },
+    "prompt_regex": {
+      "type": "string",
+      "minLength": 1,
+      "description": "shell prompt a pane must show before anything is typed into it"
+    },
+    "prompt_timeout_ms": { "type": "integer", "minimum": 100 },
+    "agent_start_timeout_ms": { "type": "integer", "minimum": 1000 },
+    "down_wait_seconds": { "type": "integer", "minimum": 0 },
+    "retire_poll_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "how long retire.sh waits for the agent to leave after /exit before it escalates"
+    },
+    "max_agents": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 32,
+      "description": "system-wide cap on live seats; over it seat.sh posts 429 and builds nothing"
+    },
+    "bringup_gate": {
+      "type": "boolean",
+      "description": "DEC-system-before-agents: a non-monitor seat is refused while the monitor seat is down"
+    },
+    "require_guard": {
+      "type": "boolean",
+      "description": "a seat is refused when compaction-guard is not on PATH (RSK-compaction-sensor); tests set false"
+    },
+    "monitor_seat": {
+      "type": "string",
+      "minLength": 1,
+      "description": "name of the monitor seat the gate looks for"
+    },
+    "runtime_bin": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "required": ["claude"]
+    },
+    "keys": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interrupt", "escape", "down", "enter"],
+      "properties": {
+        "interrupt": { "type": "string" },
+        "escape": { "type": "string" },
+        "down": { "type": "string" },
+        "enter": { "type": "string" }
+      }
+    },
+    "control_plane": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["health_url"],
+      "properties": {
+        "health_url": {
+          "type": ["string", "null"],
+          "description": "null until WO-20261010-539f stands the bus up; bringup.sh then requires a 200"
+        }
+      }
+    }
+  }
+}

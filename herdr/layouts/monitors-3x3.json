@@ -1,0 +1,15 @@
+{
+  "id": "monitors-3x3",
+  "grid": "3x3",
+  "panes": [
+    { "slot": "a", "kind": "monitor", "label": "1", "command": "" },
+    { "slot": "b", "kind": "monitor", "label": "2", "command": "" },
+    { "slot": "c", "kind": "monitor", "label": "3", "command": "" },
+    { "slot": "d", "kind": "monitor", "label": "4", "command": "" },
+    { "slot": "e", "kind": "monitor", "label": "5", "command": "" },
+    { "slot": "f", "kind": "monitor", "label": "6", "command": "" },
+    { "slot": "g", "kind": "monitor", "label": "7", "command": "" },
+    { "slot": "h", "kind": "monitor", "label": "8", "command": "" },
+    { "slot": "i", "kind": "monitor", "label": "9", "command": "" }
+  ]
+}

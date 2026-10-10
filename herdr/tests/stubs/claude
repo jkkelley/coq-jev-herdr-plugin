@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# stubs/claude - stands in for Claude Code inside the suite so no real agent starts (SPEC-04 s-testing).
+# herdr's claude manifest (agent-detection/remote/claude.toml) reads the pane as idle from the OSC title's ✳ prefix
+# (rule osc_title_idle) and from the ❯ prompt box line, so `agent start` returns ready in a few seconds. The flags are
+# echoed so a case can read them back off the screen, and /exit ends it the way the real one does.
+printf '\033]0;\xe2\x9c\xb3 stub claude\007'
+printf '\n stub claude %s\n\n' "$*"
+printf '\xe2\x95\xad%s\xe2\x95\xae\n' "$(printf '\xe2\x94\x80%.0s' $(seq 1 60))"
+printf '\xe2\x94\x82 \xe2\x9d\xaf %-57s\xe2\x94\x82\n' ""
+printf '\xe2\x95\xb0%s\xe2\x95\xaf\n' "$(printf '\xe2\x94\x80%.0s' $(seq 1 60))"
+while IFS= read -r line; do
+  printf '> %s\n' "$line"
+  [ "$line" = /exit ] && exit 0
+done

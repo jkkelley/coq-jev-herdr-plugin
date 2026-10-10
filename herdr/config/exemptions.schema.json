@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/herdr/config/exemptions.schema.json",
+  "title": "exemptions",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "description", "exemptions"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "description": { "type": "string" },
+    "exemptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rule", "until", "card_id", "why"],
+        "anyOf": [{ "required": ["seat"] }, { "required": ["pane"] }],
+        "properties": {
+          "seat": { "type": "string", "pattern": "^[A-Za-z0-9_-]{1,32}$" },
+          "pane": {
+            "type": "string",
+            "pattern": "^w[A-Za-z0-9]+:p[A-Za-z0-9]+$"
+          },
+          "rule": { "enum": ["seat.audit", "guard.freeze", "bringup.gate"] },
+          "until": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+            "description": "UTC; the exemption is void after this"
+          },
+          "card_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "the owner's bearings card that granted it"
+          },
+          "why": { "type": "string", "minLength": 1, "maxLength": 240 }
+        }
+      }
+    }
+  }
+}

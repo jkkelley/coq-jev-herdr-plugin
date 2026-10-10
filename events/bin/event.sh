@@ -14,7 +14,7 @@ set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); ROOT=$(cd "$HERE/.." && pwd); SCHEMA=$ROOT/schema/event.schema.json
 die() { local c=$1; shift; printf 'event: %s\n' "$*" >&2; exit "$c"; }
 command -v jq >/dev/null || die 4 "jq is required"
-KINDS='seat.up|seat.down|gate|test|review|merge|deploy|compaction|blocked|escalation|note'
+KINDS='seat.up|seat.down|seat.stalled|gate|test|review|merge|deploy|compaction|blocked|escalation|note'
 line_of() { jq -r '"\(.at)\t\(.code)\t\(.kind)\t\(.seat)\t\(.ticket // "-")\t\(.note // "")"' "$1"; }
 VERB=${1:-}; shift || true
 case $VERB in

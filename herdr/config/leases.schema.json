@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/herdr/config/leases.schema.json",
+  "title": "leases",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "description", "leases"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "description": { "type": "string" },
+    "leases": {
+      "type": "object",
+      "required": ["slot", "tier", "ticket", "seat"],
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["ttl_seconds", "proof", "acquire", "release"],
+        "properties": {
+          "ttl_seconds": { "type": "integer", "minimum": 60 },
+          "proof": {
+            "type": "string",
+            "minLength": 1,
+            "description": "what shows the lease is held, readable by the monitor without asking the holder"
+          },
+          "acquire": { "type": "string", "minLength": 1 },
+          "release": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

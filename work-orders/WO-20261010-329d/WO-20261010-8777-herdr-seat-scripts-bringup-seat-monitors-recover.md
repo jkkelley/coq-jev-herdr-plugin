@@ -4,13 +4,13 @@
   "slug": "herdr-seat-scripts-bringup-seat-monitors-recover",
   "title": "herdr seat scripts: bringup, seat, monitors, recover, retire, ported from bearings-v2",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p0",
   "created": "2026-10-10",
   "updated": "2026-10-10",
   "created_at": "2026-10-10T19:24:16+00:00",
   "parent": "WO-20261010-329d",
-  "branch": null,
+  "branch": "feat/herdr-seat-scripts-bringup-seat-monitors-recover",
   "pr": null,
   "closed": null,
   "approval": {
@@ -87,6 +87,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-10` seat.sh, retire.sh, seat-lib.sh, config, layouts and the Podman suite (3 cases, real headless herdr + stub claude) landed; make -C herdr test green
 
 ## Outcome
 
