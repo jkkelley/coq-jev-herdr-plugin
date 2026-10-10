@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<spec id="SPEC-05" version="1.0.0" title="Compaction and checkpoint" status="proposed" updated="2026-10-10T19:16Z">
+<spec id="SPEC-05" version="1.1.0" title="Compaction and checkpoint" status="proposed" updated="2026-10-10T19:37Z">
   <contents>
     <item ref="s-rule" title="The rule"/>
     <item ref="s-install" title="Installed on every seat, before the seat"/>
     <item ref="s-checkpoint" title="The checkpoint"/>
     <item ref="s-failure" title="After a failure"/>
     <item ref="s-monitoring" title="Monitoring the cycle"/>
+    <item ref="s-quiet" title="The quiet window: nothing stops a compaction, nothing is lost"/>
     <item ref="s-examples" title="GOOD and NEVER"/>
   </contents>
   <purpose>No seat loses context and no seat compacts itself. compaction-guard owns the cycle; this spec fixes how every seat is wired to it and what the owner sees.</purpose>
@@ -35,9 +36,18 @@
     <ref node="STC-guard-families"/>
   </section>
 
+  <section id="s-quiet" title="The quiet window: nothing stops a compaction, nothing is lost">
+    <node id="REQ-checkpoint-every-step" status="locked"><title>Every task is cut into steps that each end in a commit and a checkpoint; compact after a step lands, never at a threshold</title></node>
+    <node id="REQ-compaction-quiet-window" status="locked"><title>Nothing may stop a compaction and nothing is lost: watchers pause themselves, a system message counts down 5 seconds, wake signals queue and replay</title></node>
+    <text>Owner order 2026-10-10 UTC. The threshold in s-rule is the last line of defence; the trigger is a step landing. A step ends in a commit plus a CONTEXT_STATE.md checkpoint, then the seat raises its compact request and ends the turn. Before the guard types /compact it opens a quiet window: it writes quiet.json in the seat's state dir (seat, since, reason), posts the system message COMPACTION IN 5 into the seat's pane and counts down five seconds, one line per second. While quiet.json exists every watcher for that seat (monitor seat, page wait loops, pane watchers, Claude Code Monitor tasks) holds delivery and writes each wake signal as one UTC-named file into the seat's inbox queue (queue/ shape, SPEC-03) instead of into the pane. Nothing may cancel the window: a tool call is RES-400, a page message lands in the inbox, an owner interrupt is answered with the countdown line. PostCompact removes quiet.json, sends the resume card, re-arms the watchers and drains the inbox oldest first into the first turn, so a message that arrived during the window is the first thing the seat reads. The checkpoint and the transcript archive are on disk before the countdown starts, so a seat that dies inside the window loses nothing (s-failure).</text>
+    <ref spec="SPEC-03" anchor="s-locks"/>
+  </section>
+
   <section id="s-examples" title="GOOD and NEVER">
     <example kind="GOOD"><text>Seat settings rendered from roles/worker.json carry hooks.Stop = compaction-guard hook and statusLine.command = compaction-guard tap.</text></example>
     <example kind="GOOD"><text>A tool call refused with RES-400: the seat replies in text "checkpoint written, ending turn" and stops.</text></example>
+    <example kind="GOOD"><text>The pane shows COMPACTION IN 5 .. 1, the bearings wait loop writes the owner's message to inbox/ instead of printing it, and after the resume card the message is the first line of the next turn.</text></example>
+    <example kind="NEVER"><text>A watcher printing a MESSAGE line into the pane while quiet.json exists.</text><why>It lands in the composer, merges with the /compact line and stalls the cycle; the owner saw exactly this on 2026-10-10.</why></example>
     <example kind="NEVER"><text>An agent sending /compact because it feels full.</text><why>The guard decides; a hand compaction skips the checkpoint and the archive.</why></example>
     <example kind="NEVER"><text>A seat brought up with claude --settings pointing at a file without the tap.</text><why>Sensor reads 0; it never compacts; seat.sh --check fails it.</why></example>
   </section>

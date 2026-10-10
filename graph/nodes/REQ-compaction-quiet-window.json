@@ -1,0 +1,30 @@
+{
+  "id": "REQ-compaction-quiet-window",
+  "type": "Requirement",
+  "title": "Nothing may stop a compaction and nothing is lost: watchers pause themselves, a system message counts down 5 seconds, wake signals queue and replay",
+  "status": "locked",
+  "text": "Owner, chat 2026-10-10 ~19:50 UTC: monitoring must not trip the compact; smart on and off with automation, a system message and a 5 second countdown, nothing allowed to stop the compact, nothing lost, every agent uses this. Design: the guard writes quiet.json for the seat before the countdown; every watcher and the monitor seat hold delivery while it exists and write wake signals to the seat's inbox queue (one file per signal, UTC named); the guard posts COMPACTION IN 5 into the pane, counts down, types /compact; PostCompact removes quiet.json, watchers resume, the inbox drains oldest first into the first turn. In a Claude Code seat today the equivalent is TaskStop on every Monitor before the compact and re-arm after.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "REQ-compaction-rule"
+    },
+    {
+      "kind": "depends_on",
+      "to": "CMP-compaction-guard"
+    },
+    {
+      "kind": "implements",
+      "to": "DEC-system-before-agents"
+    }
+  ],
+  "created": "2026-10-10T19:37Z",
+  "updated": "2026-10-10T19:37Z"
+}

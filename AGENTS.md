@@ -129,6 +129,7 @@ A context threshold is the last line of defence, never the trigger; do not wait 
 Write the resume line into the checkpoint before you compact, never into chat.
 After a step lands, raise your compact request and end the turn.
 A watcher compacts the seat once it is idle; never send `/compact` yourself.
+Nothing may stop a compaction and nothing is lost: the watcher opens a quiet window, posts a system message with a five second countdown, watchers pause and queue their wake signals, and the queue drains into the first turn after the resume card (SPEC-05 s-quiet).
 Small scope compacts sooner and costs fewer tokens per step, which is what the owner is paying for.
 
 GOOD: a port of three functions lands as one commit and one checkpoint, the seat compacts, then the suite case is the next step.
