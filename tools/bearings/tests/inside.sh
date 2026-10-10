@@ -43,9 +43,13 @@ CASE="second serve of the same tier -> exit 3 with the url"; check test "$rc" = 
 node /skill/tests/probe.mjs "$URL" /work/shot.png > /work/probe.json
 CASE="page reports Live"; check test "$(jq -r .live /work/probe.json)" = Live
 CASE="first card rendered"; check test "$(jq -r .card_head /work/probe.json | grep -c 'Pick one')" = 1
-CASE="zero page errors"; check test "$(jq '.errors | length' /work/probe.json)" = 0 || jq -r '.errors[]' /work/probe.json >&2
+[ "$(jq '.errors | length' /work/probe.json)" = 0 ] || jq -r '.errors[]' /work/probe.json >&2
+CASE="zero page errors"; check test "$(jq '.errors | length' /work/probe.json)" = 0
+if ! { test -s /work/state/t-dev-t1/answers.jsonl && grep -q "probe words" /work/state/t-dev-t1/answers.jsonl; }; then
+  { echo "--- debug: state dir"; ls -la /work/state/t-dev-t1 || true; echo "--- answers.jsonl"; cat /work/state/t-dev-t1/answers.jsonl || true; echo "--- probe.json"; cat /work/probe.json || true; echo; } >&2 || true
+fi
 CASE="queued answer reached answers.jsonl with the words"; check bash -c 'test -s /work/state/t-dev-t1/answers.jsonl && grep -q "probe words" /work/state/t-dev-t1/answers.jsonl'
-CASE="wait.mjs delivers the ANSWER line"; check bash -c '$0 dev wait --ticket t1 "$@" | grep -q "^ANSWER P1 - Pick one? -> A | words: probe words"' "$B" "${C[@]}"
+CASE="wait.mjs delivers the ANSWER line"; check bash -c 'timeout 15 $0 dev wait --ticket t1 "$@" | grep -q "^ANSWER P1 - Pick one? -> A | words: probe words"' "$B" "${C[@]}"
 
 # T5 stable tier isolation: fixed port, its own dir, untouched by dev.
 URL2=$($B stable serve "${C[@]}")
@@ -62,7 +66,7 @@ CASE="migrate copies answers.jsonl byte for byte"; check cmp -s /work/state/t-de
 # T7 stop writes stopped.json and the wait reports STOPPED.
 $B dev stop --ticket t1 "${C[@]}" >/dev/null; sleep 2
 CASE="stop leaves stopped.json"; check test -f /work/state/t-dev-t1/stopped.json
-CASE="wait reports STOPPED after stop"; check bash -c '$0 dev wait --ticket t1 "$@" | grep -q "^STOPPED"' "$B" "${C[@]}"
+CASE="wait reports STOPPED after stop"; check bash -c 'timeout 15 $0 dev wait --ticket t1 "$@" | grep -q "^STOPPED"' "$B" "${C[@]}"
 
 echo "bearings tests: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ] || exit 3
