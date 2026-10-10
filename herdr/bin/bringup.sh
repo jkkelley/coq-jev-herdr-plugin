@@ -72,7 +72,14 @@ else
   else failln monitor-seat "seat.sh: $(tail -n 1 <<<"$out")"; fi
 fi
 
-# 6. the reserved monitor panes that carry a command in herdr/config/monitors.json (event log tail, queue list).
+# 6. the reserved monitor panes that carry a command in herdr/config/monitors.json (guard lease watcher, compaction-guard
+#    watch, event log tail, queue list).
+# BREADCRUMB 2026-10-10 - WO-20261010-8fa8. What broke: nothing ran herdr/bin/unfreeze.sh, so on 2026-10-10 the architect
+#   seat sat frozen 20:57-21:36 UTC behind a guard lease that expired at 21:00:20Z (full account in unfreeze.sh's header).
+#   Why this fix: monitors.json slots 1.1.1 (lease) and 1.1.2 (guard) now carry commands and this loop, which already
+#   plugs in every reserved slot that has one, needed no change; a new loop for watchers would be a second way to start a
+#   pane. JSON has no comments, so the reason lives here. Cost: bringup now fails (500) when it cannot start either
+#   pane, and the watcher panes need unfreeze.sh and compaction-guard on PATH wherever herdr was started.
 MC="${COQ_MONITORS_CONFIG:-$SL_HERDR/config/monitors.json}"
 while IFS=$'\t' read -r name what cmd; do
   cmd="${cmd//\$\{repo\}/$SL_REPO}"
