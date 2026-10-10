@@ -51,6 +51,27 @@ fi
 CASE="queued answer reached answers.jsonl with the words"; check bash -c 'test -s /work/state/t-dev-t1/answers.jsonl && grep -q "probe words" /work/state/t-dev-t1/answers.jsonl'
 CASE="wait.mjs delivers the ANSWER line"; check bash -c 'timeout 15 $0 dev wait --ticket t1 "$@" | grep -q "^ANSWER P1 - Pick one? -> A | words: probe words"' "$B" "${C[@]}"
 
+# T4b attachments: upload the probe screenshot as a PNG, send a message carrying it,
+# read it back inline, and the wait line names the stored path (owner ask m-20261010192521524-wfo6h).
+node -e '
+const url = process.argv[1]; const fs = require("fs");
+const at = (route) => url.replace("/?key=", `/${route}?key=`);
+(async () => {
+  const buf = fs.readFileSync("/work/shot.png");
+  const up = await (await fetch(at("file"), { method: "POST", headers: { "content-type": "image/png", "x-file-name": "shot.png" }, body: buf })).json();
+  if (!up.id) throw new Error(`upload: ${JSON.stringify(up)}`);
+  const msg = await (await fetch(at("message"), { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id: "m-probe-file-1", text: "here is a shot", files: [{ id: up.id }] }) })).json();
+  if (!msg.files) throw new Error(`message: ${JSON.stringify(msg)}`);
+  const got = await fetch(at(`file/${up.id}`));
+  const len = (await got.arrayBuffer()).byteLength;
+  fs.writeFileSync("/work/file.json", JSON.stringify({ upload: up, message: msg, get_status: got.status, get_type: got.headers.get("content-type"), get_len: len, buf_len: buf.length }));
+})().catch((e) => fs.writeFileSync("/work/file.json", JSON.stringify({ error: String(e) })));
+' "$URL"
+[ "$(jq -r '.error // empty' /work/file.json)" = "" ] || jq -r .error /work/file.json >&2
+CASE="PNG upload is stored as image/png with an f- id"; check bash -c 'test "$(jq -r .upload.mime /work/file.json)" = image/png && [[ "$(jq -r .upload.id /work/file.json)" == f-* ]]'
+CASE="GET /file/:id serves the same bytes back as image/png"; check bash -c 'test "$(jq -r .get_type /work/file.json)" = image/png -a "$(jq .get_len /work/file.json)" = "$(jq .buf_len /work/file.json)"'
+CASE="wait.mjs prints the stored path on the MESSAGE line"; check bash -c 'timeout 15 $0 dev wait --ticket t1 "$@" | grep -qE "^MESSAGE m-probe-file-1 - here is a shot \| files: /work/state/t-dev-t1/files/f-[A-Za-z0-9-]+\.png$"' "$B" "${C[@]}"
+
 # T5 stable tier isolation: fixed port, its own dir, untouched by dev.
 URL2=$($B stable serve "${C[@]}")
 CASE="stable serves on its fixed port"; check bash -c '[[ "$1" == http://localhost:45900/* ]]' _ "$URL2"
