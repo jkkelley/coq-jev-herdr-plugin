@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261010T210705Z-100-nt1hn",
+  "at": "2026-10-10T21:07:05Z",
+  "code": 100,
+  "seat": "worker-wo-20261010-c274",
+  "kind": "note",
+  "ticket": "WO-20261010-c274",
+  "pane": "wD3:p1G",
+  "note": "pr.opened: PR 4 at fe6073d, recover.sh, case 05, suite world fixed; AC-H4 awaits the labelled test pane",
+  "evidence": [],
+  "observations": []
+}
