@@ -17,6 +17,57 @@
 
 
 
+
+## Checkpoint 2026-10-10 21:45 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at ae73c04 (PR #4 merged) plus this step. Main checkout /home/luna/projects/coq-jev-herdr-plugin on main. No open PRs. No worktrees.
+- Live herdr session stable, workspace coq (wD3). Architect tab: this seat wD3:p2 left third, tool grid right: wD3:pF test pane "test - herdr", wD3:pD bearings wait, wD3:pC bearings server, wD3:pG/pH/pJ open. Monitor seat monitor (haiku) wD3:p1E in tab monitor. Three monitors tabs built by bringup.sh; events tail and queue list running in monitors 2; monitors 1 slots are open until WO-20261010-8fa8 lands. Worker seat worker-wo-20261010-c274 is down and its worktree removed.
+- Owner page: stable bearings tier http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, state ~/.bearings/coq-stable; wakes forwarded into wD3:p2 by tools/bearings/scripts/bearings.sh wait --to. Replies go with reply.mjs --tier stable --to <m-id>; the owner's thread is m-20261010192521524-wfo6h.
+- compaction-guard 1.2.8 binds this seat (name fable-discovery, role architect, freeze_seconds 180, threshold 30). A governed seat cannot release its own lease; herdr/bin/unfreeze.sh does it from outside.
+- Caves of Qud: the owner's D:\coq holds the Windows GOG build (CoQ.exe), copied to /home/luna/games/caves-of-qud (1.4 GB). Spike 1 (SPK-01-qud-on-wsl) needs the native Linux build; the owner was asked on the page and in chat for the gog.com Linux offline installer saved in D:\coq. Steam Windows build also at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud.
+
+#### Toolchain
+
+- herdr/bin: seat-lib.sh, seat.sh, retire.sh, monitors.sh, bringup.sh, recover.sh (--check|--apply, merged in PR #4), unfreeze.sh (break glass: <seat|pane> [--force], --all, --watch [S]); herdr/Makefile targets test image lint up check down audit bringup recover monitors unfreeze unfreeze-all. Podman suite herdr/tests/run.sh: cases 01-05, green from the labelled test pane (tests: 5 passed, 0 failed). world.sh now restores archived tickets and empties events in the scratch copy.
+- bin/step.sh: lint, changelog, commit (worktree-safe git-path), push, checkpoint; the /compact prompt is opt-in with --compact; compaction-guard owns compaction. bin/changelog.sh add no longer leaves .md.tmp entries.
+- `make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [CP=body.md]` is the only way a step lands. Checkpoint bodies live in the scratchpad as cpN.md.
+- Tests run only from the labelled test pane: `herdr pane run wD3:pF "cd <checkout> && git --no-pager log --oneline -1 && make -C herdr test 2>&1 | tail -30"` then `herdr pane wait-output wD3:pF --regex 'tests: [0-9]+ passed, [0-9]+ failed'`. A pager in that pane is quit with `herdr pane send-keys wD3:pF q`.
+- Work orders: $HOME/.claude/skills/work-order/scripts/work-order.sh; close-out on the branch is submit --pr N, note, done, make step, gh pr merge --merge, pull, cleanup; GitHub needs a few seconds after a push before a merge is accepted.
+
+#### Active Tasks
+
+- WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case: draft under WO-20261010-329d; approve, start, seat a worker on it (seat.sh --ticket WO-20261010-8fa8 --role worker --worktree /home/luna/worktrees/WO-20261010-8fa8), review its PR.
+- Then, each through a worker seat with this seat reviewing: WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles (merged; evidence and close); WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue; WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree; WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume.
+- Spike 1 waits on the Linux build from the owner.
+
+#### Blockers
+
+- Spike 1: the native Linux Caves of Qud build; asked of the owner (page thread m-20261010192521524-wfo6h and chat).
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-10 21:5x UTC, this seat: compaction has one owner, compaction-guard. bin/step.sh no longer queues /compact per step; --compact forces one. Four stacked compacts froze the architect seat from 20:57 to 21:36 UTC.
+- 2026-10-10 21:4x UTC, owner: "better have some break glass shit" for the guard lease. herdr/bin/unfreeze.sh releases an expired lease from outside the seat and wakes it; the guard itself is not patched (promoted release, its owner changes it). The watcher that runs it lives in monitors 1 slot 1.1.1 (WO-20261010-8fa8).
+- 2026-10-10 21:5x UTC, this seat: PR #4 reviewed and merged; the worker's recover.sh refuses to resume seats, lift the halt flag, start herdr or scope the guard, as its breadcrumb records.
+
+#### Lessons Learned
+
+- A no-op /compact ("Not enough messages to compact") fires the guard's PreCompact and never its PostCompact; the phase stays compacting until the lease expires, and the lease is checked only on the seat's next tool call, so a seat answering in text stays dark.
+- A worker cannot satisfy a labelled-test-pane criterion: playbooks/worker.md forbids herdr pane run. Carried into WO-20261010-8fa8.
+- `herdr pane run` with git log opens a pager; use git --no-pager, and send-keys q to free a stuck pane.
+- A case run from this seat with `timeout` left its Podman container running; tests belong in the test pane, never here.
+- GitHub reports a freshly pushed PR as not mergeable for a few seconds; retry after a short wait.
+
+### Hydration prompt
+
+Run from /home/luna/projects/coq-jev-herdr-plugin on main. Next: approve and start WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case, seat a worker on it in /home/luna/worktrees/WO-20261010-8fa8 (herdr/bin/seat.sh --ticket WO-20261010-8fa8 --role worker --worktree ...), then review the PR it opens from the labelled test pane. Answer owner page wakes first (reply.mjs --tier stable --to <m-id>). Every step lands with `make step ... CP=<body>`; never lint, commit, checkpoint or compact by hand.
+
 ## Checkpoint 2026-10-10 21:06 UTC
 
 ### Current state
