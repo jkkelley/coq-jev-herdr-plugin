@@ -6,13 +6,14 @@
 #   make -C herdr check NAME=..   / down NAME=..  / audit
 #   make -C herdr bringup         the bring-up DAG (bin/bringup.sh); recover [MODE=--check|--apply]
 #   make -C herdr monitors        the three 3x3 monitoring tabs (bin/monitors.sh grid)
+#   make -C herdr unfreeze SEAT=.. [FORCE=1] / unfreeze-all   break glass for a stuck compaction-guard lease (bin/unfreeze.sh)
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 HERE := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 WORKTREE ?= $(abspath $(HERE)..)
 MODE ?= --check
-.PHONY: help test image lint up check down audit bringup recover monitors
+.PHONY: help test image lint up check down audit bringup recover monitors unfreeze unfreeze-all
 help:
 	@sed -n '1,8p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
 test:
@@ -38,3 +39,10 @@ recover:
 	$(HERE)bin/recover.sh $(MODE)
 monitors:
 	$(HERE)bin/monitors.sh grid
+# make unfreeze SEAT=<seat-name|pane-id> [FORCE=1]   break glass: release that seat's guard lease and wake it (never your own)
+# make unfreeze-all                                one pass over every seat: release expired leases
+unfreeze:
+	@test -n "$(SEAT)" || { echo "make unfreeze SEAT=<seat-name|pane-id> [FORCE=1]" >&2; exit 2; }
+	$(HERE)bin/unfreeze.sh $(SEAT) $(if $(FORCE),--force)
+unfreeze-all:
+	$(HERE)bin/unfreeze.sh --all
