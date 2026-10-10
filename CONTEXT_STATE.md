@@ -11,6 +11,55 @@
 > Never edit a checkpoint. A new one is prepended above the last; the ones below
 > are history and are immutable. Written by `checkpoint.sh`, never by hand.
 
+
+## Checkpoint 2026-10-10 19:27 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin (owner card Q11, 2026-10-10 19:28 UTC): main pushed and protected (linear history, no force push). PR #1 = feat/p0-foundation from slot 2.
+- Main checkout /home/luna/projects/coq-jev-herdr-plugin: 27 tickets across epics WO-20261010-98ea (owner surface), 329d (P0 foundation), da54 (discovery spikes), coq-term epic, delivery epic, monitoring epic; all draft except ba08 (in-progress on its branch). INDEX.md is the router.
+- Slot 1 /home/luna/.treehouse/coq-jev-herdr-plugin-81af2c/1/coq-jev-herdr-plugin, branch feat/vendor-bearings-into-tools-bearings-with-stable- (WO-20261010-ba08): tools/bearings complete (17/17 cases, AC1-4 evidenced); assets/page.html now the owner's NEWER page (paste and drop composer); attachment server port staged under tools/bearings/scripts/lib/attach-port/ with README next steps; NOT yet wired, suite not rerun since the page swap. uat page served on http://localhost:44910/?key=f18907f3a02cec0412ad14fa027bda0f (panes bearings-uat-WO-20261010-ba08, wait wD3:p7), card UAT-1 open. Branch not pushed.
+- Slot 2 /home/luna/.treehouse/coq-jev-herdr-plugin-81af2c/2/coq-jev-herdr-plugin, branch feat/p0-foundation (holder P0-foundation): specs 00,01,03,04,05 + stubs 02,15; graph 93 nodes; lint green; events/ queue/ roles/ playbooks/ factory/ bin/ Makefile. Pushed, PR #1 open.
+- Owner page (old skill copy) ~/.bearings/coq-jev-herdr-plugin-05518e, url http://localhost:44967/?key=6e636c7db73a36c5a802bf2fd5df5928, panes wD3:p3 server, wD3:p4 wait loop; cards Q1..Q11 and SPK5-1 all answered; latest owner message m-20261010192521524-wfo6h asks for clipboard image paste (answer: port in progress, see slot 1).
+- Dotfiles: PRs #103 and #104 merged, ~/dotfiles main at 7672b3c, slots released; live work-order skill renders Contents and Degrees of freedom; container-sandbox has scripts/new-podman-suite.sh.
+- compaction-guard bound (fable-discovery, pane wD3:p2) but sensor reads 0; owner reported 51 percent context at 19:30 UTC. Test pane wD3:p5 free (test card cleared).
+- SITREP 002: https://claude.ai/artifact/PnNrFEYTqaqsg2xx2MVc9d
+
+#### Toolchain
+
+- herdr 0.9.0 protocol 22 with pane.graphics.set/clear/info (Spike 5 PASSED: owner saw the test card). treehouse v2.3.0 + slot.sh. work-order v2.1.0+#103 (--freedom). project-scaffold v1.6.0. compaction-guard 1.2.8. Podman images localhost/coq-bearings-test:1, localhost/coq-lint:1. Scratch RPC helper scratchpad/spike5/herdr-rpc.py (session-only; recreate from memory file herdr-pane-graphics-live).
+
+#### Active Tasks
+
+- WO-20261010-ba08 - Vendor bearings into tools/bearings with stable, uat and dev tiers: finish the attachment port per attach-port/README.md, rerun make test (add the file case), restart the uat server from the slot, reply to m-20261010192521524-wfo6h, wait for UAT-1, evidence AC5 via make migrate, push branch, PR, merge, make upgrade on main, stop the old server, release slot 1.
+- WO-20261010-fbad - Land the P0 foundation branch: PR #1 open; review and merge after lint in CI (no CI workflow yet; run make lint locally and record it).
+- Next tickets to approve and start (main is draft): WO-20261010-8777 herdr seat scripts (depends on Spike 11 WO-20261010-6a3b), WO-20261010-c6e9 Spike 9, WO-20261010-eaa3 Spike 1 (needs the owner's DRM-free Qud Linux zip), WO-20261010-d08d Spike 10 coq-term variant A (depends on the protocol ticket), the wireframes ticket under 98ea (figma-wireframe skill, first visual gate), handoff ticket WO-20261010-3593.
+
+#### Blockers
+
+- UAT-1 unanswered (owner must confirm the uat page).
+- Spike 1 needs the Qud Linux build from the owner.
+- This session's context is past 50 percent; compact after this checkpoint.
+
+### New this checkpoint
+
+#### Decisions
+
+- Owner cards: Q10 merge dotfiles PRs now (done); SPK5-1 the test card renders (Spike 5 passed); Q11 create jkkelley/coq-jev-herdr-plugin now (done).
+- Owner chat: tiers everywhere; own Rust pane program coq-term as the path; variants in parallel with uat per herdr session; per-package CI/CD, semver, gitops; FP mindset; templates not hand-writing; local fast, CI full; leases and queues, no human blockers.
+
+#### Lessons Learned
+
+- Owner-facing surface drift: ~/.claude/skills/bearings is a stale snapshot of ~/projects/getting-my-bearings/skills/getting-my-bearings; always diff against the project copy before vendoring.
+- The shell behind the Bash tool is zsh: unquoted $var does not word-split; generate files with python when a list must expand.
+- A relative glob removal after cd is blocked by the harness; use absolute scratch paths.
+
+### Hydration prompt
+
+Read this checkpoint. Then: in slot 1 finish tools/bearings/scripts/lib/attach-port per its README, rerun make test from pane wD3:p5 via herdr pane run, restart the uat tier (make stop/serve TIER=uat TICKET=WO-20261010-ba08) and reply on the old page to m-20261010192521524-wfo6h with the uat url. Then act on UAT-1 when it lands. Then merge PR #1 after make lint, approve and start the next tickets from work-orders/INDEX.md.
+
 ## Checkpoint 2026-10-10 19:07 UTC
 
 ### Current state
