@@ -14,6 +14,53 @@
 
 
 
+
+## Checkpoint 2026-10-10 19:40 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin: main protected, origin/main = local main (ticket WO-20261010-7083 pushed). PR #1 = feat/p0-foundation (slot 2, e9035b3 pushed, lint all ok). Bearings branch feat/vendor-bearings-into-tools-bearings-with-stable- pushed (9805ff0), no PR yet.
+- Main checkout /home/luna/projects/coq-jev-herdr-plugin on main: 28 tickets; INDEX.md is the router.
+- Slot 1 /home/luna/.treehouse/coq-jev-herdr-plugin-81af2c/1/coq-jev-herdr-plugin (WO-20261010-ba08): attachment port wired (d38eaa4), suite case T4b (384876f, 20/20 green in Podman), stop fix (9805ff0: herdr pane list has no --tab). uat page http://localhost:44910/?key=f18907f3a02cec0412ad14fa027bda0f served by the PORTED code (pid 188179), server pane wD3:pA, wait loop pane wD3:pB; card UAT-1 open; owner message m-20261010192521524-wfo6h answered with the uat url at ~19:36 UTC.
+- Slot 2 (this checkout) feat/p0-foundation: SPEC-05 1.1.0 with s-quiet, graph 95 nodes, AGENTS.md routes in its first 66 lines (contents, golden rule, hard rule: the first 100 lines route). Pushed.
+- Owner page (old skill copy) http://localhost:44967/?key=6e636c7db73a36c5a802bf2fd5df5928, server pane wD3:p3, wait loop pane wD3:p4.
+- Claude Code Monitors on panes wD3:p4 and wD3:pB are STOPPED (tasks brolk9d0t, bvrie0e0z) for the quiet window; re-arm both on resume after reading each pane for ANSWER/MESSAGE lines newer than 19:39 UTC. Card Q12 (where is the DRM-free Qud Linux build) is open on the owner page; the owner is AWAY from ~19:55 UTC and left this seat in charge.
+- Test pane wD3:p5 free. Memory: checkpoint-discipline.md holds both owner orders.
+- SITREP 002: https://claude.ai/artifact/PnNrFEYTqaqsg2xx2MVc9d
+
+#### Toolchain
+
+- herdr 0.9.0 protocol 22. treehouse v2.3.0 + slot.sh. work-order v2.1.0+#103. project-scaffold v1.6.0. compaction-guard 1.2.8 (sensor reads 0 for this session, so compaction is queued by hand via herdr agent prompt wD3:p2 until WO-20261010-7083 lands). Podman images localhost/coq-bearings-test:1, localhost/coq-lint:1.
+
+#### Active Tasks
+
+- WO-20261010-ba08 - Vendor bearings into tools/bearings with stable, uat and dev tiers: steps A, B, C done. Step D = when UAT-1 is answered: evidence AC5 via `make migrate` from ~/.bearings/coq-jev-herdr-plugin-05518e into stable, submit PR, done, merge, `make upgrade` on the main checkout, stop the old server (panes wD3:p3, p4), release slot 1.
+- WO-20261010-fbad - Land the P0 foundation branch: PR #1 lint green; merge it (step of its own), then approve it and the P0 epic.
+- WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume: draft, p0, under WO-20261010-84f1 - Monitoring: monitor seat, tab group, notifications, status codes; approve and start next (dotfiles compaction-guard change plus bearings wait loop).
+- Then from INDEX.md: WO-20261010-6a3b Spike 11, WO-20261010-8777 herdr seat scripts, WO-20261010-c6e9 Spike 9, WO-20261010-eaa3 Spike 1 (needs owner's Qud Linux zip), WO-20261010-d08d Spike 10 coq-term variant A, wireframes ticket under 98ea, handoff WO-20261010-3593.
+
+#### Blockers
+
+- UAT-1 unanswered.
+- Spike 1 needs the Qud Linux build from the owner.
+
+### New this checkpoint
+
+#### Decisions
+
+- Owner, stepping away ~19:55 UTC: this seat is in charge; never do anything by hand more than once (the second time is a script); contents lists and routing to files everywhere; agents read head 100 and lose context past it, so every file routes in its first 100 lines (AGENTS.md hard rule); be ahead of the game.
+- One question asked, on the page as Q12: where is the DRM-free Caves of Qud Linux build.
+
+#### Lessons Learned
+
+- A rule appended at line 121 of AGENTS.md was outside the window agents actually read; binding rules go right after the contents list.
+
+### Hydration prompt
+
+Read this checkpoint. Then: re-arm Monitor watches on panes wD3:p4 and wD3:pB (grep ^ANSWER|^MESSAGE|^STOPPED, 30 min, re-arm on expiry) after `herdr pane read` of each for lines newer than this checkpoint; act on any UAT-1 answer (step D above). Next step otherwise: merge PR #1 (gh pr merge 1 --squash), then approve and start WO-20261010-7083. One commit and one checkpoint per step, then queue `/compact` via herdr agent prompt wD3:p2 with the keep line, stop Monitors first. The owner is away: decide, do not ask; anything done by hand a second time becomes a script in bin/ or tools/.
+
 ## Checkpoint 2026-10-10 19:39 UTC
 
 ### Current state
