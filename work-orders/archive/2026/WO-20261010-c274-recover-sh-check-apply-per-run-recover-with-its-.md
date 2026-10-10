@@ -4,15 +4,15 @@
   "slug": "recover-sh-check-apply-per-run-recover-with-its-",
   "title": "recover.sh --check|--apply per RUN-recover with its Podman case",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-10",
   "updated": "2026-10-10",
   "created_at": "2026-10-10T20:50:09+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/recover-sh-check-apply-per-run-recover-with-its-",
-  "pr": null,
-  "closed": null,
+  "pr": 4,
+  "closed": "2026-10-10",
   "approval": {
     "via": "override",
     "reason": "architect approval; owner order 2026-10-10: approval is the architect's job, the owner adds nothing more",
@@ -86,6 +86,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-10` architect review: suite rerun from the labelled test pane wD3:pF (test - herdr): tests: 5 passed, 0 failed, 05-recover: pass. AC-H4 confirmed. Gap found: the worker playbook forbids herdr pane run, so a worker cannot satisfy a labelled-pane criterion itself; carried to the next ticket.
 - `2026-10-10` Retro. Built herdr/bin/recover.sh (halt flag, herdr, monitors, monitor seat via bringup.sh, every open seat record, guard once, ticket WARNs, closing note 100/500 plus one notification in apply mode) and herdr/tests/cases/05-recover.test.sh with a stub compaction-guard. Cases 01-04 failed on entry for two reasons unrelated to recover: ticket WO-20261010-8777 had moved to work-orders/archive/, which seat.sh refuses, and the world copied the repo's real events/ so absolute event counts were wrong. Both fixed once in tests/lib/world.sh with a breadcrumb. Decision to review: compaction-guard recover is host-wide (111 sessions needing recovery on the owner's host from other projects), so --check reports a WARN and never FAILED, and --apply will act on all of them; I did not run --apply on the host. Not done by me: AC-H4 in the labelled test pane.
 
 ## Outcome
