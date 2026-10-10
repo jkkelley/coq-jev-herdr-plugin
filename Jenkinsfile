@@ -18,6 +18,9 @@ spec:
   containers:
     - name: lint
       image: ghcr.io/jkkelley/coq-lint:1
+      # Always: build 2 reused the node's cached amd64 image under the same tag after the
+      # multi-arch push and died again with exec format error (2026-10-10 UTC).
+      imagePullPolicy: Always
       command: [cat]
       tty: true
 '''
