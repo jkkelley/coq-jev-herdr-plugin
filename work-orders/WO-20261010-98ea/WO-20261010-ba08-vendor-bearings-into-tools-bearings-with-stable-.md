@@ -15,15 +15,13 @@
   "closed": null,
   "approval": {
     "via": "override",
-    "reason": "architect: sure of it; owner 2026-10-10 UTC: approval is the architect's job, Lavish is prohibited for this project",
+    "reason": "Lavish is prohibited for Zenith by the owner-surface rule; approved by the owner on the bearings page, card Q9, 2026-10-10 UTC",
     "at": "2026-10-10"
   },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [
-    "WO-20261010-3593"
-  ]
+  "blocks": []
 }
 ---
 
