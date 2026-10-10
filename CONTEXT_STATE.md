@@ -26,7 +26,7 @@
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at ae73c04 (PR #4 merged) plus this step. Main checkout /home/luna/projects/coq-jev-herdr-plugin on main. No open PRs. No worktrees.
 - Live herdr session stable, workspace coq (wD3). Architect tab: this seat wD3:p2 left third, tool grid right: wD3:pF test pane "test - herdr", wD3:pD bearings wait, wD3:pC bearings server, wD3:pG/pH/pJ open. Monitor seat monitor (haiku) wD3:p1E in tab monitor. Three monitors tabs built by bringup.sh; events tail and queue list running in monitors 2; monitors 1 slots are open until WO-20261010-8fa8 lands. Worker seat worker-wo-20261010-c274 is down and its worktree removed.
-- Owner page: stable bearings tier http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, state ~/.bearings/coq-stable; wakes forwarded into wD3:p2 by tools/bearings/scripts/bearings.sh wait --to. Replies go with reply.mjs --tier stable --to <m-id>; the owner's thread is m-20261010192521524-wfo6h.
+- Owner page: stable bearings tier http://localhost:44900/?key=<redacted: bearings.sh stable url>, state ~/.bearings/coq-stable; wakes forwarded into wD3:p2 by tools/bearings/scripts/bearings.sh wait --to. Replies go with reply.mjs --tier stable --to <m-id>; the owner's thread is m-20261010192521524-wfo6h.
 - compaction-guard 1.2.8 binds this seat (name fable-discovery, role architect, freeze_seconds 180, threshold 30). A governed seat cannot release its own lease; herdr/bin/unfreeze.sh does it from outside.
 - Caves of Qud: the owner's D:\coq holds the Windows GOG build (CoQ.exe), copied to /home/luna/games/caves-of-qud (1.4 GB). Spike 1 (SPK-01-qud-on-wsl) needs the native Linux build; the owner was asked on the page and in chat for the gog.com Linux offline installer saved in D:\coq. Steam Windows build also at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud.
 
@@ -111,7 +111,7 @@ WO-20261010-c274 - recover.sh --check|--apply per RUN-recover with its Podman ca
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at a22ad1c (PR #3 squash-merged: seat, retire, monitors, bringup, config, layouts, Podman suite). Main checkout /home/luna/projects/coq-jev-herdr-plugin is on main. No open PRs.
 - Live herdr session stable, workspace wD3 now labelled coq: tabs "Cave's of Qud herdr plugin" (owner shell), "architect" (this seat wD3:p2 left third; right 3x2 grid: test pane wD3:pF, bearings server wD3:pC, wait wD3:pD, three OPEN tool cells), "haiku-5-5" (owner's claude wD3:pE), "monitors 1 - compaction watchers", "monitors 2 - loop, events and queue" (2.1.1 event log tail, 2.1.2 queue list running), "monitors 3 - shells", "monitor" (monitor seat, claude-haiku-5-5 dontAsk, pane wD3:p1E, record ~/.local/state/coq/seats/monitor/seat.json). bringup.sh --check exits 0.
-- Owner page stable tier http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748; the wait loop forwards every wake into wD3:p2 (proven: ANSWER Q12 arrived in this seat). Open card Q12b: the owner is fetching the DRM-free Qud build and drops it in /home/luna/games/downloads/; unpack to /home/luna/games/caves-of-qud/.
+- Owner page stable tier http://localhost:44900/?key=<redacted: bearings.sh stable url>; the wait loop forwards every wake into wD3:p2 (proven: ANSWER Q12 arrived in this seat). Open card Q12b: the owner is fetching the DRM-free Qud build and drops it in /home/luna/games/downloads/; unpack to /home/luna/games/caves-of-qud/.
 - Jenkins lints every push to main. Caves of Qud Steam Windows build at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud.
 
 #### Toolchain
@@ -153,7 +153,7 @@ Run from /home/luna/projects/coq-jev-herdr-plugin on main. The live system is up
 #### Infrastructure
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at bb4a55f + checkpoint d07d56a. Working branch feat/herdr-seat-scripts-bringup-seat-monitors-recover in the main checkout /home/luna/projects/coq-jev-herdr-plugin. No open PRs.
-- Owner page is the stable bearings tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable. The wait loop now forwards every wake into this seat with `herdr agent prompt wD3:p2` (tools/bearings/scripts/bearings.sh wait --to), so nothing has to be turned on after a compaction. Open card: Q12b (where is the DRM-free Qud Linux build); Q12 carries a probe answer, ignore it.
+- Owner page is the stable bearings tier: http://localhost:44900/?key=<redacted: bearings.sh stable url>, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable. The wait loop now forwards every wake into this seat with `herdr agent prompt wD3:p2` (tools/bearings/scripts/bearings.sh wait --to), so nothing has to be turned on after a compaction. Open card: Q12b (where is the DRM-free Qud Linux build); Q12 carries a probe answer, ignore it.
 - This seat: pane wD3:p2, labelled "claude-fable-5-1 - high - WO-20261010-8777 architect", tab "architect", left third of the tab; right two thirds are a 3x2 grid: test pane wD3:pF ("test - herdr WO-20261010-8777"), bearings server wD3:pC, wait wD3:pD, three "OPEN - any tool" cells. Owner asked for the 3x3 grid shape on 2026-10-10 20:4x UTC.
 - Jenkins job coq-jev-herdr-plugin lints every push to main (ghcr.io/jkkelley/coq-lint:1). The feature branch lints locally through make step.
 - Caves of Qud: Steam Windows build at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud; no Linux build on disk or Drive.
@@ -200,7 +200,7 @@ Run from /home/luna/projects/coq-jev-herdr-plugin on branch feat/herdr-seat-scri
 #### Infrastructure
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at bb4a55f + checkpoint d07d56a. Working branch feat/herdr-seat-scripts-bringup-seat-monitors-recover in the main checkout /home/luna/projects/coq-jev-herdr-plugin (work-order start, no worktree slot). No open PRs.
-- Owner page is the stable bearings tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable. This seat is pane wD3:p2.
+- Owner page is the stable bearings tier: http://localhost:44900/?key=<redacted: bearings.sh stable url>, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable. This seat is pane wD3:p2.
 - Jenkins job coq-jev-herdr-plugin lints every push to main (build 3 green 20:07 UTC; multi-arch ghcr.io/jkkelley/coq-lint:1, imagePullPolicy Always). The feature branch is not built by Jenkins; lint runs locally through make step.
 - Caves of Qud: Steam Windows build at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud; no Linux build on disk or Drive.
 - A live seat.sh --audit on the host found two hand-started agents besides this seat: a codex (pid 10907) and a claude in pane wD3:pE. This seat is exempt by herdr/config/exemptions.json (pane wD3:p2, until 2026-10-17); the others are the owner's and are left alone.
@@ -247,9 +247,9 @@ Run from /home/luna/projects/coq-jev-herdr-plugin on branch feat/herdr-seat-scri
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at the sha of this checkpoint: PR #1 and PR #2 merged; commits since: 920807a scripts in git, 2cc69fa schemas on nodes + changelog + step.sh, c79e862 Jenkinsfile, f5649a8 multi-arch lint image, ae67c62 pull policy. No open PRs, no worktrees (slots 1 and 2 destroyed, branches deleted).
 - Main checkout /home/luna/projects/coq-jev-herdr-plugin is the working checkout. Slots 1 and 2 are done (ba08 merged, p0-foundation merged) and are released or to be released with slot.sh. WO-20261010-ba08 is done and archived; UAT-1 was decided by this seat.
-- Owner page is now the stable tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable (12 answers migrated, diff identical). Old page stopped 19:57 UTC, panes p3/p4/p5 closed. No Claude Code Monitors armed.
+- Owner page is now the stable tier: http://localhost:44900/?key=<redacted: bearings.sh stable url>, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable (12 answers migrated, diff identical). Old page stopped 19:57 UTC, panes p3/p4/p5 closed. No Claude Code Monitors armed.
 - Caves of Qud: Steam app 333640, Windows build installed at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud (D:\SteamLibrary). No Linux build anywhere on disk or in Google Drive (searched). Card Q12 is answered by this: Spike 1 uses the Windows build or the Steam console depot download, not the owner.
-- Jenkins job coq-jev-herdr-plugin (https://jenkins.homelab.local/job/coq-jev-herdr-plugin/) lints every push to main from a clean clone: build 3 SUCCESS 20:07 UTC (builds 1 and 2 failed: amd64 image on arm64 nodes, then a cached tag; fixed by make lint-image-push multi-arch + imagePullPolicy Always). Kube context homelab-admin, nodes arm64. Graph node CMP-jenkins-lint.
+- Jenkins job coq-jev-herdr-plugin (https://<jenkins, internal>/job/coq-jev-herdr-plugin/) lints every push to main from a clean clone: build 3 SUCCESS 20:07 UTC (builds 1 and 2 failed: amd64 image on arm64 nodes, then a cached tag; fixed by make lint-image-push multi-arch + imagePullPolicy Always). Kube context homelab-admin, nodes arm64. Graph node CMP-jenkins-lint.
 
 #### Toolchain
 
@@ -296,9 +296,9 @@ Run from /home/luna/projects/coq-jev-herdr-plugin on main. Next step: start WO-2
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main: PR #1 merged bec8276, PR #2 (bearings) merged c0ea099. 2cc69fa: graph schemas on nodes, WFL-integration, changelog tree, bin/step.sh. This step: Jenkinsfile (lint in Jenkins on every push, image ghcr.io/jkkelley/coq-lint:1 pushed from localhost/coq-lint:1).
 - Main checkout /home/luna/projects/coq-jev-herdr-plugin is the working checkout. Slots 1 and 2 are done (ba08 merged, p0-foundation merged) and are released or to be released with slot.sh. WO-20261010-ba08 is done and archived; UAT-1 was decided by this seat.
-- Owner page is now the stable tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable (12 answers migrated, diff identical). Old page stopped 19:57 UTC, panes p3/p4/p5 closed. No Claude Code Monitors armed.
+- Owner page is now the stable tier: http://localhost:44900/?key=<redacted: bearings.sh stable url>, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable (12 answers migrated, diff identical). Old page stopped 19:57 UTC, panes p3/p4/p5 closed. No Claude Code Monitors armed.
 - Caves of Qud: Steam app 333640, Windows build installed at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud (D:\SteamLibrary). No Linux build anywhere on disk or in Google Drive (searched). Card Q12 is answered by this: Spike 1 uses the Windows build or the Steam console depot download, not the owner.
-- Kube contexts: homelab-admin (default). Jenkins 2.541.3 at https://jenkins.homelab.local, kubernetes agents (pod templates, imagePullSecret ghcr-pull-secret, shared lib jenkins-shared-lib); job coq-jev-herdr-plugin to be created from the Jenkinsfile (create_job via jenkins-mcp) and its first build checked.
+- Kube contexts: homelab-admin (default). Jenkins 2.541.3 at https://<jenkins, internal>, kubernetes agents (pod templates, imagePullSecret ghcr-pull-secret, shared lib jenkins-shared-lib); job coq-jev-herdr-plugin to be created from the Jenkinsfile (create_job via jenkins-mcp) and its first build checked.
 
 #### Toolchain
 

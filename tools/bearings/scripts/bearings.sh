@@ -6,7 +6,7 @@
 # watcher visible). Outside herdr it refuses, unless --no-herdr is given, which
 # the Podman test harness uses because no herdr runs there.
 #
-#   bearings.sh <tier> serve    [--ticket ID] [--config P] [--session S] [--model M] [--working-on TEXT] [--no-herdr]
+#   bearings.sh <tier> serve    [--ticket ID] [--config P] [--session S] [--join] [--model M] [--working-on TEXT] [--no-herdr]
 #   bearings.sh <tier> stop     [--ticket ID] [--config P]
 #   bearings.sh <tier> wait     [--ticket ID] [--config P] [--to PANE] [--no-herdr]   each wake is prompted into PANE (default COQ_SEAT_PANE, else the calling pane)
 #   bearings.sh <tier> reply    [--ticket ID] [--config P] --to <message-id> "text"
@@ -29,7 +29,7 @@ need() { command -v "$1" >/dev/null 2>&1 || die "$EX_IO" "$1 is required and not
 [ $# -ge 2 ] || { sed -n '2,20p' "$0" >&2; exit "$EX_USAGE"; }
 TIER=$1; VERB=$2; shift 2
 TICKET=""; CONFIG="${BEARINGS_CONFIG:-$TOOL/config/bearings.json}"; NO_HERDR=0; JSON=0; FORCE=0
-SESSION=""; MODEL=""; CWD=""; WORKING_ON=""; TO=""
+SESSION=""; MODEL=""; CWD=""; WORKING_ON=""; TO=""; JOIN=0
 POS=()
 while [ $# -gt 0 ]; do
   case $1 in
@@ -43,6 +43,7 @@ while [ $# -gt 0 ]; do
     --no-herdr) NO_HERDR=1; shift ;;
     --json) JSON=1; shift ;;
     --force) FORCE=1; shift ;;
+    --join) JOIN=1; shift ;;
     --help|-h) sed -n '2,20p' "$0" >&2; exit "$EX_OK" ;;
     --*) die "$EX_USAGE" "unknown flag $1" ;;
     *) POS+=("$1"); shift ;;
@@ -102,6 +103,12 @@ case $VERB in
     server_alive && die "$EX_VALIDATION" "$PAGE is already running: $(jq -r .url <<<"$(server_json)")"
     ARGS=("${COMMON[@]}"); [ -n "$SESSION" ] && ARGS+=(--session "$SESSION"); [ -n "$MODEL" ] && ARGS+=(--model "$MODEL")
     [ -n "$CWD" ] && ARGS+=(--cwd "$CWD"); [ -n "$WORKING_ON" ] && ARGS+=(--working-on "$WORKING_ON")
+    # BREADCRUMB 2026-10-10 22:3x UTC. What broke: server.mjs:105 refuses to start when session.json names another
+    #   session unless it is given --join, and this script had no way to pass it, so a successor seat on the same page
+    #   (the architect after a compaction or a new session) got "server did not come up in pane" and the owner page
+    #   stayed down (this seat, 22:25Z). Why this fix: forward the flag; the refusal in server.mjs is the right guard
+    #   and stays. Rejected: deleting session.json before serve (hand-edits a state file and loses the started time).
+    [ "$JOIN" = 1 ] && ARGS+=(--join)
     rm -f "$DIR/stopped.json"
     if in_herdr && [ "$NO_HERDR" = 0 ]; then
       need herdr
