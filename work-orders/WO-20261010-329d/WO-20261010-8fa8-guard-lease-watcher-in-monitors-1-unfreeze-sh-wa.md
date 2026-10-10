@@ -4,7 +4,7 @@
   "slug": "guard-lease-watcher-in-monitors-1-unfreeze-sh-wa",
   "title": "Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-10",
   "updated": "2026-10-10",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "architect approval; owner order 2026-10-10 UTC: approval is the architect's job, Lavish is prohibited for Zenith",
+    "at": "2026-10-10"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
