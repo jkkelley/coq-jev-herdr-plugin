@@ -38,7 +38,12 @@ case $VERB in
     at=$(date -u +%Y-%m-%dT%H:%M:%SZ); d=$(date -u +%Y%m%d); dir=$TREE/${d:0:4}/${d:4:2}; mkdir -p "$dir"
     name=$(slug "$title"); [ -n "$name" ] || die 3 "title slugs to nothing"
     path=$dir/$d-$name.md; [ -e "$path" ] && path=$dir/$d-$name-$(head -c 16 /dev/urandom | tr -dc a-z0-9 | head -c 5).md
-    { printf -- '---\ntitle: %s\nat: %s\ntype: %s\nticket: %s\nsha: %s\n---\n' "$title" "$at" "$type" "${ticket:-null}" "${sha:-null}"; [ -n "$text" ] && printf '\n%s\n' "$text"; } > "$path.tmp" && mv "$path.tmp" "$path"
+    # BREADCRUMB 2026-10-10 - WO-20261010-c274. What broke: the group ended in `[ -n "$text" ] && printf ...`, so with no --text
+    #   the group exited 1, the `&& mv` below it never ran, and the entry stayed `<name>.md.tmp`; render and check only read
+    #   *.md, so the entry vanished from CHANGELOG.md and `add` printed the path of a file that did not exist (four such
+    #   entries reached main before this). Why this fix: an `if` leaves the group's status at the printf's, so the mv runs
+    #   whether or not there is a body. Rejected: `|| true` after the test, which would also swallow a failed write.
+    { printf -- '---\ntitle: %s\nat: %s\ntype: %s\nticket: %s\nsha: %s\n---\n' "$title" "$at" "$type" "${ticket:-null}" "${sha:-null}"; if [ -n "$text" ]; then printf '\n%s\n' "$text"; fi; } > "$path.tmp" && mv "$path.tmp" "$path"
     render > "$OUT.tmp" && mv "$OUT.tmp" "$OUT"
     if [ "$json" = 1 ]; then jq -n --arg p "${path#"$REPO"/}" --arg at "$at" '{ok:true,path:$p,at:$at}'; else printf '%s\n' "${path#"$REPO"/}"; fi ;;
   render) render > "$OUT.tmp" && mv "$OUT.tmp" "$OUT"; echo "wrote CHANGELOG.md" >&2 ;;
