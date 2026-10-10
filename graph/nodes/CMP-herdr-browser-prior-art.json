@@ -1,0 +1,36 @@
+{
+  "id": "CMP-herdr-browser-prior-art",
+  "type": "Component",
+  "title": "Prior art: ogulcancelik/herdr-browser renders Chromium in a herdr pane via CDP screencast PNGs over pane.graphics.stream; zenbu-labs/terminal-browser uses Electron offscreen rendering plus the Kitty graphics protocol",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "research",
+      "id": "https",
+      "at": "//github.com/ogulcancelik/herdr-browser"
+    },
+    {
+      "kind": "research",
+      "id": "https",
+      "at": "//github.com/zenbu-labs/terminal-browser"
+    },
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "verified_by",
+      "to": "SPK-05-pane-graphics"
+    },
+    {
+      "kind": "risks",
+      "to": "RSK-pixels-in-pane"
+    }
+  ],
+  "created": "2026-10-10T19:01Z",
+  "updated": "2026-10-10T19:01Z"
+}

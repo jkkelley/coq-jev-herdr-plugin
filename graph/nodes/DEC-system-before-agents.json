@@ -1,0 +1,17 @@
+{
+  "id": "DEC-system-before-agents",
+  "type": "Decision",
+  "title": "Monitoring and the system come up before any agent, so seats start hooked in",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "m-20261010182528361-2sphh",
+      "at": "2026-10-10T18"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

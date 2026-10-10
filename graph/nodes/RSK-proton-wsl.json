@@ -1,0 +1,16 @@
+{
+  "id": "RSK-proton-wsl",
+  "type": "Risk",
+  "title": "Proton in WSL2 is unproven; the ARM64 cluster cannot host x86 games",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-game-host-linux-native"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

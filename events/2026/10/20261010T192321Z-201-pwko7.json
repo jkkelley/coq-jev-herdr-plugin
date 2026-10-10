@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261010T192321Z-201-pwko7",
+  "at": "2026-10-10T19:23:21Z",
+  "code": 201,
+  "seat": "fable-discovery",
+  "kind": "test",
+  "ticket": null,
+  "pane": null,
+  "note": "Spike 5: pane.graphics.set PNG rendered in owner terminal (card SPK5-1)",
+  "evidence": [
+    "graph/nodes/DEC-spike5-passed.json"
+  ],
+  "observations": []
+}

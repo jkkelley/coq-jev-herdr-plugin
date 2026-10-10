@@ -1,5 +1,27 @@
 # AGENTS.md
 
+## Contents
+
+- What this repository is
+- Golden rule: checkpoint every step, compact early
+- Hard rule: the first 100 lines route
+- Hard rule: dated entry files, one file per entry
+- Law: the bus is NATS JetStream, the control plane is gRPC, status codes drive it
+- Law: herdr-first, never background processes
+- Law: automation leads, never by hand
+- Law: Google Drive first
+- Law: the surface follows the runtime
+- Law: scope small, integrate in CI
+- Law: testing
+- Law: the architect model chain
+- Hard rule: read the window, not the history
+- Hard rule: no PII
+- Hard rule: documentation goes where its lifetime says it goes
+- The close-out flow
+- Skills
+- Where your workspace comes from
+- General guidelines
+
 This file tells every agent working in this repository how to work here, whatever model or runtime it runs on.
 It is complete on its own.
 `CLAUDE.md` is a pointer to it and holds nothing else.
@@ -11,6 +33,73 @@ Ask the knowledge-steward seat for the current copy rather than working from mem
 ## What this repository is
 
 TODO: FILL THIS IN
+
+## Golden rule: checkpoint every step, compact early
+
+This is the rule above every other rule in this file, and it binds the interface agent first.
+Owner order, 2026-10-10 UTC: never run without proper checkpointing built into your own tasks.
+
+Cut every task into steps small enough that each one ends in a commit and a `CONTEXT_STATE.md` checkpoint (`checkpoint.sh new`).
+A step that cannot end that way is too large: split it before starting it, never partway through.
+A context threshold is the last line of defence, never the trigger; do not wait for it.
+Write the resume line into the checkpoint before you compact, never into chat.
+After a step lands, raise your compact request and end the turn.
+A watcher compacts the seat once it is idle; never send `/compact` yourself.
+Nothing may stop a compaction and nothing is lost: the watcher opens a quiet window, posts a system message with a five second countdown, watchers pause and queue their wake signals, and the queue drains into the first turn after the resume card (SPEC-05 s-quiet).
+Small scope compacts sooner and costs fewer tokens per step, which is what the owner is paying for.
+
+GOOD: a port of three functions lands as one commit and one checkpoint, the seat compacts, then the suite case is the next step.
+GOOD: a checkpoint written while the suite runs in its pane, so a compaction mid-run loses nothing.
+NEVER: carrying four finished steps in context because the next one looks quick.
+NEVER: a checkpoint whose resume line lives only in the chat transcript.
+
+## Hard rule: the first 100 lines route
+
+Agents read the first 100 lines of a file and stop; the owner watched them lose context past that line on 2026-10-10.
+So the first 100 lines of every file an agent opens must route: a contents list first, then the rules that bind, then pointers to the files that hold the rest.
+Nothing an agent must know to act may sit past line 100 unless the contents list names it and the entry says what it decides.
+A file that cannot route in 100 lines is two files; split it rather than hoping it is read.
+`CONTEXT_STATE.md` keeps its preamble under 20 lines so the top checkpoint is inside the window.
+`work-orders/INDEX.md` leads with what is startable, `COMPASS.md` stays under 100 lines, and every spec starts with its contents element.
+
+GOOD: a 240 line AGENTS.md whose contents list, golden rule and this rule are all inside the first 60 lines.
+NEVER: a rule added at the bottom of a long file with no contents entry, because "it is in the file".
+
+## Hard rule: dated entry files, one file per entry
+
+Owner order, 2026-10-10 UTC: every scripted entry is a new file on one layout, never an overwrite, so nothing is lost and every entry is visible.
+This covers logs, issues, backlog items, checkpoints, index entries, context files, and anything else an agent records more than once.
+
+```text
+<tree>/YYYY/MM/YYYYMMDD-<descriptive-name>.<ext>
+```
+
+`YYYY`, `MM` and `YYYYMMDD` are the UTC date the entry was written.
+`<descriptive-name>` says what the entry is, in under 50 characters, lowercase, words joined by `-`.
+Every entry opens with frontmatter that carries at least `title`, `at` (UTC, ISO 8601, `Z` suffix) and `type`; the owning script writes it.
+Two entries on the same day with the same name are two files: the script adds a short suffix, never a second write to the first.
+Two concurrent agents must never need to touch the same path, and distinct paths mean merges never meet.
+
+Never hand-write an entry.
+A tree has one script that owns its format; the scripts live in `.claude/scripts/` and `bin/`, and every one takes `--json` and uses the exit codes 0 ok, 2 usage, 3 validation, 4 io, 6 id not found.
+Branch on the code, not on the message text.
+A fix for an earlier issue is a new entry carrying `resolves: <suffix>`, never an edit of the old one.
+
+`issues/` and `backlog/` still write `YYYY/MM/<UTC-timestamp>-<suffix>.md`, and `CONTEXT_STATE.md` still stacks checkpoints in one file.
+Moving them onto the layout above is WO-20261010-d354 in `work-orders/INDEX.md` (search "dated entry files"); until it lands, read both shapes and write only through the scripts.
+
+GOOD: `events/2026/10/20261010-uat-tier-started.md` with frontmatter, written by `bin/event.sh`.
+NEVER: appending a line to a shared `LOG.md`, or editing yesterday's entry to say what happened today.
+
+## Law: the bus is NATS JetStream, the control plane is gRPC, status codes drive it
+
+Owner decision, 2026-10-10 UTC: the producer-consumer model runs on NATS JetStream, gRPC carries only the synchronous control plane, and routing is by status code (SPEC-01 s-codes, SPEC-03 routes.json).
+Every component is a black box behind a subject: it consumes messages, emits a record with a code, and never reaches into another component.
+Adding behaviour is a routes row and a consumer.
+The file queue in `queue/` is the offline fallback only, until WO-20261010-539f lands the bus (graph node DEC-nats-jetstream-grpc).
+
+GOOD: a seat waits as a durable pull consumer and is woken by the publish, with no polling loop.
+NEVER: a second broker, gRPC streaming for events, or a component that reads another component's state directory to decide what to do.
 
 ## Law: herdr-first, never background processes
 
@@ -97,31 +186,6 @@ It starts from the previous model's checkpoint and continues on the same worktre
 Nothing is restarted from scratch, and nothing waits for a human to notice the stall.
 
 Seat roles are declared against `agent-role-v1.1.0.schema.json`.
-
-## Law: compaction
-
-Every seat checkpoints when it reaches its context threshold.
-A watcher compacts the seat once it is idle.
-Never send `/compact` yourself.
-Finish the step you are on, write your checkpoint, raise your compact request, and end your turn.
-
-## Hard rule: entry trees are one file per entry
-
-`issues/` and `backlog/` are directories of one file per entry, never a single shared file.
-Two concurrent agents must never need to touch the same path, and distinct paths mean merges never meet.
-This is this project's own convention, not a Drive standard.
-
-Never hand-write an entry.
-Both trees have scripts that own their format:
-
-```sh
-.claude/scripts/log-issue.sh --project . --help
-.claude/scripts/backlog.sh   --help
-```
-
-A fix for an earlier issue is a new entry carrying `resolves: <suffix>`, never an edit of the old one.
-Both scripts take `--json` and use documented exit codes: 0 ok, 2 usage, 3 validation, 4 io, 6 id not found.
-Branch on the code, not on the message text.
 
 ## Hard rule: read the window, not the history
 

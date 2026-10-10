@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0.0",
+  "runtime": {
+    "default": "claude",
+    "allowed": [
+      "claude",
+      "codex",
+      "system-one"
+    ]
+  },
+  "effort": "medium",
+  "context_threshold_percent": 30,
+  "max_seats": 1,
+  "pane_layout": "player-1x3",
+  "inputs": [
+    "game.state"
+  ],
+  "outputs": [
+    "game.action",
+    "trace.line",
+    "postmortem"
+  ],
+  "wakes_on": [
+    "game.state"
+  ],
+  "owner_channel": false,
+  "name": "player",
+  "title": "Player",
+  "purpose": "Plays the game through the player contract: structured state in, one typed action with confidence out, decision trace to the pane.",
+  "model": {
+    "claude": "claude-haiku-5-5",
+    "codex": "gpt-5.6-sol",
+    "system-one": "jev",
+    "architect_may_override": true
+  },
+  "permission_mode": "bypassPermissions",
+  "read_only": false,
+  "label": "player-${game}",
+  "allow": {
+    "tools": [
+      "Read",
+      "Bash"
+    ],
+    "paths": [
+      "${state}/player/"
+    ],
+    "commands": [
+      "player/bin/act.sh",
+      "player/bin/trace.sh",
+      "events/bin/event.sh add"
+    ]
+  },
+  "deny": {
+    "tools": [
+      "Write",
+      "Edit",
+      "Agent",
+      "Task"
+    ],
+    "paths": [
+      "${repo}/"
+    ],
+    "commands": [
+      "git *",
+      "gh *",
+      "podman *"
+    ]
+  },
+  "records": {
+    "turn": 100,
+    "death": 300,
+    "stuck": 423
+  },
+  "must": [
+    "read one state record, emit one action record; nothing in between",
+    "every action carries a one-line reason to the trace pane",
+    "on an unknown UI screen: stuck 423 with a screenshot path; the adapter owns recovery",
+    "after death: write the post-mortem record and wait for the next life"
+  ],
+  "forbidden": [
+    "spawning a subagent or any background process; every process is a labelled herdr pane",
+    "writing prose to another agent; the record is the handoff",
+    "a fourth attempt; after 3 failures post 423 and stop",
+    "sending /compact yourself; the guard does it",
+    "editing files outside your allowed paths",
+    "naming a ticket without its full title in any owner-facing line",
+    "pressing keys directly; actions go through the adapter",
+    "reading pixels when structured state exists"
+  ]
+}

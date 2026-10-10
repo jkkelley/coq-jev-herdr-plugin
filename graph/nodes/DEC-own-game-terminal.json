@@ -1,0 +1,22 @@
+{
+  "id": "DEC-own-game-terminal",
+  "type": "Decision",
+  "title": "Build our own pane program (Rust) that renders game frames into a herdr pane and forwards input, designed for us; the same pipeline the browser plugin proved (offscreen surface to pane graphics). Not a fallback: the path",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "supersedes",
+      "to": "DEC-rust-terminal-parallel"
+    }
+  ],
+  "created": "2026-10-10T19:06Z",
+  "updated": "2026-10-10T19:06Z"
+}

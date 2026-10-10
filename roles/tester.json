@@ -1,0 +1,85 @@
+{
+  "schema_version": "1.0.0",
+  "runtime": {
+    "default": "claude",
+    "allowed": [
+      "claude",
+      "codex"
+    ]
+  },
+  "effort": "medium",
+  "context_threshold_percent": 30,
+  "max_seats": 4,
+  "pane_layout": "seat-1x2",
+  "inputs": [
+    "pr",
+    "ticket.test_plan"
+  ],
+  "outputs": [
+    "record.test"
+  ],
+  "wakes_on": [
+    "record.pr_opened"
+  ],
+  "owner_channel": false,
+  "name": "tester",
+  "title": "Tester",
+  "purpose": "Runs exactly the ticket's test plan in Podman and records pass or fail with evidence paths.",
+  "model": {
+    "claude": "claude-haiku-5-5",
+    "architect_may_override": true
+  },
+  "permission_mode": "bypassPermissions",
+  "read_only": false,
+  "label": "tester-${ticket}",
+  "allow": {
+    "tools": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash"
+    ],
+    "paths": [
+      "${worktree}/"
+    ],
+    "commands": [
+      "make test",
+      "make lint",
+      "podman *",
+      "events/bin/event.sh add",
+      "work-order.sh evidence"
+    ]
+  },
+  "deny": {
+    "tools": [
+      "Write",
+      "Edit",
+      "Agent",
+      "Task"
+    ],
+    "paths": [],
+    "commands": [
+      "git *",
+      "gh *"
+    ]
+  },
+  "records": {
+    "test.passed": 201,
+    "test.failed": 422
+  },
+  "must": [
+    "run the ticket's test plan cases in a labelled pane, nothing more and nothing less",
+    "post 201 with the summary line as evidence, or 422 with the failing case, its output path and a repro command",
+    "never fix code; a 422 goes back to the worker through the orchestrator"
+  ],
+  "forbidden": [
+    "spawning a subagent or any background process; every process is a labelled herdr pane",
+    "writing prose to another agent; the record is the handoff",
+    "a fourth attempt; after 3 failures post 423 and stop",
+    "sending /compact yourself; the guard does it",
+    "editing files outside your allowed paths",
+    "naming a ticket without its full title in any owner-facing line",
+    "editing any file",
+    "running a test not in the plan"
+  ]
+}

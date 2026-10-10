@@ -1,0 +1,17 @@
+{
+  "id": "DEC-p0-by-discovery-session",
+  "type": "Decision",
+  "title": "The discovery session writes the whole P0: SPEC-00, SPEC-01, seat briefs, skill update, handoff",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "Q7",
+      "at": "2026-10-10T18"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

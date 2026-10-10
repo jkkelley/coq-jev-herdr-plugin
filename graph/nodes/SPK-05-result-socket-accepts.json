@@ -1,0 +1,26 @@
+{
+  "id": "SPK-05-result-socket-accepts",
+  "type": "Spike",
+  "title": "Spike 5 step 1: herdr 0.9.0 pane.graphics.set {png,rgb,rgba,bgra; placement grid_cols/rows, viewport_col/row; layer_id; z_index} returned ok; pane.graphics.info gives cell 10x22 px, 16 layers; docs v0.9.3 call the API removed, so pin herdr 0.9.0 until proven otherwise",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "research",
+      "id": "herdr-api-schema-protocol-22",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "SPK-05-pane-graphics"
+    },
+    {
+      "kind": "risks",
+      "to": "RSK-pixels-in-pane"
+    }
+  ],
+  "created": "2026-10-10T19:04Z",
+  "updated": "2026-10-10T19:04Z"
+}

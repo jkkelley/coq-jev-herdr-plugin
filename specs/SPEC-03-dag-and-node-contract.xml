@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-03" version="1.0.0" title="DAG workflow and node contract" status="proposed" updated="2026-10-10T19:16Z">
+  <contents>
+    <item ref="s-node" title="The node contract"/>
+    <item ref="s-records" title="Records, not prose"/>
+    <item ref="s-routes" title="The decision table"/>
+    <item ref="s-sdlc" title="The SDLC DAG"/>
+    <item ref="s-retry" title="Retries, blocked, escalation"/>
+    <item ref="s-locks" title="Leases and the queue"/>
+    <item ref="s-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose>Define a factory node so precisely that an agent given one never has to ask what to do next, and define how records move between nodes so the owner only ever sees a done line or a decision card.</purpose>
+
+  <section id="s-node" title="The node contract">
+    <node id="REQ-factory-node-contract" status="locked"><title>Every factory node: schema in, schema out, 3 retries, black box, no agent prose to agent prose</title></node>
+    <text>A node is one role (roles/&lt;role&gt;.json) acting on one ticket in one labelled herdr pane. Input: exactly the artefacts its role lists under inputs (a ticket, a pr, a record). Output: exactly one record (factory/schema/record.schema.json) and the artefacts under outputs. A node reads its playbook (rendered from the role, never hand-written), runs the numbered steps, and stops. It cannot be prompted with free text; its brief is one line: the ticket id, its title, and the playbook path.</text>
+    <text>Black box: the seat inside a node is replaceable (claude, codex, system-one) because only the record crosses the boundary. A node that needs something it does not have emits blocked 423 with observations; it never asks the next seat.</text>
+    <ref spec="SPEC-02" anchor="s-roles"/>
+  </section>
+
+  <section id="s-records" title="Records, not prose">
+    <node id="SCH-factory-record" status="proposed"><title>factory/schema/record.schema.json: id, at, ticket, seat, role, kind, code, attempt, sha, pr, evidence[], observations[], repro, note (240 chars max)</title></node>
+    <text>A record is written by events/bin/event.sh (which validates it) into the event log and mirrored as a PR comment when a pr exists. The orchestrator routes on kind and code only. note is for the owner's line and the monitor's screen; nothing branches on it. A failure record must carry repro (one command) and at least one observation (path, line, saw, expected), or event.sh refuses it with exit 3: kickback without evidence is prose.</text>
+  </section>
+
+  <section id="s-routes" title="The decision table">
+    <node id="SCH-routes" status="proposed"><title>factory/config/routes.json: first matching row on kind, code, attempt and escalations decides enqueue, wake, escalate or notify_owner; validated by routes.schema.json</title></node>
+    <text>The orchestrator never reasons about a record. It matches it against routes.json top to bottom and performs the first row's action: enqueue (into the priority queue for the architect), wake (herdr agent prompt to the target seat with the record id), escalate (re-emit to the architect with code 423), notify_owner (the interface agent writes one line on the page). A record that matches no row is 500 to the monitor. Changing behaviour is editing the table and running make lint.</text>
+    <mermaid>flowchart TD
+  R[record kind,code,attempt] --> M{routes.json first match}
+  M -- enqueue --> Q[(priority queue)] --> A[architect]
+  M -- wake --> W[target seat via herdr agent prompt]
+  M -- escalate 423 --> A
+  M -- notify_owner --> I[interface agent: one line on the page]
+  M -- no match 500 --> MON[monitor]</mermaid>
+  </section>
+
+  <section id="s-sdlc" title="The SDLC DAG">
+    <node id="WFL-sdlc" status="proposed"><title>SDLC DAG: request to ticket to work to test to review to merge to verify to owner line; every edge is a record kind in routes.json</title></node>
+    <mermaid>flowchart LR
+  O[owner card or message] --> IA[interface agent&lt;br/&gt;request.forwarded 300]
+  IA --> OR[orchestrator&lt;br/&gt;request.accepted 100]
+  OR --> AR[architect&lt;br/&gt;graph.sh find, ticket.cut 100]
+  AR --> WK[worker&lt;br/&gt;work.started 100, pr.opened 100]
+  WK --> TS[tester&lt;br/&gt;test.passed 201 / test.failed 422]
+  TS -- 201 --> RV[reviewer&lt;br/&gt;review.passed 201 / review.changes 422]
+  TS -- 422 attempt lt 3 --> WK
+  RV -- 201 --> MG[merger&lt;br/&gt;merged 200 / merge.conflict 409]
+  RV -- 422 attempt lt 3 --> WK
+  MG -- 200 --> AR2[architect verify&lt;br/&gt;verified 201]
+  AR2 --> IA2[interface agent&lt;br/&gt;one line: WO-id - title done]
+  TS -- 422 attempt 3 --> AR
+  RV -- 422 attempt 3 --> AR
+  AR -- second 423 --> IA3[interface agent: decision card]</mermaid>
+    <text>Parallelism: the architect cuts tickets with disjoint write paths; the queue hands up to max_seats workers tickets at once; PRs merge as they pass, never in a batch, so a PR is never a bottleneck. Every seat comes up through the same bring-up DAG (SPEC-04): control plane, guard, monitor, log tab group, then the seat.</text>
+    <ref spec="SPEC-15" anchor="s-sdlc"/>
+  </section>
+
+  <section id="s-retry" title="Retries, blocked, escalation">
+    <text>attempt counts a seat's tries on one ticket and stops at 3. The third failure is 422 with attempt 3, which routes to the architect as 423: the ticket is split, re-scoped or re-planned, never re-prompted. A 423 that reaches the architect twice becomes an owner decision card. Nothing waits silently: every blocked state is a record, every record has a route, every route ends in a seat waking or the owner seeing one line.</text>
+    <node id="RUN-kickback" status="proposed"><title>Kickback: events/bin/event.sh add --kind test.failed --code 422 --attempt N --repro "cmd" --observe "path:line:saw:expected" --evidence path; the orchestrator wakes the worker with the record id</title></node>
+  </section>
+
+  <section id="s-locks" title="Leases and the queue">
+    <node id="REQ-locks-and-queues" status="locked"><title>Locks are leases with a TTL and automatic release; work is a priority queue with smart dequeue; nothing blocks on a human except an owner decision card</title></node>
+    <text>Every exclusive thing (a treehouse slot, a tier port, a ticket, a page) is a lease: holder, acquired_at, ttl_seconds, renewed by the holder's records; the monitor releases an expired lease and records seat.stalled 500. The queue is a directory of files (queue/&lt;priority&gt;-&lt;UTC&gt;-&lt;ticket&gt;.json) so enqueue is a write and dequeue is a rename; priority p0..p3 from the request, age breaks ties; dequeue refuses a ticket whose depends_on is not done (work-order.sh next is the oracle). A seat waiting on a lease does not poll: the monitor wakes it on release (REQ-status-change-wakeups).</text>
+    <ref spec="SPEC-04" anchor="s-leases"/>
+  </section>
+
+  <section id="s-examples" title="GOOD and NEVER">
+    <example kind="GOOD"><text>Brief to a worker: "WO-20261010-ba08 - Vendor bearings into tools/bearings with stable, uat and dev tiers. Playbook playbooks/worker.md."</text></example>
+    <example kind="GOOD"><text>Tester record: kind test.failed, code 422, attempt 2, repro "make -C tools/bearings test", observation tests/inside.sh:41 saw "FAIL - zero page errors" expected "ok".</text></example>
+    <example kind="GOOD"><text>A new failure class: add a row to routes.json, make lint, PR. No seat playbook changes.</text></example>
+    <example kind="NEVER"><text>Orchestrator reads the note field and decides the worker "probably needs more context".</text><why>Routing is the table; a note is for humans.</why></example>
+    <example kind="NEVER"><text>A worker's fourth attempt because the fix "is almost there".</text><why>attempt 3 is the architect's problem by design.</why></example>
+    <example kind="NEVER"><text>A seat waiting in a sleep loop for a slot to free.</text><why>Leases wake their waiters through the monitor.</why></example>
+  </section>
+</spec>

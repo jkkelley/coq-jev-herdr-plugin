@@ -1,0 +1,17 @@
+{
+  "id": "REQ-event-log",
+  "type": "Requirement",
+  "title": "One git-tracked event log dir, one file per entry, status code and UTC only, multi-agent safe",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "m-20261010183732219-i8sbs",
+      "at": "2026-10-10T18"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

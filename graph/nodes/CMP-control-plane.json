@@ -1,0 +1,16 @@
+{
+  "id": "CMP-control-plane",
+  "type": "Component",
+  "title": "Go gRPC control plane: inventory, status codes, receipts, DAG runner, priority queue",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "STC-http-shaped"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

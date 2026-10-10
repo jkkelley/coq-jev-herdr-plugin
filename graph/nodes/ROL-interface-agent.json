@@ -1,0 +1,16 @@
+{
+  "id": "ROL-interface-agent",
+  "type": "Role",
+  "title": "Interface agent: read only, the owner's single point of contact, runs the bearings tool",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-permissions-by-role"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

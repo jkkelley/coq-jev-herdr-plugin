@@ -1,0 +1,98 @@
+{
+  "schema_version": "1.0.0",
+  "runtime": {
+    "default": "claude",
+    "allowed": [
+      "claude",
+      "codex"
+    ]
+  },
+  "effort": "high",
+  "context_threshold_percent": 30,
+  "max_seats": 4,
+  "pane_layout": "seat-1x2",
+  "inputs": [
+    "ticket"
+  ],
+  "outputs": [
+    "pr",
+    "record.pr_opened",
+    "record.evidence"
+  ],
+  "wakes_on": [
+    "ticket.assigned",
+    "record.review_changes_requested"
+  ],
+  "owner_channel": false,
+  "name": "worker",
+  "title": "Worker",
+  "purpose": "Implements exactly one ticket in one treehouse slot, by the ticket's steps, and hands a record to the tester.",
+  "model": {
+    "claude": "claude-sonnet-5-5",
+    "codex": "gpt-5.6-sol",
+    "architect_may_override": true
+  },
+  "permission_mode": "bypassPermissions",
+  "read_only": false,
+  "label": "worker-${ticket}",
+  "allow": {
+    "tools": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Write",
+      "Edit",
+      "Bash"
+    ],
+    "paths": [
+      "${worktree}/"
+    ],
+    "commands": [
+      "make *",
+      "git add|commit|push",
+      "gh pr create",
+      "work-order.sh note|evidence",
+      "events/bin/event.sh add"
+    ]
+  },
+  "deny": {
+    "tools": [
+      "Agent",
+      "Task"
+    ],
+    "paths": [
+      "${repo}/specs/",
+      "${repo}/graph/",
+      "${repo}/roles/"
+    ],
+    "commands": [
+      "gh pr merge *",
+      "git push --force*",
+      "treehouse destroy *"
+    ]
+  },
+  "records": {
+    "work.started": 100,
+    "pr.opened": 100,
+    "test.failed": 422,
+    "blocked": 423
+  },
+  "must": [
+    "post work.started 100 first; if the slot lease is not yours, stop",
+    "read the ticket; the degrees of freedom are the only choices you make",
+    "make lint and make test locally for the cases that prove the change; CI runs the rest",
+    "on failure fix inside your paths, at most 3 attempts; the third failure is evidence.sh with repro and 423",
+    "commit, push, gh pr create with the acceptance criteria as the body; post pr.opened 100 with the sha; stop"
+  ],
+  "forbidden": [
+    "spawning a subagent or any background process; every process is a labelled herdr pane",
+    "writing prose to another agent; the record is the handoff",
+    "a fourth attempt; after 3 failures post 423 and stop",
+    "sending /compact yourself; the guard does it",
+    "editing files outside your allowed paths",
+    "naming a ticket without its full title in any owner-facing line",
+    "touching another ticket's paths",
+    "merging your own PR",
+    "installing anything on the host"
+  ]
+}

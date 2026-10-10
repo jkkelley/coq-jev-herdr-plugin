@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/factory/schema/routes.schema.json",
+  "title": "routes", "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "description", "max_attempts", "routes"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" }, "description": { "type": "string" }, "max_attempts": { "const": 3 },
+    "routes": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["match", "do", "to"],
+      "properties": {
+        "match": { "type": "object", "additionalProperties": false, "properties": { "kind": { "type": "string" }, "code": { "type": "integer" }, "code_gte": { "type": "integer" }, "attempt": { "type": "integer" }, "attempt_lt": { "type": "integer" }, "escalations": { "type": "integer" }, "escalations_lt": { "type": "integer" } } },
+        "do": { "enum": ["enqueue", "wake", "escalate", "notify_owner"] },
+        "to": { "enum": ["interface-agent", "orchestrator", "architect", "worker", "tester", "reviewer", "merger", "player", "monitor"] },
+        "with": { "enum": ["ticket", "pr", "record", "verify"] }, "code": { "type": "integer" }, "priority_from": { "type": "string" }, "line": { "enum": ["done", "decision"] }
+      } } }
+  }
+}

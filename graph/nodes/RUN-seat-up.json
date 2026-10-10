@@ -1,0 +1,20 @@
+{
+  "id": "RUN-seat-up",
+  "type": "Runbook",
+  "title": "seat.sh --ticket WO --role R: workspace by label, tab create, panes from layout, pane rename, markers unset, env exported, herdr agent start --kind --pane -- --model --effort --permission-mode --settings, guard bound, brief sent",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "WFL-bringup"
+    },
+    {
+      "kind": "implements",
+      "to": "DEC-no-process-under-agent"
+    }
+  ],
+  "created": "2026-10-10T19:15Z",
+  "updated": "2026-10-10T19:15Z"
+}

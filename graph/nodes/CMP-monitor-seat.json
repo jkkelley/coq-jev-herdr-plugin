@@ -1,0 +1,20 @@
+{
+  "id": "CMP-monitor-seat",
+  "type": "Component",
+  "title": "Monitor seat and herdr tab group for the event log and system health",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-event-log"
+    },
+    {
+      "kind": "decided_by",
+      "to": "DEC-system-before-agents"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

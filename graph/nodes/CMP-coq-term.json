@@ -1,0 +1,32 @@
+{
+  "id": "CMP-coq-term",
+  "type": "Component",
+  "title": "coq-term: Rust pane program. Backends: herdr pane.graphics.set over the socket (proven accepted on 0.9.0) and Kitty graphics from inside the pane; input forwarded to the game host; decision trace overlay as a layer",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-own-game-terminal"
+    },
+    {
+      "kind": "decided_by",
+      "to": "DEC-spike5-passed"
+    },
+    {
+      "kind": "depends_on",
+      "to": "CMP-herdr-browser-prior-art"
+    },
+    {
+      "kind": "depends_on",
+      "to": "SPK-05-result-socket-accepts"
+    },
+    {
+      "kind": "implements",
+      "to": "REQ-north-star"
+    }
+  ],
+  "created": "2026-10-10T19:06Z",
+  "updated": "2026-10-10T19:23Z"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "SCH-factory-record",
+  "type": "Schema",
+  "title": "factory/schema/record.schema.json: id, at, ticket, seat, role, kind, code, attempt, sha, pr, evidence[], observations[], repro, note (240 chars max)",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-factory-node-contract"
+    }
+  ],
+  "created": "2026-10-10T19:10Z",
+  "updated": "2026-10-10T19:10Z"
+}

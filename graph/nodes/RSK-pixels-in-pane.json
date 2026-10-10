@@ -1,0 +1,11 @@
+{
+  "id": "RSK-pixels-in-pane",
+  "type": "Risk",
+  "title": "Pixels in a pane exist only via Kitty graphics from the pane's own process; the owner's outer terminal may not support it",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

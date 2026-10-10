@@ -1,0 +1,16 @@
+{
+  "id": "ROL-architect",
+  "type": "Role",
+  "title": "Architect (Opus): reads the graph, cuts epics and tickets, picks the model per ticket",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-permissions-by-role"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

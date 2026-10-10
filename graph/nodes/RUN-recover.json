@@ -1,0 +1,16 @@
+{
+  "id": "RUN-recover",
+  "type": "Runbook",
+  "title": "recover.sh [--check|--apply]: halt flag, herdr reachable, monitors grid, loop heartbeat, every seat seat.sh --check, down if the agent is gone, re-arm the guard per live pane, tickets report; notification at the end",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "RUN-seat-up"
+    }
+  ],
+  "created": "2026-10-10T19:15Z",
+  "updated": "2026-10-10T19:15Z"
+}

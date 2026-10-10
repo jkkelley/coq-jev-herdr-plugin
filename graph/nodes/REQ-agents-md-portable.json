@@ -1,0 +1,11 @@
+{
+  "id": "REQ-agents-md-portable",
+  "type": "Requirement",
+  "title": "Every AGENTS.md and markdown file is runtime-agnostic, opens with a contents list, carries GOOD and NEVER examples",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

@@ -1,0 +1,11 @@
+{
+  "id": "CMP-herdr-plugin",
+  "type": "Component",
+  "title": "herdr-plugin.toml: actions, panes, events, link handlers for the game and dashboards",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

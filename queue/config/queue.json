@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "items_dir": "${repo}/queue/items",
+  "priorities": ["p0", "p1", "p2", "p3"],
+  "default_priority": "p2",
+  "lease_ttl_seconds": 7200,
+  "renew_grace_seconds": 300
+}

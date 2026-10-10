@@ -1,0 +1,11 @@
+{
+  "id": "REQ-any-steam-game",
+  "type": "Requirement",
+  "title": "Any Steam game the owner has can be played by a model through the same player contract",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

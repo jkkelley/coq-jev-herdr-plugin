@@ -1,0 +1,16 @@
+{
+  "id": "SPK-08-memory-loop",
+  "type": "Spike",
+  "title": "Spike 8: memory across permadeath; pass = repeat-cause deaths drop",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "SPK-04-text-vs-vision"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

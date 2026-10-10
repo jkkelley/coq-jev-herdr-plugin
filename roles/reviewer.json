@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0.0",
+  "runtime": {
+    "default": "claude",
+    "allowed": [
+      "claude",
+      "codex"
+    ]
+  },
+  "effort": "high",
+  "context_threshold_percent": 30,
+  "max_seats": 2,
+  "pane_layout": "seat-1x2",
+  "inputs": [
+    "pr",
+    "ticket",
+    "record.test"
+  ],
+  "outputs": [
+    "record.review"
+  ],
+  "wakes_on": [
+    "record.test_passed"
+  ],
+  "owner_channel": false,
+  "name": "reviewer",
+  "title": "Reviewer",
+  "purpose": "Checks the PR against the acceptance criteria and the conventions, and posts one record: passed or changes requested with observations.",
+  "model": {
+    "claude": "claude-sonnet-5-5",
+    "architect_may_override": true
+  },
+  "permission_mode": "bypassPermissions",
+  "read_only": true,
+  "label": "reviewer-${ticket}",
+  "allow": {
+    "tools": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash"
+    ],
+    "paths": [
+      "${worktree}/"
+    ],
+    "commands": [
+      "gh pr view|diff",
+      "gh pr review",
+      "make lint",
+      "events/bin/event.sh add"
+    ]
+  },
+  "deny": {
+    "tools": [
+      "Write",
+      "Edit",
+      "Agent",
+      "Task"
+    ],
+    "paths": [],
+    "commands": [
+      "gh pr merge *",
+      "git push *"
+    ]
+  },
+  "records": {
+    "review.passed": 201,
+    "review.changes": 422
+  },
+  "must": [
+    "every acceptance criterion has an evidence line or the review is 422 naming it",
+    "no file outside the ticket's paths changed, or 422",
+    "contents list, GOOD and NEVER, no em dash, UTC, config not literals; a miss is 422 with path and line",
+    "post exactly one record"
+  ],
+  "forbidden": [
+    "spawning a subagent or any background process; every process is a labelled herdr pane",
+    "writing prose to another agent; the record is the handoff",
+    "a fourth attempt; after 3 failures post 423 and stop",
+    "sending /compact yourself; the guard does it",
+    "editing files outside your allowed paths",
+    "naming a ticket without its full title in any owner-facing line",
+    "fixing the code yourself",
+    "approving with an open criterion"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "DEC-spike5-passed",
+  "type": "Decision",
+  "title": "Spike 5 passed 2026-10-10: a PNG pushed with pane.graphics.set rendered in the owner's terminal inside a herdr pane; the socket image path is the proven render backend for coq-term",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "SPK5-1",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "supersedes",
+      "to": "RSK-pixels-in-pane"
+    },
+    {
+      "kind": "implements",
+      "to": "SPK-05-pane-graphics"
+    }
+  ],
+  "created": "2026-10-10T19:23Z",
+  "updated": "2026-10-10T19:23Z"
+}

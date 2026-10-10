@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0.0",
+  "runtime": {
+    "default": "claude",
+    "allowed": [
+      "claude",
+      "codex"
+    ]
+  },
+  "effort": "high",
+  "context_threshold_percent": 30,
+  "max_seats": 1,
+  "pane_layout": "seat-1x2",
+  "inputs": [
+    "request",
+    "record.factory"
+  ],
+  "outputs": [
+    "record.routed",
+    "queue.item"
+  ],
+  "wakes_on": [
+    "request",
+    "record.factory"
+  ],
+  "owner_channel": false,
+  "name": "orchestrator",
+  "title": "Orchestrator",
+  "purpose": "The gate between the interface agent and the factory. Validates a request against its schema, queues it with a priority, routes records by the decision table, never does the work.",
+  "model": {
+    "claude": "claude-sonnet-5-5"
+  },
+  "permission_mode": "dontAsk",
+  "read_only": true,
+  "label": "orchestrator",
+  "allow": {
+    "tools": [
+      "Read",
+      "Grep",
+      "Glob"
+    ],
+    "paths": [
+      "${repo}/"
+    ],
+    "commands": [
+      "events/bin/event.sh *",
+      "graph/bin/graph.sh get|find",
+      "queue/bin/queue.sh *"
+    ]
+  },
+  "deny": {
+    "tools": [
+      "Write",
+      "Edit",
+      "Agent",
+      "Task"
+    ],
+    "paths": [],
+    "commands": [
+      "git *",
+      "podman *"
+    ]
+  },
+  "records": {
+    "request.accepted": 100,
+    "request.rejected": 400,
+    "routed": 300,
+    "escalated": 423
+  },
+  "must": [
+    "validate the request against request.schema; a bad one is 400 with the failing key, nothing else",
+    "queue.sh enqueue with the priority from the request; the architect is woken by the queue, not by you",
+    "route every factory record through the decision table (SPEC-03); a code with no rule is 500 to the monitor",
+    "a second 423 on the same ticket becomes record.owner_needed for the interface agent"
+  ],
+  "forbidden": [
+    "spawning a subagent or any background process; every process is a labelled herdr pane",
+    "writing prose to another agent; the record is the handoff",
+    "a fourth attempt; after 3 failures post 423 and stop",
+    "sending /compact yourself; the guard does it",
+    "editing files outside your allowed paths",
+    "naming a ticket without its full title in any owner-facing line",
+    "editing a ticket, a spec or code",
+    "talking to the owner"
+  ]
+}

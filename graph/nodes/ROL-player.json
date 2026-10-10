@@ -1,0 +1,16 @@
+{
+  "id": "ROL-player",
+  "type": "Role",
+  "title": "Player (Haiku 5.5 first): plays the game through the player contract",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-permissions-by-role"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

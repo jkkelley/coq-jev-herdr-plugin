@@ -1,0 +1,16 @@
+{
+  "id": "RUN-kickback",
+  "type": "Runbook",
+  "title": "Kickback: events/bin/event.sh add --kind test.failed --code 422 --attempt N --repro \"cmd\" --observe \"path:line:saw:expected\" --evidence path; the orchestrator wakes the worker with the record id",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "defined_in",
+      "to": "SCH-factory-record"
+    }
+  ],
+  "created": "2026-10-10T19:10Z",
+  "updated": "2026-10-10T19:10Z"
+}

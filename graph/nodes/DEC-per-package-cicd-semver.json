@@ -1,0 +1,22 @@
+{
+  "id": "DEC-per-package-cicd-semver",
+  "type": "Decision",
+  "title": "Each package in the monorepo has its own CI/CD (GitHub Actions or Jenkins, whichever fits), semver tags per package, gitops deploys (Helm and Argo) for anything that runs on the cluster",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-monorepo-apache2"
+    }
+  ],
+  "created": "2026-10-10T19:10Z",
+  "updated": "2026-10-10T19:10Z"
+}

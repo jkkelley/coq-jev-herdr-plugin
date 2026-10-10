@@ -1,0 +1,20 @@
+{
+  "id": "CMP-pane-renderer",
+  "type": "Component",
+  "title": "Pane renderer TUI: map, transcript and decision trace in a herdr pane",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "risks",
+      "to": "RSK-pixels-in-pane"
+    },
+    {
+      "kind": "verified_by",
+      "to": "SPK-05-pane-graphics"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

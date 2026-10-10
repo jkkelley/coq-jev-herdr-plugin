@@ -1,0 +1,17 @@
+{
+  "id": "DEC-mvp-player-haiku",
+  "type": "Decision",
+  "title": "First MVP player model is Haiku 5.5; player runtime and effort are config",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T17"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

@@ -1,0 +1,16 @@
+{
+  "id": "SPK-02-harmony-mod",
+  "type": "Spike",
+  "title": "Spike 2: Harmony mod exports state per turn and consumes actions; pass = 100 turns no freeze",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "SPK-01-qud-on-wsl"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

@@ -1,0 +1,26 @@
+{
+  "id": "REQ-checkpoint-every-step",
+  "type": "Requirement",
+  "title": "Every task is cut into steps that each end in a commit and a checkpoint; compact after a step lands, never at a threshold",
+  "status": "locked",
+  "text": "Owner golden rule, chat 2026-10-10 ~19:40 UTC: never run without proper checkpointing built into your own tasks; keep scope small so compaction comes sooner and costs fewer tokens. Binds the interface agent first. AGENTS.md section Golden rule.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "REQ-compaction-rule"
+    },
+    {
+      "kind": "implements",
+      "to": "DEC-system-before-agents"
+    }
+  ],
+  "created": "2026-10-10T19:37Z",
+  "updated": "2026-10-10T19:37Z"
+}

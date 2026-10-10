@@ -1,0 +1,17 @@
+{
+  "id": "DEC-no-hardcode-config-s3",
+  "type": "Decision",
+  "title": "Nothing hardcoded: every tunable in versioned schema-validated config, S3-portable, variables resolved at load",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T17"
+    }
+  ],
+  "edges": [],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}

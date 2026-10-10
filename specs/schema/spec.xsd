@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- The contract every SPEC-NN-*.xml file validates against (make lint, xmllint in Podman).
+     A spec is a bounded document under 1000 lines that defines graph nodes and points at
+     other specs by id instead of repeating them. Prose is allowed only inside <why> and
+     <text>; everything an agent acts on is an element with an id. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:simpleType name="specId"><xs:restriction base="xs:string"><xs:pattern value="SPEC-[0-9]{2}(\.[A-Z])?"/></xs:restriction></xs:simpleType>
+  <xs:simpleType name="nodeId"><xs:restriction base="xs:string"><xs:pattern value="(DEC|REQ|CMP|IFC|SCH|WFL|NOD|ROL|SPK|RSK|STC|RUN)-[a-z0-9][a-z0-9-]{1,47}"/></xs:restriction></xs:simpleType>
+  <xs:simpleType name="status"><xs:restriction base="xs:string"><xs:enumeration value="draft"/><xs:enumeration value="proposed"/><xs:enumeration value="locked"/><xs:enumeration value="superseded"/></xs:restriction></xs:simpleType>
+  <xs:simpleType name="edgeKind"><xs:restriction base="xs:string">
+    <xs:enumeration value="depends_on"/><xs:enumeration value="implements"/><xs:enumeration value="decided_by"/><xs:enumeration value="verified_by"/><xs:enumeration value="risks"/><xs:enumeration value="owned_by"/><xs:enumeration value="defined_in"/><xs:enumeration value="supersedes"/>
+  </xs:restriction></xs:simpleType>
+  <xs:simpleType name="utc"><xs:restriction base="xs:string"><xs:pattern value="[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}Z"/></xs:restriction></xs:simpleType>
+
+  <xs:complexType name="ref"><xs:attribute name="spec" type="specId"/><xs:attribute name="node" type="nodeId"/><xs:attribute name="anchor" type="xs:string"/></xs:complexType>
+  <xs:complexType name="example"><xs:sequence><xs:element name="text" type="xs:string"/><xs:element name="why" type="xs:string" minOccurs="0"/></xs:sequence><xs:attribute name="kind" use="required"><xs:simpleType><xs:restriction base="xs:string"><xs:enumeration value="GOOD"/><xs:enumeration value="NEVER"/></xs:restriction></xs:simpleType></xs:attribute></xs:complexType>
+  <xs:complexType name="edge"><xs:attribute name="kind" type="edgeKind" use="required"/><xs:attribute name="to" type="nodeId" use="required"/></xs:complexType>
+  <xs:complexType name="node">
+    <xs:sequence>
+      <xs:element name="title" type="xs:string"/>
+      <xs:element name="text" type="xs:string" minOccurs="0"/>
+      <xs:element name="source" minOccurs="0" maxOccurs="unbounded"><xs:complexType><xs:attribute name="kind" use="required"/><xs:attribute name="id" use="required"/><xs:attribute name="at" type="utc"/></xs:complexType></xs:element>
+      <xs:element name="edge" type="edge" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="example" type="example" minOccurs="0" maxOccurs="unbounded"/>
+      <xs:element name="ref" type="ref" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="nodeId" use="required"/>
+    <xs:attribute name="status" type="status" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="section">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="text" type="xs:string"/>
+      <xs:element name="node" type="node"/>
+      <xs:element name="example" type="example"/>
+      <xs:element name="ref" type="ref"/>
+      <xs:element name="mermaid" type="xs:string"/>
+      <xs:element name="section" type="section"/>
+    </xs:choice>
+    <xs:attribute name="id" type="xs:ID" use="required"/>
+    <xs:attribute name="title" type="xs:string" use="required"/>
+  </xs:complexType>
+
+  <xs:element name="spec">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="contents"><xs:complexType><xs:sequence><xs:element name="item" maxOccurs="unbounded"><xs:complexType><xs:attribute name="ref" type="xs:IDREF" use="required"/><xs:attribute name="title" use="required"/></xs:complexType></xs:element></xs:sequence></xs:complexType></xs:element>
+        <xs:element name="purpose" type="xs:string"/>
+        <xs:element name="section" type="section" maxOccurs="unbounded"/>
+      </xs:sequence>
+      <xs:attribute name="id" type="specId" use="required"/>
+      <xs:attribute name="version" use="required"><xs:simpleType><xs:restriction base="xs:string"><xs:pattern value="[0-9]+\.[0-9]+\.[0-9]+"/></xs:restriction></xs:simpleType></xs:attribute>
+      <xs:attribute name="title" use="required"/>
+      <xs:attribute name="status" type="status" use="required"/>
+      <xs:attribute name="updated" type="utc" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

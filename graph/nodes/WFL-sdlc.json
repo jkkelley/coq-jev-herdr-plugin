@@ -1,0 +1,20 @@
+{
+  "id": "WFL-sdlc",
+  "type": "Workflow",
+  "title": "SDLC DAG: request to ticket to work to test to review to merge to verify to owner line; every edge is a record kind in routes.json",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "SCH-routes"
+    },
+    {
+      "kind": "depends_on",
+      "to": "SCH-factory-record"
+    }
+  ],
+  "created": "2026-10-10T19:10Z",
+  "updated": "2026-10-10T19:10Z"
+}

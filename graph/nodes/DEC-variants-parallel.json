@@ -1,0 +1,22 @@
+{
+  "id": "DEC-variants-parallel",
+  "type": "Decision",
+  "title": "Several coq-term variants are designed and built in parallel as separate packages in the monorepo; each uat runs in its own named herdr session so the owner tries them side by side and picks",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-own-game-terminal"
+    }
+  ],
+  "created": "2026-10-10T19:10Z",
+  "updated": "2026-10-10T19:10Z"
+}

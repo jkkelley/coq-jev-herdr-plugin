@@ -1,0 +1,16 @@
+{
+  "id": "CMP-rust-terminal",
+  "type": "Component",
+  "title": "Rust terminal with Kitty graphics: fallback and parallel spike for pixels in a pane",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-rust-terminal-parallel"
+    }
+  ],
+  "created": "2026-10-10T18:55Z",
+  "updated": "2026-10-10T18:55Z"
+}
