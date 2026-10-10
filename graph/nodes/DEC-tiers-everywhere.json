@@ -1,0 +1,22 @@
+{
+  "id": "DEC-tiers-everywhere",
+  "type": "Decision",
+  "title": "stable, uat and dev tiers for every runnable tool: bearings, coq-term, the Qud game host and adapter, the SITREP server; stable runs main, uat a slot on the PR branch for the owner to verify, dev the feature slot; own state, ports, panes and game saves per tier",
+  "status": "locked",
+  "text": "",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat",
+      "at": "2026-10-10T19"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "supersedes",
+      "to": "DEC-bearings-vendored-tiers"
+    }
+  ],
+  "created": "2026-10-10T19:08Z",
+  "updated": "2026-10-10T19:08Z"
+}
