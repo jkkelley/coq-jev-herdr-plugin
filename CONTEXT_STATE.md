@@ -12,6 +12,51 @@
 > are history and are immutable. Written by `checkpoint.sh`, never by hand.
 
 
+
+## Checkpoint 2026-10-10 19:34 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin: main protected; PR #1 = feat/p0-foundation from slot 2 (now carries the golden rule in AGENTS.md, commit 6f5e759, pushed).
+- Main checkout /home/luna/projects/coq-jev-herdr-plugin: 27 tickets; INDEX.md is the router; all draft except WO-20261010-ba08 (in-progress).
+- Slot 1 /home/luna/.treehouse/coq-jev-herdr-plugin-81af2c/1/coq-jev-herdr-plugin, branch feat/vendor-bearings-into-tools-bearings-with-stable- (WO-20261010-ba08): attachment port WIRED and committed (d38eaa4: POST /file, GET /file/:id, files-aware /message, wait prints `| files:`, file_max_bytes in config+schema, staging dir deleted). tests/inside.sh gained case T4b (3 checks, uncommitted). Suite running in pane wD3:p5 (prints MAKE_TEST_DONE rc=N). uat page http://localhost:44910/?key=f18907f3a02cec0412ad14fa027bda0f still serves the PRE-port process (wait pane wD3:p7), card UAT-1 open. Branch not pushed.
+- Slot 2 (this checkout), branch feat/p0-foundation: specs 00,01,03,04,05 + stubs 02,15; graph 93 nodes; lint green; events/ queue/ roles/ playbooks/ factory/ bin/ Makefile.
+- Owner page (old skill copy) http://localhost:44967/?key=6e636c7db73a36c5a802bf2fd5df5928, server pane wD3:p3, wait loop pane wD3:p4 (its 30 min monitor expired; re-arm with herdr pane read polling). Open owner message m-20261010192521524-wfo6h (clipboard image paste) awaits the uat url reply.
+- Memory: new file checkpoint-discipline.md (owner golden rule).
+- SITREP 002: https://claude.ai/artifact/PnNrFEYTqaqsg2xx2MVc9d
+
+#### Toolchain
+
+- herdr 0.9.0 protocol 22 (pane.graphics.set live). treehouse v2.3.0 + slot.sh. work-order v2.1.0+#103. project-scaffold v1.6.0. compaction-guard 1.2.8 (sensor reads 0 for this session). Podman images localhost/coq-bearings-test:1, localhost/coq-lint:1.
+
+#### Active Tasks
+
+- WO-20261010-ba08 - Vendor bearings into tools/bearings with stable, uat and dev tiers: step A (port) done; step B = read MAKE_TEST_DONE in pane wD3:p5, fix any red case, commit tests/inside.sh; step C = `make stop TIER=uat TICKET=WO-20261010-ba08` then `make serve ...` from slot 1 (new process has /file), reply on the old page to m-20261010192521524-wfo6h with the uat url; step D = UAT-1 answer, evidence AC5 via make migrate, push, PR, merge, make upgrade on main, stop old server, release slot 1. One checkpoint per step.
+- WO-20261010-fbad - Land the P0 foundation branch: PR #1 open; merge after make lint.
+- Then approve/start from INDEX.md: WO-20261010-6a3b Spike 11, WO-20261010-8777 herdr seat scripts, WO-20261010-c6e9 Spike 9, WO-20261010-eaa3 Spike 1 (needs owner's Qud Linux zip), WO-20261010-d08d Spike 10 coq-term variant A, wireframes ticket under 98ea, handoff WO-20261010-3593.
+
+#### Blockers
+
+- UAT-1 unanswered.
+- Spike 1 needs the Qud Linux build from the owner.
+
+### New this checkpoint
+
+#### Decisions
+
+- Owner golden rule (chat, 2026-10-10 ~19:40 UTC): every task carries its own checkpoints and compact points, scope small, compact sooner; written into AGENTS.md as "Golden rule: checkpoint every step, compact early" (replaces "Law: compaction") and into memory checkpoint-discipline.md.
+
+#### Lessons Learned
+
+- A staged verbatim extract can be cut short at a nested callback; always `node --check` after splicing and diff the tail against the source.
+- Write the checkpoint while the suite runs in its pane, not after; the run outcome is one line to read on resume.
+
+### Hydration prompt
+
+Read this checkpoint. Then: `herdr pane read wD3:p5 --source recent-unwrapped --lines 60` for MAKE_TEST_DONE; green -> commit tests/inside.sh in slot 1 and do step C; red -> fix the case, rerun via `herdr pane run wD3:p5 "cd <slot1>/tools/bearings && make test 2>&1 | tail -40; echo MAKE_TEST_DONE rc=\${PIPESTATUS[0]}"`. Checkpoint after each step.
+
 ## Checkpoint 2026-10-10 19:27 UTC
 
 ### Current state
