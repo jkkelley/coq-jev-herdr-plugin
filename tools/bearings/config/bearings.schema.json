@@ -5,42 +5,168 @@
   "description": "Every tunable of the bearings page tool. Strings may use ${HOME}, ${project}, ${tier}, ${ticket} and ${ENV:NAME}.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "project", "state_root", "listen_host", "allowed_hosts", "cookie_name", "idle_minutes", "settle_ms", "stop_tries", "stop_try_ms", "max_body_bytes", "max_message_chars", "max_words_chars", "messages_window", "pane_split", "tiers"],
+  "required": [
+    "schema_version",
+    "project",
+    "state_root",
+    "listen_host",
+    "allowed_hosts",
+    "cookie_name",
+    "idle_minutes",
+    "settle_ms",
+    "stop_tries",
+    "stop_try_ms",
+    "max_body_bytes",
+    "file_max_bytes",
+    "max_message_chars",
+    "max_words_chars",
+    "messages_window",
+    "pane_split",
+    "tiers"
+  ],
   "properties": {
-    "schema_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
-    "project": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,23}$" },
-    "state_root": { "type": "string", "minLength": 1 },
-    "listen_host": { "type": "string", "minLength": 1 },
-    "allowed_hosts": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-    "cookie_name": { "type": "string", "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
-    "idle_minutes": { "type": "integer", "minimum": 1 },
-    "settle_ms": { "type": "integer", "minimum": 0 },
-    "stop_tries": { "type": "integer", "minimum": 1 },
-    "stop_try_ms": { "type": "integer", "minimum": 100 },
-    "max_body_bytes": { "type": "integer", "minimum": 1024 },
-    "max_message_chars": { "type": "integer", "minimum": 1 },
-    "max_words_chars": { "type": "integer", "minimum": 1 },
-    "messages_window": { "type": "integer", "minimum": 1 },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "project": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,23}$"
+    },
+    "state_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "listen_host": {
+      "type": "string",
+      "minLength": 1
+    },
+    "allowed_hosts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "cookie_name": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "idle_minutes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "settle_ms": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "stop_tries": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "stop_try_ms": {
+      "type": "integer",
+      "minimum": 100
+    },
+    "max_body_bytes": {
+      "type": "integer",
+      "minimum": 1024
+    },
+    "max_message_chars": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_words_chars": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "messages_window": {
+      "type": "integer",
+      "minimum": 1
+    },
     "pane_split": {
-      "type": "object", "additionalProperties": false, "required": ["direction", "ratio"],
-      "properties": { "direction": { "enum": ["down", "right"] }, "ratio": { "type": "number", "exclusiveMinimum": 0, "exclusiveMaximum": 1 } }
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "direction",
+        "ratio"
+      ],
+      "properties": {
+        "direction": {
+          "enum": [
+            "down",
+            "right"
+          ]
+        },
+        "ratio": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 1
+        }
+      }
     },
     "tiers": {
       "type": "object",
       "minProperties": 1,
       "additionalProperties": {
-        "type": "object", "additionalProperties": false,
-        "required": ["page", "pane_label", "wait_pane_label", "checkout"],
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "page",
+          "pane_label",
+          "wait_pane_label",
+          "checkout"
+        ],
         "properties": {
-          "page": { "type": "string", "minLength": 1 },
-          "port": { "type": "integer", "minimum": 1024, "maximum": 65535 },
-          "port_range": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "integer", "minimum": 1024, "maximum": 65535 } },
-          "pane_label": { "type": "string", "minLength": 1 },
-          "wait_pane_label": { "type": "string", "minLength": 1 },
-          "checkout": { "type": "string" }
+          "page": {
+            "type": "string",
+            "minLength": 1
+          },
+          "port": {
+            "type": "integer",
+            "minimum": 1024,
+            "maximum": 65535
+          },
+          "port_range": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "integer",
+              "minimum": 1024,
+              "maximum": 65535
+            }
+          },
+          "pane_label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "wait_pane_label": {
+            "type": "string",
+            "minLength": 1
+          },
+          "checkout": {
+            "type": "string"
+          }
         },
-        "oneOf": [ { "required": ["port"] }, { "required": ["port_range"] } ]
+        "oneOf": [
+          {
+            "required": [
+              "port"
+            ]
+          },
+          {
+            "required": [
+              "port_range"
+            ]
+          }
+        ]
       }
+    },
+    "file_max_bytes": {
+      "type": "integer",
+      "minimum": 1024,
+      "description": "Cap on one uploaded attachment in bytes (POST /file); the JSON body cap max_body_bytes does not apply to uploads."
     }
   }
 }

@@ -70,10 +70,18 @@ const tick = () => {
   }
   const last = Math.max(mtime("answers.jsonl"), mtime("messages.jsonl"));
   if (!fresh.length || Date.now() - last < SETTLE_MS) return setTimeout(tick, 1000);
+  // Ported from getting-my-bearings wait.mjs (WK-20260916-069): a message's files array names
+  // an id, not a path; the path only lives in files.jsonl. Resolved once per tick, so the agent
+  // is handed the path in the same line that wakes it instead of a lookup it has to know to make.
+  const filesById = {};
+  for (const f of readJsonl("files.jsonl")) filesById[f.id] = f;
   for (const x of fresh) {
     if (x.kind === "ANSWER")
       console.log(`ANSWER ${x.id} - ${x.decide} -> ${x.choice}${x.words ? ` | words: ${x.words}` : ""}`);
-    else console.log(`MESSAGE ${x.id} - ${x.text}`);
+    else {
+      const paths = (x.files || []).map((f) => filesById[f.id]?.path).filter(Boolean);
+      console.log(`MESSAGE ${x.id} - ${x.text}${paths.length ? ` | files: ${paths.join(", ")}` : ""}`);
+    }
     delivered[x.id] = x.at;
   }
   fs.writeFileSync(file("delivered.json"), `${JSON.stringify(delivered, null, 2)}\n`);
