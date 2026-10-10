@@ -10,7 +10,7 @@
 - Law: scope small, integrate in CI
 - Law: testing
 - Law: the architect model chain
-- Law: compaction
+- Golden rule: checkpoint every step, compact early
 - Hard rule: entry trees are one file per entry
 - Hard rule: read the window, not the history
 - Hard rule: no PII
@@ -118,12 +118,23 @@ Nothing is restarted from scratch, and nothing waits for a human to notice the s
 
 Seat roles are declared against `agent-role-v1.1.0.schema.json`.
 
-## Law: compaction
+## Golden rule: checkpoint every step, compact early
 
-Every seat checkpoints when it reaches its context threshold.
-A watcher compacts the seat once it is idle.
-Never send `/compact` yourself.
-Finish the step you are on, write your checkpoint, raise your compact request, and end your turn.
+This is the rule above every other rule in this file, and it binds the interface agent first.
+Owner order, 2026-10-10 UTC: never run without proper checkpointing built into your own tasks.
+
+Cut every task into steps small enough that each one ends in a commit and a `CONTEXT_STATE.md` checkpoint (`checkpoint.sh new`).
+A step that cannot end that way is too large: split it before starting it, never partway through.
+A context threshold is the last line of defence, never the trigger; do not wait for it.
+Write the resume line into the checkpoint before you compact, never into chat.
+After a step lands, raise your compact request and end the turn.
+A watcher compacts the seat once it is idle; never send `/compact` yourself.
+Small scope compacts sooner and costs fewer tokens per step, which is what the owner is paying for.
+
+GOOD: a port of three functions lands as one commit and one checkpoint, the seat compacts, then the suite case is the next step.
+GOOD: a checkpoint written while the suite runs in its pane, so a compaction mid-run loses nothing.
+NEVER: carrying four finished steps in context because the next one looks quick.
+NEVER: a checkpoint whose resume line lives only in the chat transcript.
 
 ## Hard rule: entry trees are one file per entry
 
