@@ -16,6 +16,42 @@
 
 
 
+
+## Checkpoint 2026-10-10 21:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261010-c274 (pane wD3:p1G, tab wD3:t8) holds WO-20261010-c274 - recover.sh --check|--apply per RUN-recover with its Podman case, in worktree /home/luna/worktrees/WO-20261010-c274 on branch feat/recover-sh-check-apply-per-run-recover-with-its-.
+- Live herdr session stable is healthy: `herdr/bin/recover.sh --check` on the host prints ok herdr, ok monitors, ok monitor, ok worker-wo-20261010-c274 and one WARN that 111 guard sessions need recovery (other projects). Never run `recover.sh --apply` on the host: compaction-guard recover is host-wide.
+- work.started 100 was posted as event 20261010T205400Z-100-gpx24 before anything else.
+
+#### Toolchain
+
+- herdr/bin/recover.sh is new: halt flag, herdr, monitors, monitor seat (bringup.sh on apply), every open seat record (seat.sh --down on agent gone), guard once, ticket WARNs, closing note 100 or 500 and one notification in apply mode.
+- herdr/tests/cases/05-recover.test.sh is new, with a stub compaction-guard; `make -C herdr test` reads tests: 5 passed, 0 failed; `make lint` and `make -C herdr lint` are clean.
+- herdr/tests/lib/world.sh now restores archived tickets to work-orders/ and empties the copied events/, which fixed cases 01-04 that were red on entry.
+
+#### Active Tasks
+
+- WO-20261010-c274 - recover.sh --check|--apply per RUN-recover with its Podman case: in-progress. Code, case 05, evidence for AC-H1 to AC-H4 and the retro note are done. Left: open the PR with the acceptance criteria as body and post pr.opened 100 with the sha, then stop.
+
+#### Blockers
+
+- AC-H4 asks for the suite run from a labelled test pane. The worker playbook allows make but not herdr pane run, so the worker ran it as a foreground make; the tester reruns it in the pane.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-10 UTC, worker: --check reports the host-wide guard backlog as a WARN, never FAILED, and --apply runs compaction-guard recover --apply once as the spec says. The owner decides when to run --apply on the host.
+- 2026-10-10 UTC, worker: the world in tests/lib/world.sh is a scratch copy, so it restores archived tickets and clears copied events once, instead of every case baselining its counts.
+
+### Hydration prompt
+
+WO-20261010-c274 - recover.sh --check|--apply per RUN-recover with its Podman case. Read the top checkpoint of CONTEXT_STATE.md and stop. Playbook playbooks/worker.md step 5: gh pr create with the acceptance criteria as the body, post pr.opened 100 with the pushed sha through events/bin/event.sh add, then stop. Work only in /home/luna/worktrees/WO-20261010-c274.
+
 ## Checkpoint 2026-10-10 20:52 UTC
 
 ### Current state

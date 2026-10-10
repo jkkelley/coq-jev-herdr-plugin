@@ -24,8 +24,13 @@ make -C "$REPO" lint >/dev/null 2>&1 || { make -C "$REPO" lint 2>&1 | grep -v ' 
 args=(--type "$type" --title "$title"); [ -z "$ticket" ] || args+=(--ticket "$ticket"); [ -z "$text" ] || args+=(--text "$text")
 entry=$(bash "$HERE/changelog.sh" add "${args[@]}")
 git -C "$REPO" add -A
-{ printf '%s\n\n' "$msg"; [ -z "$body" ] || { cat "$body"; echo; }; printf 'Changelog: %s\n\nClaude-Session: https://claude.ai/code/session_01694jMaqrg4CVo5zWF3jq6Z\n' "$entry"; } > "$REPO/.git/STEP_MSG"
-git -C "$REPO" commit -q -F "$REPO/.git/STEP_MSG" || die 4 "commit failed"
+# BREADCRUMB 2026-10-10 - WO-20261010-c274. What broke: the message file was "$REPO/.git/STEP_MSG", and in a git worktree
+#   (every worker seat's checkout) .git is a file, so the redirect failed with "Not a directory" after the changelog entry
+#   was written and staged but before the commit. Why this fix: `git rev-parse --git-path` names the right per-worktree
+#   git dir in both layouts. Rejected: a mktemp file, which would leave a message behind when the commit fails.
+MSGF=$(git -C "$REPO" rev-parse --path-format=absolute --git-path STEP_MSG)
+{ printf '%s\n\n' "$msg"; [ -z "$body" ] || { cat "$body"; echo; }; printf 'Changelog: %s\n\nClaude-Session: https://claude.ai/code/session_01694jMaqrg4CVo5zWF3jq6Z\n' "$entry"; } > "$MSGF"
+git -C "$REPO" commit -q -F "$MSGF" || die 4 "commit failed"
 sha=$(git -C "$REPO" rev-parse --short HEAD)
 [ "$push" = 0 ] || git -C "$REPO" push -q origin HEAD || die 4 "push failed at $sha"
 at=""

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261010T205400Z-100-gpx24",
+  "at": "2026-10-10T20:54:00Z",
+  "code": 100,
+  "seat": "worker-wo-20261010-c274",
+  "kind": "note",
+  "ticket": "WO-20261010-c274",
+  "pane": "wD3:p1G",
+  "note": "work.started: worker seat begins recover.sh --check|--apply per RUN-recover with its Podman case",
+  "evidence": [],
+  "observations": []
+}

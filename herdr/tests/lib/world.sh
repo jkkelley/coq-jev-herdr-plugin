@@ -11,6 +11,16 @@ world_up() {
   WORLD="${COQ_CASE_WORK:-${WORK_ROOT:-/tmp}}/$name"; mkdir -p "$WORLD"
   REPO="$WORLD/repo"; cp -a "${REPO_ROOT:-/repo}/." "$REPO/"; rm -rf "$REPO/.git"
   STATE="$WORLD/state"; EVENTS="$REPO/events"
+  # BREADCRUMB 2026-10-10 - WO-20261010-c274, cases 01-04 all failed on the first run of case 05. What broke: (1) every
+  #   case seats WO-20261010-8777, which closed and moved to work-orders/archive/ (seat.sh line ~215 refuses a ticket it
+  #   cannot find outside archive/: "no ticket ... (archived or never cut)"); (2) event_count read the copy's events/, which
+  #   holds the live repo's real history (10 note 100 where case 04 wants 4, an extra seat.stalled 500 in case 02). Why this
+  #   fix: the world is a scratch copy, so it gets the archived tickets back at the root and an empty event log, and every
+  #   absolute count in a case means "this world made it". Rejected: pointing the cases at a ticket that is still open
+  #   (the test would break again the day that one closes), and baselining each count in each case (five places to
+  #   forget). Cost: a case cannot assert anything about the repo's real events or about archive/ staying archived.
+  find "$REPO/work-orders/archive" -name 'WO-*.md' -exec cp -n {} "$REPO/work-orders/" \; 2>/dev/null
+  rm -rf "$REPO"/events/20*
   # shellcheck disable=SC2034  # SEAT, EVENTS and STATE are the case's handles
   SEAT="$REPO/herdr/bin/seat.sh"
   # Short, unique XDG root: the socket lives under it. /tmp/hw-<pid>-<name> stays well under sun_path.
