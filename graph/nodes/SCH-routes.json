@@ -1,0 +1,20 @@
+{
+  "id": "SCH-routes",
+  "type": "Schema",
+  "title": "factory/config/routes.json: first matching row on kind, code, attempt and escalations decides enqueue, wake, escalate or notify_owner; validated by routes.schema.json",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-factory-node-contract"
+    },
+    {
+      "kind": "owned_by",
+      "to": "ROL-orchestrator"
+    }
+  ],
+  "created": "2026-10-10T19:10Z",
+  "updated": "2026-10-10T19:10Z"
+}

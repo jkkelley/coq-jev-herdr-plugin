@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "description": "The orchestrator's decision table (SPEC-03). First matching row wins. A record with no matching row is a 500 to the monitor. Data, not prose: adding a route is editing this file and running make lint.",
+  "max_attempts": 3,
+  "routes": [
+    { "match": { "kind": "request.forwarded", "code": 300 }, "do": "enqueue", "to": "architect", "priority_from": "request" },
+    { "match": { "kind": "ticket.cut", "code": 100 }, "do": "wake", "to": "worker", "with": "ticket" },
+    { "match": { "kind": "pr.opened", "code": 100 }, "do": "wake", "to": "tester", "with": "pr" },
+    { "match": { "kind": "test.passed", "code": 201 }, "do": "wake", "to": "reviewer", "with": "pr" },
+    { "match": { "kind": "test.failed", "code": 422, "attempt_lt": 3 }, "do": "wake", "to": "worker", "with": "record" },
+    { "match": { "kind": "test.failed", "code": 422, "attempt": 3 }, "do": "escalate", "to": "architect", "code": 423 },
+    { "match": { "kind": "review.passed", "code": 201 }, "do": "wake", "to": "merger", "with": "pr" },
+    { "match": { "kind": "review.changes", "code": 422, "attempt_lt": 3 }, "do": "wake", "to": "worker", "with": "record" },
+    { "match": { "kind": "review.changes", "code": 422, "attempt": 3 }, "do": "escalate", "to": "architect", "code": 423 },
+    { "match": { "kind": "merged", "code": 200 }, "do": "wake", "to": "architect", "with": "verify" },
+    { "match": { "kind": "merge.conflict", "code": 409 }, "do": "wake", "to": "worker", "with": "record" },
+    { "match": { "kind": "verified", "code": 201 }, "do": "notify_owner", "to": "interface-agent", "line": "done" },
+    { "match": { "kind": "blocked", "code": 423, "escalations_lt": 1 }, "do": "escalate", "to": "architect", "code": 423 },
+    { "match": { "kind": "blocked", "code": 423, "escalations": 1 }, "do": "notify_owner", "to": "interface-agent", "line": "decision" },
+    { "match": { "kind": "seat.down", "code": 500 }, "do": "wake", "to": "monitor", "with": "record" },
+    { "match": { "code_gte": 500 }, "do": "wake", "to": "monitor", "with": "record" }
+  ]
+}

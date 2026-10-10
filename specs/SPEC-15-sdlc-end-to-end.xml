@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-15" version="0.1.0" title="SDLC end to end" status="draft" updated="2026-10-10T19:55Z">
+  <contents>
+    <item ref="s-sdlc" title="sdlc"/>
+    <item ref="s-parallel-prs" title="parallel prs"/>
+    <item ref="s-cleanup" title="cleanup"/>
+  </contents>
+  <purpose>The whole delivery path from a ticket to a merged, deployed, verified change, with who merges and how PRs never queue.</purpose>
+  <section id="s-sdlc" title="sdlc"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+  <section id="s-parallel-prs" title="parallel prs"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+  <section id="s-cleanup" title="cleanup"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+</spec>

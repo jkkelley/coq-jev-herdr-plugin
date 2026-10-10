@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-04" version="0.1.0" title="herdr seat lifecycle" status="draft" updated="2026-10-10T19:55Z">
+  <contents>
+    <item ref="s-bringup" title="bringup"/>
+    <item ref="s-labels" title="labels"/>
+    <item ref="s-monitors" title="monitors"/>
+    <item ref="s-leases" title="leases"/>
+    <item ref="s-recovery" title="recovery"/>
+    <item ref="s-cleanup" title="cleanup"/>
+    <item ref="s-breakglass" title="breakglass"/>
+  </contents>
+  <purpose>How a seat comes up, is labelled, is watched, is recovered and is retired, all through herdr, with monitoring up before any seat.</purpose>
+  <section id="s-bringup" title="bringup"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+  <section id="s-labels" title="labels"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+  <section id="s-monitors" title="monitors"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+  <section id="s-leases" title="leases"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+  <section id="s-recovery" title="recovery"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+  <section id="s-cleanup" title="cleanup"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+  <section id="s-breakglass" title="breakglass"><text>Draft. Filled by its ticket; pointers from other specs already resolve here.</text></section>
+</spec>
