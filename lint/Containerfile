@@ -1,4 +1,7 @@
 # Lint image for the repo: xmllint for the XML specs, jq, python3 jsonschema for configs,
 # shellcheck for scripts. Pinned by digest (Rule 15). Human tag: debian:bookworm-slim.
+# Built for linux/amd64 AND linux/arm64 (make lint-image-push): the homelab Jenkins agents
+# are arm64 (k8s-worker-01/02) and build 1 of job coq-jev-herdr-plugin died with
+# 'exec /usr/bin/cat: exec format error' on an amd64-only push, 2026-10-10 UTC.
 FROM docker.io/library/debian@sha256:3783cc01769c7b2b1b83a5c5ad96c815348e28ed7da68e2e3687004faa906251
 RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends libxml2-utils jq python3-jsonschema shellcheck >/dev/null && rm -rf /var/lib/apt/lists/*

@@ -3,6 +3,7 @@
 #   make lint            every static check, in the lint container (specs, graph, configs, shell, markdown)
 #   make test            every tool's suite (tools/*/Makefile test), in Podman
 #   make graph-check     graph/bin/graph.sh check + index
+#   make lint-image-push  build lint/Containerfile for amd64+arm64 and push ghcr.io/jkkelley/coq-lint:1 (Jenkins pulls it)
 #   make changelog       bin/changelog.sh render (CHANGELOG.md from changelog/YYYY/MM/*.md)
 #   make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [TEXT=..] [CP=body.md]   one step: lint, changelog, commit, push, checkpoint, /compact
 #   make contents        regenerate the Contents block of every AGENTS.md
@@ -15,7 +16,7 @@ HERE := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 LINT_IMAGE := localhost/coq-lint:1
 TOOLS := $(wildcard $(HERE)tools/*/Makefile)
 
-.PHONY: step changelog help lint test graph-check contents images bearings-% event
+.PHONY: lint-image-push step changelog help lint test graph-check contents images bearings-% event
 help:
 	@sed -n '1,9p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
 images:
@@ -38,3 +39,8 @@ changelog:
 	bash $(HERE)bin/changelog.sh render
 step:
 	bash $(HERE)bin/step.sh --msg "$(MSG)" --type "$(TYPE)" --title "$(TITLE)" $(if $(TICKET),--ticket $(TICKET)) $(if $(TEXT),--text "$(TEXT)") $(if $(CP),--cp-body $(CP))
+LINT_IMAGE ?= ghcr.io/jkkelley/coq-lint:1
+lint-image-push:
+	-podman manifest rm $(LINT_IMAGE) 2>/dev/null; podman untag $(LINT_IMAGE) 2>/dev/null || true
+	podman build -q --platform linux/amd64,linux/arm64 --manifest $(LINT_IMAGE) -f $(HERE)lint/Containerfile $(HERE)lint
+	podman manifest push --all $(LINT_IMAGE) docker://$(LINT_IMAGE)
