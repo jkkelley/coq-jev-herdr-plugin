@@ -19,6 +19,50 @@
 
 
 
+
+## Checkpoint 2026-10-10 22:33 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Seat worker-wo-20261010-8fa8 (claude-sonnet-5-5, worker playbook) works WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case.
+- Workspace and lease: /home/luna/worktrees/WO-20261010-8fa8 on branch feat/guard-lease-watcher-in-monitors-1-unfreeze-sh-wa. treehouse shows an empty pool and slot.sh does not exist; the architect ruled this worktree is the lease (the gap is the architect's to ticket).
+- work.started 100 is posted: events/2026/10/20261010T222442Z-100-kbqko.json.
+- The only pane this seat runs anything in is the labelled test pane wD3:pF. Tests go there as `herdr pane run wD3:pF 'clear; cd /home/luna/worktrees/WO-20261010-8fa8 && make -C herdr test 2>&1 | tail -30'`. Its scrollback holds old "tests: N passed" lines, so wait on a unique marker (echo DONE8fa8-<n> after the make) rather than on the tests regex alone.
+
+#### Toolchain
+
+- herdr/bin/unfreeze.sh already exists on main (--watch, --all, --force); this ticket does not change it.
+- Step A landed as 878f65a: herdr/config/monitors.json slots 1.1.1 (lease, `${repo}/herdr/bin/unfreeze.sh --watch 30`) and 1.1.2 (guard, `compaction-guard watch --interval 15`); 1.1.3 stays the open orchestrator slot. herdr/bin/bringup.sh needed no logic change, only a breadcrumb comment above step 6. New stub herdr/tests/stubs/compaction-guard (doctor, watch stays up, release resets phase.json to idle like the real cmd_release). Case 04 asserts both panes in status, their output (a tick line, the stub's watch line), six note 100 records and --check ok for pane-lease and pane-guard; case 05's bringup note count moved 4 to 6.
+- Step B done: herdr/bin/unfreeze.sh exemptions loop fixed (`$now_iso`, breadcrumb in place) and herdr/tests/cases/06-unfreeze.test.sh added (worker seat with an expired lease released, reviewer inside its lease left alone, hand-started exempt pane released, wake prompt heard, two note 100 from seat unfreeze, a second pass releases nothing, a pane named in HERDR_PANE_ID is refused). Proof: CASES=06, tests: 1 passed, 0 failed, after fixing two assertions of mine (the stub echoes the prompt twice; a grep where jq belonged).
+- Proof of step A: CASES=04 and CASES="04 05" from wD3:pF, tests: 1 passed and tests: 2 passed, 0 failed. make lint clean.
+
+#### Active Tasks
+
+- Step C blocked on one architect answer: playbooks/worker.md and roles/worker.json. The worker role denies ${repo}/roles/ and seat.sh renders ${repo} as the seat's worktree, so the seat's own settings refuse the edit; playbooks/worker.md is rendered from the role (roles/bin/render-playbook.sh), never hand-edited. Also unsolved: how a static role allows `herdr pane run` for only the brief's pane, since brief.sh carries no pane and bypassPermissions ignores allow rules.
+- Then: full suite from wD3:pF, make lint, work-order evidence per AC, work-order done, PR with the acceptance criteria as the body, post pr.opened 100, stop.
+
+#### Blockers
+
+- Step C: the roles/ deny versus the ticket's scope, and the per-pane enforcement design. One question goes to the architect.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-10 22:5x UTC, worker: fixed the unfreeze.sh exemptions jq bug inside this ticket although the scope list names no change to unfreeze.sh; the lease watcher the ticket plugs in would otherwise skip the architect seat, which defeats its purpose, and the owner rule is to fix what is seen.
+- 2026-10-10 22:5x UTC, worker: the compaction-guard stub lives in herdr/tests/stubs so the pane shells find it at world_up, because panes inherit the herdr server's PATH and case 05's $WORLD/bin trick only reaches scripts. Case 05 still prepends its own richer stub.
+
+#### Lessons Learned
+
+- herdr pane wait-output --regex 'tests: ...' matches stale scrollback from earlier runs in wD3:pF; wait on a marker unique to the run.
+- make -C herdr test pipes through tail, so nothing shows until it ends; a long case section can be cut by tail -60, so filter with grep inside the pane command when you need specific lines.
+
+### Hydration prompt
+
+Run from /home/luna/worktrees/WO-20261010-8fa8 as worker-wo-20261010-8fa8. Read playbooks/worker.md and this checkpoint. Steps A and B have landed (monitors.json, bringup breadcrumb, stub compaction-guard, cases 04 to 06, unfreeze.sh fix). Next: the architect answers the step C question (roles/ deny and per-pane enforcement); then step C, the full suite from wD3:pF, evidence per AC, done, PR. Step C (roles/playbook) waits for the architect's answer on the roles/ deny; do not edit roles/ or playbooks/ until it comes.
+
 ## Checkpoint 2026-10-10 22:30 UTC
 
 ### Current state
