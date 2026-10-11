@@ -51,7 +51,7 @@
       "make *",
       "git add|commit|push",
       "gh pr create",
-      "work-order.sh note|evidence",
+      "work-order.sh note|evidence|submit|done",
       "events/bin/event.sh add",
       "herdr/bin/testpane.sh *",
       "treehouse status *"
@@ -85,7 +85,7 @@
     "read the ticket; the degrees of freedom are the only choices you make",
     "make lint and make test for the cases that prove the change, run only in the labelled test pane your brief names, through herdr/bin/testpane.sh; CI runs the rest",
     "on failure fix inside your paths, at most 3 attempts; the third failure is evidence.sh with repro and 423",
-    "commit, push, gh pr create with the acceptance criteria as the body; post pr.opened 100 with the sha; stop"
+    "close out on your branch: evidence --observed per criterion, retro note, commit, push, gh pr create (criteria as body), work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened 100 with sha and pr; stop"
   ],
   "forbidden": [
     "spawning a subagent or any background process; every process is a labelled herdr pane",
@@ -98,5 +98,8 @@
     "merging your own PR",
     "installing anything on the host",
     "running anything in a pane other than the test pane your brief names; testpane.sh refuses every other pane"
+  ],
+  "breadcrumbs": [
+    "2026-10-11 WO-20261011-9639. What broke: allow.commands listed work-order.sh note|evidence only, so a worker could never run submit or done and every ticket reached its PR still in-progress; the architect then ran submit, evidence, done and cleanup from main by hand for WO-20261011-c077, WO-20261011-36d7 and WO-20261011-4c5e, playing reviewer and merger (AGENTS.md close-out flow says the ticket reaches done on the work branch, then one PR). Why this fix: the two verbs join the same allow entry and the close-out order is a must line, so the playbook renders it. Rejected: a separate closer seat (one more seat to close a record the worker already holds every fact for). Cost: a worker can mark its own ticket done before review; reopen exists for a rejected PR, and the reviewer verifies the evidence, not the status."
   ]
 }
