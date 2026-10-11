@@ -3,30 +3,258 @@
   "$id": "coq/roles/schema/role.schema.json",
   "title": "role",
   "description": "One factory role. Everything a seat of this role is allowed, must do, and must never do, as data. playbooks/<role>.md is rendered from this file by roles/bin/render-playbook.sh and never edited by hand. Shape follows bearings-v2 roles/*.json (owner decision 2026-10-06) with permission_mode per Q2.",
-  "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "name", "title", "purpose", "runtime", "model", "effort", "permission_mode", "read_only", "context_threshold_percent", "max_seats", "label", "pane_layout", "allow", "deny", "records", "must", "forbidden", "inputs", "outputs", "wakes_on", "owner_channel"],
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "name",
+    "title",
+    "purpose",
+    "runtime",
+    "model",
+    "effort",
+    "permission_mode",
+    "read_only",
+    "context_threshold_percent",
+    "max_seats",
+    "label",
+    "pane_layout",
+    "allow",
+    "deny",
+    "records",
+    "must",
+    "forbidden",
+    "inputs",
+    "outputs",
+    "wakes_on",
+    "owner_channel"
+  ],
   "properties": {
-    "schema_version": { "const": "1.0.0" },
-    "name": { "enum": ["interface-agent", "orchestrator", "architect", "worker", "tester", "reviewer", "merger", "player", "monitor"] },
-    "title": { "type": "string", "maxLength": 80 },
-    "purpose": { "type": "string", "maxLength": 240 },
-    "runtime": { "type": "object", "additionalProperties": false, "required": ["default", "allowed"], "properties": { "default": { "enum": ["claude", "codex", "system-one"] }, "allowed": { "type": "array", "items": { "enum": ["claude", "codex", "system-one"] }, "minItems": 1 } } },
-    "model": { "type": "object", "additionalProperties": false, "required": ["claude"], "properties": { "claude": { "type": "string" }, "codex": { "type": "string" }, "system-one": { "type": "string" }, "architect_may_override": { "type": "boolean" } } },
-    "effort": { "enum": ["low", "medium", "high", "max"] },
-    "permission_mode": { "enum": ["bypassPermissions", "dontAsk"] },
-    "read_only": { "type": "boolean" },
-    "context_threshold_percent": { "type": "integer", "minimum": 10, "maximum": 90 },
-    "max_seats": { "type": "integer", "minimum": 1, "maximum": 16 },
-    "label": { "type": "string", "description": "herdr seat and tab label pattern, e.g. worker-${ticket}" },
-    "pane_layout": { "type": "string", "description": "name of a layout JSON under herdr/layouts/" },
-    "allow": { "type": "object", "additionalProperties": false, "required": ["tools", "paths", "commands"], "properties": { "tools": { "type": "array", "items": { "type": "string" } }, "paths": { "type": "array", "items": { "type": "string" } }, "commands": { "type": "array", "items": { "type": "string" } } } },
-    "deny": { "type": "object", "additionalProperties": false, "required": ["tools", "paths", "commands"], "properties": { "tools": { "type": "array", "items": { "type": "string" } }, "paths": { "type": "array", "items": { "type": "string" } }, "commands": { "type": "array", "items": { "type": "string" } } } },
-    "records": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 100, "maximum": 599 }, "description": "record kind -> status code this role emits" },
-    "must": { "type": "array", "minItems": 1, "items": { "type": "string", "maxLength": 240 }, "description": "ordered steps; each is a command or a record" },
-    "forbidden": { "type": "array", "minItems": 1, "items": { "type": "string", "maxLength": 160 } },
-    "inputs": { "type": "array", "items": { "type": "string" }, "description": "schema ids this role consumes" },
-    "outputs": { "type": "array", "items": { "type": "string" }, "description": "schema ids this role produces" },
-    "wakes_on": { "type": "array", "items": { "type": "string" }, "description": "event kinds or status codes that wake a seat of this role (REQ-status-change-wakeups)" },
-    "owner_channel": { "type": "boolean", "description": "true only for the interface agent (DEC-interface-agent-owns-bearings)" }
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "name": {
+      "enum": [
+        "interface-agent",
+        "orchestrator",
+        "architect",
+        "worker",
+        "tester",
+        "reviewer",
+        "merger",
+        "player",
+        "monitor"
+      ]
+    },
+    "title": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "purpose": {
+      "type": "string",
+      "maxLength": 240
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default",
+        "allowed"
+      ],
+      "properties": {
+        "default": {
+          "enum": [
+            "claude",
+            "codex",
+            "system-one"
+          ]
+        },
+        "allowed": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "claude",
+              "codex",
+              "system-one"
+            ]
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claude"
+      ],
+      "properties": {
+        "claude": {
+          "type": "string"
+        },
+        "codex": {
+          "type": "string"
+        },
+        "system-one": {
+          "type": "string"
+        },
+        "architect_may_override": {
+          "type": "boolean"
+        }
+      }
+    },
+    "effort": {
+      "enum": [
+        "low",
+        "medium",
+        "high",
+        "max"
+      ]
+    },
+    "permission_mode": {
+      "enum": [
+        "bypassPermissions",
+        "dontAsk"
+      ]
+    },
+    "read_only": {
+      "type": "boolean"
+    },
+    "context_threshold_percent": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 90
+    },
+    "max_seats": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 16
+    },
+    "label": {
+      "type": "string",
+      "description": "herdr seat and tab label pattern, e.g. worker-${ticket}"
+    },
+    "pane_layout": {
+      "type": "string",
+      "description": "name of a layout JSON under herdr/layouts/"
+    },
+    "allow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tools",
+        "paths",
+        "commands"
+      ],
+      "properties": {
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "deny": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tools",
+        "paths",
+        "commands"
+      ],
+      "properties": {
+        "tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "commands": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "records": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 100,
+        "maximum": 599
+      },
+      "description": "record kind -> status code this role emits"
+    },
+    "must": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "maxLength": 240
+      },
+      "description": "ordered steps; each is a command or a record"
+    },
+    "forbidden": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "maxLength": 160
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "schema ids this role consumes"
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "schema ids this role produces"
+    },
+    "wakes_on": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "event kinds or status codes that wake a seat of this role (REQ-status-change-wakeups)"
+    },
+    "owner_channel": {
+      "type": "boolean",
+      "description": "true only for the interface agent (DEC-interface-agent-owns-bearings)"
+    },
+    "breadcrumbs": {
+      "type": "array",
+      "minItems": 1,
+      "description": "BREADCRUMB entries for a role file (JSON has no comment syntax, so the breadcrumb lives in the file it explains): what broke, why it mattered, why this fix, what it costs, the record id. Rendered nowhere; read by whoever opens the role.",
+      "items": {
+        "type": "string",
+        "minLength": 40
+      }
+    }
   }
 }

@@ -1,0 +1,155 @@
+{
+  "schema_version": "1.0.0",
+  "number": 3,
+  "at": "2026-10-11T13:30Z",
+  "actor": "architect wD3:p2",
+  "state": "HELD",
+  "headline": "P0. Loop runs. Close-out broken. Qud is up.",
+  "strip": [
+    { "kind": "go", "text": "3 closed" },
+    { "kind": "hold", "text": "1 PR open" },
+    { "kind": "risk", "text": "process fault" },
+    { "kind": "ask", "text": "1 question" }
+  ],
+  "phase": {
+    "now": "P0",
+    "phases": [
+      { "id": "P0", "label": "here" },
+      { "id": "P1", "label": "sitrep site" },
+      { "id": "P2", "label": "wireframes" },
+      { "id": "P3", "label": "control plane" },
+      { "id": "P4", "label": "player" },
+      { "id": "P5", "label": "any game" }
+    ],
+    "gate": {
+      "columns": ["P0 gate", "Need", "Have"],
+      "rows": [
+        [
+          "Spikes",
+          "1 2 3 5 6 9 evidenced",
+          "5 passed · 1 running · 4 idle · 0 evidence files"
+        ],
+        [
+          "Specs",
+          "00 01 reviewed",
+          "00-05, 15 on branch, off main, unreviewed"
+        ],
+        ["Skill", "DoF + Contents", "[[go:done]]"]
+      ]
+    }
+  },
+  "tickets": [
+    {
+      "id": "c077",
+      "what": "slot comes up on ticket branch",
+      "state": "done",
+      "kind": "go",
+      "pr": 8
+    },
+    {
+      "id": "36d7",
+      "what": "test pane survives slot return",
+      "state": "done",
+      "kind": "go",
+      "pr": 9
+    },
+    {
+      "id": "4c5e",
+      "what": "worker allow path renders to slot",
+      "state": "done",
+      "kind": "go",
+      "pr": 10
+    },
+    {
+      "id": "dc0d",
+      "what": "seat nudges worker past guard ack",
+      "state": "pr open, held",
+      "kind": "hold",
+      "pr": 11
+    },
+    {
+      "id": "eaa3",
+      "what": "spike 1: Qud on Linux",
+      "state": "running",
+      "kind": "hold",
+      "pr": null
+    },
+    {
+      "id": "3435",
+      "what": "test-pane fence gaps",
+      "state": "draft",
+      "kind": "plain",
+      "pr": null
+    },
+    {
+      "id": "3d78",
+      "what": "SITREP renders from a data file",
+      "state": "branch, this page",
+      "kind": "hold",
+      "pr": null
+    }
+  ],
+  "blocks": [
+    {
+      "title": "Fault",
+      "kind": "risk",
+      "rows": [
+        ["Law", "done on branch · 1 PR · reviewer verifies · merger merges"],
+        [
+          "Did",
+          "merge first · done on main · architect as reviewer and merger · x3"
+        ],
+        ["Cause", "worker fence lacks `done` and `submit`"],
+        ["Fixed", "no. Q1."]
+      ]
+    },
+    {
+      "title": "Spike 1",
+      "kind": "hold",
+      "rows": [
+        ["Build", "GOG Linux 2.0.211.56 · unzip only · ldd clean"],
+        ["WSLg", "[[go:running]] pane wD3:pH · window on ROG 3440,0 2560x1440"],
+        ["Xvfb", "[[risk:blocked]] not installed · no sudo"],
+        ["Frame", "none yet · no X capture tool"],
+        ["Plan", "Podman: xvfb + llvmpipe + xwd · `--network=none`"]
+      ]
+    },
+    {
+      "title": "Held",
+      "kind": "hold",
+      "rows": [
+        ["Seats", "dc0d worker up wD3:p22 · slot 1 leased"],
+        ["Main", "bc85334 · clean · pushed"],
+        ["Page", "live · idle-stopped 07:45, 11:46 · restarted same panes"],
+        ["Monitors", "lease watch pK · guard watch pM · monitor seat p1E"]
+      ]
+    }
+  ],
+  "question": {
+    "title": "Q1 · close-out loop",
+    "options": [
+      {
+        "key": "A",
+        "text": "fix now: worker gets `done` + `submit`; reviewer + merger seats; PR 11 first",
+        "rec": true
+      },
+      {
+        "key": "B",
+        "text": "close dc0d by hand, last time; fix from next ticket"
+      },
+      { "key": "C", "text": "hold until you read PR 11" }
+    ],
+    "queued": "Q2 queued · Spike 1 Xvfb: Podman, or you install xvfb"
+  },
+  "legend": {
+    "c077": "WO-20261011-c077 - seat.sh checks out the ticket branch in the slot it leases, so a worker starts on its branch without the architect touching the slot",
+    "36d7": "WO-20261011-36d7 - The labelled test pane never keeps its cwd inside a treehouse slot, so treehouse return --force cannot kill it",
+    "4c5e": "WO-20261011-4c5e - Worker fence paths resolve against the worktree: render_settings substitutes ${worktree} in allow.paths and deny paths name the slot, not the main checkout",
+    "dc0d": "WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else'",
+    "eaa3": "WO-20261010-eaa3 - Spike 1: native Linux Qud runs in WSL2 under Xvfb or WSLg",
+    "3435": "WO-20261011-3435 - Worker test-pane fence closes its gaps: SPEC-04 s-seat lists COQ_TEST_PANE, testpane.sh denies pane send-text and send-keys, brief.sh usage names --test-pane",
+    "3d78": "WO-20261011-3d78 - SITREP page renders from a data file through one script, so every SITREP has the locked shape",
+    "fbad": "WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles"
+  },
+  "sources": "work-orders/INDEX.md · graph/INDEX.md · herdr pane list · treehouse status · player.log · built 13:30 UTC"
+}
