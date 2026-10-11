@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# stubs/treehouse - stands in for the treehouse CLI inside the suite, so a case never leases, resets or returns a real slot of
+# the host's pool (WO-20261010-a429). On PATH from world_up like the compaction-guard stub. The pool is a directory under the
+# case's private HOME ($TREEHOUSE_STUB_ROOT overrides): pool.json holds one entry per leased slot in the shape the real
+# `treehouse status --json` prints (name, path, status, flavor, lease_id, lease_holder, leased_at, processes), slots/<n> the
+# directories. Only the verbs seat.sh uses exist:
+#   get --lease [--lease-holder H] [--no-fetch] [--json]   lowest free slot number, a directory, an entry; prints the entry (--json) or the path
+#   status [--json]                                        the leased entries; --json is the array, otherwise one line per slot
+#   return <path> [--force] [--if-lease-holder H]          removes the entry and the directory; exit 1 when the path is not leased or the holder differs
+# TREEHOUSE_STUB_FAIL=1 makes `get` exit 1 with a pool-exhausted message, to prove a failed acquire builds nothing.
+# Every call's argv is appended to $TREEHOUSE_STUB_LOG when it is set, so a case can count and read them.
+root="${TREEHOUSE_STUB_ROOT:-$HOME/.treehouse-stub}"; db="$root/pool.json"
+mkdir -p "$root/slots"; [ -f "$db" ] || echo '[]' > "$db"
+[ -z "${TREEHOUSE_STUB_LOG:-}" ] || printf '%s\n' "$*" >> "$TREEHOUSE_STUB_LOG"
+save() { printf '%s\n' "$1" > "$db.tmp" && mv "$db.tmp" "$db"; }
+verb="${1:-}"; [ $# -eq 0 ] || shift
+case "$verb" in
+  get)
+    lease=0; json=0; holder="${TREEHOUSE_LEASE_HOLDER:-}"
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --lease) lease=1 ;; --json) json=1 ;; --no-fetch) ;;
+        --lease-holder) holder="${2:?--lease-holder needs a value}"; shift ;;
+        *) echo "stub treehouse: get: unknown flag $1" >&2; exit 2 ;;
+      esac
+      shift
+    done
+    [ "$lease" = 1 ] || { echo "stub treehouse: get without --lease would open a subshell" >&2; exit 2; }
+    [ "${TREEHOUSE_STUB_FAIL:-0}" != 1 ] || { echo "stub treehouse: no free worktree in the pool" >&2; exit 1; }
+    n="$(jq -r '[.[].name | tonumber] as $u | first(range(1; 100) | select(. as $i | any($u[]; . == $i) | not))' "$db")"
+    path="$root/slots/$n"; mkdir -p "$path"
+    id="$(printf '%s' "$holder-$n-$(date -u +%s%N)" | sha256sum | cut -c1-32)"
+    entry="$(jq -nc --arg n "$n" --arg p "$path" --arg i "$id" --arg h "$holder" --arg at "$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" \
+      '{name:$n,path:$p,status:"leased",flavor:"git",lease_id:$i,lease_holder:$h,leased_at:$at,processes:[]}')"
+    save "$(jq -c --argjson e "$entry" '. + [$e]' "$db")"
+    if [ "$json" = 1 ]; then echo "$entry"; else echo "$path"; fi ;;
+  status)
+    if [ "${1:-}" = --json ]; then jq -c . "$db"
+    else jq -r '.[] | "\(.name)\t\(.status)\t\(.path)  (held by \(.lease_holder))"' "$db"; fi ;;
+  return)
+    path="${1:?return needs a path}"; shift; holder=""
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --force) ;; --if-lease-holder) holder="${2:?--if-lease-holder needs a value}"; shift ;;
+        *) echo "stub treehouse: return: unknown flag $1" >&2; exit 2 ;;
+      esac
+      shift
+    done
+    row="$(jq -c --arg p "$path" 'first(.[] | select(.path == $p)) // empty' "$db")"
+    [ -n "$row" ] || { echo "stub treehouse: $path is not a leased worktree" >&2; exit 1; }
+    [ -z "$holder" ] || [ "$(jq -r .lease_holder <<<"$row")" = "$holder" ] \
+      || { echo "stub treehouse: $path is held by $(jq -r .lease_holder <<<"$row"), not $holder" >&2; exit 1; }
+    save "$(jq -c --arg p "$path" 'map(select(.path != $p))' "$db")"
+    rm -rf "$path" ;;
+esac
+exit 0
