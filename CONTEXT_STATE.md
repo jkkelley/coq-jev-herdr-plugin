@@ -47,6 +47,40 @@
 
 
 
+
+## Checkpoint 2026-10-11 22:39 UTC
+
+### Current state
+
+#### Infrastructure
+
+Worker seat worker-wo-20261011-ceea holds treehouse slot 8, branch feat/blueprint-page-report-loop-renders-the-system-de, rebuilt on origin/main at 20:42Z after the architect's 422 and force-pushed by the architect; my role denies git push --force so nothing may rewrite it again.
+Test pane wD3:p1V is shared: a run queues behind other seats and takes 5 to 25 minutes to start, so batch lint, suite and step in one call; my helper is tp.sh in the session scratchpad.
+No server, pane or process of mine runs beyond the test pane.
+
+#### Toolchain
+
+Step 3 added report/blueprint: server.py (stdlib http server, routes /blueprint, /blueprint/data.json, /healthz, dev refreshes in-process with loop.sh --view blueprint watch --iterations 1), serve.sh (TIER, and --check TIER probes /healthz), bin/promote.sh (renders a tagged build into out_dir/releases/N with state set to the tier, switches the current symlink), config/dev.json, uat.json, stable.json (ports 44910 to 44912, pane labels blueprint-dev, blueprint-uat, blueprint-stable) and tier.schema.json.
+Cases 14 (promotion) and 15 (server, tier configs, python unit tests) join the loop suite; report/blueprint/out/ is gitignored.
+
+#### Active Tasks
+
+WO-20261011-ceea - Blueprint page: report/loop renders the system design from graph/ and work-orders/ as done, in flight and coming up, in the board's format, served by bearings at /blueprint.
+Steps 1 to 4 of 6 done.
+Step 4 landed: report/loop/Makefile has render-blueprint, serve-dev, serve-uat, serve-stable, promote-uat, promote-stable and a lint check that blueprint.json out_dir equals dev.json out_dir; the job ran render-blueprint, promote-uat and promote-stable for real first (output in the session scratchpad s4.out, build dirs under report/blueprint/out in slot 8).
+Step 5: herdr/config/monitors.json reserved slots (names blueprint-dev, blueprint-uat, blueprint-stable with commands report/blueprint/serve.sh TIER) so bringup.sh --check lists them and recover.sh restarts a killed one; read monitors.schema.json and recover.sh first and extend their tests.
+Step 6: RUNBOOK section in report/loop/RUNBOOK.md (rules: derive state, how to link a ticket to a component by naming its CMP id in title, Problem or Scope, add a view or tier by config only), Jenkinsfile path trigger for this directory, make test-browser board parity, evidence per AC, retro note, PR, work-order done.
+
+#### Blockers
+
+graph/nodes/DEC-blueprint-server-tiers.json is missing though GRAPH.mmd and INDEX.md name it; a CMP node for the blueprint tool defined_in a RUN node is also needed; graph/ is denied to this role, so both are the architect's.
+work-orders/INDEX.md does not list this ticket on the rebuilt branch; work-order.sh reindex or the next note regenerates it.
+Real tickets rarely name a CMP id, so the page shows 0 components in flight today.
+
+### Hydration prompt
+
+You are worker-wo-20261011-ceea on WO-20261011-ceea. Read AGENTS.md, playbooks/worker.md, the ticket, then this checkpoint, and continue with step 5.
+
 ## Checkpoint 2026-10-11 21:53 UTC
 
 ### Current state
