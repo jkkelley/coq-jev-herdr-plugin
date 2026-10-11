@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T162001Z-100-qh74v",
+  "at": "2026-10-11T16:20:01Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-dc0d",
+  "kind": "note",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p1V",
+  "note": "work.started: resuming for review.changes 422 on PR 11; closing the ticket on the branch",
+  "evidence": [],
+  "observations": []
+}

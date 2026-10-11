@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T203039Z-100-4m4zt",
+  "at": "2026-10-11T20:30:39Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261011-6842",
+  "kind": "work.started",
+  "ticket": "WO-20261011-6842",
+  "pane": null,
+  "note": "review started on PR 19, reading ticket and diff against acceptance criteria",
+  "evidence": [],
+  "observations": [],
+  "to": "reviewer"
+}

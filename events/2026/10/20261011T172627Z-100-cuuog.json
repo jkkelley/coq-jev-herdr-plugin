@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T172627Z-100-cuuog",
+  "at": "2026-10-11T17:26:27Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "note",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p3W",
+  "note": "merger started: checking PR 11 for review.passed 201 and test.passed 201 on one sha before merging",
+  "evidence": [],
+  "observations": []
+}

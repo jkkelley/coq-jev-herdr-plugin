@@ -1,0 +1,24 @@
+{
+  "id": "CMP-factory-board",
+  "type": "Component",
+  "title": "report/loop: the factory board, loop.sh collect derives one entry from records, tickets, roles, routes and herdr panes, render and watch draw it, bearings serves it at /board",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "defined_in",
+      "to": "RUN-factory-board"
+    },
+    {
+      "kind": "depends_on",
+      "to": "CMP-bearings-tool"
+    }
+  ],
+  "created": "2026-10-11T17:21Z",
+  "updated": "2026-10-11T17:21Z",
+  "schema": "report/loop/schema/loop.schema.json",
+  "data": [
+    "report/loop/tests/fixtures/design-iteration-5.json"
+  ]
+}

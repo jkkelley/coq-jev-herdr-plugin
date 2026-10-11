@@ -3,6 +3,7 @@ flowchart LR
   CMP-compaction-guard["CMP-compaction-guard<br/>compaction-guard 1.2.8 hooks and status-"]
   CMP-control-plane["CMP-control-plane<br/>Go gRPC control plane: inventory, status"]
   CMP-coq-term["CMP-coq-term<br/>coq-term: Rust pane program. Backends: h"]
+  CMP-factory-board["CMP-factory-board<br/>report/loop: the factory board, loop.sh "]
   CMP-factory-dashboard["CMP-factory-dashboard<br/>Factory dashboard with a Factorio feel, "]
   CMP-game-host-linux["CMP-game-host-linux<br/>Game host, Linux-native: Qud under Xvfb "]
   CMP-game-host-windows["CMP-game-host-windows<br/>Game host, Windows: capture plus input m"]
@@ -24,7 +25,6 @@ flowchart LR
   DEC-automate-recover-retry["DEC-automate-recover-retry<br/>Templates, scripts, automation, recovery"]
   DEC-bearings-vendored-tiers["DEC-bearings-vendored-tiers<br/>Bearings is vendored into tools/bearings"]
   DEC-blueprint-first["DEC-blueprint-first<br/>Design from the blueprint, never improvi"]
-  DEC-blueprint-server-tiers["DEC-blueprint-server-tiers<br/>The blueprint has its own local web serv"]
   DEC-break-glass-one-time["DEC-break-glass-one-time<br/>Break glass: the owner alone authorises "]
   DEC-clear-schemas-codes-token-efficiency["DEC-clear-schemas-codes-token-efficiency<br/>Clear schemas and status codes, token ef"]
   DEC-components-first["DEC-components-first<br/>Components are the design unit: every pi"]
@@ -86,6 +86,7 @@ flowchart LR
   RSK-proton-wsl["RSK-proton-wsl<br/>Proton in WSL2 is unproven; the ARM64 cl"]
   RSK-steam-tos["RSK-steam-tos<br/>Steam Subscriber Agreement 4.C bans bots"]
   RUN-bearings-promote["RUN-bearings-promote<br/>Promote a bearings change: dev slot, mak"]
+  RUN-factory-board["RUN-factory-board<br/>report/loop/RUNBOOK.md: set up the facto"]
   RUN-kickback["RUN-kickback<br/>Kickback: events/bin/event.sh add --kind"]
   RUN-recover["RUN-recover<br/>recover.sh --check|--apply: halt flag, h"]
   RUN-retire["RUN-retire<br/>retire: agent send-keys esc, agent promp"]
@@ -121,6 +122,8 @@ flowchart LR
   CMP-coq-term -- depends_on --> CMP-herdr-browser-prior-art
   CMP-coq-term -- depends_on --> SPK-05-result-socket-accepts
   CMP-coq-term -- implements --> REQ-north-star
+  CMP-factory-board -- defined_in --> RUN-factory-board
+  CMP-factory-board -- depends_on --> CMP-bearings-tool
   CMP-factory-dashboard -- depends_on --> CMP-control-plane
   CMP-game-host-linux -- decided_by --> DEC-game-host-linux-native
   CMP-game-host-linux -- verified_by --> SPK-01-qud-on-wsl
@@ -160,9 +163,6 @@ flowchart LR
   DEC-automate-recover-retry -- depends_on --> DEC-system-runs-the-loop
   DEC-blueprint-first -- implements --> REQ-north-star
   DEC-blueprint-first -- depends_on --> DEC-system-runs-the-loop
-  DEC-blueprint-server-tiers -- implements --> REQ-north-star
-  DEC-blueprint-server-tiers -- depends_on --> DEC-blueprint-first
-  DEC-blueprint-server-tiers -- depends_on --> DEC-components-first
   DEC-break-glass-one-time -- implements --> REQ-north-star
   DEC-break-glass-one-time -- depends_on --> DEC-system-runs-the-loop
   DEC-clear-schemas-codes-token-efficiency -- implements --> REQ-north-star
@@ -208,6 +208,7 @@ flowchart LR
   RSK-proton-wsl -- decided_by --> DEC-game-host-linux-native
   RSK-steam-tos -- decided_by --> DEC-qud-drm-free
   RUN-bearings-promote -- defined_in --> CMP-bearings-tool
+  RUN-factory-board -- depends_on --> CMP-bearings-tool
   RUN-kickback -- defined_in --> SCH-factory-record
   RUN-recover -- depends_on --> RUN-seat-up
   RUN-retire -- owned_by --> ROL-monitor

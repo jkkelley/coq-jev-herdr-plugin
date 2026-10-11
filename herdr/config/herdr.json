@@ -9,6 +9,8 @@
   "down_wait_seconds": 3,
   "retire_poll_seconds": 10,
   "max_agents": 16,
+  "nudge_wait_seconds": 180,
+  "nudge_settle_seconds": 10,
   "bringup_gate": true,
   "require_guard": true,
   "monitor_seat": "monitor",

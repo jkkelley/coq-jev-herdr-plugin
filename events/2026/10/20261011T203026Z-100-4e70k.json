@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T203026Z-100-4e70k",
+  "at": "2026-10-11T20:30:26Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261011-6842",
+  "kind": "seat.up",
+  "ticket": "WO-20261011-6842",
+  "pane": "wD3:p5A",
+  "note": "reviewer seat up: claude-sonnet-5-5 high bypassPermissions",
+  "evidence": [],
+  "observations": []
+}
