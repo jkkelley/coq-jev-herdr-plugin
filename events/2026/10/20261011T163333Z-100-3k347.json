@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T163333Z-100-3k347",
+  "at": "2026-10-11T16:33:33Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p2",
+  "note": "hand step 16:33Z: reviewer-wo-20261011-616c up on wD3:p3J in slot 2 for test 201 f74ub (PR 16 head fb48fac); waited on the agent cap since 16:27Z",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T161926Z-100-uy0e6",
+  "at": "2026-10-11T16:19:26Z",
+  "code": 100,
+  "seat": "tester-wo-20261011-616c",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": null,
+  "note": "work.started: tester seat begins the test plan for factory board, report/loop renders the lines from records",
+  "evidence": [],
+  "observations": []
+}

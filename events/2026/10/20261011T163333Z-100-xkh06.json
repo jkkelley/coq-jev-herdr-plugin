@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T163333Z-100-xkh06",
+  "at": "2026-10-11T16:33:33Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-23df",
+  "pane": "wD3:p2",
+  "note": "16:33Z: test 422 xilia on PR 15 is a cap defect, not a code defect: the plan checks tester, reviewer and merger up at once and the architect had downed the reviewer for the cap at 16:21Z. Rerun when all three can hold seats",
+  "evidence": [],
+  "observations": []
+}

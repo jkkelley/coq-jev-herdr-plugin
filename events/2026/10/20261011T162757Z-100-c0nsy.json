@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T162757Z-100-c0nsy",
+  "at": "2026-10-11T16:27:57Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-e618",
+  "kind": "note",
+  "ticket": "WO-20261011-e618",
+  "pane": "wD3:p1V",
+  "note": "work.started: WO-20261011-e618 - Interface agent seat owns the bearings page: owner requests become records and the done line comes from it",
+  "evidence": [],
+  "observations": []
+}

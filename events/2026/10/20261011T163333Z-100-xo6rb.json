@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T163333Z-100-xo6rb",
+  "at": "2026-10-11T16:33:33Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p2",
+  "note": "16:33Z: pr.opened 8oitv for PR 11 head f432c26 sits in slot 1 (branch predates COQ_EVENTS_ROOT); tester-wo-20261011-dc0d waits on the agent cap behind the PR 14 and PR 16 reviewers",
+  "evidence": [],
+  "observations": []
+}

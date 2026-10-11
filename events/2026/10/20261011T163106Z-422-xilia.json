@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T163106Z-422-xilia",
+  "at": "2026-10-11T16:31:06Z",
+  "code": 422,
+  "seat": "tester-wo-20261011-23df",
+  "kind": "test",
+  "ticket": "WO-20261011-23df",
+  "pane": "wD3:p1V",
+  "note": "Test plan case 1 failed: seat.sh --check reviewer-wo-20261011-23df exit 3, down since 2026-10-11T16:21:25Z. Tester and merger checks ok; event check 81 files ok.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-4-coq-jev-herdr-plugin/754296fe-9dc2-4937-b922-67efaf84403b/scratchpad/plan.txt"
+  ],
+  "observations": [
+    {
+      "path": "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-4-coq-jev-herdr-plugin/754296fe-9dc2-4937-b922-67efaf84403b/scratchpad/plan.txt",
+      "line": 2,
+      "saw": "reviewer-wo-20261011-23df down (exit 3)",
+      "expected": "seat up for the check"
+    }
+  ],
+  "attempt": 1
+}
