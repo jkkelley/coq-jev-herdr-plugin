@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T170332Z-100-4xof2",
+  "at": "2026-10-11T17:03:32Z",
+  "code": 100,
+  "seat": "tester-wo-20261011-38c7",
+  "kind": "work.started",
+  "ticket": "WO-20261011-38c7",
+  "pane": null,
+  "note": "Tester seat up on WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else. Reading the ticket's test plan before running anything.",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

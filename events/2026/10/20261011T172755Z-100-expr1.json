@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T172755Z-100-expr1",
+  "at": "2026-10-11T17:27:55Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p2",
+  "note": "17:30Z AC-H3 live: stable restarted on a checkout carrying PR 16, loop.sh watch in monitors pane wD3:pZ, GET /board 200, data.json build 1 LIVE, opened on the owner's ASUS. URL: bearings.sh stable url + /board",
+  "evidence": [],
+  "observations": []
+}

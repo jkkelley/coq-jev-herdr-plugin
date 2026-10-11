@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Qud Factory Loop</title>
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+/>
+<style>
+  /* Layout: a factory floor. Each work stream is one line: a horizontal belt (the orchestrator) that scrolls sideways,
+     stations (roles) on it, return lanes below for kickbacks. Lines stack; each folds. One floor summary on top, one key,
+     one build board. Same tokens as the SITREP. */
+  :root {
+    --ground: #0c1117;
+    --surface: #131a22;
+    --surface-2: #1a232d;
+    --line: #263241;
+    --ink: #e6edf3;
+    --ink-2: #9fb0c0;
+    --ink-3: #6b7d8f;
+    --accent: #ffb000;
+    --good: #3fd27f;
+    --bad: #ff5c5c;
+    --warn: #ffb000;
+    --info: #5ab0ff;
+    --belt: #1f2a36;
+    --belt-stripe: #324354;
+    --font-display: "Barlow Condensed", Impact, "Arial Narrow", sans-serif;
+    --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground: #f3f1ec; --surface: #ffffff; --surface-2: #ebe8e1; --line: #d6d1c6;
+      --ink: #141a20; --ink-2: #3f4d5a; --ink-3: #6b7a88; --accent: #b86e00;
+      --good: #1f8f52; --bad: #c62f2f; --warn: #b86e00; --info: #1f6fc2;
+      --belt: #e2ded4; --belt-stripe: #c9c3b5; color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #f3f1ec; --surface: #ffffff; --surface-2: #ebe8e1; --line: #d6d1c6;
+    --ink: #141a20; --ink-2: #3f4d5a; --ink-3: #6b7a88; --accent: #b86e00;
+    --good: #1f8f52; --bad: #c62f2f; --warn: #b86e00; --info: #1f6fc2;
+    --belt: #e2ded4; --belt-stripe: #c9c3b5; color-scheme: light;
+  }
+  body { background: var(--ground); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.4; padding-inline: 16px; padding-block: 0 48px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; letter-spacing: 0.01em; margin: 0; }
+  h1 { font-size: 2rem; font-weight: 700; line-height: 1; margin-top: 6px; }
+  h2 { font-size: 1.1rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-2); }
+  h3 { font-size: 1.35rem; font-weight: 700; line-height: 1; }
+  .eyebrow { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .top { position: sticky; top: env(safe-area-inset-top, 0px); background: var(--ground); border-bottom: 1px solid var(--line); padding: 12px 0 10px; z-index: 2; }
+  .strip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .pill { display: inline-block; font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; border: 1px solid var(--line); color: var(--ink-2); white-space: nowrap; }
+  .pill.live { color: var(--good); border-color: var(--good); }
+  .pill.building { color: var(--warn); border-color: var(--warn); }
+  .pill.queued { color: var(--ink-3); border-color: var(--line); }
+  .pill.blocked { color: var(--bad); border-color: var(--bad); }
+  .pill.hand { color: var(--info); border-color: var(--info); }
+  .pill.sim { color: var(--ink-3); border-style: dashed; }
+  a { color: var(--info); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  /* floor summary */
+  .floor { margin-top: 22px; }
+  .floor table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 8px; }
+  .floor th { text-align: left; font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); padding: 5px 8px; border-bottom: 1px solid var(--line); }
+  .floor td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .badge { display: inline-block; font-family: var(--font-display); font-weight: 700; font-size: 1rem; line-height: 1; padding: 4px 7px 3px; border-radius: 3px; background: var(--surface-2); color: var(--accent); border: 1px solid var(--line); min-width: 22px; text-align: center; }
+  .meter { display: inline-grid; grid-template-columns: repeat(9, 10px); gap: 2px; vertical-align: middle; }
+  .meter i { height: 10px; border-radius: 1px; background: var(--surface-2); border: 1px solid var(--line); box-sizing: border-box; }
+  .meter i.live { background: var(--good); border-color: var(--good); }
+  .meter i.building { background: var(--warn); border-color: var(--warn); }
+  .meter i.blocked { background: var(--bad); border-color: var(--bad); }
+  .meter i.hand { background: var(--info); border-color: var(--info); }
+  .meter i.here { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  /* a line */
+  .ln { margin-top: 26px; border-left: 3px solid var(--line); padding-left: 14px; }
+  .ln[data-s="live"] { border-color: var(--good); }
+  .ln[data-s="building"] { border-color: var(--warn); }
+  .ln[data-s="blocked"] { border-color: var(--bad); }
+  .ln[data-s="queued"] { border-color: var(--line); }
+  .ln summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: auto 1fr auto; gap: 8px 14px; align-items: center; }
+  .ln summary::-webkit-details-marker { display: none; }
+  .ln summary .name { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .ln summary .name .sub { font-size: 0.88rem; color: var(--ink-2); }
+  .ln summary .pills { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .ln summary .fold { font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.06em; }
+  .ln details[open] summary .fold::before { content: "fold "; }
+  .ln details:not([open]) summary .fold::before { content: "unfold "; }
+  .line-tools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+  .hint { font-size: 0.82rem; color: var(--ink-3); }
+  .nav { display: flex; gap: 6px; }
+  .nav button { font-family: var(--font-mono); font-size: 0.8rem; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 4px 12px; cursor: pointer; }
+  .nav button:hover { border-color: var(--accent); color: var(--accent); }
+  .nav button:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+  .track { overflow-x: scroll; margin-top: 8px; padding-bottom: 8px; cursor: grab; user-select: none; scrollbar-width: auto; scrollbar-color: var(--accent) var(--surface-2); }
+  .track.drag { cursor: grabbing; }
+  .track::-webkit-scrollbar { height: 12px; }
+  .track::-webkit-scrollbar-track { background: var(--surface-2); border-radius: 6px; }
+  .track::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 6px; }
+  .track:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+  .grid { display: grid; grid-auto-flow: column; grid-auto-rows: auto; gap: 0; align-items: start; padding: 4px 2px 6px; }
+  .st { width: 236px; grid-row: 1; }
+  .belt { width: 112px; grid-row: 1; position: relative; align-self: stretch; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; min-height: 100%; display: flex; flex-direction: column; gap: 8px; box-sizing: border-box; position: relative; }
+  .card.live { border-top: 3px solid var(--good); }
+  .card.building { border-top: 3px solid var(--warn); }
+  .card.queued { border-top: 3px solid var(--line); }
+  .card.blocked { border-top: 3px solid var(--bad); }
+  .card.here { box-shadow: 0 0 0 2px var(--accent); }
+  .card .here-tag { position: absolute; top: -11px; right: 10px; background: var(--accent); color: var(--ground); font-family: var(--font-mono); font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+  .card .who { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+  .card .role { font-family: var(--font-display); font-size: 1.25rem; font-weight: 700; letter-spacing: 0.01em; line-height: 1; }
+  .card .model { font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-3); }
+  .card .does { font-size: 0.88rem; color: var(--ink-2); }
+  .parts { display: grid; grid-template-columns: 12px 1fr; gap: 4px 8px; font-size: 0.8rem; align-items: center; margin: 0; padding: 0; list-style: none; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); display: inline-block; }
+  .dot.ok { background: var(--good); }
+  .dot.todo { background: var(--line); border: 1px solid var(--ink-3); box-sizing: border-box; }
+  .dot.hand { background: var(--info); }
+  .dot.bad { background: var(--bad); }
+  .parts .n { font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-2); }
+  .belt .rail { position: absolute; left: 0; right: 0; top: 46px; height: 14px; background: repeating-linear-gradient(90deg, var(--belt) 0 10px, var(--belt-stripe) 10px 20px); border-radius: 2px; border: 1px solid var(--line); background-size: 20px 100%; }
+  .belt.live .rail { animation: roll 1.2s linear infinite; border-color: var(--good); }
+  .belt .rail::after { content: ""; position: absolute; right: -1px; top: -5px; border: 11px solid transparent; border-left: 10px solid var(--belt-stripe); border-right: 0; }
+  .belt.live .rail::after { border-left-color: var(--good); }
+  .belt .rec { position: absolute; left: 50%; top: 66px; transform: translateX(-50%); white-space: nowrap; }
+  .belt .rec .pill { font-size: 0.62rem; padding: 1px 6px; background: var(--ground); }
+  .belt .rec.waiting .pill { color: var(--accent); border-color: var(--accent); }
+  .belt .rec .code { display: block; text-align: center; font-family: var(--font-mono); font-size: 0.62rem; color: var(--ink-3); margin-top: 2px; }
+  @keyframes roll { from { background-position: 0 0; } to { background-position: 20px 0; } }
+  @media (prefers-reduced-motion: reduce) { .belt.live .rail { animation: none; } }
+  .lane { grid-row: var(--r); height: 26px; position: relative; margin-top: 6px; }
+  .lane .bar { position: absolute; left: 24px; right: 24px; top: 12px; height: 2px; background: var(--bad); opacity: 0.85; }
+  .lane .bar::before { content: ""; position: absolute; left: -1px; top: -5px; border: 6px solid transparent; border-right: 9px solid var(--bad); border-left: 0; }
+  .lane .bar::after { content: ""; position: absolute; right: -1px; top: -6px; width: 2px; height: 14px; background: var(--bad); }
+  .lane .tag { position: absolute; left: 50%; top: 2px; transform: translateX(-50%); background: var(--ground); padding: 0 6px; font-family: var(--font-mono); font-size: 0.62rem; color: var(--bad); white-space: nowrap; }
+  .lane.esc .bar, .lane.esc .bar::before, .lane.esc .bar::after { background-color: var(--warn); border-right-color: var(--warn); }
+  .lane.esc .tag { color: var(--warn); }
+
+  /* key */
+  .key { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 24px; margin-top: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+  .kg { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+  .kg .eyebrow { padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+  .ki { display: grid; grid-template-columns: 72px 1fr; align-items: center; gap: 10px; font-size: 0.86rem; color: var(--ink-2); }
+  .ki .pill { justify-self: start; }
+  .ki .dot { width: 10px; height: 10px; justify-self: start; margin-left: 2px; }
+  .ks { display: block; width: 64px; justify-self: start; }
+  .ks.rail-off, .ks.rail-on { height: 12px; border-radius: 2px; border: 1px solid var(--line); background: repeating-linear-gradient(90deg, var(--belt) 0 8px, var(--belt-stripe) 8px 16px); }
+  .ks.rail-on { border-color: var(--good); background: repeating-linear-gradient(90deg, var(--belt) 0 8px, var(--good) 8px 16px); }
+  .ks.lane-kb, .ks.lane-esc { height: 2px; background: var(--bad); position: relative; }
+  .ks.lane-kb::before, .ks.lane-esc::before { content: ""; position: absolute; left: -1px; top: -5px; border: 6px solid transparent; border-right: 9px solid var(--bad); border-left: 0; }
+  .ks.lane-esc { background: var(--warn); }
+  .ks.lane-esc::before { border-right-color: var(--warn); }
+  .ks.here-sw { width: 40px; height: 16px; border-radius: 3px; border: 1px solid var(--line); box-shadow: 0 0 0 2px var(--accent); background: var(--surface-2); }
+  .ki .steps i { width: 11px; }
+  @media (max-width: 900px) { .key { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .key { grid-template-columns: 1fr; } .ln summary { grid-template-columns: auto 1fr; } .ln summary .pills { grid-column: 1 / -1; justify-content: flex-start; } }
+
+  /* build board */
+  .blk { border-left: 3px solid var(--line); padding-left: 14px; margin-top: 26px; }
+  .blk[data-s="hold"] { border-color: var(--warn); }
+  .board { display: grid; grid-template-columns: 28px 1fr auto; gap: 8px 12px; margin-top: 10px; align-items: center; }
+  .board .k { font-family: var(--font-mono); font-weight: 600; color: var(--accent); }
+  .board .t { font-size: 0.92rem; min-width: 0; }
+  .board .t small { display: block; font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-3); letter-spacing: 0.04em; }
+  .steps { display: flex; gap: 4px; align-items: center; }
+  .steps i { width: 26px; height: 8px; border-radius: 2px; background: var(--surface-2); border: 1px solid var(--line); display: block; }
+  .steps i.on { background: var(--good); border-color: var(--good); }
+  .steps i.now { background: var(--warn); border-color: var(--warn); }
+  details.legend { margin-top: 14px; }
+  details.legend summary { cursor: pointer; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); }
+  details.legend table { width: 100%; border-collapse: collapse; font-size: 0.86rem; margin-top: 8px; }
+  details.legend td { padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  td.id { font-family: var(--font-mono); font-weight: 600; color: var(--accent); white-space: nowrap; }
+  footer { margin-top: 28px; }
+  @media (max-width: 480px) { .board { grid-template-columns: 24px 1fr; } .board .steps { grid-column: 2; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow" id="eyebrow"></div>
+    <h1 id="headline"></h1>
+    <div class="strip" id="strip"></div>
+  </header>
+
+  <section class="floor">
+    <h2>Floor · every line at a glance</h2>
+    <div id="floor"></div>
+  </section>
+
+  <div id="lines"></div>
+
+  <section class="blk" data-s="hold" id="keyblk">
+    <h2>Key</h2>
+    <div class="key" aria-label="Key">
+      <div class="kg">
+        <div class="eyebrow">Stations</div>
+        <div class="ki"><span class="pill live">live</span><span>seat is up and doing its job</span></div>
+        <div class="ki"><span class="pill building">building</span><span>its ticket is in progress</span></div>
+        <div class="ki"><span class="pill queued">queued</span><span>nothing built yet</span></div>
+        <div class="ki"><span class="pill blocked">blocked</span><span>waiting on a decision</span></div>
+        <div class="ki"><span class="pill hand">by hand</span><span>the architect doing this role's job</span></div>
+        <div class="ki"><i class="ks here-sw"></i><span>work is here right now</span></div>
+      </div>
+      <div class="kg">
+        <div class="eyebrow">Parts of a station</div>
+        <div class="ki"><i class="dot ok"></i><span>exists</span></div>
+        <div class="ki"><i class="dot todo"></i><span>to build</span></div>
+        <div class="ki"><i class="dot hand"></i><span>done by hand today</span></div>
+        <div class="ki"><i class="dot bad"></i><span>wrong today</span></div>
+      </div>
+      <div class="kg">
+        <div class="eyebrow">Belt · the orchestrator</div>
+        <div class="ki"><i class="ks rail-off"></i><span>stopped: no runner reads routes.json</span></div>
+        <div class="ki"><i class="ks rail-on"></i><span>running: records move between stations</span></div>
+        <div class="ki"><span class="pill queued">pr.opened</span><span>the record that rides the belt, with its code</span></div>
+        <div class="ki"><span class="pill queued" style="color:var(--accent);border-color:var(--accent)">pr.opened</span><span>a record sitting on a stopped belt</span></div>
+      </div>
+      <div class="kg">
+        <div class="eyebrow">Lanes, lines and board</div>
+        <div class="ki"><i class="ks lane-kb"></i><span>kickback: work goes back to the worker</span></div>
+        <div class="ki"><i class="ks lane-esc"></i><span>escalation: up to the architect, then the owner</span></div>
+        <div class="ki"><span class="pill sim">simulated</span><span>a line drawn to test the layout, not real state</span></div>
+        <div class="ki"><span class="steps"><i class="on"></i><i class="on"></i><i class="now"></i><i></i><i></i></span><span>board: planned, cut, in progress, PR, merged</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="blk" data-s="hold">
+    <h2>Build board · what makes line 1 real</h2>
+    <div class="board" id="board"></div>
+  </section>
+
+  <details class="legend">
+    <summary>Legend · ticket ids and record codes</summary>
+    <table id="legend"></table>
+  </details>
+
+  <footer class="eyebrow" id="sources"></footer>
+</div>
+<script type="application/json" id="loop-data">@@DATA@@</script>
+<script>
+// WO-20261011-616c. The markup and CSS above are the owner-locked design iteration 5, byte for byte (report/loop/design;
+// tests/cases check it). What changed is this block: the data is one JSON element the renderer fills from
+// loop.sh collect, the nine stations and the kickback lanes arrive in that entry instead of being page constants, and
+// the page polls data.json and redraws in place, keeping every line's fold state and sideways scroll.
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pill = (k, t) => `<span class="pill ${k}">${esc(t)}</span>`;
+const STEP = 348; // one station plus one belt
+let conn = location.protocol === "file:" ? "static" : "live"; // static: opened as a file, live: the last ask worked, offline: it did not
+
+function lineHTML(L, d) {
+  const cols = [], colOf = {};
+  const stations = d.stations.map(s => Object.assign({}, s, L.st[s.id] || { status: "queued", parts: [] }));
+  stations.forEach((s, i) => {
+    colOf[s.id] = i * 2 + 1;
+    const here = L.here === s.id;
+    cols.push(`<div class="st" style="grid-column:${i*2+1}">
+      <div class="card ${s.status}${here ? " here" : ""}">${here ? '<span class="here-tag">work here</span>' : ""}
+        <div class="who"><span class="role">${esc(s.role)}</span>${pill(s.hand ? "hand" : s.status, s.hand ? "by hand" : s.status)}</div>
+        <div class="model">${esc(s.model)}</div>
+        <div class="does">${esc(s.does)}</div>
+        <ul class="parts">${s.parts.map(([k, t]) => `<li class="dot ${k}"></li><li class="n">${esc(t)}</li>`).join("")}</ul>
+      </div></div>`);
+    if (s.out) {
+      const waiting = L.waiting === s.id;
+      cols.push(`<div class="belt ${L.belt}" style="grid-column:${i*2+2}">
+        <div class="rail"></div>
+        <div class="rec${waiting ? " waiting" : ""}">${pill("queued", s.out.kind)}<span class="code">${s.out.code}${waiting ? " · waiting" : ""}</span></div>
+      </div>`);
+    }
+  });
+  d.kickbacks.forEach((k, j) => {
+    if (!(k.to in colOf) || !(k.from in colOf)) return;
+    cols.push(`<div class="lane ${k.esc ? "esc" : ""}" style="--r:${j+2};grid-column:${colOf[k.to]} / ${colOf[k.from]+1}"><div class="bar"></div><span class="tag">${esc(k.tag)}</span></div>`);
+  });
+  const tmpl = Array.from({length: stations.length * 2 - 1}, (_, i) => i % 2 === 0 ? "236px" : "112px").join(" ");
+  const n = s => stations.filter(x => x.status === s).length;
+  return `<section class="ln" data-s="${L.status}" id="${L.id}">
+    <details open>
+      <summary>
+        <span class="badge">${esc(L.id)}</span>
+        <span class="name"><h3>${esc(L.name)}</h3><span class="sub">${esc(L.sub)}</span></span>
+        <span class="pills">${L.sim ? pill("sim", "simulated") : ""}${pill(L.belt === "live" ? "live" : "blocked", L.belt === "live" ? "belt running" : "belt stopped")}${pill("live", n("live") + " live")}${pill("queued", n("queued") + " queued")}<span class="fold"></span></span>
+      </summary>
+      <div class="line-tools">
+        <span class="hint">drag or wheel to move · the belt is the orchestrator · red lanes are kickbacks</span>
+        <span class="nav"><button type="button" data-move="-1" aria-label="Move line ${esc(L.id)} left">&larr;</button><button type="button" data-move="1" aria-label="Move line ${esc(L.id)} right">&rarr;</button></span>
+      </div>
+      <div class="track" tabindex="0" aria-label="Line ${esc(L.id)}, scrolls sideways"><div class="grid" style="grid-template-columns:${tmpl}">${cols.join("")}</div></div>
+    </details>
+  </section>`;
+}
+
+function floorHTML(d) {
+  if (!d.lines.length) return `<p class="hint">No ticket is in progress or in review, so no line is running.</p>`;
+  const rows = d.lines.map(L => {
+    const stations = d.stations.map(s => Object.assign({}, s, L.st[s.id] || { status: "queued", parts: [] }));
+    const meter = stations.map(s => `<i class="${s.hand ? "hand" : s.status}${L.here === s.id ? " here" : ""}" title="${esc(s.role)}: ${esc(s.status)}"></i>`).join("");
+    const hereName = stations.find(s => s.id === L.here);
+    return `<tr>
+      <td><a href="#${esc(L.id)}"><span class="badge">${esc(L.id)}</span></a></td>
+      <td><a href="#${esc(L.id)}">${esc(L.name)}</a>${L.sim ? " " + pill("sim", "sim") : ""}<br><span class="hint">${esc(L.sub)}</span></td>
+      <td><span class="meter">${meter}</span></td>
+      <td>${hereName ? esc(hereName.role) : "-"}</td>
+      <td>${pill(L.belt === "live" ? "live" : "blocked", L.belt === "live" ? "running" : "stopped")}</td>
+    </tr>`;
+  }).join("");
+  return `<table><tr><th>line</th><th>stream</th><th>stations</th><th>work is at</th><th>belt</th></tr>${rows}</table>`;
+}
+
+function render(d) {
+  const at = d.at.slice(0, 16).replace("T", " ") + " UTC"; // the design draws the minute; the entry keeps the second
+  document.getElementById("eyebrow").textContent = `LOOP ${String(d.number).padStart(3,"0")} · ${at} · ${d.actor} · ${d.state}`;
+  document.getElementById("headline").textContent = d.headline;
+  const count = s => d.lines.filter(L => L.status === s).length;
+  document.getElementById("strip").innerHTML =
+    pill("queued", `${d.lines.length} lines`) + pill(count("building") ? "building" : "queued", `${count("building")} building`) +
+    pill(count("blocked") ? "blocked" : "queued", `${count("blocked")} blocked`) + pill("queued", `${count("queued")} not started`) +
+    pill("blocked", `${d.lines.filter(L => L.belt !== "live").length} belts stopped`) +
+    (conn === "static" ? "" : pill(conn === "live" ? "live" : "blocked", conn === "live" ? "page live" : "page offline"));
+  document.getElementById("floor").innerHTML = floorHTML(d);
+  document.getElementById("lines").innerHTML = d.lines.map(L => lineHTML(L, d)).join("");
+  document.getElementById("board").innerHTML = d.board.map(b =>
+    `<span class="k">${esc(b.k)}</span><span class="t">${esc(b.t)}<small>${esc(b.sub)}</small></span>
+     <span class="steps">${[0,1,2,3,4].map(i => `<i class="${i < b.step ? "on" : i === b.step && b.step > 0 ? "now" : ""}"></i>`).join("")}</span>`).join("");
+  // The locked markup says "what makes line 1 real", true of the design's one real line and no one else's; the entry may say better.
+  if (d.board_title) document.getElementById("board").parentElement.querySelector("h2").textContent = d.board_title;
+  document.getElementById("legend").innerHTML = d.legend.map(([k, v]) => `<tr><td class="id">${esc(k)}</td><td>${esc(v)}</td></tr>`).join("");
+  document.getElementById("sources").textContent = `${d.sources} · built ${at}`;
+  wire();
+}
+
+// moving a line: arrow keys, its buttons, vertical wheel turned sideways, drag to pan
+function wire() {
+  document.querySelectorAll(".track").forEach(track => {
+    const move = dx => track.scrollBy({ left: dx, behavior: "smooth" });
+    track.addEventListener("keydown", e => {
+      if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); move(e.key === "ArrowRight" ? STEP : -STEP); }
+    });
+    track.addEventListener("wheel", e => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); track.scrollLeft += e.deltaY; }
+    }, { passive: false });
+    let drag = null;
+    track.addEventListener("pointerdown", e => {
+      if (e.button !== 0) return;
+      drag = { x: e.clientX, left: track.scrollLeft }; track.classList.add("drag"); track.setPointerCapture(e.pointerId);
+    });
+    track.addEventListener("pointermove", e => { if (drag) track.scrollLeft = drag.left - (e.clientX - drag.x); });
+    const stop = () => { drag = null; track.classList.remove("drag"); };
+    track.addEventListener("pointerup", stop);
+    track.addEventListener("pointercancel", stop);
+    const tools = track.previousElementSibling;
+    tools.querySelectorAll("button[data-move]").forEach(b => b.addEventListener("click", () => move(STEP * Number(b.dataset.move))));
+  });
+}
+
+// A redraw replaces the lines, so the fold state and the sideways scroll of each line, and the page scroll, are taken first
+// and put back after; an owner reading line 2 unfolded is not thrown back to the top by a new record.
+function snapshot() {
+  const lines = {};
+  document.querySelectorAll(".ln").forEach(l => { lines[l.id] = { open: l.querySelector("details").open, left: l.querySelector(".track").scrollLeft }; });
+  return { lines, y: window.scrollY };
+}
+function restore(s) {
+  document.querySelectorAll(".ln").forEach(l => {
+    const was = s.lines[l.id];
+    if (!was) return;
+    l.querySelector("details").open = was.open;
+    l.querySelector(".track").scrollLeft = was.left;
+  });
+  window.scrollTo(0, s.y);
+}
+
+let DATA = JSON.parse(document.getElementById("loop-data").textContent);
+let lastText = JSON.stringify(DATA);
+render(DATA);
+
+// Served by bearings stable at /board, the page asks /board/data.json every poll_seconds. Opened as a file there is no server, so it stays as built.
+if (location.protocol !== "file:") {
+  const url = (location.pathname.endsWith("/") ? location.pathname : location.pathname + "/") + "data.json";
+  const ask = async () => {
+    let next = conn;
+    try {
+      const r = await fetch(url, { cache: "no-store", credentials: "same-origin" });
+      if (r.ok) {
+        next = "live";
+        const text = await r.text();
+        if (text !== lastText) { lastText = text; DATA = JSON.parse(text); conn = next; const snap = snapshot(); render(DATA); restore(snap); }
+      } else next = "offline";
+    } catch { next = "offline"; }
+    if (next !== conn) { conn = next; const snap = snapshot(); render(DATA); restore(snap); }
+    setTimeout(ask, DATA.poll_seconds * 1000);
+  };
+  setTimeout(ask, DATA.poll_seconds * 1000);
+}
+</script>

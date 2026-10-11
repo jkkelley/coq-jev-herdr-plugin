@@ -1,0 +1,10 @@
+# BREADCRUMB 2026-10-11 - WO-20261011-616c. What broke: the owner's global PostToolUse hook runs `npx prettier --write` on every
+#   Write and Edit, and it re-indented report/loop/assets/template.html from 247 to 1182 lines on the first edit, so the markup
+#   and CSS stopped being the owner-locked design iteration 5 byte for byte (tests/cases/03-parity.test.sh compares them).
+#   Why this fix: the two files below are locked to the design the owner approved on 2026-10-11 UTC ("lock that in"), so a
+#   formatter has no business with them; prettier reads this file from the project root. Rejected: formatting the design copy
+#   too (then the parity test would compare two formatted files and prove nothing about the approved page) and editing only
+#   through sed (a worker that uses Edit by habit would break it again).
+#   Cost: these files are not auto-formatted; keep their style by hand.
+report/loop/assets/template.html
+report/loop/design/

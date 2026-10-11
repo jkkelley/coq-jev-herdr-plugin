@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T172028Z-100-478hy",
+  "at": "2026-10-11T17:20:28Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p2",
+  "note": "hand step 17:21Z: tester-wo-20261011-dc0d downed after test 201 h5hmz (PR 11 head f432c26); reviewer-wo-20261011-dc0d up for it",
+  "evidence": [],
+  "observations": []
+}

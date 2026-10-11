@@ -15,3 +15,11 @@ test:
 	podman run --rm --network=none -v "$(REPO)":/w:Z -w /w $(LINT_IMAGE) bash report/sitrep/tests/run.sh
 test-host:
 	bash $(HERE)tests/run.sh
+
+# image: the root Makefile's `images` target runs `make -C <tool> image` for every TOOLS entry (Makefile line 24) and
+# report/sitrep had no such target, so every `make step` on a checkout carrying PR 16 died with "No rule to make target
+# 'image'" (2026-10-11 17:28Z, architect records branch). The suite runs inside the lint image, which `images` has already
+# built by the time it gets here, so there is nothing to build: the target exists so the foreach succeeds. Rejected: a
+# sitrep-specific image, which would duplicate the lint image for python3 + jsonschema. Record: WO-20261010-329d notes.
+image:
+	@true

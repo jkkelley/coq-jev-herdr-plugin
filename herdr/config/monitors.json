@@ -51,6 +51,12 @@
           "pos": "2.1.3",
           "name": "audit",
           "what": "seat audit"
+        },
+        {
+          "pos": "2.2.1",
+          "name": "board",
+          "what": "factory board watch",
+          "command": "${repo}/report/loop/loop.sh watch"
         }
       ]
     },

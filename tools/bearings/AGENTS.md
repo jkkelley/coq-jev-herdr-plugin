@@ -6,6 +6,7 @@
 - Tiers
 - Run it
 - Ask, wait, reply
+- The factory board
 - Test it
 - Promote a change: dev to uat to stable
 - Config and variables
@@ -77,6 +78,14 @@ A `MESSAGE` is the owner talking: answer it first, on the page:
 ```sh
 scripts/bearings.sh stable reply --to m-20261010182008718-2ewk9 "text"
 ```
+
+## The factory board
+
+Every tier also serves the factory board (WO-20261011-616c) behind the same key and cookie.
+`GET /board` is the page report/loop builds, and `GET /board/data.json` is the data it polls.
+Both are read from `board_dir` in the config (relative to the repository root), which must equal `out_dir` in `report/loop/config/board.json`; `make -C report/loop lint` checks that.
+A board that was never built answers 503 `board not built`; a config with no `board_dir` answers 404.
+Run `report/loop/loop.sh watch` in a labelled herdr pane to keep it built (`report/loop/RUNBOOK.md`).
 
 ## Test it
 

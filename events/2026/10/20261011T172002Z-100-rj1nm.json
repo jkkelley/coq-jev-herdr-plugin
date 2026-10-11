@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T172002Z-100-rj1nm",
+  "at": "2026-10-11T17:20:02Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p2",
+  "note": "hand step 17:20Z: merger woken with r9apb and mzqn1 (both name 08f5621); the merger had gone idle after o0hm2 and nothing wakes it until the belt lands",
+  "evidence": [],
+  "observations": []
+}

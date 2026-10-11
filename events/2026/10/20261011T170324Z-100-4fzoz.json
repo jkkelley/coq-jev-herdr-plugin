@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T170324Z-100-4fzoz",
+  "at": "2026-10-11T17:03:24Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p2",
+  "note": "hand step 17:04Z: merger holds PR 14 (o0hm2): rtu39 names e3fc362 and bwo6b names no sha, head is 08f5621. Tester and reviewer re-seated to post 201s naming 08f5621. Defect for the belt: records must carry the sha",
+  "evidence": [],
+  "observations": []
+}

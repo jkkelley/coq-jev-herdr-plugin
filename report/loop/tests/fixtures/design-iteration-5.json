@@ -1,0 +1,762 @@
+{
+  "schema_version": "1.0.0",
+  "number": 1,
+  "at": "2026-10-11T14:21:00Z",
+  "actor": "architect wD3:p2",
+  "state": "DESIGN ITERATION 5",
+  "headline": "Floor: 5 lines, every belt stopped, 1 real and 4 simulated",
+  "poll_seconds": 10,
+  "stations": [
+    {
+      "id": "owner",
+      "role": "Owner",
+      "model": "bearings page",
+      "does": "decides on the page",
+      "out": {
+        "kind": "request",
+        "code": 300
+      }
+    },
+    {
+      "id": "ia",
+      "role": "Interface agent",
+      "model": "sonnet · dontAsk",
+      "does": "the owner's only contact",
+      "out": {
+        "kind": "request.forwarded",
+        "code": 300
+      }
+    },
+    {
+      "id": "arch",
+      "role": "Architect",
+      "model": "opus · max",
+      "does": "cuts tickets, picks models",
+      "out": {
+        "kind": "ticket.cut",
+        "code": 100
+      }
+    },
+    {
+      "id": "worker",
+      "role": "Worker",
+      "model": "sonnet · high",
+      "does": "one ticket, one slot",
+      "out": {
+        "kind": "pr.opened",
+        "code": 100
+      }
+    },
+    {
+      "id": "tester",
+      "role": "Tester",
+      "model": "haiku · medium",
+      "does": "runs the ticket's test plan",
+      "out": {
+        "kind": "test.passed",
+        "code": 201
+      }
+    },
+    {
+      "id": "reviewer",
+      "role": "Reviewer",
+      "model": "haiku · medium",
+      "does": "evidence vs acceptance",
+      "out": {
+        "kind": "review.passed",
+        "code": 201
+      }
+    },
+    {
+      "id": "merger",
+      "role": "Merger",
+      "model": "haiku · medium",
+      "does": "squash, cleanup, slot release",
+      "out": {
+        "kind": "merged",
+        "code": 200
+      }
+    },
+    {
+      "id": "verify",
+      "role": "Architect",
+      "model": "verify",
+      "does": "checks main after merge",
+      "out": {
+        "kind": "verified",
+        "code": 201
+      }
+    },
+    {
+      "id": "line",
+      "role": "Interface agent",
+      "model": "owner line",
+      "does": "one line on the page",
+      "out": null
+    }
+  ],
+  "kickbacks": [
+    {
+      "from": "tester",
+      "to": "worker",
+      "tag": "test.failed 422 · attempt < 3"
+    },
+    {
+      "from": "reviewer",
+      "to": "worker",
+      "tag": "review.changes 422 · attempt < 3"
+    },
+    {
+      "from": "merger",
+      "to": "worker",
+      "tag": "merge.conflict 409"
+    },
+    {
+      "from": "reviewer",
+      "to": "arch",
+      "tag": "attempt 3 · 423 escalate",
+      "esc": true
+    },
+    {
+      "from": "arch",
+      "to": "ia",
+      "tag": "second 423 · owner card",
+      "esc": true
+    }
+  ],
+  "lines": [
+    {
+      "id": "L1",
+      "name": "Small loop",
+      "sub": "the line that builds the line",
+      "sim": false,
+      "status": "building",
+      "belt": "stopped",
+      "here": "arch",
+      "st": {
+        "owner": {
+          "status": "live",
+          "parts": [
+            [
+              "ok",
+              "bearings stable up"
+            ],
+            [
+              "ok",
+              "page key rotated"
+            ]
+          ]
+        },
+        "ia": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "role file"
+            ],
+            [
+              "ok",
+              "playbook"
+            ],
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "arch": {
+          "status": "live",
+          "parts": [
+            [
+              "ok",
+              "role file"
+            ],
+            [
+              "hand",
+              "seat up, by hand"
+            ],
+            [
+              "bad",
+              "also reviewer and merger today"
+            ]
+          ],
+          "hand": true
+        },
+        "worker": {
+          "status": "live",
+          "parts": [
+            [
+              "ok",
+              "seat up: dc0d, slot 1"
+            ],
+            [
+              "todo",
+              "role lacks done + submit"
+            ]
+          ]
+        },
+        "tester": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "role file"
+            ],
+            [
+              "ok",
+              "playbook"
+            ],
+            [
+              "todo",
+              "seat up"
+            ],
+            [
+              "todo",
+              "never run"
+            ]
+          ]
+        },
+        "reviewer": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "role file"
+            ],
+            [
+              "ok",
+              "playbook"
+            ],
+            [
+              "todo",
+              "seat up"
+            ],
+            [
+              "bad",
+              "PR 11, 12 waiting"
+            ]
+          ]
+        },
+        "merger": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "role file"
+            ],
+            [
+              "ok",
+              "playbook"
+            ],
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "verify": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "route exists"
+            ],
+            [
+              "todo",
+              "never fired"
+            ]
+          ]
+        },
+        "line": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "route exists"
+            ],
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "L2",
+      "name": "Seat nudge · dc0d",
+      "sub": "PR 11 open, record sitting on the belt",
+      "sim": true,
+      "status": "blocked",
+      "belt": "stopped",
+      "here": "tester",
+      "waiting": "worker",
+      "st": {
+        "owner": {
+          "status": "live",
+          "parts": [
+            [
+              "ok",
+              "ticket approved"
+            ]
+          ]
+        },
+        "ia": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "arch": {
+          "status": "live",
+          "parts": [
+            [
+              "hand",
+              "cut and started by hand"
+            ]
+          ],
+          "hand": true
+        },
+        "worker": {
+          "status": "live",
+          "parts": [
+            [
+              "ok",
+              "PR 11 opened"
+            ],
+            [
+              "ok",
+              "slot 1 held"
+            ]
+          ]
+        },
+        "tester": {
+          "status": "blocked",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ],
+            [
+              "bad",
+              "no tester has read PR 11"
+            ]
+          ]
+        },
+        "reviewer": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "merger": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "verify": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "route exists"
+            ]
+          ]
+        },
+        "line": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "L3",
+      "name": "Spike 1 · Qud on Linux",
+      "sub": "game runs, no frame captured yet",
+      "sim": true,
+      "status": "building",
+      "belt": "stopped",
+      "here": "worker",
+      "st": {
+        "owner": {
+          "status": "live",
+          "parts": [
+            [
+              "ok",
+              "GOG build unpacked"
+            ]
+          ]
+        },
+        "ia": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "arch": {
+          "status": "live",
+          "parts": [
+            [
+              "hand",
+              "started by hand"
+            ]
+          ],
+          "hand": true
+        },
+        "worker": {
+          "status": "building",
+          "parts": [
+            [
+              "ok",
+              "CoQ.x86_64 running under WSLg"
+            ],
+            [
+              "todo",
+              "Xvfb container"
+            ],
+            [
+              "todo",
+              "frame grab"
+            ]
+          ]
+        },
+        "tester": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "evidence: non-black title screen"
+            ]
+          ]
+        },
+        "reviewer": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "merger": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "verify": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "route exists"
+            ]
+          ]
+        },
+        "line": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "L4",
+      "name": "Foundation branch · fbad",
+      "sub": "139 files off main, nobody has reviewed them",
+      "sim": true,
+      "status": "blocked",
+      "belt": "stopped",
+      "here": "reviewer",
+      "waiting": "worker",
+      "st": {
+        "owner": {
+          "status": "live",
+          "parts": [
+            [
+              "ok",
+              "P0 decided"
+            ]
+          ]
+        },
+        "ia": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "arch": {
+          "status": "live",
+          "parts": [
+            [
+              "hand",
+              "specs written by hand"
+            ]
+          ],
+          "hand": true
+        },
+        "worker": {
+          "status": "live",
+          "parts": [
+            [
+              "ok",
+              "branch feat/p0-foundation"
+            ],
+            [
+              "todo",
+              "no PR yet"
+            ]
+          ]
+        },
+        "tester": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "make lint green on branch"
+            ]
+          ]
+        },
+        "reviewer": {
+          "status": "blocked",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ],
+            [
+              "bad",
+              "SPEC-00, 01 unreviewed"
+            ]
+          ]
+        },
+        "merger": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "verify": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "route exists"
+            ]
+          ]
+        },
+        "line": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "id": "L5",
+      "name": "coq-term variant A · d08d",
+      "sub": "not started",
+      "sim": true,
+      "status": "queued",
+      "belt": "stopped",
+      "here": "owner",
+      "st": {
+        "owner": {
+          "status": "live",
+          "parts": [
+            [
+              "ok",
+              "decision locked"
+            ]
+          ]
+        },
+        "ia": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "arch": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "ticket ready"
+            ],
+            [
+              "todo",
+              "not started"
+            ]
+          ]
+        },
+        "worker": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "slot"
+            ]
+          ]
+        },
+        "tester": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "reviewer": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "merger": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        },
+        "verify": {
+          "status": "queued",
+          "parts": [
+            [
+              "ok",
+              "route exists"
+            ]
+          ]
+        },
+        "line": {
+          "status": "queued",
+          "parts": [
+            [
+              "todo",
+              "seat up"
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "board": [
+    {
+      "k": "B1",
+      "t": "worker role gains done and submit",
+      "sub": "roles/worker.json · one line",
+      "step": 0
+    },
+    {
+      "k": "B2",
+      "t": "route runner: applies routes.json, nothing else",
+      "sub": "factory/bin · hard cap in the ticket",
+      "step": 0
+    },
+    {
+      "k": "B3",
+      "t": "tester, reviewer, merger seats come up",
+      "sub": "seat.sh · three haiku seats",
+      "step": 0
+    },
+    {
+      "k": "B4",
+      "t": "orchestrator seat runs the runner",
+      "sub": "belt starts",
+      "step": 0
+    },
+    {
+      "k": "B5",
+      "t": "interface agent seat on bearings",
+      "sub": "owner stops talking to the architect",
+      "step": 0
+    },
+    {
+      "k": "B6",
+      "t": "first ticket through the line: PR 11",
+      "sub": "dc0d",
+      "step": 0
+    },
+    {
+      "k": "B7",
+      "t": "PR 12, then the foundation branch",
+      "sub": "3d78 · fbad",
+      "step": 0
+    }
+  ],
+  "legend": [
+    [
+      "dc0d",
+      "WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else'"
+    ],
+    [
+      "3d78",
+      "WO-20261011-3d78 - SITREP page renders from a data file through one script, so every SITREP has the locked shape"
+    ],
+    [
+      "eaa3",
+      "WO-20261010-eaa3 - Spike 1: native Linux Qud runs in WSL2 under Xvfb or WSLg"
+    ],
+    [
+      "fbad",
+      "WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles"
+    ],
+    [
+      "d08d",
+      "WO-20261010-d08d - Spike 10: coq-term variant A, Rust pane program with the pane.graphics.set backend"
+    ],
+    [
+      "B1-B7",
+      "not cut yet; they become WO ids under WO-20261010-329d - P0 foundation: specs, knowledge graph, factory scripts"
+    ],
+    [
+      "records",
+      "kind and code from factory/config/routes.json; 100 accepted, 200 done, 201 passed, 300 routed, 409 conflict, 422 failed, 423 blocked"
+    ]
+  ],
+  "sources": "roles/*.json · factory/config/routes.json · events/2026/10 (39 records, 0 routed) · herdr pane list · gh pr list · L2 to L5 simulated for layout"
+}

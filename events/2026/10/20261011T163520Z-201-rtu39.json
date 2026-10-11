@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T163520Z-201-rtu39",
+  "at": "2026-10-11T16:35:20Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261011-38c7",
+  "kind": "review.passed",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p1V",
+  "note": "PR 14 e3fc362 passed (head 08f5621 adds one event file). AC-H1 to H7 observed, main is an ancestor and the merge dropped nothing, scope as round 2, GOOD/NEVER present, no em dash, make lint ok.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-3-coq-jev-herdr-plugin/8980035f-e0d5-4dd3-af1f-49be032a755d/scratchpad/lint3.log"
+  ],
+  "observations": [],
+  "attempt": 3,
+  "to": "merger"
+}

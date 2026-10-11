@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T162037Z-100-kuh8u",
+  "at": "2026-10-11T16:20:37Z",
+  "code": 100,
+  "seat": "tester-wo-20261011-38c7",
+  "kind": "work.started",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p1V",
+  "note": "tester seat up; running the ticket test plan (make -C factory test) in the labelled test pane",
+  "evidence": [],
+  "observations": [],
+  "to": "orchestrator"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T172114Z-423-q1grt",
+  "at": "2026-10-11T17:21:14Z",
+  "code": 423,
+  "seat": "worker-wo-20261011-e618",
+  "kind": "blocked",
+  "ticket": "WO-20261011-e618",
+  "pane": "wD3:p3E",
+  "note": "roles/interface-agent.json (roles/ denied to me): add allow.commands 'interface/bin/interface.sh forward|line|snapshot *' and set pane_layout 'interface-2x3'; working on the rest meanwhile",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

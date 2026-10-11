@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T170802Z-201-mzqn1",
+  "at": "2026-10-11T17:08:02Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261011-38c7",
+  "kind": "review.passed",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p1V",
+  "note": "PR 14 head 08f5621 passed. AC-H1 to H7 observed, delta from e3fc362 is one event file, main is ancestor, scope as before, GOOD/NEVER present, no em dash, make lint ok.",
+  "evidence": [],
+  "observations": [],
+  "to": "orchestrator"
+}

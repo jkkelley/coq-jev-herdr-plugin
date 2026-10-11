@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T165022Z-100-u6ure",
+  "at": "2026-10-11T16:50:22Z",
+  "code": 100,
+  "seat": "merger-wo-20261011-38c7",
+  "kind": "seat.up",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p1V",
+  "note": "merger seat up for WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else; gate check on review.passed and test.passed next",
+  "evidence": [],
+  "observations": [],
+  "to": "orchestrator"
+}
