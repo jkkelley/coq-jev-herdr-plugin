@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T054933Z-100-egbbp",
+  "at": "2026-10-11T05:49:33Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4c5e",
+  "kind": "note",
+  "ticket": "WO-20261011-4c5e",
+  "pane": "wD3:p10",
+  "note": "pr.opened: PR 10 at aa1d382, render_settings substitutes ${worktree} and ${repo} in role paths, case 01 asserts it",
+  "evidence": [],
+  "observations": []
+}
