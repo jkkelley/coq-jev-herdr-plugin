@@ -25,6 +25,44 @@
 
 
 
+
+## Checkpoint 2026-10-11 03:07 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261010-a429 on branch feat/seat-sh-leases-a-treehouse-slot-for-the-worker-a, in treehouse slot 1 leased to WO-20261010-a429 - seat.sh leases a treehouse slot for the worker and the worker playbook names the real lease tool.
+- Test pane wD3:pF, reached only through herdr/bin/testpane.sh.
+- No pull request yet; the next action opens it.
+
+#### Toolchain
+
+- herdr/bin/seat.sh: door 1 without --worktree leases a slot (treehouse get --lease --lease-holder TICKET --no-fetch --json), reads path and lease id back from treehouse status --json, records lease {holder, id, owned} in seat.json, null for --worktree.
+- seat.sh --down returns an owned slot with treehouse return --if-lease-holder TICKET --force after retire.sh and the tab close; a lease the ticket already held is reused with owned false and never returned.
+- seat.sh --check reports a lost lease; an EXIT trap gives back a slot leased by a run that died before seat.json was written.
+- herdr/tests/stubs/treehouse: stub pool under the case's HOME; herdr/tests/cases/08-treehouse-lease.test.sh proves AC-H1 to AC-H4 and the refusal and abandon paths.
+- roles/worker.json allows treehouse status *; step 1 names the lease check; playbooks/worker.md rendered with roles/bin/render-playbook.sh, no drift.
+
+#### Active Tasks
+
+- WO-20261010-a429 - seat.sh leases a treehouse slot for the worker and the worker playbook names the real lease tool: code and tests done, make -C herdr lint clean, make -C herdr test 8 passed 0 failed from wD3:pF.
+- Next: open the pull request with the acceptance criteria as the body, post pr.opened 100 with the sha, stop.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- The real treehouse get --json key names were not probed, because a worker must not lease a slot itself; seat.sh reads the path from treehouse status --json, whose shape was seen live.
+- render_settings does not substitute ${worktree} in allow.paths, so the rendered Edit allow rule for a seat reads Edit(//<worktree>/${worktree}/**); under bypassPermissions it restricts nothing. Not changed here, reported for the architect.
+- roles/ is a denied path for the worker under ${repo}, the main checkout; the edit to roles/worker.json is in this worktree, as the ticket scopes, and goes through the pull request.
+
+### Hydration prompt
+
+Resume line: on branch feat/seat-sh-leases-a-treehouse-slot-for-the-worker-a in the a429 slot, open the pull request for WO-20261010-a429 - seat.sh leases a treehouse slot for the worker and the worker playbook names the real lease tool with the four acceptance criteria as the body, post pr.opened 100 with the sha, then stop.
+
 ## Checkpoint 2026-10-11 02:50 UTC
 
 ### Current state
