@@ -10,7 +10,7 @@
 # panes from the layout with their labels, settings rendered from the role's allow and deny into
 # <state_dir>/seats/<name>/settings.json, COQ_* exported on one physical line into the agent pane only, a shell prompt
 # waited for, `herdr agent start` with the role's model, effort and permission mode, then the brief (roles/bin/brief.sh)
-# as the first prompt. A rerun repairs: a pane with the right label is kept, strays are relabelled, missing ones split.
+# as the first prompt; a claude seat that then acks the compaction-guard memo and goes idle gets one continue prompt (nudge_seat, seat.json nudged_at). A rerun repairs: a pane with the right label is kept, strays are relabelled, missing ones split.
 # Prints one JSON line. DRY_RUN=1 prints every mutating herdr call and writes nothing.
 # Exit: 0 ok, 1 check differences, 2 usage, 3 refused (gate, cap, guard, name, no test pane for a ticket seat, no treehouse slot, a ticket with no branch, a slot that cannot reach it, --down with a foreign process in the slot), 4 herdr failure
 #   or a slot that would not come back on --down.
@@ -468,11 +468,13 @@ agent_pane="$a"
 
 if [ "$DRY" != 1 ]; then
   render_settings > "$settings.tmp" && mv "$settings.tmp" "$settings"
-  jq -n --arg name "$name" --arg ticket "$id" --arg role "$role" --arg role_file "$role_file" --arg runtime "$runtime" --arg model "$MODEL" \
+  # nudged_at (WO-20261011-dc0d) survives a repair rerun of a live seat; a record that was ended starts over, null.
+  prev_nudged=""; [ ! -f "$seat_file" ] || prev_nudged="$(jq -r 'if .ended_at then empty else .nudged_at // empty end' "$seat_file" 2>/dev/null || true)"
+  jq -n --arg nudged "$prev_nudged" --arg name "$name" --arg ticket "$id" --arg role "$role" --arg role_file "$role_file" --arg runtime "$runtime" --arg model "$MODEL" \
     --arg effort "$effort" --arg wt "$wt" --arg layout_file "$layout_file" --arg ws "$ws" --arg tab "$tab" --arg hs "$HS" \
     --arg settings "$settings" --arg pane "$a" --arg at "$(sl_now)" --arg task "$task" --argjson lease "$lease" \
     '{name:$name,ticket:$ticket,task:$task,role:$role,role_file:$role_file,runtime:$runtime,model:$model,effort:$effort,worktree:$wt,
-      lease:$lease,layout_file:$layout_file,workspace:$ws,tab:$tab,session:$hs,settings:$settings,pane:$pane,started_at:$at,ended_at:null}' > "$seat_file.tmp" \
+      lease:$lease,layout_file:$layout_file,workspace:$ws,tab:$tab,session:$hs,settings:$settings,pane:$pane,started_at:$at,ended_at:null,nudged_at:(if $nudged == "" then null else $nudged end)}' > "$seat_file.tmp" \
     && mv "$seat_file.tmp" "$seat_file"
   recorded=1
 fi
@@ -488,6 +490,55 @@ ensure_trust() {
   [ -f "$f" ] || printf '{}\n' > "$f"
   jq -e --arg p "$wt" '.projects[$p].hasTrustDialogAccepted == true' "$f" >/dev/null 2>&1 && return 0
   jq --arg p "$wt" '.projects[$p] = ((.projects[$p] // {}) + {hasTrustDialogAccepted: true})' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+}
+# BREADCRUMB 2026-10-11 - WO-20261011-dc0d, the seat that acks the guard memo and stops. What broke: compaction-guard sends every
+#   new session a GOV-100 memo whose last action is "reply with the ack line below and nothing else". A worker whose turn had
+#   already ended (brief read, first record posted) acked and stopped dead, because the memo's last word was the last thing it
+#   was told; it sat idle on 2026-10-10 (WO-20261010-8fa8) and 2026-10-11 (WO-20261010-a429, -2d04, WO-20261011-4c5e) until the
+#   architect ran `herdr agent prompt` by hand, 3 of the 4 ticket seats that day. A worker mid-turn acks and carries on, so only
+#   the idle case needs help. Why this fix: this script is the party that knows a brief is pending, so after the brief it
+#   watches the agent pane for the ack line "● ACK compaction-guard " (herdr pane wait-output, bounded by nudge_wait_seconds),
+#   then polls agent_status through `herdr pane list` for nudge_settle_seconds; two idle reads in a row mean the turn ended, and
+#   one `herdr agent prompt` tells the seat to continue; still working at the end of the window means no prompt. seat.json
+#   carries nudged_at (UTC) or null. Rejected: changing the guard or its memo (outside this repo, its wording is its own), a
+#   timer that nudges every seat blind (it would interrupt a seat that is working), and a standing watcher that nudges for as
+#   long as the seat lives (the ticket says once). Cost: seat.sh blocks up to nudge_wait_seconds on a claude seat whose guard
+#   sends no memo, which is logged and not an error; a seat that finishes real work inside the settle window and idles is
+#   nudged too, which is harmless because the text only says to continue the brief; a stale ack line left in the pane's
+#   scrollback by an earlier agent would match, and then the idle poll still decides. The nudge text comes from
+#   roles/bin/nudge.sh (--role, --ticket, --project; one line) so render-playbook's directory owns the wording next to the
+#   brief; that file is outside the worker fence, so until it exists the inline text below is used. Record: WO-20261011-dc0d.
+nudged_set() { jq --arg at "$1" '.nudged_at = (if $at == "" then null else $at end)' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }
+agent_status() {
+  sl_h pane list ${ws:+--workspace "$ws"} 2>/dev/null | jq -r --arg p "$a" 'first((.result.panes // [])[] | select(.pane_id == $p) | .agent_status) // empty'
+}
+nudge_text() {
+  local t title
+  if [ -n "$id" ] && t="$("$SL_REPO/roles/bin/nudge.sh" --role "$role" --ticket "$id" --project "$SL_REPO" 2>/dev/null)" && [ -n "$t" ]; then printf '%s' "$t"; return 0; fi
+  if [ -n "$id" ]; then
+    title="$(awk '/^---$/{c++; next} c==1' "$ticket_file" | jq -r '.title // empty' 2>/dev/null)" || title=""
+    printf '%s - %s. Continue your brief from the step you reached. Playbook playbooks/%s.md.' "$id" "$title" "$role"
+  else printf 'Continue your task from the step you reached. Playbook playbooks/%s.md.' "$role"; fi
+}
+# nudge_seat: after the brief, one continue prompt when the seat acked the guard memo and went idle. A claude seat only: the
+# guard binds no other runtime, so there is no ack to wait for.
+nudge_seat() {
+  local wait settle s idle=0 st
+  [ "$runtime" = claude ] || return 0
+  if [ "$DRY" = 1 ]; then printf 'DRY: nudge %s once after the line "● ACK compaction-guard " when the seat is idle\n' "$name" >&2; return 0; fi
+  wait="$(sl_cfg .nudge_wait_seconds)"; settle="$(sl_cfg .nudge_settle_seconds)"
+  nudged_set ""
+  if ! sl_h pane wait-output "$a" --regex '● ACK compaction-guard ' --source recent-unwrapped --timeout "$((wait * 1000))" >/dev/null 2>&1; then
+    sl_log "seat $name: no guard ack within ${wait}s, no nudge"; return 0
+  fi
+  for ((s = 0; s < settle; s++)); do
+    st="$(agent_status)" || st=""
+    if [ "$st" = idle ]; then idle=$((idle + 1)); [ "$idle" -lt 2 ] || break; else idle=0; fi
+    sleep 1
+  done
+  if [ "$idle" -lt 2 ]; then sl_log "seat $name: still working after the guard ack, no nudge"; return 0; fi
+  if sl_h agent prompt "$name" "$(nudge_text)" >/dev/null; then nudged_set "$(sl_now)"; sl_log "seat $name: idle after the guard ack, nudged once"
+  else sl_log "seat $name: idle after the guard ack but the nudge could not be sent; the monitor will re-prompt"; fi
 }
 started=0
 if [ "$DRY" != 1 ] && sl_agent_live "$name"; then sl_log "seat $name: agent already running, left as is"
@@ -518,7 +569,8 @@ if [ "$started" = 1 ]; then
       || prompt="$id. Playbook playbooks/$role.md. The ticket file could not be read; post blocked 423 before anything else."
   else prompt="You are the $role seat named $name. Read playbooks/$role.md first. Your task: $task. Post your first record before anything else."; fi
   prompt+=" Work only in $wt."
-  sl_mut agent prompt "$name" "$prompt" >/dev/null || sl_log "seat $name: brief could not be sent; the monitor will re-prompt"
+  if sl_mut agent prompt "$name" "$prompt" >/dev/null; then nudge_seat
+  else sl_log "seat $name: brief could not be sent; the monitor will re-prompt"; fi
 fi
 jq -nc --arg name "$name" --arg ticket "$id" --arg role "$role" --arg ws "$ws" --arg tab "$tab" --arg agent "$a" --arg settings "$settings" \
   --arg model "$MODEL" --arg effort "$effort" --arg panes "${pane[*]}" --argjson started "$started" --arg wt "$wt" --argjson lease "$lease" \
