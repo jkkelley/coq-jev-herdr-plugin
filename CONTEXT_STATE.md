@@ -39,6 +39,41 @@
 
 
 
+
+## Checkpoint 2026-10-11 17:04 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-e618 on WO-20261011-e618 - Interface agent seat owns the bearings page: owner requests become records and the done line comes from it. Slot 5 of the treehouse pool, branch feat/interface-agent-seat-owns-the-bearings-page-owne. Test pane wD3:p1V is shared with other seats, so a command can queue behind a long suite; poll the output file, do not resend.
+- Records go to the main checkout's events/ (COQ_EVENTS_ROOT). work.started for this re-seat: 20261011T165104Z-100-xzl6r. The 423 hyrzb the architect saw in the slot at 16:50Z was a test fixture, not a block; it is deleted.
+- PR 14 (route runner) and PR 16 (board) are open, not merged. The branch carries PR 14's event kinds and --to, and now PR 15's COQ_EVENTS_ROOT handling in events/bin/event.sh.
+
+#### Toolchain
+
+- interface/bin/interface.sh verbs forward, line and snapshot exist; make -C interface test (Podman, lint image) is green: all ok, five cases.
+- events/bin/event.sh honors COQ_EVENTS_ROOT. Before this step it did not on this branch, so the suite wrote seven fake records into the slot's real events/ and the first work.started landed in the slot too.
+- tools/bearings/scripts/bearings.sh: serve --join, wait --to PANE, reply --to m-id (a reply is the only way a line reaches the page; no bearings code changes in this ticket).
+
+#### Active Tasks
+
+- WO-20261011-e618 plan, one commit and checkpoint each: (1) adopt PR 14's event kinds - done; (2) interface/bin/interface.sh plus its Podman test - this step; (3) herdr/layouts/interface-2x3.json, a layout pre_start list and seat.sh support so serve and wait come up in the seat's tab, with a herdr test case; (4) docs: RUNBOOK.md in interface/ and an SOP; (5) evidence per AC, retro note, PR.
+
+#### Blockers
+
+- Role file edits (roles/interface-agent.json: allow event.sh add and interface/bin/interface.sh, pane_layout interface-2x3) belong to the architect; roles/ is denied to this worker. Ask once, with the diff, when step 3 lands.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-11 16:5x UTC, this seat: event.sh on this branch adopts PR 15's COQ_EVENTS_ROOT line verbatim so the two branches merge clean whichever lands first; the test fixture creates its temp events root because event.sh list runs find on a root that must exist.
+
+### Hydration prompt
+
+Resume WO-20261011-e618 at step 3: write herdr/layouts/interface-2x3.json and the seat.sh support (layout pre_start list) so bearings serve and wait come up in the interface-agent seat's tab, with a herdr test case run through herdr/bin/testpane.sh, then make step.
+
 ## Checkpoint 2026-10-11 16:36 UTC
 
 ### Current state
