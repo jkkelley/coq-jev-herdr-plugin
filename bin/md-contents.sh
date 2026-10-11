@@ -17,7 +17,14 @@ fi
 [ "$MODE" = --fix ] || { echo "usage: md-contents.sh --fix|--check <file.md>" >&2; exit 2; }
 tmp=$(mktemp)
 if grep -q '^## Contents' "$F"; then
-  awk -v block="$want" 'BEGIN{skip=0} /^## Contents/{print; print ""; print block; print ""; skip=1; next} skip&&/^## /{skip=0} !skip{print}' "$F" > "$tmp"
+  # Replace only the bullet list under "## Contents", not everything up to the next H2.
+  # Broke 2026-10-11 on docs/sops/SOP-0001: the old `skip&&/^## /` form dropped the
+  # prose between the list and "## Purpose" ("Diataxis mode", "Last reviewed"), so a
+  # --fix run silently deleted living-docs metadata. Skipping ends at the first line
+  # that is neither a bullet nor blank; a second H2-bounded pass was rejected because
+  # it cannot tell generated bullets from an author's own list. No cost: a stale list
+  # is still fully replaced. Record: WO-20261011-23df step "SOP-0001 updated".
+  awk -v block="$want" 'BEGIN{skip=0} /^## Contents/{print; print ""; print block; print ""; skip=1; next} skip&&(/^- /||/^$/){next} {skip=0; print}' "$F" > "$tmp"
 else
   awk -v block="$want" 'NR==1&&/^# /{print; print ""; print "## Contents"; print ""; print block; next} {print}' "$F" > "$tmp"
 fi

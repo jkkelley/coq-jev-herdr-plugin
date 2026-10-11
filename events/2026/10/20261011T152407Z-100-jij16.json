@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T152407Z-100-jij16",
+  "at": "2026-10-11T15:24:07Z",
+  "code": 100,
+  "seat": "tester-wo-20261011-9639",
+  "kind": "note",
+  "ticket": "WO-20261011-9639",
+  "pane": "wD3:p1V",
+  "note": "test.started: tester begins WO-20261011-9639 test plan on PR 13 (make lint, grep submit/done counts in roles/worker.json and playbooks/worker.md)",
+  "evidence": [],
+  "observations": []
+}

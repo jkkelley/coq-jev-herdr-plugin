@@ -8,16 +8,16 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261011-5355` | draft | p0 | WO-20261011-38c7 WO-20261011-23df | [Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped](WO-20261011-5355-belt-on-bringup-sh-starts-the-route-runner-in-it.md) |
+| `WO-20261011-5355` | draft | p0 | WO-20261011-38c7 | [Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped](WO-20261011-5355-belt-on-bringup-sh-starts-the-route-runner-in-it.md) |
 | `WO-20261010-d354` | ready | p0 | - | [Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree](WO-20261010-d354-dated-entry-files-yyyy-mm-yyyymmdd-name-ext-fron.md) |
 | `WO-20261011-616c` | in-progress | p0 | - | [Factory board: report/loop renders the lines from records and bearings stable serves it live](WO-20261011-616c-factory-board-report-loop-renders-the-lines-from.md) |
-| `WO-20261011-fa78` | draft | p0 | WO-20261011-23df | [First ticket through the line: PR 11 closes with a seat at every station and no by-hand record](WO-20261011-fa78-first-ticket-through-the-line-pr-11-closes-with-.md) |
+| `WO-20261011-fa78` | draft | p0 | - | [First ticket through the line: PR 11 closes with a seat at every station and no by-hand record](WO-20261011-fa78-first-ticket-through-the-line-pr-11-closes-with-.md) |
 | `WO-20261011-e618` | draft | p0 | - | [Interface agent seat owns the bearings page: owner requests become records and the done line comes from it](WO-20261011-e618-interface-agent-seat-owns-the-bearings-page-owne.md) |
 | `WO-20261010-fbad` | ready | p0 | - | [Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles](WO-20261010-fbad-land-the-p0-foundation-branch-spec-00-01-03-04-0.md) |
+| `WO-20261011-af9d` | draft | p0 | - | [Merger seat leases its own slot: a door 2 seat that runs git gets a treehouse worktree held by its own name, so cleanup never checks out main in a PR's slot](WO-20261011-af9d-merger-seat-leases-its-own-slot-a-door-2-seat-th.md) |
 | `WO-20261010-539f` | ready | p0 | - | [NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue](WO-20261010-539f-nats-jetstream-is-the-producer-consumer-bus-and-.md) |
 | `WO-20261011-7b8f` | draft | p0 | WO-20261011-fa78 | [PR 12 and the foundation branch go through the line: a reviewer seat passes SPEC-00 and SPEC-01 for the P0 gate](WO-20261011-7b8f-pr-12-and-the-foundation-branch-go-through-the-l.md) |
 | `WO-20261011-38c7` | in-progress | p0 | - | [Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else](WO-20261011-38c7-route-runner-factory-bin-route-sh-applies-routes.md) |
-| `WO-20261011-23df` | in-progress | p0 | - | [Tester, reviewer and merger seats come up through seat.sh and each writes one record on a real PR](WO-20261011-23df-tester-reviewer-and-merger-seats-come-up-through.md) |
 | `WO-20261011-5064` | draft | p1 | - | [Merger regenerates generated files on a merge conflict: a 409 whose only conflicts are CHANGELOG.md, INDEX.md or epic READMEs is resolved by their scripts, not kicked back](WO-20261011-5064-merger-regenerates-generated-files-on-a-merge-co.md) |
 | `WO-20261010-976e` | draft | p1 | - | [SPEC-02 roles and permissions written from roles/*.json](WO-20261010-976e-spec-02-roles-and-permissions-written-from-roles.md) |
 | `WO-20261010-1c23` | draft | p1 | - | [SPEC-13 testing and lint: local fast, CI full, container-sandbox as source of truth](WO-20261010-1c23-spec-13-testing-and-lint-local-fast-ci-full-cont.md) |

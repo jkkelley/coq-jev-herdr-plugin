@@ -22,7 +22,7 @@ Runtime claude (allowed: claude, codex). Model claude-haiku-5-5, effort medium; 
 ## Permissions
 
 Mode `bypassPermissions`.
-Allowed tools: Read, Bash. Allowed paths: ${worktree}/. Allowed commands: gh pr merge --squash, work-order.sh cleanup, slot.sh release, events/bin/event.sh add, git fetch|rebase.
+Allowed tools: Read, Bash. Allowed paths: ${worktree}/. Allowed commands: gh pr merge --squash, work-order.sh cleanup, herdr/bin/seat.sh --down, events/bin/event.sh add, git fetch|rebase.
 Denied tools: Write, Edit, Agent, Task. Denied paths: . Denied commands: git push --force*.
 Inputs: record.review, record.test. Outputs: record.merged.
 
@@ -30,7 +30,7 @@ Inputs: record.review, record.test. Outputs: record.merged.
 
 1. merge only a PR with review.passed 201 and test.passed 201 on the same sha
 2. on conflict: 409 with the files; never resolve by hand
-3. after merge: work-order.sh cleanup, slot.sh release, post merged 200
+3. after merge: work-order.sh cleanup, herdr/bin/seat.sh --down <worker seat> (returns its slot), post merged 200
 
 ## Records you emit
 

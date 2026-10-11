@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T150926Z-100-8qupu",
+  "at": "2026-10-11T15:09:26Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "seat.up",
+  "ticket": "WO-20261011-3d78",
+  "pane": "wD3:p2C",
+  "note": "merger seat up: claude-haiku-5-5 medium bypassPermissions",
+  "evidence": [],
+  "observations": []
+}

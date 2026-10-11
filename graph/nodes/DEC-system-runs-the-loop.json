@@ -1,0 +1,26 @@
+{
+  "id": "DEC-system-runs-the-loop",
+  "type": "Decision",
+  "title": "The system runs the loop, never an agent: wake, hand-off, cleanup and the green are deterministic automation; an idle agent and a by-hand nudge are defects",
+  "status": "locked",
+  "text": "Owner, 2026-10-11 15:34Z, on the first PRs through tester, reviewer and merger seats: 'Most important thing to any loop is ensuring that the notification system is sound, works, its automated, deterministic, is the thing that works, clean up is being done, no idle agents, I can see greens so the system better handle this, not agents.' Binding on the small loop (WO-20261011-5355 belt, WO-20261011-e618 interface agent, route runner WO-20261011-38c7) and the real loop (WO-20261010-539f): a record wakes the next seat without a human or an architect prompt; a seat that posted its record is taken down by the system; the board shows green from records only; every hand step observed in SOP-0001 is a routes.json row or a ticket, never a habit.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat-wD3-p2",
+      "at": "2026-10-11T15"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-north-star"
+    },
+    {
+      "kind": "depends_on",
+      "to": "DEC-system-before-agents"
+    }
+  ],
+  "created": "2026-10-11T15:36Z",
+  "updated": "2026-10-11T15:36Z"
+}

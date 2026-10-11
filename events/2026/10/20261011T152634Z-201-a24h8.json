@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T152634Z-201-a24h8",
+  "at": "2026-10-11T15:26:34Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-9639",
+  "kind": "test",
+  "ticket": "WO-20261011-9639",
+  "pane": "wD3:p1V",
+  "note": "test.passed: make lint all ok; grep finds submit and done in roles/worker.json (allow line 54) and playbooks/worker.md (line 35)",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-5-coq-jev-herdr-plugin/ce375174-c8c4-4940-9242-3782c5f06897/scratchpad/9639-lint.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-5-coq-jev-herdr-plugin/ce375174-c8c4-4940-9242-3782c5f06897/scratchpad/9639-grep.log"
+  ],
+  "observations": []
+}

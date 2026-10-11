@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T151515Z-100-kzea4",
+  "at": "2026-10-11T15:15:15Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-9639",
+  "pane": "wD3:p2",
+  "note": "pr.opened: PR 13 open for WO-20261011-9639 at d3d98ab; tester-wo-20261011-9639 runs playbooks/tester.md on it. Kind is note because this branch's schema has no pr.opened yet (PR 14 adds it)",
+  "evidence": [],
+  "observations": []
+}

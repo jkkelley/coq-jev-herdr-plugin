@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T151036Z-201-u7zur",
+  "at": "2026-10-11T15:10:36Z",
+  "code": 201,
+  "seat": "tester-3d78",
+  "kind": "test",
+  "ticket": "WO-20261011-3d78",
+  "pane": "wD3:p1V",
+  "note": "sitrep tests: pass (4 cases, 3 renderer checks); make lint: all ok; run from test pane wD3:p1V",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-4-coq-jev-herdr-plugin/2300aab0-07bf-49df-9346-fd5f18950a56/scratchpad/sitrep-test.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-4-coq-jev-herdr-plugin/2300aab0-07bf-49df-9346-fd5f18950a56/scratchpad/lint.log"
+  ],
+  "observations": []
+}

@@ -16,6 +16,7 @@ flowchart LR
   CMP-player-seat["CMP-player-seat<br/>Player seat: runtime-pluggable (claude, "]
   CMP-qud-adapter["CMP-qud-adapter<br/>Qud adapter: Harmony C# mod exporting st"]
   CMP-queue["CMP-queue<br/>queue/: directory queue with p0..p3 prio"]
+  CMP-role-seats["CMP-role-seats<br/>Tester, reviewer and merger seats: one r"]
   CMP-rust-terminal["CMP-rust-terminal<br/>Rust terminal with Kitty graphics: fallb"]
   CMP-sitrep-site["CMP-sitrep-site<br/>SITREP site: Go server, websocket owner "]
   DEC-bearings-vendored-tiers["DEC-bearings-vendored-tiers<br/>Bearings is vendored into tools/bearings"]
@@ -40,6 +41,7 @@ flowchart LR
   DEC-sitrep-local-first["DEC-sitrep-local-first<br/>SITREP client/server runs locally in WSL"]
   DEC-spike5-passed["DEC-spike5-passed<br/>Spike 5 passed 2026-10-10: a PNG pushed "]
   DEC-system-before-agents["DEC-system-before-agents<br/>Monitoring and the system come up before"]
+  DEC-system-runs-the-loop["DEC-system-runs-the-loop<br/>The system runs the loop, never an agent"]
   DEC-templates-over-handwriting["DEC-templates-over-handwriting<br/>Test plans, harnesses and records are ge"]
   DEC-tiers-everywhere["DEC-tiers-everywhere<br/>stable, uat and dev tiers for every runn"]
   DEC-variants-parallel["DEC-variants-parallel<br/>Several coq-term variants are designed a"]
@@ -77,6 +79,7 @@ flowchart LR
   RUN-kickback["RUN-kickback<br/>Kickback: events/bin/event.sh add --kind"]
   RUN-recover["RUN-recover<br/>recover.sh --check|--apply: halt flag, h"]
   RUN-retire["RUN-retire<br/>retire: agent send-keys esc, agent promp"]
+  RUN-role-seats-on-a-pr["RUN-role-seats-on-a-pr<br/>SOP-0001: bring up a tester, reviewer or"]
   RUN-seat-up["RUN-seat-up<br/>seat.sh --ticket WO --role R: workspace "]
   SCH-factory-record["SCH-factory-record<br/>factory/schema/record.schema.json: id, a"]
   SCH-routes["SCH-routes<br/>factory/config/routes.json: first matchi"]
@@ -117,8 +120,9 @@ flowchart LR
   CMP-jenkins-lint -- implements --> DEC-system-before-agents
   CMP-jenkins-lint -- depends_on --> CMP-knowledge-graph
   CMP-knowledge-graph -- decided_by --> DEC-xml-specs-bounded
-  CMP-monitor-seat -- implements --> REQ-event-log
   CMP-monitor-seat -- decided_by --> DEC-system-before-agents
+  CMP-monitor-seat -- decided_by --> DEC-system-runs-the-loop
+  CMP-monitor-seat -- implements --> REQ-event-log
   CMP-pane-renderer -- risks --> RSK-pixels-in-pane
   CMP-pane-renderer -- verified_by --> SPK-05-pane-graphics
   CMP-player-seat -- decided_by --> DEC-mvp-player-haiku
@@ -128,6 +132,10 @@ flowchart LR
   CMP-qud-adapter -- verified_by --> SPK-02-harmony-mod
   CMP-queue -- implements --> REQ-locks-and-queues
   CMP-queue -- owned_by --> ROL-orchestrator
+  CMP-role-seats -- decided_by --> DEC-system-before-agents
+  CMP-role-seats -- decided_by --> DEC-system-runs-the-loop
+  CMP-role-seats -- defined_in --> RUN-role-seats-on-a-pr
+  CMP-role-seats -- implements --> REQ-event-log
   CMP-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
   CMP-sitrep-site -- decided_by --> DEC-sitrep-local-first
   CMP-sitrep-site -- depends_on --> IFC-owner-channel
@@ -140,6 +148,8 @@ flowchart LR
   DEC-per-package-cicd-semver -- decided_by --> DEC-monorepo-apache2
   DEC-spike5-passed -- supersedes --> RSK-pixels-in-pane
   DEC-spike5-passed -- implements --> SPK-05-pane-graphics
+  DEC-system-runs-the-loop -- implements --> REQ-north-star
+  DEC-system-runs-the-loop -- depends_on --> DEC-system-before-agents
   DEC-tiers-everywhere -- supersedes --> DEC-bearings-vendored-tiers
   DEC-variants-parallel -- decided_by --> DEC-own-game-terminal
   IFC-owner-channel -- decided_by --> DEC-page-only-owner-channel
@@ -152,6 +162,7 @@ flowchart LR
   REQ-compaction-rule -- implements --> DEC-system-before-agents
   REQ-locks-and-queues -- implements --> REQ-factory-node-contract
   REQ-north-star -- decided_by --> DEC-game-host-linux-native
+  REQ-north-star -- decided_by --> DEC-system-runs-the-loop
   ROL-architect -- decided_by --> DEC-permissions-by-role
   ROL-interface-agent -- decided_by --> DEC-permissions-by-role
   ROL-merger -- decided_by --> DEC-permissions-by-role
@@ -167,6 +178,8 @@ flowchart LR
   RUN-kickback -- defined_in --> SCH-factory-record
   RUN-recover -- depends_on --> RUN-seat-up
   RUN-retire -- owned_by --> ROL-monitor
+  RUN-role-seats-on-a-pr -- depends_on --> RUN-seat-up
+  RUN-role-seats-on-a-pr -- depends_on --> RUN-kickback
   RUN-seat-up -- depends_on --> WFL-bringup
   RUN-seat-up -- implements --> DEC-no-process-under-agent
   SCH-factory-record -- implements --> REQ-factory-node-contract

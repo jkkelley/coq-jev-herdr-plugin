@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T153315Z-100-47y9r",
+  "at": "2026-10-11T15:33:15Z",
+  "code": 100,
+  "seat": "reviewer-3d78",
+  "kind": "seat.up",
+  "ticket": "WO-20261011-3d78",
+  "pane": "wD3:p1V",
+  "note": "reviewer seat up on WO-20261011-3d78 (PR 12); reviewing against acceptance criteria and conventions, one record at the end",
+  "evidence": [],
+  "observations": []
+}

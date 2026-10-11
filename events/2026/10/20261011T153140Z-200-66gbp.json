@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T153140Z-200-66gbp",
+  "at": "2026-10-11T15:31:40Z",
+  "code": 200,
+  "seat": "merger-3d78",
+  "kind": "merge",
+  "ticket": "WO-20261011-9639",
+  "pane": "wD3:p1V",
+  "note": "merged: PR 13 squash-merged at 57b7eae; test 201 a24h8 and review 201 gkkza on head d3d98ab. Cleanup left to architect from project checkout",
+  "evidence": [
+    "57b7eae7c8524d1fcaae3a2f3b8263eeab9c2173"
+  ],
+  "observations": []
+}

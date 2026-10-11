@@ -84,6 +84,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` Second idle pattern seen 2026-10-11 15:27-15:47Z on worker-wo-20261011-616c: the worker ended its turn 'so the guard can compact' at 9% context, under the 30% threshold, so nothing fired and it idled 20 minutes until the architect prompted it. The brief or playbook must say: the guard compacts only above threshold at a step boundary; never end a turn to wait for it. Same family as the ack stall this ticket fixes.
 - `2026-10-11` Decision 2026-10-11 05:5x UTC (architect): approved --no-lavish (Claude seat, Lavish prohibited by the owner hard rule). Fixed points: the nudge watches the agent pane for the line '● ACK compaction-guard' with herdr pane wait-output (milliseconds), then polls agent_status via herdr pane list; idle after the ack means nudge, working means do not. Config key nudge_wait_seconds in herdr config, default 180. The nudge text names the ticket and says 'continue your brief from the step you reached'. seat.json nudged_at is null when no nudge was needed.
 
 ## Outcome
