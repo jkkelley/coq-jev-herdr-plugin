@@ -4,15 +4,15 @@
   "slug": "seat-sh-leases-a-treehouse-slot-for-the-worker-a",
   "title": "seat.sh leases a treehouse slot for the worker and the worker playbook names the real lease tool",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-10",
   "updated": "2026-10-11",
   "created_at": "2026-10-10T22:29:51+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/seat-sh-leases-a-treehouse-slot-for-the-worker-a",
-  "pr": null,
-  "closed": null,
+  "pr": 6,
+  "closed": "2026-10-11",
   "approval": {
     "via": "override",
     "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
@@ -61,10 +61,14 @@ AGENTS.md (Where your workspace comes from) allows one source of worktrees, the 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* seat.sh --ticket X --role worker with no --worktree starts the seat in a treehouse slot leased to X, and treehouse status shows the lease
-- [ ] `AC-H2` *(human)* a worker at step 1 finds its lease without asking the architect
-- [ ] `AC-H3` *(human)* seat.sh --down for a ticket seat returns the slot and treehouse status no longer lists the ticket
-- [ ] `AC-H4` *(human)* a seat started with --worktree leases nothing and returns nothing, so the Podman suite keeps running against a plain directory
+- [x] `AC-H1` *(human)* seat.sh --ticket X --role worker with no --worktree starts the seat in a treehouse slot leased to X, and treehouse status shows the lease
+  - observed `2026-10-11` case 08 in herdr/tests, 8 passed 0 failed on dee2db0 from wD3:pF; live: slot 1 leased to WO-20261010-a429, worker read it at step 1
+- [x] `AC-H2` *(human)* a worker at step 1 finds its lease without asking the architect
+  - observed `2026-10-11` case 08 in herdr/tests, 8 passed 0 failed on dee2db0 from wD3:pF; live: slot 1 leased to WO-20261010-a429, worker read it at step 1
+- [x] `AC-H3` *(human)* seat.sh --down for a ticket seat returns the slot and treehouse status no longer lists the ticket
+  - observed `2026-10-11` case 08 in herdr/tests, 8 passed 0 failed on dee2db0 from wD3:pF; live: slot 1 leased to WO-20261010-a429, worker read it at step 1
+- [x] `AC-H4` *(human)* a seat started with --worktree leases nothing and returns nothing, so the Podman suite keeps running against a plain directory
+  - observed `2026-10-11` case 08 in herdr/tests, 8 passed 0 failed on dee2db0 from wD3:pF; live: slot 1 leased to WO-20261010-a429, worker read it at step 1
 
 ## Test plan
 
@@ -84,6 +88,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` Review 2026-10-11 03:2x UTC (architect, from the labelled test pane wD3:pF on dee2db0): make lint all ok, make -C herdr test 8 passed 0 failed, render-playbook.sh roles playbooks --check clean. Live check: treehouse status showed slot 1 held by WO-20261010-a429 and the worker found it at step 1 with a read. Reviewer notes carried forward as follow-ups, not blockers: render_settings leaves ${worktree} unsubstituted in allow.paths so the rendered Edit allow rule is malformed (restricts nothing under bypassPermissions); the deny path ${repo}/roles/ names the main checkout, so a worker edits roles/ in its worktree freely; treehouse get --json live shape is path, lease_id, lease_holder, leased_at, which matches what th_row reads from status.
 - `2026-10-11` Decision 2026-10-11 UTC (architect, fixed): lease with treehouse get --lease --lease-holder <ticket> --no-fetch --json, the holder is the ticket id so treehouse status is keyed by it; release in seat.sh --down with treehouse return <worktree> --if-lease-holder <ticket> --force after retire.sh and the tab close; worker step 1 reads treehouse status --json for its ticket on its worktree and roles/worker.json allows treehouse status *, get and return stay with seat.sh; the suite stubs treehouse in herdr/tests/stubs (get --lease makes a directory under the world and records the holder, status --json lists it, return removes it), on PATH from world_up like the compaction-guard stub, proved by a new case 08. Why: AGENTS.md names the pool as the one worktree source and treehouse get --lease is its non-interactive verb; a worker never acquires because the slot is the seat's, not the agent's.
 
 ## Outcome

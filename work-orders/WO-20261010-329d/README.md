@@ -15,4 +15,3 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261010-1c23` | draft | p1 | - | [SPEC-13 testing and lint: local fast, CI full, container-sandbox as source of truth](WO-20261010-1c23-spec-13-testing-and-lint-local-fast-ci-full-cont.md) |
 | `WO-20261010-2dab` | draft | p1 | - | [SPEC-15 SDLC end to end with parallel PRs and cleanup](WO-20261010-2dab-spec-15-sdlc-end-to-end-with-parallel-prs-and-cl.md) |
 | `WO-20261010-2d04` | draft | p2 | - | [bearings.sh serve and wait place their panes in the tool grid, never under the calling seat](WO-20261010-2d04-bearings-sh-serve-and-wait-place-their-panes-in-.md) |
-| `WO-20261010-a429` | in-progress | p2 | - | [seat.sh leases a treehouse slot for the worker and the worker playbook names the real lease tool](WO-20261010-a429-seat-sh-leases-a-treehouse-slot-for-the-worker-a.md) |
