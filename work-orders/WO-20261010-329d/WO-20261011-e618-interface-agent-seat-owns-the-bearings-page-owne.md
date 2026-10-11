@@ -4,7 +4,7 @@
   "slug": "interface-agent-seat-owns-the-bearings-page-owne",
   "title": "Interface agent seat owns the bearings page: owner requests become records and the done line comes from it",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p0",
   "created": "2026-10-11",
   "updated": "2026-10-11",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
+    "at": "2026-10-11"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
@@ -82,6 +86,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` Owner 2026-10-11 16:25Z: the interface agent is station one of the line and must be built first, not last. Reordered ahead of B4 (belt) and the rest of P0; the architect stops addressing the owner once it is up.
 - `2026-10-11` Owner law 2026-10-11 15:34Z (graph DEC-system-runs-the-loop, on REQ-north-star): the system runs the loop, not agents. Notification sound, automated, deterministic; cleanup done by the system; no idle agents; greens visible from records. Every hand step in SOP-0001 (wake by prompt, down after record, salvage, cleanup) must be owned by the belt when this lands.
 
 ## Outcome
