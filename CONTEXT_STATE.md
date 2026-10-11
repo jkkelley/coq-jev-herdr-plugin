@@ -38,6 +38,39 @@
 
 
 
+
+## Checkpoint 2026-10-11 16:36 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-e618 on WO-20261011-e618 - Interface agent seat owns the bearings page: owner requests become records and the done line comes from it. Slot 5 of the treehouse pool, branch feat/interface-agent-seat-owns-the-bearings-page-owne. Test pane wD3:p1V, commands only through herdr/bin/testpane.sh. Records go to the main checkout's events/ (COQ_EVENTS_ROOT). work.started posted as 20261011T162757Z-100-c0nsy.
+- PR 14 (route runner) and PR 16 (board) are open, not merged. The kinds request.forwarded and verified come from PR 14's events/schema/event.schema.json and events/bin/event.sh, copied whole into this branch so both merge clean whichever lands first.
+
+#### Toolchain
+
+- events/bin/event.sh add takes the factory kinds and --to ROLE after this step. tools/bearings/scripts/bearings.sh: serve --join, wait --to PANE, reply --to m-id (a reply is the only way a line reaches the page; no bearings code changes in this ticket).
+- The role file roles/interface-agent.json is denied to this worker (playbook: roles/ is the architect's). It lacks `events/bin/event.sh add` in allow.commands, and its pane_layout is seat-1x2, so the architect must apply the role diff the final report names.
+
+#### Active Tasks
+
+- WO-20261011-e618 plan, one commit and checkpoint each: (1) adopt PR 14's event kinds; (2) interface/bin/interface.sh with verbs forward, line and snapshot plus its Podman test; (3) herdr/layouts/interface-2x3.json, a layout pre_start list and seat.sh support so serve and wait come up in the seat's tab, with a herdr test case; (4) docs: RUNBOOK.md in interface/ and an SOP; (5) evidence per AC, retro note, PR.
+
+#### Blockers
+
+- Role file edits (roles/interface-agent.json: allow event.sh add and interface.sh, pane_layout interface-2x3) belong to the architect; ask once when step 3 lands.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-11 16:4x UTC, this seat: page lines go out as bearings replies threaded under the owner message that caused the request, because bearings has no unsolicited line API and bearings code changes are out of scope.
+
+### Hydration prompt
+
+Resume WO-20261011-e618 at step 2: create interface/bin/interface.sh (forward, line, snapshot) with a test in interface/tests run by make -C interface test, then make step.
+
 ## Checkpoint 2026-10-11 05:58 UTC
 
 ### Current state
