@@ -10,8 +10,8 @@
 # Flags: --config FILE (default factory/config/runner.json)   --repo DIR (what ${repo} means)   --routes FILE   --state DIR
 #        --from-start   on the first start only, route the records already in the log (default: only records written after it)
 # Actions: wake and notify_owner = herdr agent prompt <seat> "record <id> playbook <path>"; enqueue = queue.sh enqueue;
-#          escalate = event.sh add --kind escalated --to <role>. A record no row matches, or an action that fails, becomes a
-#          500 note addressed to the monitor.
+#          escalate = event.sh add --kind escalated --to <role>; ignore = the ledger entry and nothing else (no receipt, no 500).
+#          A record no row matches, or an action that fails, becomes a 500 note addressed to the monitor.
 # Exit: 0 ok, 1 belt stale (status only), 2 usage, 3 validation, 4 io.
 #
 # BREADCRUMB 2026-10-11 - WO-20261011-38c7. Three choices that look arbitrary:
@@ -27,6 +27,18 @@
 #      record under factory/state/, gitignored.
 #   3. The first start routes nothing already in the log (state/since holds the boundary) unless --from-start is given.
 #      What would break: starting on a log of hundreds of old records would wake every seat that ever existed.
+# BREADCRUMB 2026-10-11 - WO-20261011-4db1, the ignore action. What broke: the table had no row for seat.up 100, seat.down 100,
+#   note 100 or work.started 100, so each one became a 500 "no route for ..." addressed to the monitor (nine in six minutes at
+#   18:32Z, and `grep "no route for" events/2026/10/*` still shows work.started 100 four times), and the monitor could not tell
+#   those from a real 500 such as the pr.opened 100 that found no tester seat (muiv4). Why this fix: a row with do ignore,
+#   written in routes.json like every other behaviour; route_file marks the ledger "ignored" and returns, so a record that
+#   matches it leaves no trace but its ledger entry. Rejected: a skip list of kinds inside this script (it would be the first
+#   line here that reads a kind outside a row match), and a receipt per ignored record (a seat that comes up writes seat.up, and
+#   a receipt for it would double the log with exactly the noise this removes). Cost: an ignored record is invisible to
+#   `record.routed` counts; the ledger file under state/routed/ is the only proof it was seen. work.started 100 is NOT ignored
+#   here: report/loop/lib/collect.jq reads the first matching row's `to` to place a line on the board, and a row with no `to`
+#   would put a ticket whose newest record is work.started at the owner station; that file is WO-20261011-616c's, so the row
+#   waits for a one-line route_of change there (finding in the 4db1 retro note).
 #   A record with no attempt counts as attempt 1; escalations is the number of escalated records the runner wrote for the
 #   ticket before this one, which is how the table tells a first 423 from a second.
 set -uo pipefail
@@ -114,6 +126,9 @@ route_file() {
   if [ "$rseat" = "$SEAT" ]; then echo own > "$LEDGER/$id"; return; fi
   esc=$(escalations_before "$ticket" "$id"); row=$(match_route "$rec" "${esc:-0}")
   if [ -z "$row" ]; then trouble "$id" "$ticket" "no route for $kind $code, record $id"; echo unrouted > "$LEDGER/$id"; return; fi
+  # ignore: the table says this record is housekeeping. Its ledger entry is all it leaves; no receipt, so a seat coming up or
+  #   going down does not write a second record for every first one (see the breadcrumb at the top, item 4).
+  if [ "$(jq -r .do <<<"$row")" = ignore ]; then echo ignored > "$LEDGER/$id"; return; fi
   if why=$(perform "$row" "$id" "$ticket" "$rec"); then
     to=$(jq -r .to <<<"$row"); act=$(jq -r .do <<<"$row")
     local r=(--code 300 --kind record.routed --to "$to" --note "routed $kind $code ($id): $act $to" --evidence "${f#"$REPO"/}"); [ "$ticket" = - ] || r+=(--ticket "$ticket")

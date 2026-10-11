@@ -17,6 +17,10 @@
     { "match": { "kind": "verified", "code": 201 }, "do": "notify_owner", "to": "interface-agent", "line": "done" },
     { "match": { "kind": "blocked", "code": 423, "escalations_lt": 1 }, "do": "escalate", "to": "architect", "code": 423 },
     { "match": { "kind": "blocked", "code": 423, "escalations": 1 }, "do": "notify_owner", "to": "interface-agent", "line": "decision" },
+    { "match": { "kind": "seat.up", "code": 100 }, "do": "ignore" },
+    { "match": { "kind": "seat.down", "code": 100 }, "do": "ignore" },
+    { "match": { "kind": "note", "code": 100 }, "do": "ignore" },
+    { "match": { "kind": "record.routed", "code": 300 }, "do": "ignore" },
     { "match": { "kind": "seat.down", "code": 500 }, "do": "wake", "to": "monitor", "with": "record" },
     { "match": { "code_gte": 500 }, "do": "wake", "to": "monitor", "with": "record" }
   ]
