@@ -39,6 +39,11 @@
 #   here: report/loop/lib/collect.jq reads the first matching row's `to` to place a line on the board, and a row with no `to`
 #   would put a ticket whose newest record is work.started at the owner station; that file is WO-20261011-616c's, so the row
 #   waits for a one-line route_of change there (finding in the 4db1 retro note).
+#   The sha on the wake line: a row that says `with pr` appends " pr N" and " sha S" from the record, so the merger gate
+#   compares fields, not a note (event.sh --sha and --pr write them). What broke: playbooks/merger.md step 1 gates on "the
+#   same sha" and the only copy of it was prose. A value that is not a PR number or 7 to 40 hex characters is a 500 and
+#   nothing is typed into the seat: both reach a prompt as text. Rejected: dropping a bad value and sending the plain line
+#   (the merger would hold with no sign why). Cost: a hand-written record with a bad sha stops its own route.
 #   A record with no attempt counts as attempt 1; escalations is the number of escalated records the runner wrote for the
 #   ticket before this one, which is how the table tells a first 423 from a second.
 set -uo pipefail
@@ -93,17 +98,26 @@ trouble() {
   local args=(--code 500 --kind note --to monitor --note "$(printf '%s' "$3" | cut -c1-240)")
   [ "$2" = - ] || args+=(--ticket "$2"); emit "${args[@]}" || log "could not write the 500 for $1"
 }
+# wake_extras ROW ID REC: for a row that says `with pr`, " pr N" and " sha S" from the record, whichever it carries; prints a reason
+# and returns 1 when one is malformed. Both reach a seat's prompt as typed text, so neither is passed on unless it is a PR number or hex.
+wake_extras() {
+  local pr sha out=""; [ "$(jq -r '.with // empty' <<<"$1")" = pr ] || return 0
+  pr=$(jq -r '.pr // empty' <<<"$3"); sha=$(jq -r '.sha // empty' <<<"$3")
+  [ -z "$pr" ] || [[ $pr =~ ^[1-9][0-9]*$ ]] || { echo "record $2 has a malformed pr"; return 1; }
+  [ -z "$sha" ] || [[ $sha =~ ^[0-9a-f]{7,40}$ ]] || { echo "record $2 has a malformed sha"; return 1; }
+  [ -z "$pr" ] || out+=" pr $pr"; [ -z "$sha" ] || out+=" sha $sha"; printf '%s' "$out"
+}
 herdr_prompt() { env -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_SOCKET_PATH herdr --session "$SESSION" agent prompt "$1" "$2" >/dev/null 2>&1; }
 
 # perform ROW ID TICKET RECORD_JSON: the row's action; prints a reason and returns 1 when it fails.
 perform() {
-  local row=$1 id=$2 ticket=$3 rec=$4 act to seat text prio qargs=()
+  local row=$1 id=$2 ticket=$3 rec=$4 act to seat text more prio qargs=()
   act=$(jq -r .do <<<"$row"); to=$(jq -r .to <<<"$row")
   case $act in
     wake|notify_owner)
       seat=$(seat_of "$to" "$ticket") || { echo "no seat name for role $to on ticket $ticket"; return 1; }
-      text="record $id playbook $PLAYBOOKS/$to.md"
-      [ "$act" = wake ] || text="record $id line $(jq -r .line <<<"$row") playbook $PLAYBOOKS/$to.md"
+      if [ "$act" = wake ]; then more=$(wake_extras "$row" "$id" "$rec") || { echo "$more"; return 1; }; text="record $id$more playbook $PLAYBOOKS/$to.md"
+      else text="record $id line $(jq -r .line <<<"$row") playbook $PLAYBOOKS/$to.md"; fi
       herdr_prompt "$seat" "$text" || { echo "herdr agent prompt $seat failed"; return 1; } ;;
     enqueue)
       [ "$ticket" != - ] || { echo "enqueue needs a ticket"; return 1; }

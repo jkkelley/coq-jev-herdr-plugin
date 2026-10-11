@@ -18,6 +18,8 @@
     "note": { "type": "string", "maxLength": 240 },
     "evidence": { "type": "array", "items": { "type": "string" }, "maxItems": 20 },
     "observations": { "type": "array", "maxItems": 5, "items": { "type": "object", "additionalProperties": false, "required": ["saw", "expected"], "properties": { "path": { "type": "string" }, "line": { "type": "integer" }, "saw": { "type": "string", "maxLength": 240 }, "expected": { "type": "string", "maxLength": 240 } } } },
-    "attempt": { "type": "integer", "minimum": 1, "maximum": 3 }
+    "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{7,40}$", "description": "the pull request head this record is about; routed on the wake line of a row that says with pr" },
+    "pr": { "type": "integer", "minimum": 1, "description": "the pull request number; routed on the wake line of a row that says with pr" }
   }
 }
