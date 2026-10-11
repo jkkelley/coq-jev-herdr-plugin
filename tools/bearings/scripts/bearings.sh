@@ -6,8 +6,9 @@
 # watcher visible). Outside herdr it refuses, unless --no-herdr is given, which
 # the Podman test harness uses because no herdr runs there.
 #
-#   bearings.sh <tier> serve    [--ticket ID] [--config P] [--session S] [--model M] [--working-on TEXT] [--no-herdr]
+#   bearings.sh <tier> serve    [--ticket ID] [--config P] [--session S] [--join] [--model M] [--working-on TEXT] [--no-herdr]
 #   bearings.sh <tier> stop     [--ticket ID] [--config P]
+#   bearings.sh <tier> rotate-key [--ticket ID] [--config P] [--to PANE] [--no-herdr]   new key, same page, same panes; prints the new url
 #   bearings.sh <tier> wait     [--ticket ID] [--config P] [--to PANE] [--no-herdr]   each wake is prompted into PANE (default COQ_SEAT_PANE, else the calling pane)
 #   bearings.sh <tier> reply    [--ticket ID] [--config P] --to <message-id> "text"
 #   bearings.sh <tier> status   [--ticket ID] [--config P] [--json]
@@ -29,7 +30,7 @@ need() { command -v "$1" >/dev/null 2>&1 || die "$EX_IO" "$1 is required and not
 [ $# -ge 2 ] || { sed -n '2,20p' "$0" >&2; exit "$EX_USAGE"; }
 TIER=$1; VERB=$2; shift 2
 TICKET=""; CONFIG="${BEARINGS_CONFIG:-$TOOL/config/bearings.json}"; NO_HERDR=0; JSON=0; FORCE=0
-SESSION=""; MODEL=""; CWD=""; WORKING_ON=""; TO=""
+SESSION=""; MODEL=""; CWD=""; WORKING_ON=""; TO=""; JOIN=0
 POS=()
 while [ $# -gt 0 ]; do
   case $1 in
@@ -43,6 +44,7 @@ while [ $# -gt 0 ]; do
     --no-herdr) NO_HERDR=1; shift ;;
     --json) JSON=1; shift ;;
     --force) FORCE=1; shift ;;
+    --join) JOIN=1; shift ;;
     --help|-h) sed -n '2,20p' "$0" >&2; exit "$EX_OK" ;;
     --*) die "$EX_USAGE" "unknown flag $1" ;;
     *) POS+=("$1"); shift ;;
@@ -102,6 +104,12 @@ case $VERB in
     server_alive && die "$EX_VALIDATION" "$PAGE is already running: $(jq -r .url <<<"$(server_json)")"
     ARGS=("${COMMON[@]}"); [ -n "$SESSION" ] && ARGS+=(--session "$SESSION"); [ -n "$MODEL" ] && ARGS+=(--model "$MODEL")
     [ -n "$CWD" ] && ARGS+=(--cwd "$CWD"); [ -n "$WORKING_ON" ] && ARGS+=(--working-on "$WORKING_ON")
+    # BREADCRUMB 2026-10-10 22:3x UTC. What broke: server.mjs:105 refuses to start when session.json names another
+    #   session unless it is given --join, and this script had no way to pass it, so a successor seat on the same page
+    #   (the architect after a compaction or a new session) got "server did not come up in pane" and the owner page
+    #   stayed down (this seat, 22:25Z). Why this fix: forward the flag; the refusal in server.mjs is the right guard
+    #   and stays. Rejected: deleting session.json before serve (hand-edits a state file and loses the started time).
+    [ "$JOIN" = 1 ] && ARGS+=(--join)
     rm -f "$DIR/stopped.json"
     if in_herdr && [ "$NO_HERDR" = 0 ]; then
       need herdr
@@ -155,6 +163,43 @@ case $VERB in
     else
       die "$EX_VALIDATION" "not inside herdr (HERDR_ENV unset); pass --no-herdr to run one wait in the foreground"
     fi
+    ;;
+  rotate-key)
+    # BREADCRUMB 2026-10-11 UTC, owner: "Do it now". What broke: the keyed page URL sat in six committed checkpoints
+    #   of the public repo (CONTEXT_STATE.md, 2026-10-10 20:01 to 21:45 UTC); the in-tree redaction left it in git
+    #   history. Why this fix: server.mjs reuses server.json's key on every start (the KEY line), so a new key means
+    #   dropping it from server.json between a stop and a start. Doing that here keeps the file owned by the tool,
+    #   keeps the labelled panes (stop closes them, this does not), and keeps the session binding (--join with the
+    #   session.json values). Rejected: rewriting history on a public main (breaks every clone and the worker's
+    #   branch base, and a dead key needs no scrubbing). Cost: the owner opens the new link once; the old cookie no
+    #   longer matches.
+    server_alive || die "$EX_VALIDATION" "$PAGE is not running; nothing to rotate"
+    SESS=$(jq -r '.session // empty' "$DIR/session.json" 2>/dev/null || true)
+    SMODEL=$(jq -r '.model // empty' "$DIR/session.json" 2>/dev/null || true)
+    SWORK=$(jq -r '.working_on // empty' "$DIR/session.json" 2>/dev/null || true)
+    node "$HERE/server.mjs" "${COMMON[@]}" --stop >/dev/null
+    for _ in $(seq 1 40); do server_alive || break; sleep 0.25; done
+    server_alive && die "$EX_IO" "$PAGE did not stop"
+    for _ in $(seq 1 20); do [ -f "$DIR/stopped.json" ] && break; sleep 0.25; done
+    jq 'del(.key, .url, .pid)' "$DIR/server.json" >"$DIR/server.json.tmp" && mv "$DIR/server.json.tmp" "$DIR/server.json"
+    rm -f "$DIR/stopped.json"
+    ARGS=("${COMMON[@]}" --join)
+    [ -n "$SESS" ] && ARGS+=(--session "$SESS"); [ -n "$SMODEL" ] && ARGS+=(--model "$SMODEL"); [ -n "$SWORK" ] && ARGS+=(--working-on "$SWORK")
+    if in_herdr && [ "$NO_HERDR" = 0 ]; then
+      need herdr
+      P=$(pane_for "$PANE_LABEL")
+      herdr pane run "$P" "node $HERE/server.mjs $(printf '%q ' "${ARGS[@]}")" >/dev/null
+      wait_for_server || die "$EX_IO" "server did not come back in pane $P; read it with: herdr pane read $P"
+      note "server back in pane $P ($PANE_LABEL) with a new key"
+      # The wait loop ended on stopped.json; the wait verb restarts it in its own labelled pane.
+      "$0" "$TIER" wait "${TICKET_ARGS[@]}" --config "$CONFIG" ${TO:+--to "$TO"} >/dev/null
+    elif [ "$NO_HERDR" = 1 ]; then
+      nohup node "$HERE/server.mjs" "${ARGS[@]}" >"$DIR/server.log" 2>&1 &
+      wait_for_server || die "$EX_IO" "server did not come back; see $DIR/server.log"
+    else
+      die "$EX_VALIDATION" "not inside herdr (HERDR_ENV unset): every bearings process needs a labelled pane; run this from a herdr pane or pass --no-herdr in a test harness"
+    fi
+    jq -r .url <<<"$(server_json)"
     ;;
   reply)
     [ -n "$TO" ] || die "$EX_USAGE" "reply needs --to <message-id>"

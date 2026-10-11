@@ -20,91 +20,157 @@
 
 
 
-## Checkpoint 2026-10-10 22:33 UTC
+
+## Checkpoint 2026-10-11 00:10 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Seat worker-wo-20261010-8fa8 (claude-sonnet-5-5, worker playbook) works WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case.
-- Workspace and lease: /home/luna/worktrees/WO-20261010-8fa8 on branch feat/guard-lease-watcher-in-monitors-1-unfreeze-sh-wa. treehouse shows an empty pool and slot.sh does not exist; the architect ruled this worktree is the lease (the gap is the architect's to ticket).
-- work.started 100 is posted: events/2026/10/20261010T222442Z-100-kbqko.json.
-- The only pane this seat runs anything in is the labelled test pane wD3:pF. Tests go there as `herdr pane run wD3:pF 'clear; cd /home/luna/worktrees/WO-20261010-8fa8 && make -C herdr test 2>&1 | tail -30'`. Its scrollback holds old "tests: N passed" lines, so wait on a unique marker (echo DONE8fa8-<n> after the make) rather than on the tests regex alone.
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at 562bb55 plus this step. Main checkout /home/luna/projects/coq-jev-herdr-plugin on main. No open PRs. One hand-rolled worktree /home/luna/worktrees/WO-20261010-8fa8 (branch feat/guard-lease-watcher-in-monitors-1-unfreeze-sh-wa) for the worker; the treehouse pool is empty (WO-20261010-a429).
+- Live herdr session stable, workspace coq (wD3). Architect tab: this seat wD3:p2 is the full left column; tool grid right: wD3:pF test pane "test - herdr", wD3:p1N bearings-stable-wait, wD3:pG open, wD3:pH open, wD3:p1M bearings-stable, wD3:pJ open. Monitor seat monitor (haiku) wD3:p1E in tab monitor. Three monitors tabs up (bringup.sh --check: all ok); events tail and queue list in monitors 2; monitors 1 slots open until WO-20261010-8fa8 lands. Worker seat worker-wo-20261010-8fa8 in wD3:p1J (tab worker-wo-20261010-8fa8), working.
+- Owner page: stable bearings tier, URL from `tools/bearings/scripts/bearings.sh stable url` (never write the keyed URL into a record: public repo, hard rule no PII). Key rotated 2026-10-11 00:07 UTC with `bearings.sh stable rotate-key --to wD3:p2`; the old key in git history is dead. Server in wD3:p1M bound to this session, wait loop in wD3:p1N forwarding wakes into wD3:p2. Replies go with reply.mjs --tier stable --to <m-id>; the owner's thread is m-20261010192521524-wfo6h.
+- compaction-guard 1.2.8 binds this seat. recover.sh --check warns 112 host-wide stale guard sessions (other projects' dead seats; their resume_cmd would relaunch them) and was deliberately not applied.
+- Caves of Qud: Windows GOG build copied to /home/luna/games/caves-of-qud; Spike 1 still needs the native Linux build from the owner.
 
 #### Toolchain
 
-- herdr/bin/unfreeze.sh already exists on main (--watch, --all, --force); this ticket does not change it.
-- Step A landed as 878f65a: herdr/config/monitors.json slots 1.1.1 (lease, `${repo}/herdr/bin/unfreeze.sh --watch 30`) and 1.1.2 (guard, `compaction-guard watch --interval 15`); 1.1.3 stays the open orchestrator slot. herdr/bin/bringup.sh needed no logic change, only a breadcrumb comment above step 6. New stub herdr/tests/stubs/compaction-guard (doctor, watch stays up, release resets phase.json to idle like the real cmd_release). Case 04 asserts both panes in status, their output (a tick line, the stub's watch line), six note 100 records and --check ok for pane-lease and pane-guard; case 05's bringup note count moved 4 to 6.
-- Step B done: herdr/bin/unfreeze.sh exemptions loop fixed (`$now_iso`, breadcrumb in place) and herdr/tests/cases/06-unfreeze.test.sh added (worker seat with an expired lease released, reviewer inside its lease left alone, hand-started exempt pane released, wake prompt heard, two note 100 from seat unfreeze, a second pass releases nothing, a pane named in HERDR_PANE_ID is refused). Proof: CASES=06, tests: 1 passed, 0 failed, after fixing two assertions of mine (the stub echoes the prompt twice; a grep where jq belonged).
-- Proof of step A: CASES=04 and CASES="04 05" from wD3:pF, tests: 1 passed and tests: 2 passed, 0 failed. make lint clean.
+- herdr/bin: seat-lib.sh, seat.sh, retire.sh, monitors.sh, bringup.sh, recover.sh, unfreeze.sh (the worker found its exemptions jq line broken and masked by 2>/dev/null, so --all skipped the architect seat; fix lands in WO-20261010-8fa8). herdr/Makefile: test image lint up check down audit bringup recover monitors unfreeze unfreeze-all. Podman suite herdr/tests/run.sh cases 01-05 green from the labelled test pane.
+- tools/bearings/scripts/bearings.sh: serve forwards --join; rotate-key stops, drops the key from server.json, restarts with --join and the session.json binding, keeps the panes, restarts the wait loop (container cases T4c). Its pane_for still splits the calling seat (WO-20261010-2d04); after a plain stop/serve move the two panes into the grid with herdr pane move via a temporary tab.
+- bin/step.sh: lint, changelog, commit, push, checkpoint; /compact only with --compact; compaction-guard owns compaction.
+- `make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [CP=body.md]` is the only way a step lands. Checkpoint bodies live in the scratchpad as cpN.md.
+- Tests run only from the labelled test pane: `herdr pane run wD3:pF "cd <checkout> && git --no-pager log --oneline -1 && make -C herdr test 2>&1 | tail -30"` then `herdr pane wait-output wD3:pF --regex 'tests: [0-9]+ passed, [0-9]+ failed'`.
+- Work orders: $HOME/.claude/skills/work-order/scripts/work-order.sh; close-out on the branch is submit --pr N, note, done, make step, gh pr merge --merge, pull, cleanup.
 
 #### Active Tasks
 
-- Step C blocked on one architect answer: playbooks/worker.md and roles/worker.json. The worker role denies ${repo}/roles/ and seat.sh renders ${repo} as the seat's worktree, so the seat's own settings refuse the edit; playbooks/worker.md is rendered from the role (roles/bin/render-playbook.sh), never hand-edited. Also unsolved: how a static role allows `herdr pane run` for only the brief's pane, since brief.sh carries no pane and bypassPermissions ignores allow rules.
-- Then: full suite from wD3:pF, make lint, work-order evidence per AC, work-order done, PR with the acceptance criteria as the body, post pr.opened 100, stop.
+- WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case: steps A and B landed on the branch (878f65a, e562f71: monitors 1 slots 1.1.1 lease and 1.1.2 guard, unfreeze.sh exemptions jq fix, cases 04 05 06 green). Step C: the architect changed roles/worker.json on main (allow herdr/bin/testpane.sh *, deny herdr pane run *, step 3 and a forbidden line) and rendered playbooks/worker.md; the worker merges origin/main, writes herdr/bin/testpane.sh (refuses any pane but COQ_TEST_PANE), seat.sh resolves the pane labelled "test - herdr ..." in the architect tab and exports COQ_TEST_PANE, brief.sh names it, a case proves the refusal; then suite, evidence, done, PR, pr.opened. Review from wD3:pF, merge, cleanup, retire.
+- Drafts cut this step under WO-20261010-329d: WO-20261010-a429 - seat.sh leases a treehouse slot for the worker and the worker playbook names the real lease tool; WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat.
+- Then, each through a worker seat with this seat reviewing: WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles; WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue; WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree; WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume.
 
 #### Blockers
 
-- Step C: the roles/ deny versus the ticket's scope, and the per-pane enforcement design. One question goes to the architect.
+- Spike 1: the native Linux Caves of Qud build; asked of the owner (page thread m-20261010192521524-wfo6h and chat).
 
 ### New this checkpoint
 
 #### Decisions
 
-- 2026-10-10 22:5x UTC, worker: fixed the unfreeze.sh exemptions jq bug inside this ticket although the scope list names no change to unfreeze.sh; the lease watcher the ticket plugs in would otherwise skip the architect seat, which defeats its purpose, and the owner rule is to fix what is seen.
-- 2026-10-10 22:5x UTC, worker: the compaction-guard stub lives in herdr/tests/stubs so the pane shells find it at world_up, because panes inherit the herdr server's PATH and case 05's $WORLD/bin trick only reaches scripts. Case 05 still prepends its own richer stub.
+- 2026-10-11 00:07 UTC, owner: rotate the key, do not rewrite history. Done with bearings.sh rotate-key; history keeps a dead key.
+- 2026-10-10 22:2x UTC, this seat: the worktree named in a worker's brief is its lease until WO-20261010-a429 lands; the worker on 8fa8 was told so and proceeded.
+- 2026-10-10 22:3x UTC, this seat: compaction-guard recover --apply is not run from this seat; its 112 sessions are other projects' dead seats and the resume commands would relaunch them.
 
 #### Lessons Learned
 
-- herdr pane wait-output --regex 'tests: ...' matches stale scrollback from earlier runs in wD3:pF; wait on a marker unique to the run.
-- make -C herdr test pipes through tail, so nothing shows until it ends; a long case section can be cut by tail -60, so filter with grep inside the pane command when you need specific lines.
+- bearings.sh serve refuses a page owned by another session unless server.mjs gets --join; the launcher did not forward it, so a seat successor could not bring the page back.
+- bearings.sh pane_for splits the calling pane, so a restart from a seat breaks that seat's layout; herdr pane move within the same tab is a no-op, go through --new-tab and back.
+- herdr pane resize --amount is a fraction of the tab; up on the top pane shrinks it, up on a lower pane grows it.
+- The worker playbook names slot.sh, which does not exist, and seat.sh takes a hand-made worktree; a worker following the playbook stops at step 1.
 
 ### Hydration prompt
 
-Run from /home/luna/worktrees/WO-20261010-8fa8 as worker-wo-20261010-8fa8. Read playbooks/worker.md and this checkpoint. Steps A and B have landed (monitors.json, bringup breadcrumb, stub compaction-guard, cases 04 to 06, unfreeze.sh fix). Next: the architect answers the step C question (roles/ deny and per-pane enforcement); then step C, the full suite from wD3:pF, evidence per AC, done, PR. Step C (roles/playbook) waits for the architect's answer on the roles/ deny; do not edit roles/ or playbooks/ until it comes.
+Run from /home/luna/projects/coq-jev-herdr-plugin on main. Next: wait for pr.opened 100 from worker-wo-20261010-8fa8 on WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case, review the PR from the labelled test pane wD3:pF, merge, cleanup, retire the seat. Answer owner page wakes first (reply.mjs --tier stable --to <m-id>); the page URL comes from bearings.sh stable url and never enters a record. Every step lands with `make step ... CP=<body>`; never lint, commit, checkpoint or compact by hand.
 
-## Checkpoint 2026-10-10 22:30 UTC
+## Checkpoint 2026-10-11 00:08 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Seat worker-wo-20261010-8fa8 (claude-sonnet-5-5, worker playbook) works WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case.
-- Workspace and lease: /home/luna/worktrees/WO-20261010-8fa8 on branch feat/guard-lease-watcher-in-monitors-1-unfreeze-sh-wa. treehouse shows an empty pool and slot.sh does not exist; the architect ruled this worktree is the lease (the gap is the architect's to ticket).
-- work.started 100 is posted: events/2026/10/20261010T222442Z-100-kbqko.json.
-- The only pane this seat runs anything in is the labelled test pane wD3:pF. Tests go there as `herdr pane run wD3:pF 'clear; cd /home/luna/worktrees/WO-20261010-8fa8 && make -C herdr test 2>&1 | tail -30'`. Its scrollback holds old "tests: N passed" lines, so wait on a unique marker (echo DONE8fa8-<n> after the make) rather than on the tests regex alone.
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at 562bb55 plus this step. Main checkout /home/luna/projects/coq-jev-herdr-plugin on main. No open PRs. One hand-rolled worktree /home/luna/worktrees/WO-20261010-8fa8 (branch feat/guard-lease-watcher-in-monitors-1-unfreeze-sh-wa) for the worker; the treehouse pool is empty (WO-20261010-a429).
+- Live herdr session stable, workspace coq (wD3). Architect tab: this seat wD3:p2 is the full left column; tool grid right: wD3:pF test pane "test - herdr", wD3:p1N bearings-stable-wait, wD3:pG open, wD3:pH open, wD3:p1M bearings-stable, wD3:pJ open. Monitor seat monitor (haiku) wD3:p1E in tab monitor. Three monitors tabs up (bringup.sh --check: all ok); events tail and queue list in monitors 2; monitors 1 slots open until WO-20261010-8fa8 lands. Worker seat worker-wo-20261010-8fa8 in wD3:p1J (tab worker-wo-20261010-8fa8), working.
+- Owner page: stable bearings tier, URL from `tools/bearings/scripts/bearings.sh stable url` (never write the keyed URL into a record: public repo, hard rule no PII). Key rotated 2026-10-11 00:07 UTC with `bearings.sh stable rotate-key --to wD3:p2`; the old key in git history is dead. Server in wD3:p1M bound to this session, wait loop in wD3:p1N forwarding wakes into wD3:p2. Replies go with reply.mjs --tier stable --to <m-id>; the owner's thread is m-20261010192521524-wfo6h.
+- compaction-guard 1.2.8 binds this seat. recover.sh --check warns 112 host-wide stale guard sessions (other projects' dead seats; their resume_cmd would relaunch them) and was deliberately not applied.
+- Caves of Qud: Windows GOG build copied to /home/luna/games/caves-of-qud; Spike 1 still needs the native Linux build from the owner.
 
 #### Toolchain
 
-- herdr/bin/unfreeze.sh already exists on main (--watch, --all, --force); this ticket does not change it.
-- Step A done, uncommitted until this step lands: herdr/config/monitors.json slots 1.1.1 (lease, `${repo}/herdr/bin/unfreeze.sh --watch 30`) and 1.1.2 (guard, `compaction-guard watch --interval 15`); 1.1.3 stays the open orchestrator slot. herdr/bin/bringup.sh needed no logic change, only a breadcrumb comment above step 6. New stub herdr/tests/stubs/compaction-guard (doctor, watch stays up, release resets phase.json to idle like the real cmd_release). Case 04 asserts both panes in status, their output (a tick line, the stub's watch line), six note 100 records and --check ok for pane-lease and pane-guard; case 05's bringup note count moved 4 to 6.
-- Proof: CASES=04 and CASES="04 05" from wD3:pF, tests: 1 passed and tests: 2 passed, 0 failed. make lint clean.
-- Bug found in unfreeze.sh pass() (confirmed with jq): the exemptions read uses `select(.until > now_iso)` with `--arg now_iso`, so jq fails to compile (now_iso/0 is not defined) and 2>/dev/null hides it. Result: `--all` and `--watch` never visit the hand-started architect seat wD3:p2, the very seat that froze on 2026-10-10. Fixed in step B (`$now_iso`) with a case 06 section for an exempt pane.
+- herdr/bin: seat-lib.sh, seat.sh, retire.sh, monitors.sh, bringup.sh, recover.sh, unfreeze.sh (the worker found its exemptions jq line broken and masked by 2>/dev/null, so --all skipped the architect seat; fix lands in WO-20261010-8fa8). herdr/Makefile: test image lint up check down audit bringup recover monitors unfreeze unfreeze-all. Podman suite herdr/tests/run.sh cases 01-05 green from the labelled test pane.
+- tools/bearings/scripts/bearings.sh: serve forwards --join; rotate-key stops, drops the key from server.json, restarts with --join and the session.json binding, keeps the panes, restarts the wait loop (container cases T4c). Its pane_for still splits the calling seat (WO-20261010-2d04); after a plain stop/serve move the two panes into the grid with herdr pane move via a temporary tab.
+- bin/step.sh: lint, changelog, commit, push, checkpoint; /compact only with --compact; compaction-guard owns compaction.
+- `make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [CP=body.md]` is the only way a step lands. Checkpoint bodies live in the scratchpad as cpN.md.
+- Tests run only from the labelled test pane: `herdr pane run wD3:pF "cd <checkout> && git --no-pager log --oneline -1 && make -C herdr test 2>&1 | tail -30"` then `herdr pane wait-output wD3:pF --regex 'tests: [0-9]+ passed, [0-9]+ failed'`.
+- Work orders: $HOME/.claude/skills/work-order/scripts/work-order.sh; close-out on the branch is submit --pr N, note, done, make step, gh pr merge --merge, pull, cleanup.
 
 #### Active Tasks
 
-- Step B next: fix `$now_iso` in herdr/bin/unfreeze.sh with a breadcrumb, then the new case herdr/tests/cases/06-unfreeze.test.sh. A world seat with a hand-written guard binding.json plus phase.json (phase compacting, armed_at older than freeze_seconds) is released by one `unfreeze.sh --all`: prints released <pane> <name>, the pane's stub claude receives the wake prompt, a note 100 from seat unfreeze exists; a fresh lease prints ok and is untouched; a pane equal to HERDR_PANE_ID is refused; an exempt hand-started pane (exemptions.json, no seat record) frozen past its lease is released too.
-- Step C blocked on one architect answer: playbooks/worker.md and roles/worker.json. The worker role denies ${repo}/roles/ and seat.sh renders ${repo} as the seat's worktree, so the seat's own settings refuse the edit; playbooks/worker.md is rendered from the role (roles/bin/render-playbook.sh), never hand-edited. Also unsolved: how a static role allows `herdr pane run` for only the brief's pane, since brief.sh carries no pane and bypassPermissions ignores allow rules.
-- Then: full suite from wD3:pF, make lint, work-order evidence per AC, work-order done, PR with the acceptance criteria as the body, post pr.opened 100, stop.
+- WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case: in progress on the worker seat wD3:p1J; it posts pr.opened 100 when done. Review its PR from the labelled test pane, merge, cleanup.
+- Drafts cut this step under WO-20261010-329d: WO-20261010-a429 - seat.sh leases a treehouse slot for the worker and the worker playbook names the real lease tool; WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat.
+- Then, each through a worker seat with this seat reviewing: WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles; WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue; WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree; WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume.
 
 #### Blockers
 
-- Step C: the roles/ deny versus the ticket's scope, and the per-pane enforcement design. One question goes to the architect.
+- Spike 1: the native Linux Caves of Qud build; asked of the owner (page thread m-20261010192521524-wfo6h and chat).
 
 ### New this checkpoint
 
 #### Decisions
 
-- 2026-10-10 22:5x UTC, worker: the compaction-guard stub lives in herdr/tests/stubs so the pane shells find it at world_up, because panes inherit the herdr server's PATH and case 05's $WORLD/bin trick only reaches scripts. Case 05 still prepends its own richer stub.
+- 2026-10-11 00:07 UTC, owner: rotate the key, do not rewrite history. Done with bearings.sh rotate-key; history keeps a dead key.
+- 2026-10-10 22:2x UTC, this seat: the worktree named in a worker's brief is its lease until WO-20261010-a429 lands; the worker on 8fa8 was told so and proceeded.
+- 2026-10-10 22:3x UTC, this seat: compaction-guard recover --apply is not run from this seat; its 112 sessions are other projects' dead seats and the resume commands would relaunch them.
 
 #### Lessons Learned
 
-- herdr pane wait-output --regex 'tests: ...' matches stale scrollback from earlier runs in wD3:pF; wait on a marker unique to the run.
-- make -C herdr test pipes through tail, so nothing shows until it ends; a long case section can be cut by tail -60, so filter with grep inside the pane command when you need specific lines.
+- bearings.sh serve refuses a page owned by another session unless server.mjs gets --join; the launcher did not forward it, so a seat successor could not bring the page back.
+- bearings.sh pane_for splits the calling pane, so a restart from a seat breaks that seat's layout; herdr pane move within the same tab is a no-op, go through --new-tab and back.
+- herdr pane resize --amount is a fraction of the tab; up on the top pane shrinks it, up on a lower pane grows it.
+- The worker playbook names slot.sh, which does not exist, and seat.sh takes a hand-made worktree; a worker following the playbook stops at step 1.
 
 ### Hydration prompt
 
-Run from /home/luna/worktrees/WO-20261010-8fa8 as worker-wo-20261010-8fa8. Read playbooks/worker.md and this checkpoint. Step A (monitors.json, bringup breadcrumb, stub compaction-guard, cases 04 and 05) has landed. Next: write herdr/tests/cases/06-unfreeze.test.sh per the Active Tasks line, run CASES=06 from wD3:pF, land it with `make step`. Step C (roles/playbook) waits for the architect's answer on the roles/ deny; do not edit roles/ or playbooks/ until it comes.
+Run from /home/luna/projects/coq-jev-herdr-plugin on main. Next: wait for pr.opened 100 from worker-wo-20261010-8fa8 on WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case, review the PR from the labelled test pane wD3:pF, merge, cleanup, retire the seat. Answer owner page wakes first (reply.mjs --tier stable --to <m-id>); the page URL comes from bearings.sh stable url and never enters a record. Every step lands with `make step ... CP=<body>`; never lint, commit, checkpoint or compact by hand.
+
+## Checkpoint 2026-10-10 22:31 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at 562bb55 plus this step. Main checkout /home/luna/projects/coq-jev-herdr-plugin on main. No open PRs. One hand-rolled worktree /home/luna/worktrees/WO-20261010-8fa8 (branch feat/guard-lease-watcher-in-monitors-1-unfreeze-sh-wa) for the worker; the treehouse pool is empty (WO-20261010-a429).
+- Live herdr session stable, workspace coq (wD3). Architect tab: this seat wD3:p2 is the full left column; tool grid right: wD3:pF test pane "test - herdr", wD3:p1N bearings-stable-wait, wD3:pG open, wD3:pH open, wD3:p1M bearings-stable, wD3:pJ open. Monitor seat monitor (haiku) wD3:p1E in tab monitor. Three monitors tabs up (bringup.sh --check: all ok); events tail and queue list in monitors 2; monitors 1 slots open until WO-20261010-8fa8 lands. Worker seat worker-wo-20261010-8fa8 in wD3:p1J (tab worker-wo-20261010-8fa8), working.
+- Owner page: stable bearings tier, URL from `tools/bearings/scripts/bearings.sh stable url` (never write the keyed URL into a record: public repo, hard rule no PII). Server pid 534299 in wD3:p1M bound to this session (serve --join), wait loop in wD3:p1N forwarding wakes into wD3:p2. Replies go with reply.mjs --tier stable --to <m-id>; the owner's thread is m-20261010192521524-wfo6h. Nothing from the owner is unanswered on the page.
+- compaction-guard 1.2.8 binds this seat. recover.sh --check warns 112 host-wide stale guard sessions (other projects' dead seats; their resume_cmd would relaunch them) and was deliberately not applied.
+- Caves of Qud: Windows GOG build copied to /home/luna/games/caves-of-qud; Spike 1 still needs the native Linux build from the owner.
+
+#### Toolchain
+
+- herdr/bin: seat-lib.sh, seat.sh, retire.sh, monitors.sh, bringup.sh, recover.sh, unfreeze.sh (the worker found its exemptions jq line broken and masked by 2>/dev/null, so --all skipped the architect seat; fix lands in WO-20261010-8fa8). herdr/Makefile: test image lint up check down audit bringup recover monitors unfreeze unfreeze-all. Podman suite herdr/tests/run.sh cases 01-05 green from the labelled test pane.
+- tools/bearings/scripts/bearings.sh: serve now forwards --join so a successor session on the same seat can take the page over (breadcrumb at the serve verb). Its pane_for still splits the calling seat (WO-20261010-2d04); after a restart move the two panes into the grid with herdr pane move via a temporary tab (same-tab move is a no-op).
+- bin/step.sh: lint, changelog, commit, push, checkpoint; /compact only with --compact; compaction-guard owns compaction.
+- `make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [CP=body.md]` is the only way a step lands. Checkpoint bodies live in the scratchpad as cpN.md.
+- Tests run only from the labelled test pane: `herdr pane run wD3:pF "cd <checkout> && git --no-pager log --oneline -1 && make -C herdr test 2>&1 | tail -30"` then `herdr pane wait-output wD3:pF --regex 'tests: [0-9]+ passed, [0-9]+ failed'`.
+- Work orders: $HOME/.claude/skills/work-order/scripts/work-order.sh; close-out on the branch is submit --pr N, note, done, make step, gh pr merge --merge, pull, cleanup.
+
+#### Active Tasks
+
+- WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case: in progress on the worker seat wD3:p1J; it posts pr.opened 100 when done. Review its PR from the labelled test pane, merge, cleanup.
+- Drafts cut this step under WO-20261010-329d: WO-20261010-a429 - seat.sh leases a treehouse slot for the worker and the worker playbook names the real lease tool; WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat.
+- Then, each through a worker seat with this seat reviewing: WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles; WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue; WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree; WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume.
+- Owner question pending in chat: rotate the bearings page key (it sat in six committed checkpoints of a public repo and is still in git history) and whether to rewrite history.
+
+#### Blockers
+
+- Spike 1: the native Linux Caves of Qud build; asked of the owner (page thread m-20261010192521524-wfo6h and chat).
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-10 22:3x UTC, this seat: the keyed owner-page URL is a credential and never enters a record; it is redacted in CONTEXT_STATE.md (in-tree only; history still holds it), together with the internal Jenkins hostname. Key rotation is the owner's call.
+- 2026-10-10 22:2x UTC, this seat: the worktree named in a worker's brief is its lease until WO-20261010-a429 lands; the worker on 8fa8 was told so and proceeded.
+- 2026-10-10 22:3x UTC, this seat: compaction-guard recover --apply is not run from this seat; its 112 sessions are other projects' dead seats and the resume commands would relaunch them.
+
+#### Lessons Learned
+
+- bearings.sh serve refuses a page owned by another session unless server.mjs gets --join; the launcher did not forward it, so a seat successor could not bring the page back.
+- bearings.sh pane_for splits the calling pane, so a restart from a seat breaks that seat's layout; herdr pane move within the same tab is a no-op, go through --new-tab and back.
+- herdr pane resize --amount is a fraction of the tab; up on the top pane shrinks it, up on a lower pane grows it.
+- The worker playbook names slot.sh, which does not exist, and seat.sh takes a hand-made worktree; a worker following the playbook stops at step 1.
+
+### Hydration prompt
+
+Run from /home/luna/projects/coq-jev-herdr-plugin on main. Next: wait for pr.opened 100 from worker-wo-20261010-8fa8 on WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case, review the PR from the labelled test pane wD3:pF, merge, cleanup, retire the seat. Answer owner page wakes first (reply.mjs --tier stable --to <m-id>); the page URL comes from bearings.sh stable url and never enters a record. Every step lands with `make step ... CP=<body>`; never lint, commit, checkpoint or compact by hand.
 
 ## Checkpoint 2026-10-10 21:45 UTC
 
@@ -114,7 +180,7 @@ Run from /home/luna/worktrees/WO-20261010-8fa8 as worker-wo-20261010-8fa8. Read 
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at ae73c04 (PR #4 merged) plus this step. Main checkout /home/luna/projects/coq-jev-herdr-plugin on main. No open PRs. No worktrees.
 - Live herdr session stable, workspace coq (wD3). Architect tab: this seat wD3:p2 left third, tool grid right: wD3:pF test pane "test - herdr", wD3:pD bearings wait, wD3:pC bearings server, wD3:pG/pH/pJ open. Monitor seat monitor (haiku) wD3:p1E in tab monitor. Three monitors tabs built by bringup.sh; events tail and queue list running in monitors 2; monitors 1 slots are open until WO-20261010-8fa8 lands. Worker seat worker-wo-20261010-c274 is down and its worktree removed.
-- Owner page: stable bearings tier http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, state ~/.bearings/coq-stable; wakes forwarded into wD3:p2 by tools/bearings/scripts/bearings.sh wait --to. Replies go with reply.mjs --tier stable --to <m-id>; the owner's thread is m-20261010192521524-wfo6h.
+- Owner page: stable bearings tier http://localhost:44900/?key=<redacted: bearings.sh stable url>, state ~/.bearings/coq-stable; wakes forwarded into wD3:p2 by tools/bearings/scripts/bearings.sh wait --to. Replies go with reply.mjs --tier stable --to <m-id>; the owner's thread is m-20261010192521524-wfo6h.
 - compaction-guard 1.2.8 binds this seat (name fable-discovery, role architect, freeze_seconds 180, threshold 30). A governed seat cannot release its own lease; herdr/bin/unfreeze.sh does it from outside.
 - Caves of Qud: the owner's D:\coq holds the Windows GOG build (CoQ.exe), copied to /home/luna/games/caves-of-qud (1.4 GB). Spike 1 (SPK-01-qud-on-wsl) needs the native Linux build; the owner was asked on the page and in chat for the gog.com Linux offline installer saved in D:\coq. Steam Windows build also at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud.
 
@@ -199,7 +265,7 @@ WO-20261010-c274 - recover.sh --check|--apply per RUN-recover with its Podman ca
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at a22ad1c (PR #3 squash-merged: seat, retire, monitors, bringup, config, layouts, Podman suite). Main checkout /home/luna/projects/coq-jev-herdr-plugin is on main. No open PRs.
 - Live herdr session stable, workspace wD3 now labelled coq: tabs "Cave's of Qud herdr plugin" (owner shell), "architect" (this seat wD3:p2 left third; right 3x2 grid: test pane wD3:pF, bearings server wD3:pC, wait wD3:pD, three OPEN tool cells), "haiku-5-5" (owner's claude wD3:pE), "monitors 1 - compaction watchers", "monitors 2 - loop, events and queue" (2.1.1 event log tail, 2.1.2 queue list running), "monitors 3 - shells", "monitor" (monitor seat, claude-haiku-5-5 dontAsk, pane wD3:p1E, record ~/.local/state/coq/seats/monitor/seat.json). bringup.sh --check exits 0.
-- Owner page stable tier http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748; the wait loop forwards every wake into wD3:p2 (proven: ANSWER Q12 arrived in this seat). Open card Q12b: the owner is fetching the DRM-free Qud build and drops it in /home/luna/games/downloads/; unpack to /home/luna/games/caves-of-qud/.
+- Owner page stable tier http://localhost:44900/?key=<redacted: bearings.sh stable url>; the wait loop forwards every wake into wD3:p2 (proven: ANSWER Q12 arrived in this seat). Open card Q12b: the owner is fetching the DRM-free Qud build and drops it in /home/luna/games/downloads/; unpack to /home/luna/games/caves-of-qud/.
 - Jenkins lints every push to main. Caves of Qud Steam Windows build at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud.
 
 #### Toolchain
@@ -241,7 +307,7 @@ Run from /home/luna/projects/coq-jev-herdr-plugin on main. The live system is up
 #### Infrastructure
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at bb4a55f + checkpoint d07d56a. Working branch feat/herdr-seat-scripts-bringup-seat-monitors-recover in the main checkout /home/luna/projects/coq-jev-herdr-plugin. No open PRs.
-- Owner page is the stable bearings tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable. The wait loop now forwards every wake into this seat with `herdr agent prompt wD3:p2` (tools/bearings/scripts/bearings.sh wait --to), so nothing has to be turned on after a compaction. Open card: Q12b (where is the DRM-free Qud Linux build); Q12 carries a probe answer, ignore it.
+- Owner page is the stable bearings tier: http://localhost:44900/?key=<redacted: bearings.sh stable url>, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable. The wait loop now forwards every wake into this seat with `herdr agent prompt wD3:p2` (tools/bearings/scripts/bearings.sh wait --to), so nothing has to be turned on after a compaction. Open card: Q12b (where is the DRM-free Qud Linux build); Q12 carries a probe answer, ignore it.
 - This seat: pane wD3:p2, labelled "claude-fable-5-1 - high - WO-20261010-8777 architect", tab "architect", left third of the tab; right two thirds are a 3x2 grid: test pane wD3:pF ("test - herdr WO-20261010-8777"), bearings server wD3:pC, wait wD3:pD, three "OPEN - any tool" cells. Owner asked for the 3x3 grid shape on 2026-10-10 20:4x UTC.
 - Jenkins job coq-jev-herdr-plugin lints every push to main (ghcr.io/jkkelley/coq-lint:1). The feature branch lints locally through make step.
 - Caves of Qud: Steam Windows build at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud; no Linux build on disk or Drive.
@@ -288,7 +354,7 @@ Run from /home/luna/projects/coq-jev-herdr-plugin on branch feat/herdr-seat-scri
 #### Infrastructure
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at bb4a55f + checkpoint d07d56a. Working branch feat/herdr-seat-scripts-bringup-seat-monitors-recover in the main checkout /home/luna/projects/coq-jev-herdr-plugin (work-order start, no worktree slot). No open PRs.
-- Owner page is the stable bearings tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable. This seat is pane wD3:p2.
+- Owner page is the stable bearings tier: http://localhost:44900/?key=<redacted: bearings.sh stable url>, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable. This seat is pane wD3:p2.
 - Jenkins job coq-jev-herdr-plugin lints every push to main (build 3 green 20:07 UTC; multi-arch ghcr.io/jkkelley/coq-lint:1, imagePullPolicy Always). The feature branch is not built by Jenkins; lint runs locally through make step.
 - Caves of Qud: Steam Windows build at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud; no Linux build on disk or Drive.
 - A live seat.sh --audit on the host found two hand-started agents besides this seat: a codex (pid 10907) and a claude in pane wD3:pE. This seat is exempt by herdr/config/exemptions.json (pane wD3:p2, until 2026-10-17); the others are the owner's and are left alone.
@@ -335,9 +401,9 @@ Run from /home/luna/projects/coq-jev-herdr-plugin on branch feat/herdr-seat-scri
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at the sha of this checkpoint: PR #1 and PR #2 merged; commits since: 920807a scripts in git, 2cc69fa schemas on nodes + changelog + step.sh, c79e862 Jenkinsfile, f5649a8 multi-arch lint image, ae67c62 pull policy. No open PRs, no worktrees (slots 1 and 2 destroyed, branches deleted).
 - Main checkout /home/luna/projects/coq-jev-herdr-plugin is the working checkout. Slots 1 and 2 are done (ba08 merged, p0-foundation merged) and are released or to be released with slot.sh. WO-20261010-ba08 is done and archived; UAT-1 was decided by this seat.
-- Owner page is now the stable tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable (12 answers migrated, diff identical). Old page stopped 19:57 UTC, panes p3/p4/p5 closed. No Claude Code Monitors armed.
+- Owner page is now the stable tier: http://localhost:44900/?key=<redacted: bearings.sh stable url>, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable (12 answers migrated, diff identical). Old page stopped 19:57 UTC, panes p3/p4/p5 closed. No Claude Code Monitors armed.
 - Caves of Qud: Steam app 333640, Windows build installed at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud (D:\SteamLibrary). No Linux build anywhere on disk or in Google Drive (searched). Card Q12 is answered by this: Spike 1 uses the Windows build or the Steam console depot download, not the owner.
-- Jenkins job coq-jev-herdr-plugin (https://jenkins.homelab.local/job/coq-jev-herdr-plugin/) lints every push to main from a clean clone: build 3 SUCCESS 20:07 UTC (builds 1 and 2 failed: amd64 image on arm64 nodes, then a cached tag; fixed by make lint-image-push multi-arch + imagePullPolicy Always). Kube context homelab-admin, nodes arm64. Graph node CMP-jenkins-lint.
+- Jenkins job coq-jev-herdr-plugin (https://<jenkins, internal>/job/coq-jev-herdr-plugin/) lints every push to main from a clean clone: build 3 SUCCESS 20:07 UTC (builds 1 and 2 failed: amd64 image on arm64 nodes, then a cached tag; fixed by make lint-image-push multi-arch + imagePullPolicy Always). Kube context homelab-admin, nodes arm64. Graph node CMP-jenkins-lint.
 
 #### Toolchain
 
@@ -384,9 +450,9 @@ Run from /home/luna/projects/coq-jev-herdr-plugin on main. Next step: start WO-2
 
 - Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main: PR #1 merged bec8276, PR #2 (bearings) merged c0ea099. 2cc69fa: graph schemas on nodes, WFL-integration, changelog tree, bin/step.sh. This step: Jenkinsfile (lint in Jenkins on every push, image ghcr.io/jkkelley/coq-lint:1 pushed from localhost/coq-lint:1).
 - Main checkout /home/luna/projects/coq-jev-herdr-plugin is the working checkout. Slots 1 and 2 are done (ba08 merged, p0-foundation merged) and are released or to be released with slot.sh. WO-20261010-ba08 is done and archived; UAT-1 was decided by this seat.
-- Owner page is now the stable tier: http://localhost:44900/?key=487cd37401fd837c97cdfdcb2ef40748, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable (12 answers migrated, diff identical). Old page stopped 19:57 UTC, panes p3/p4/p5 closed. No Claude Code Monitors armed.
+- Owner page is now the stable tier: http://localhost:44900/?key=<redacted: bearings.sh stable url>, server pane wD3:pC, wait pane wD3:pD, state ~/.bearings/coq-stable (12 answers migrated, diff identical). Old page stopped 19:57 UTC, panes p3/p4/p5 closed. No Claude Code Monitors armed.
 - Caves of Qud: Steam app 333640, Windows build installed at /mnt/d/SteamLibrary/steamapps/common/Caves of Qud (D:\SteamLibrary). No Linux build anywhere on disk or in Google Drive (searched). Card Q12 is answered by this: Spike 1 uses the Windows build or the Steam console depot download, not the owner.
-- Kube contexts: homelab-admin (default). Jenkins 2.541.3 at https://jenkins.homelab.local, kubernetes agents (pod templates, imagePullSecret ghcr-pull-secret, shared lib jenkins-shared-lib); job coq-jev-herdr-plugin to be created from the Jenkinsfile (create_job via jenkins-mcp) and its first build checked.
+- Kube contexts: homelab-admin (default). Jenkins 2.541.3 at https://<jenkins, internal>, kubernetes agents (pod templates, imagePullSecret ghcr-pull-secret, shared lib jenkins-shared-lib); job coq-jev-herdr-plugin to be created from the Jenkinsfile (create_job via jenkins-mcp) and its first build checked.
 
 #### Toolchain
 

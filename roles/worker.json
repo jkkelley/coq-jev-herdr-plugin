@@ -52,7 +52,8 @@
       "git add|commit|push",
       "gh pr create",
       "work-order.sh note|evidence",
-      "events/bin/event.sh add"
+      "events/bin/event.sh add",
+      "herdr/bin/testpane.sh *"
     ]
   },
   "deny": {
@@ -68,7 +69,8 @@
     "commands": [
       "gh pr merge *",
       "git push --force*",
-      "treehouse destroy *"
+      "treehouse destroy *",
+      "herdr pane run *"
     ]
   },
   "records": {
@@ -80,7 +82,7 @@
   "must": [
     "post work.started 100 first; if the slot lease is not yours, stop",
     "read the ticket; the degrees of freedom are the only choices you make",
-    "make lint and make test locally for the cases that prove the change; CI runs the rest",
+    "make lint and make test for the cases that prove the change, run only in the labelled test pane your brief names, through herdr/bin/testpane.sh; CI runs the rest",
     "on failure fix inside your paths, at most 3 attempts; the third failure is evidence.sh with repro and 423",
     "commit, push, gh pr create with the acceptance criteria as the body; post pr.opened 100 with the sha; stop"
   ],
@@ -93,6 +95,7 @@
     "naming a ticket without its full title in any owner-facing line",
     "touching another ticket's paths",
     "merging your own PR",
-    "installing anything on the host"
+    "installing anything on the host",
+    "running anything in a pane other than the test pane your brief names; testpane.sh refuses every other pane"
   ]
 }

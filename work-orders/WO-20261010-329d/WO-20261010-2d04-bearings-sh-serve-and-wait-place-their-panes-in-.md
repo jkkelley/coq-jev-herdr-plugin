@@ -1,0 +1,82 @@
+---
+{
+  "id": "WO-20261010-2d04",
+  "slug": "bearings-sh-serve-and-wait-place-their-panes-in-",
+  "title": "bearings.sh serve and wait place their panes in the tool grid, never under the calling seat",
+  "type": "bug",
+  "status": "draft",
+  "priority": "p2",
+  "created": "2026-10-10",
+  "updated": "2026-10-10",
+  "created_at": "2026-10-10T22:30:00+00:00",
+  "parent": "WO-20261010-329d",
+  "branch": null,
+  "pr": null,
+  "closed": null,
+  "approval": null,
+  "evidence": null,
+  "surfaces": [],
+  "depends_on": [],
+  "blocks": []
+}
+---
+
+# WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat
+
+## Contents
+
+- Problem
+- Scope
+- Degrees of freedom
+- Acceptance criteria
+- Test plan
+- Assumptions
+- Open questions
+- Notes
+- Outcome
+
+## Problem
+
+tools/bearings/scripts/bearings.sh pane_for splits HERDR_PANE_ID (the seat that called it) down at ratio 0.2 whenever no pane carries the label. Restarting the stable tier from the architect seat at 22:25 UTC closed the two grid panes and carved two new ones out of the architect column, so the owner saw the arc broken (one agent on the left, two tool slots gone). The architect moved them back by hand with herdr pane move through a temporary tab.
+
+## Scope
+
+**In**
+
+- pane_for takes the target from a config key (the tool grid pane, or a named OPEN slot) and splits that, falling back to the calling pane only outside a seat layout
+- stop leaves the grid slots in place as OPEN panes instead of closing them
+
+**Out - non-goals**
+
+- any change to the page or the server
+
+## Degrees of freedom
+
+- [fixed] None declared: implement exactly as specified; raise a question before deviating.
+
+## Acceptance criteria
+
+- [ ] `AC-H1` *(human)* bearings.sh stable stop then serve from the architect seat leaves the architect column untouched and the server and wait panes in the tool grid
+- [ ] `AC-H2` *(human)* the Podman case for bearings proves the placement with a stub herdr
+
+## Test plan
+
+```sh
+make -C tools/bearings test in the container, then make lint
+```
+
+## Assumptions
+
+_none_
+
+## Open questions
+
+_none_
+
+## Notes
+
+_Newest first. Appended only by `work-order note` - never by hand._
+
+## Outcome
+
+_Written by `work-order done`. Empty until then._

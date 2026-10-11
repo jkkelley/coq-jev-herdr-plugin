@@ -72,6 +72,13 @@ CASE="PNG upload is stored as image/png with an f- id"; check bash -c 'test "$(j
 CASE="GET /file/:id serves the same bytes back as image/png"; check bash -c 'test "$(jq -r .get_type /work/file.json)" = image/png -a "$(jq .get_len /work/file.json)" = "$(jq .buf_len /work/file.json)"'
 CASE="wait.mjs prints the stored path on the MESSAGE line"; check bash -c 'timeout 15 $0 dev wait --ticket t1 "$@" | grep -qE "^MESSAGE m-probe-file-1 - here is a shot \| files: /work/state/t-dev-t1/files/f-[A-Za-z0-9-]+\.png$"' "$B" "${C[@]}"
 
+# T4c rotate-key: a new key, the old link refused, the page still up on the same port.
+OLD_URL=$URL
+URL=$($B dev rotate-key --ticket t1 "${C[@]}")
+CASE="rotate-key prints a url with a different key"; check bash -c '[[ "$2" =~ ^http://localhost:4592[0-2]/\?key=[a-f0-9]{32}$ ]] && [ "$1" != "$2" ] && [ "${1%%\?*}" = "${2%%\?*}" ]' _ "$OLD_URL" "$URL"
+CASE="the old key is refused with 403"; check bash -c 'test "$(node -e "fetch(process.argv[1]).then(r=>console.log(r.status))" "$1")" = 403' _ "$OLD_URL"
+CASE="the new key serves the page with 200"; check bash -c 'test "$(node -e "fetch(process.argv[1]).then(r=>console.log(r.status))" "$1")" = 200' _ "$URL"
+
 # T5 stable tier isolation: fixed port, its own dir, untouched by dev.
 URL2=$($B stable serve "${C[@]}")
 CASE="stable serves on its fixed port"; check bash -c '[[ "$1" == http://localhost:45900/* ]]' _ "$URL2"
