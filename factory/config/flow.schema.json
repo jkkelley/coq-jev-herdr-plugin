@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/factory/config/flow.schema.json",
+  "title": "flow watch configuration",
+  "description": "Tunables of factory/bin/flow.sh. ${repo} is the directory above factory/ (or the --repo flag). No tunable lives in the script. flow.sh refuses a config where poll_seconds + stall_seconds is more than visible_within_seconds.",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "poll_seconds", "stall_seconds", "visible_within_seconds", "watcher_seat", "events_dir", "event_bin", "state_dir", "runner_script", "runner_config", "runner_pane_label_regex", "gates"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "poll_seconds": { "type": "integer", "minimum": 5, "maximum": 30, "description": "seconds between ticks" },
+    "stall_seconds": { "type": "integer", "minimum": 30, "maximum": 115, "description": "age of a gate record with no consumer record past which it is a stall" },
+    "visible_within_seconds": { "type": "integer", "minimum": 60, "maximum": 120, "description": "the most a stall may take to reach the board: poll_seconds + stall_seconds must not pass it" },
+    "watcher_seat": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$", "description": "the seat name on every note the watcher writes" },
+    "events_dir": { "type": "string" },
+    "event_bin": { "type": "string" },
+    "state_dir": { "type": "string", "description": "latch files: one per noted gate record, one per standing belt or pane stall, and the first-start boundary" },
+    "runner_script": { "type": "string", "description": "factory/bin/route.sh; its status verb is the only definition of a stale belt" },
+    "runner_config": { "type": "string", "description": "the runner.json that script reads; also names the herdr session" },
+    "runner_pane_label_regex": { "type": "string", "minLength": 1, "description": "extended regex a herdr pane label must match for the route runner's pane" },
+    "gates": {
+      "type": "array", "minItems": 1,
+      "items": { "type": "object", "additionalProperties": false, "required": ["kind", "code", "role", "consumers"],
+        "properties": {
+          "kind": { "type": "string", "minLength": 1 },
+          "code": { "type": "integer", "minimum": 100, "maximum": 599 },
+          "role": { "enum": ["interface-agent", "orchestrator", "architect", "worker", "tester", "reviewer", "merger", "player", "monitor"], "description": "the role whose record is expected next; named in the note" },
+          "consumers": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "description": "record kinds on the same ticket, written after the gate record, that mean someone took it" }
+        } }
+    }
+  }
+}

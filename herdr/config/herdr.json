@@ -27,6 +27,11 @@
   "control_plane": {
     "health_url": null
   },
+  "belt": {
+    "slot": "runner",
+    "status": "${repo}/factory/bin/route.sh status",
+    "settle_seconds": 20
+  },
   "halt_flag": "${state_dir}/HALT",
   "monitor_task": "watch the event log, the seats and the guard; wake a waiting seat on status change with one line; raise owner notifications for 423 and any 5xx; run cleanup every tick"
 }
