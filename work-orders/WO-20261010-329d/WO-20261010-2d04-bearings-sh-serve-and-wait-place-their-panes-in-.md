@@ -4,16 +4,20 @@
   "slug": "bearings-sh-serve-and-wait-place-their-panes-in-",
   "title": "bearings.sh serve and wait place their panes in the tool grid, never under the calling seat",
   "type": "bug",
-  "status": "draft",
+  "status": "ready",
   "priority": "p2",
   "created": "2026-10-10",
-  "updated": "2026-10-10",
+  "updated": "2026-10-11",
   "created_at": "2026-10-10T22:30:00+00:00",
   "parent": "WO-20261010-329d",
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
+    "at": "2026-10-11"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
@@ -76,6 +80,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-11` Decision 2026-10-11 UTC (architect, fixed): pane_for, when no pane carries the label, takes the first pane in the caller's tab (HERDR_TAB_ID) whose label starts with the config key open_label_prefix (default 'OPEN - any tool') and relabels it; it splits the calling pane only when the tab has no such pane and the caller carries no seat label (COQ_SEAT unset), else it dies with a clear message naming the tab. stop relabels the server and wait panes back to '<open_label_prefix> <n>' with the n they had (kept in server.json as open_slots) instead of closing them. The Podman case drives bearings.sh against a stub herdr on PATH that records pane list, split, rename and close calls, and asserts no split happens when an OPEN pane exists and that stop issues renames, never a close. Why: the architect tab is a 3x3 arc the owner reads at a glance (owner, 2026-10-10: 'this is a 3X3 layout with you being the only thing on the left'); the tool grid exists for exactly these panes.
 
 ## Outcome
 
