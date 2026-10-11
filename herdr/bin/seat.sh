@@ -261,6 +261,15 @@ if [ "$mode" = down ]; then
   if [ -n "$ended_at" ]; then echo "$name: already down since $ended_at"; exit 0; fi
   [ "$lease_owned" != true ] || sl_require treehouse
   seat_own=""; [ "$lease_owned" != true ] || seat_own="$(seat_pids)"
+  # Second net for records (first: COQ_EVENTS_ROOT above). lease_down runs `treehouse return --force`, which resets the slot
+  # and takes every untracked file with it; PR 13's test 201 went that way on 2026-10-11 (WO-20261011-23df). Any record a seat
+  # in this slot wrote and nobody committed is copied to this checkout's events/ first, never overwriting, one log line each.
+  if [ "$lease_owned" = true ] && [ -d "$wt/events" ] && [ "$DRY" != 1 ]; then
+    while IFS= read -r rel; do
+      [ -n "$rel" ] || continue; dst="$SL_REPO/$rel"
+      [ -e "$dst" ] || { mkdir -p "$(dirname "$dst")" && cp "$wt/$rel" "$dst" && sl_log "seat $name: salvaged uncommitted record $rel from the slot into $SL_REPO"; }
+    done < <(git -C "$wt" ls-files --others --exclude-standard -- events 2>/dev/null)
+  fi
   "$SL_HERE/retire.sh" "$name" --pane "$agent_pane" || sl_log "seat $name: retire did not finish cleanly; closing the tab anyway"
   sl_run sleep "$(sl_cfg .down_wait_seconds)"
   sl_mut tab close "$tab" >/dev/null 2>&1 || true
@@ -337,7 +346,20 @@ role_file="$(sl_role_file "$role")"
 branch=""
 if [ -n "$ticket" ]; then
   ticket_file="$(find "$SL_REPO/work-orders" -name "$ticket-*.md" -not -path '*/archive/*' 2>/dev/null | head -1)"
-  [ -n "$ticket_file" ] || refuse "no ticket $ticket under work-orders/ (archived or never cut)"
+  # BREADCRUMB 2026-10-11 - WO-20261011-23df. What broke: the close-out law runs `work-order done` on the feature branch
+  #   before the PR lands, which archives the ticket; a checkout carrying that branch (here, after merging PR 13's branch)
+  #   then has WO-20261011-9639 only under work-orders/archive/, and the line above refused the tester seat on PR 13 as
+  #   "archived or never cut" while the PR was still open and still needed its test, review and merge. Why this fix: the
+  #   tester, reviewer and merger act on a PR, and a PR in review is exactly a ticket that is done on its branch, so for
+  #   those roles the archive is the expected place; the worker keeps the refusal, because a worker on a done ticket is a
+  #   defect. The branch check below still refuses when origin has no feat/<slug>. Rejected: moving `done` to after the
+  #   merge (the close-out law puts the archive move in the PR's own commit range on purpose) and a --force flag (an
+  #   operator would learn to pass it always). Cost: none; the find walks one more directory for three roles.
+  if [ -z "$ticket_file" ] && [ "$role" != worker ]; then
+    ticket_file="$(find "$SL_REPO/work-orders/archive" -name "$ticket-*.md" 2>/dev/null | head -1)"
+    [ -z "$ticket_file" ] || sl_log "ticket $ticket is archived in this checkout (done on its branch, PR still open); $role seat reads the archived copy"
+  fi
+  [ -n "$ticket_file" ] || refuse "no ticket $ticket under work-orders/ (never cut, or archived and role is worker)"
   # BREADCRUMB 2026-10-11 - WO-20261011-c077, the ticket's branch. What broke: a slot leased below comes up detached at
   #   origin/main while `work-order start` made feat/<slug> in the main checkout, and the worker role may run git add,
   #   commit and push only, so the architect ran `git checkout` in the slot by hand before seating WO-20261010-2d04, and
@@ -513,8 +535,12 @@ else
   # runtime (dotfiles Rule 19; owner 2026-09-22).
   surface=lavish; [ "$runtime" = claude ] && surface=artifact
   unset_markers='for v in $(env | sed -n '\''s/^\(CLAUDECODE\|CLAUDE_CODE_[A-Z0-9_]*\|CLAUDE_PID\|CLAUDE_EFFORT\|AI_AGENT\)=.*/\1/p'\''); do unset "$v"; done; '
-  line="$unset_markers$(printf 'cd %q && export COQ_SEAT=%q COQ_TEST_PANE=%q COQ_ROLE=%q COQ_TICKET=%q COQ_ROLE_FILE=%q COQ_WORKTREE=%q COQ_REPO=%q RAIL_SURFACE=%q PATH=%q:"$PATH"' \
-    "$wt" "$name" "$tpane" "$role" "$id" "$role_file" "$wt" "$SL_REPO" "$surface" "$SL_REPO/bin")"
+  # A role that cannot run git writes its records to this checkout's events/ (COQ_EVENTS_ROOT, read by events/bin/event.sh),
+  # because a record left untracked in the slot dies with `treehouse return --force` on --down (PR 13's test 201, 2026-10-11,
+  # WO-20261011-23df; the full reason is the breadcrumb at ROOT in event.sh). A role with git commits its own records in the slot.
+  ev_root=""; jq -e '[.deny.commands[]?] | index("git *") != null' "$role_file" >/dev/null 2>&1 && ev_root="$SL_REPO/events"
+  line="$unset_markers$(printf 'cd %q && export COQ_SEAT=%q COQ_TEST_PANE=%q COQ_ROLE=%q COQ_TICKET=%q COQ_ROLE_FILE=%q COQ_WORKTREE=%q COQ_REPO=%q COQ_EVENTS_ROOT=%q RAIL_SURFACE=%q PATH=%q:"$PATH"' \
+    "$wt" "$name" "$tpane" "$role" "$id" "$role_file" "$wt" "$SL_REPO" "$ev_root" "$surface" "$SL_REPO/bin")"
   sl_mut pane wait-output "$a" --regex "$SL_PROMPT_RE" --timeout "$(sl_cfg .prompt_timeout_ms)" >/dev/null 2>&1 \
     || { [ "$DRY" = 1 ] || { SL_EXIT=4 sl_die "pane $a showed no shell prompt within $(sl_cfg .prompt_timeout_ms) ms; rerun to repair"; }; }
   sl_mut pane run "$a" "$line" >/dev/null
