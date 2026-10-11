@@ -45,6 +45,51 @@
 
 
 
+
+## Checkpoint 2026-10-11 20:44 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4562 on WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day.
+  Branch feat/break-glass-one-owner-authorised-action-at-a-tim, treehouse slot 6, test pane wD3:p1V through herdr/bin/testpane.sh only (scratchpad tp.sh wraps it; the pane is shared and a command can queue for ten minutes behind other seats).
+- Steps 1 to 3 of 5 have landed: the break.glass record kind and routes (f51d77e), seat.sh --break-glass with its guard hook and watcher, and the interface card and verdict.
+- This step touched herdr/ and interface/ only; no host service was changed and nothing was started outside a labelled pane.
+
+#### Toolchain
+
+- herdr/bin/seat.sh gains --break-glass SEAT --record ID, --break-glass-restore SEAT [--why], --break-glass-sweep, and --check and --audit know an active break glass.
+  The logic is herdr/bin/break-glass-lib.sh (sourced by seat.sh) and the Claude Code hook herdr/bin/break-glass-guard.sh (pre and post on Bash).
+  herdr/config/herdr.json has break_glass.ttl_seconds 600 (schema: 30 to 3599) and break_glass.bearings_tier stable.
+  herdr/config/monitors.json has a reserved watcher slot 2.3.1 glass that loops seat.sh --break-glass-sweep every 15 seconds; cases 04 and 05 count it (eight bringup note 100 records).
+- interface/bin/interface.sh: `line --record <break.glass 300>` adds a Grant or Refuse card (Refuse preselected) to the page's questions.json, keeping the other cards; `forward "ANSWER <id> - ... -> Grant"` writes break.glass 200, anything else 423, once per card.
+  interface/tests/run.sh case 6 and 6b pass (56 checks); herdr case 13 passes (68 checks); the full herdr suite and make lint were green when this step committed.
+
+#### Active Tasks
+
+- Step 4: report/loop board shows every break glass as a line (AC-H3 second half) - collect.jq, the render, a test case.
+- Step 5: runbook for break glass (herdr/RUNBOOK or docs/ via living-docs), make -C factory test, make -C herdr test, make lint, evidence per AC with work-order.sh evidence --observed, retro note, commit, push, gh pr create with the criteria as body, work-order.sh submit --pr N then done, push the archive move, post pr.opened 100.
+
+#### Blockers
+
+- None. Merge note for the architect: cases 04 and 05 changed (the sixth reserved watcher pane), so a branch that also adds a reserved slot will conflict there.
+  The live claim in AC-H1, that a running Claude Code re-reads --settings and the hook, is proved at file level here and has to be seen once on a real seat.
+
+### New this checkpoint
+
+- The hook is the fence for the lifted territory; settings.json cannot say "everything but this command". The deny rules that cover the action are removed, Bash(<action>) is allowed, and break-glass-guard.sh blocks (exit 2) every other command that holds a lifted rule's head, and the same command a second time.
+- The seat and the command come from the 300 request, never from the 200; the owner's answer line on the page must carry choice Grant and a card text naming both. A 200 is a notice, seat.sh is the authority.
+- The action must be one plain command (no newline, ; & | backtick $( or *); a multi-step hotfix is a script and the script's path is the action.
+- Route rows for 100, 201 and 204 are `do: none` so the lifecycle records are receipted, not 500s; 423 wakes the monitor; seat.sh exit 3 is a handled refusal in route.sh.
+- Lesson: a test record made to prove "a 200 is not a page line" carried a real card's answer id and made forward return it as the existing verdict; probe records use an unrelated id.
+
+### Hydration prompt
+
+Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 6. Read playbooks/worker.md, the ticket and this checkpoint.
+Steps 1 to 3 are committed and pushed. Start step 4: make the factory board (report/loop) show every break glass as a line, derived from the break.glass records of one request id (300 request, 200 granted, 423 refused, 100 in effect, 201 done, 204 restored), with a test case; read report/loop/lib/collect.jq and the render first.
+Then step 5, the close-out. Land every step through make step in the test pane, one checkpoint each.
+
 ## Checkpoint 2026-10-11 19:39 UTC
 
 ### Current state
