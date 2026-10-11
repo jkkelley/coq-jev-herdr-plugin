@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T201448Z-201-u54ds",
+  "at": "2026-10-11T20:14:48Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-6842",
+  "kind": "work.started",
+  "ticket": "WO-20261011-6842",
+  "pane": "wD3:p1V",
+  "note": "Tester seat up for WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 and recover.sh restarts the belt. Reading the ticket test plan now.",
+  "evidence": [],
+  "observations": [],
+  "to": "orchestrator"
+}

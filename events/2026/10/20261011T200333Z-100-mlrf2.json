@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T200333Z-100-mlrf2",
+  "at": "2026-10-11T20:03:33Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-8fb3",
+  "pane": "wD3:p2",
+  "note": "hand step 20:04Z: tester wD3:p54 and reviewer wD3:p56 seated for PR 18 after belt 500 o2hmz (no tester seat up); PR 18 CONFLICTING with main, architect resolving before the wake",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T201517Z-100-a9lg5",
+  "at": "2026-10-11T20:15:17Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p2",
+  "note": "hand step 20:16Z: merger wD3:p4E woken with qjysr and 2jrn6 (test and review 201 on PR 16 head 09b879f)",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T195158Z-201-2jrn6",
+  "at": "2026-10-11T19:51:58Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261011-616c",
+  "kind": "review.passed",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p1V",
+  "note": "review.passed: PR 16 head 09b879f, AC-H1..H6 evidenced; lint, loop 8, bearings 52, sitrep, herdr 04/05 green. Non-blocking: sitrep Makefile image target is outside ticket paths but needed by the Makefile TOOLS change",
+  "evidence": [],
+  "observations": [],
+  "to": "merger"
+}

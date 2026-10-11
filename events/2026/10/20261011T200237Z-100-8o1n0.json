@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T200237Z-100-8o1n0",
+  "at": "2026-10-11T20:02:37Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-8fb3",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-8fb3",
+  "pane": "wD3:p4T",
+  "note": "PR 18 at a930f3c: seat.sh --adopt, adopted --check/--down/--audit, --resume; cases 13 and 14; herdr suite 14 of 14, lint clean",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

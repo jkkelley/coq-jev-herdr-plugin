@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T202103Z-100-nonfw",
+  "at": "2026-10-11T20:21:03Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p2",
+  "note": "hand step 20:21Z: after merged 200 9edlz the merger, reviewer and tester seats for 616c are down and slot 2 is returned; slot 2 records preserved in the checkout",
+  "evidence": [],
+  "observations": []
+}

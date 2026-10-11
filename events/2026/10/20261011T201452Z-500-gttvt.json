@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T201452Z-500-gttvt",
+  "at": "2026-10-11T20:14:52Z",
+  "code": 500,
+  "seat": "hand-codex-8118",
+  "kind": "seat.stalled",
+  "ticket": null,
+  "pane": null,
+  "note": "audit: hand-started: no live seat record (COQ_SEAT=unset)",
+  "evidence": [],
+  "observations": []
+}

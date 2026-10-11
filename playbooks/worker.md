@@ -22,7 +22,7 @@ Runtime claude (allowed: claude, codex). Model claude-sonnet-5-5 / codex gpt-5.6
 ## Permissions
 
 Mode `bypassPermissions`.
-Allowed tools: Read, Grep, Glob, Write, Edit, Bash. Allowed paths: ${worktree}/. Allowed commands: make *, git add|commit|push, gh pr create, work-order.sh note|evidence|submit|done, events/bin/event.sh add, herdr/bin/testpane.sh *, treehouse status *.
+Allowed tools: Read, Grep, Glob, Write, Edit, Bash. Allowed paths: ${worktree}/. Allowed commands: make *, git add|commit|push|fetch|merge, gh pr create, work-order.sh note|evidence|submit|done, events/bin/event.sh add, herdr/bin/testpane.sh *, treehouse status *.
 Denied tools: Agent, Task. Denied paths: ${repo}/specs/, ${repo}/graph/, ${repo}/roles/. Denied commands: gh pr merge *, git push --force*, treehouse destroy *, herdr pane run *.
 Inputs: ticket. Outputs: pr, record.pr_opened, record.evidence.
 
@@ -32,7 +32,8 @@ Inputs: ticket. Outputs: pr, record.pr_opened, record.evidence.
 2. read the ticket; the degrees of freedom are the only choices you make
 3. make lint and make test for the cases that prove the change, run only in the labelled test pane your brief names, through herdr/bin/testpane.sh; CI runs the rest
 4. on failure fix inside your paths, at most 3 attempts; the third failure is evidence.sh with repro and 423
-5. close out on your branch: evidence --observed per criterion, retro note, commit, push, gh pr create (criteria as body), work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened 100 with sha and pr; stop
+5. before close-out: git fetch origin and git merge origin/main; a conflict in a generated file (CHANGELOG, changelog/, graph INDEX and GRAPH, work-orders INDEX, README) is rerun by its script, never hand-edited; then make lint again
+6. close out on your branch: evidence --observed per criterion, retro note, commit, push, gh pr create (criteria as body), work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened 100 with sha and pr; stop
 
 ## Records you emit
 
@@ -45,6 +46,7 @@ Inputs: ticket. Outputs: pr, record.pr_opened, record.evidence.
 
 - ticket.assigned
 - record.review_changes_requested
+- record.merge_conflict
 
 ## Forbidden
 

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T201337Z-100-95b50",
+  "at": "2026-10-11T20:13:37Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-6842",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-6842",
+  "pane": null,
+  "note": "pr 19 sha c1c2edd, four criteria evidenced, factory 10 and herdr 13 passed",
+  "evidence": [],
+  "observations": []
+}

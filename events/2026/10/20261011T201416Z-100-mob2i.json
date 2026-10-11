@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T201416Z-100-mob2i",
+  "at": "2026-10-11T20:14:16Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-6842",
+  "kind": "work.started",
+  "ticket": "WO-20261011-6842",
+  "pane": null,
+  "note": "resolving merge.conflict 409 20261011T201412Z-409-u4dye on PR 19",
+  "evidence": [],
+  "observations": []
+}

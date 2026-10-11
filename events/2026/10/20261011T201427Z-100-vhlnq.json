@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T201427Z-100-vhlnq",
+  "at": "2026-10-11T20:14:27Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-6842",
+  "pane": "wD3:p2",
+  "note": "hand step 20:15Z: PR 19 conflicts with main in seat.sh, event.sh, herdr.json (409 u4dye to the worker); tester and reviewer seats brought up so the belt can wake them on the next pr.opened",
+  "evidence": [],
+  "observations": []
+}

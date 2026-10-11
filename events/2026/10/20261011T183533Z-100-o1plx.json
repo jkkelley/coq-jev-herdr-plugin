@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T183533Z-100-o1plx",
+  "at": "2026-10-11T18:35:33Z",
+  "code": 100,
+  "seat": "merger-616c",
+  "kind": "seat.up",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p1V",
+  "note": "merger seat up for WO-20261011-616c; waiting for review.passed 201 and test.passed 201 on the same sha",
+  "evidence": [],
+  "observations": []
+}
