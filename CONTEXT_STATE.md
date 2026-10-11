@@ -40,6 +40,42 @@
 
 
 
+
+## Checkpoint 2026-10-11 17:33 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-e618 on WO-20261011-e618 - Interface agent seat owns the bearings page: owner requests become records and the done line comes from it. Slot 5 of the treehouse pool, branch feat/interface-agent-seat-owns-the-bearings-page-owne. Test pane wD3:p1V is shared with other seats, so a command can queue behind a long suite; poll the output file, do not resend.
+- Records go to the main checkout's events/ (COQ_EVENTS_ROOT). The role-file block was posted as 423 q1grt and corrected as 423 an45u; the architect answered it by editing roles/interface-agent.json (pane_layout interface-2x2, allow line for interface/bin/interface.sh), and this step commits that edit with the re-rendered playbook.
+- PR 14 (route runner) and PR 16 (board) are open, not merged. The live stable bearings page runs in the architect tab; moving it into the interface seat's tab is the cutover in the runbook (step 4), not done by this ticket's tests.
+
+#### Toolchain
+
+- herdr/layouts/interface-2x2.json: agent, MONITOR, and panes labelled bearings-stable and bearings-stable-wait, so bearings (which claims panes by label in its caller's tab) finds them in the seat's tab. The layout schema gains pre_start.
+- herdr/bin/seat.sh run_pre_start types each pre_start line into the agent pane after the env line and before the agent starts, waits for a counter echo, refuses the up with exit 4 if a line never finishes. Lines: serve --join only when status says the page is not alive, then wait --to the agent pane.
+- herdr case 12 (stub bearings.sh, real headless herdr) and the full herdr suite pass: 12 passed, 0 failed. make -C interface test passes (five cases).
+
+#### Active Tasks
+
+- WO-20261011-e618 plan, one commit and checkpoint each: (1) event kinds - done; (2) interface.sh and its Podman test - done; (3) layout, seat.sh pre_start, herdr case 12, role and playbook - this step; (4) interface/RUNBOOK.md, interface/brief.txt with make targets up/check/down, and interface.sh snapshot --to M posting the snapshot path (and its Windows UNC form when WSL_DISTRO_NAME is set) as a threaded reply, since bearings replies carry text only; (5) evidence per AC, retro note, PR.
+
+#### Blockers
+
+- None. The role file block is resolved. The role's must lines still describe the seat writing records itself; they should say it runs interface.sh forward and line. That is the architect's wording to change, noted in the runbook.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-11 17:3x UTC, this seat: layout slots carry the labels bearings itself uses, rather than OPEN slots, so seat.sh repair and bearings find the same panes and two OPEN slots with one label never collapse into one pane.
+- 2026-10-11 17:3x UTC, this seat: playbooks/interface-agent.md was not re-rendered by the architect edit; the renderer was run here (pure render of the role file, only that playbook changed).
+
+### Hydration prompt
+
+Resume WO-20261011-e618 at step 4: add snapshot --to to interface/bin/interface.sh with a case in interface/tests/run.sh, add interface/brief.txt and make targets up, check and down to interface/Makefile, write interface/RUNBOOK.md (hand the owner channel to an interface agent on another repo, AC-H5), run through the test pane, then make step.
+
 ## Checkpoint 2026-10-11 17:04 UTC
 
 ### Current state
