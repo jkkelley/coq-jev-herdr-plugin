@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T030741Z-100-hv22u",
+  "at": "2026-10-11T03:07:41Z",
+  "code": 100,
+  "seat": "worker-wo-20261010-a429",
+  "kind": "note",
+  "ticket": "WO-20261010-a429",
+  "pane": "wD3:pF",
+  "note": "pr.opened: PR 6 for WO-20261010-a429 seat.sh leases a treehouse slot for the worker, code at eb90a00, lint clean, suite 8 passed 0 failed",
+  "evidence": [],
+  "observations": []
+}
