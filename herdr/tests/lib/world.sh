@@ -6,6 +6,7 @@
 #   world_up <name> [jq filter applied to herdr.json]   e.g. world_up gate '.bringup_gate=true'
 #   h <args>                                            herdr --session t-<name> <args>, markers unset
 #   SEAT, REPO, STATE, EVENTS                            the paths a case asserts on
+#   notest_layout / role_layout ROLE LAYOUT              a world whose role names a layout with no test slot (AC-H4)
 world_up() {
   local name="$1" filt="${2:-.}"
   WORLD="${COQ_CASE_WORK:-${WORK_ROOT:-/tmp}}/$name"; mkdir -p "$WORLD"
@@ -58,6 +59,16 @@ world_up() {
   export HERDR_WORKSPACE_ID HERDR_TAB_ID WORLD_TEST_PANE
   trap 'world_down' EXIT
 }
+# BREADCRUMB 2026-10-11 - WO-20261011-f896. What broke (would break): seat-1x2 now carries its own test pane, so cases 01 and 08,
+#   which prove the architect-tab fallback and its refusal (a ticket seat with no 'test - herdr' pane to name is refused before
+#   any lease), could no longer reach that path with the real worker role. Why this fix: the world copies the repo, so it
+#   can point its copy of a role at seat-nt, seat-1x2 minus its test slot, which is exactly the shape of a layout that has
+#   none (player-1x3, interface-2x2). Rejected: an env switch in seat.sh (the production path would go untested). Cost: a
+#   case that calls role_layout must put the role back (role_layout ROLE seat-1x2) before it asserts on the real shape.
+#   notest_layout            writes herdr/layouts/seat-nt.json in the world
+#   role_layout ROLE LAYOUT  points the world's copy of roles/ROLE.json at LAYOUT
+notest_layout() { jq '.id = "seat-nt" | .panes |= map(select(.kind != "test"))' "$REPO/herdr/layouts/seat-1x2.json" > "$REPO/herdr/layouts/seat-nt.json"; }
+role_layout() { jq --arg l "$2" '.pane_layout = $l' "$REPO/roles/$1.json" > "$REPO/roles/$1.json.tmp" && mv "$REPO/roles/$1.json.tmp" "$REPO/roles/$1.json"; }
 h() { herdr --session "$COQ_HERDR_SESSION" "$@"; }
 world_down() {
   [ -n "${COQ_HERDR_SESSION:-}" ] || return 0
