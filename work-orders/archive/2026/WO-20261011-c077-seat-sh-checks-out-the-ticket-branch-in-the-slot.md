@@ -4,15 +4,15 @@
   "slug": "seat-sh-checks-out-the-ticket-branch-in-the-slot",
   "title": "seat.sh checks out the ticket branch in the slot it leases, so a worker starts on its branch without the architect touching the slot",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p2",
   "created": "2026-10-11",
   "updated": "2026-10-11",
   "created_at": "2026-10-11T03:28:09+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/seat-sh-checks-out-the-ticket-branch-in-the-slot",
-  "pr": null,
-  "closed": null,
+  "pr": 8,
+  "closed": "2026-10-11",
   "approval": {
     "via": "override",
     "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
@@ -61,8 +61,10 @@ WO-20261010-a429 made seat.sh lease a treehouse slot for a ticket seat, but the 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* seat.sh --ticket X --role worker with no --worktree leaves the slot on X's feat branch, tracking origin
-- [ ] `AC-H2` *(human)* a ticket whose frontmatter has branch null is refused with exit 3 and no lease is taken
+- [x] `AC-H1` *(human)* seat.sh --ticket X --role worker with no --worktree leaves the slot on X's feat branch, tracking origin
+  - observed `2026-10-11` case 08 in herdr/tests on ad4ebf8 from wD3:p1V: slot checked out on the ticket branch tracking origin, 8 passed 0 failed; live proof lands on the next ticket seat (WO-20261011-36d7), the first seated without a hand checkout
+- [x] `AC-H2` *(human)* a ticket whose frontmatter has branch null is refused with exit 3 and no lease is taken
+  - observed `2026-10-11` live 2026-10-11 05:01 UTC from wD3:p2: seat.sh --ticket WO-20261011-4c5e --role worker (draft, branch null) refused exit 3 naming the ticket, pool still available with no lease; case 08 covers the same
 
 ## Test plan
 
@@ -82,6 +84,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` Retro: worker did not stall after the compaction-guard ack this time (it kept its turn). Review from wD3:p1V in a subshell; treehouse return afterwards found no process in the slot and the test pane survived. The ticket's PR was opened by the worker without work-order submit, so submit ran at close-out. Found by the new case: lease_abandon returned a refused fresh lease twice; fixed in the same PR.
 - `2026-10-11` Worker: seat.sh reads the ticket frontmatter branch before any lease (null refuses, exit 3, nothing leased) and slot_to_branch fetches origin and checks the slot out on it, tracking origin; a fresh lease that cannot reach the branch is returned once (lease_abandon no longer returns twice, found by the new case). Stub treehouse clones a bare origin when TREEHOUSE_STUB_ORIGIN is set. Case 08 extended; make -C herdr test: 8 passed 0 failed, make lint rc 0, both from the labelled test pane. AC-H1 and AC-H2 are human: the architect confirms the live seat-up on the next ticket seat.
 
 ## Outcome
