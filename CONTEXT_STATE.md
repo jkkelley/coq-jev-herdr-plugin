@@ -42,6 +42,40 @@
 
 
 
+
+## Checkpoint 2026-10-11 17:51 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-e618 on WO-20261011-e618 - Interface agent seat owns the bearings page: owner requests become records and the done line comes from it. Slot 5, branch feat/interface-agent-seat-owns-the-bearings-page-owne. Test pane wD3:p1V is shared; poll the output file, do not resend.
+- The ticket file on this branch now carries status in-progress and the branch (copied from the records branch, which is what work-order start writes; start itself refuses here because the branch exists), five evidence lines, and the retro note. No PR is open yet.
+- PR 14 (route runner) and PR 16 (board) are open, not merged. The live stable bearings page was not touched by this seat.
+
+#### Toolchain
+
+- All suites green at the last run: make -C interface test (all ok), make -C herdr test (12 passed, 0 failed, case 12 is new).
+- Close-out commands left: gh pr create (criteria as body), work-order.sh submit --pr N, work-order.sh done, commit and push the archive move, then post pr.opened 100 with sha and pr.
+
+#### Active Tasks
+
+- WO-20261011-e618 step 5: this commit lands evidence and the retro note; then open the PR, submit, done, push the archive move, post pr.opened 100.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-11 17:5x UTC, this seat: AC-H1 to AC-H5 are recorded as observed by the suites, each line saying plainly that the live cutover and a timed live AC-H2 run were not done; they need the owner's page.
+
+### Hydration prompt
+
+Resume WO-20261011-e618 at the PR: gh pr create with the five criteria as the body, work-order.sh submit --id WO-20261011-e618 --pr N, work-order.sh done, git add -A and commit the archive move, push, then events/bin/event.sh add --code 100 --seat worker-wo-20261011-e618 --kind pr.opened --ticket WO-20261011-e618 --note "sha and pr", and stop.
+
 ## Checkpoint 2026-10-11 17:48 UTC
 
 ### Current state
