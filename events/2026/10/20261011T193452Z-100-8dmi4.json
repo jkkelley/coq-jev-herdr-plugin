@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T193452Z-100-8dmi4",
+  "at": "2026-10-11T19:34:52Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-f896",
+  "kind": "work.started",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p52",
+  "note": "worker up on WO-20261011-f896, test pane wD3:p1V, reading the ticket",
+  "evidence": [],
+  "observations": []
+}
