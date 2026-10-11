@@ -4,7 +4,7 @@
   "slug": "seat-sh-adopt-a-running-claude-session-becomes-a",
   "title": "seat.sh adopt: a running claude session becomes a seat in place, keeping its context, under the role's label, settings and record",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p0",
   "created": "2026-10-11",
   "updated": "2026-10-11",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule; owner order 18:38Z get the system operational",
+    "at": "2026-10-11"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],

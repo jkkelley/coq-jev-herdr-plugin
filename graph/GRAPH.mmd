@@ -24,6 +24,7 @@ flowchart LR
   DEC-automate-recover-retry["DEC-automate-recover-retry<br/>Templates, scripts, automation, recovery"]
   DEC-bearings-vendored-tiers["DEC-bearings-vendored-tiers<br/>Bearings is vendored into tools/bearings"]
   DEC-blueprint-first["DEC-blueprint-first<br/>Design from the blueprint, never improvi"]
+  DEC-blueprint-server-tiers["DEC-blueprint-server-tiers<br/>The blueprint has its own local web serv"]
   DEC-break-glass-one-time["DEC-break-glass-one-time<br/>Break glass: the owner alone authorises "]
   DEC-clear-schemas-codes-token-efficiency["DEC-clear-schemas-codes-token-efficiency<br/>Clear schemas and status codes, token ef"]
   DEC-components-first["DEC-components-first<br/>Components are the design unit: every pi"]
@@ -159,6 +160,9 @@ flowchart LR
   DEC-automate-recover-retry -- depends_on --> DEC-system-runs-the-loop
   DEC-blueprint-first -- implements --> REQ-north-star
   DEC-blueprint-first -- depends_on --> DEC-system-runs-the-loop
+  DEC-blueprint-server-tiers -- implements --> REQ-north-star
+  DEC-blueprint-server-tiers -- depends_on --> DEC-blueprint-first
+  DEC-blueprint-server-tiers -- depends_on --> DEC-components-first
   DEC-break-glass-one-time -- implements --> REQ-north-star
   DEC-break-glass-one-time -- depends_on --> DEC-system-runs-the-loop
   DEC-clear-schemas-codes-token-efficiency -- implements --> REQ-north-star

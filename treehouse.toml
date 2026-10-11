@@ -2,5 +2,8 @@
 # (~/.treehouse/<repo>-<hash>/), never in-project: an in-repo pool is bound
 # into every container, taken as build context by `podman build .`, and staged
 # by `git add -A` (AGENTS.md, "Where your workspace comes from").
-max_trees = 8
+# max_trees 8 -> 16 on 2026-10-11 18:52Z: the owner raised the agent budget to 16 streams ("I'll give you 16"), and every
+# seat needs its own worktree; herdr/config/herdr.json max_agents moved with it. The cap was hit every hour at 8 and the
+# architect downed finished seats by hand to free it. Record: WO-20261010-329d notes.
+max_trees = 16
 root = ""

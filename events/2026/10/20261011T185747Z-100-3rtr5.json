@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T185747Z-100-3rtr5",
+  "at": "2026-10-11T18:57:47Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-6842",
+  "kind": "work.started",
+  "ticket": "WO-20261011-6842",
+  "pane": null,
+  "note": "worker up on WO-20261011-6842 flow watch, lease check next",
+  "evidence": [],
+  "observations": []
+}
