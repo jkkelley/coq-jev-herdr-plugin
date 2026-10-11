@@ -19,7 +19,7 @@ echo "-- bringup builds the system in order"
 "$BU" --worktree "$REPO" > "$WORLD/out" 2>&1; rc=$?; out="$(tr '\n' ' ' < "$WORLD/out")"
 echo "$out" | sed 's/^/    /'
 assert_eq "bringup exits 0" "$rc" 0
-assert_match "monitors, the monitor seat and all five reserved panes were fixed, in that order" "$out" "fixed monitors.*fixed monitor-seat.*fixed pane-lease.*fixed pane-guard.*fixed pane-events.*fixed pane-queue.*fixed pane-board"
+assert_match "monitors, the monitor seat and all eight reserved panes were fixed, in that order" "$out" "fixed monitors.*fixed monitor-seat.*fixed pane-lease.*fixed pane-guard.*fixed pane-events.*fixed pane-queue.*fixed pane-board.*fixed pane-blueprint-dev.*fixed pane-blueprint-uat.*fixed pane-blueprint-stable"
 ws="$(h workspace list | jq -r '.result.workspaces[] | select(.label == "coq") | .workspace_id')"
 assert_match "one workspace labelled coq" "$ws" '^w'
 assert_eq "three monitors tabs plus the monitor seat tab" "$(h tab list --workspace "$ws" | jq -r '[.result.tabs[].label] | sort | join("|")')" "monitor|monitors 1 - compaction watchers|monitors 2 - loop, events and queue|monitors 3 - shells"
@@ -43,11 +43,17 @@ assert_match "2.1.2 runs the queue list" "$st" "2\.1\.2 queue list - queue  \[[^
 assert_match "2.2.1 runs the factory board watch (WO-20261011-616c)" "$st" "2\.2\.1 factory board watch - board  \[[^]]+\]  in use"
 bp="$(slot_pane '2\.2\.1')"
 h pane wait-output "$bp" --match 'watch: ' --source recent-unwrapped --timeout 30000 >/dev/null 2>&1; assert_eq "2.2.1 printed loop.sh watch's start line" "$?" 0
+# The three blueprint servers of WO-20261011-ceea: dev, uat and stable, one labelled pane each, started by the same bringup.
+assert_match "2.2.2 runs the blueprint dev server" "$st" "2\.2\.2 blueprint dev server - blueprint-dev  \[[^]]+\]  in use"
+assert_match "2.2.3 runs the blueprint uat server" "$st" "2\.2\.3 blueprint uat server - blueprint-uat  \[[^]]+\]  in use"
+assert_match "2.3.1 runs the blueprint stable server" "$st" "2\.3\.1 blueprint stable server - blueprint-stable  \[[^]]+\]  in use"
 assert_match "3.1.1 is an open shell" "$st" "3\.1\.1 OPEN - any shell  \[[^]]+\]  open"
 assert_eq "the monitor seat is live" "$(h agent get monitor | jq -r .result.agent.agent_status)" idle
-assert_eq "seven note 100 records, one per repaired node" "$(event_count note 100)" 7
+assert_eq "ten note 100 records, one per repaired node" "$(event_count note 100)" 10
+# A label outlives its process, so --check asks each blueprint server (serve.sh --check); give the three a moment to listen.
+for tier in dev uat stable; do for _ in $(seq 1 40); do "$REPO/report/blueprint/serve.sh" --check "$tier" >/dev/null 2>&1 && break; sleep 1; done; done
 chk="$("$BU" --check --worktree "$REPO" 2>&1)"; rc=$?; assert_eq "--check now exits 0" "$rc" 0
-assert_match "--check reports the lease and guard watchers ok, ahead of the tails" "$(tr '\n' ' ' <<<"$chk")" "ok pane-lease ok pane-guard ok pane-events ok pane-queue ok pane-board"
+assert_match "--check reports the lease and guard watchers ok, ahead of the tails" "$(tr '\n' ' ' <<<"$chk")" "ok pane-lease ok pane-guard ok pane-events ok pane-queue ok pane-board ok pane-blueprint-dev ok pane-blueprint-uat ok pane-blueprint-stable"
 
 echo "-- rerun is idempotent"
 "$BU" --worktree "$REPO" > "$WORLD/out" 2>&1; rc=$?; out="$(tr '\n' ' ' < "$WORLD/out")"

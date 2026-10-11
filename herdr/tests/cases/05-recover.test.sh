@@ -47,6 +47,8 @@ seats_up() { local n=0 f; for f in "$STATE"/seats/*/seat.json; do [ -f "$f" ] &&
 notes0="$(event_count note 100)"; downs0="$(event_count seat.down 100)"
 echo "-- bringup, then a worker seat behind the monitor seat"
 "$BU" --worktree "$REPO" >/dev/null 2>&1; assert_eq "bringup exits 0" "$?" 0
+# recover.sh also asks the three blueprint servers whether they answer (WO-20261011-ceea); give them a moment to listen.
+for tier in dev uat stable; do for _ in $(seq 1 40); do "$REPO/report/blueprint/serve.sh" --check "$tier" >/dev/null 2>&1 && break; sleep 1; done; done
 "$SEAT" --ticket "$T" --role worker --worktree "$REPO" >/dev/null; assert_eq "the worker comes up" "$?" 0
 
 echo "-- AC-H1: --check on a healthy world prints ok per object and exits 0"
@@ -58,9 +60,9 @@ assert_match "the guard ran and was ok" "$out" "^ok compaction-guard$"
 assert_match "the ticket nobody holds is warned, with its title" "$out" "^WARN $T2 - fixture ticket nobody holds \(no live seat"
 assert_eq "the ticket with a seat is not warned" "$(grep -c "^WARN $T " <<<"$out")" 0
 assert_eq "--check called the guard once, without --apply" "$(grep -c '^recover$' "$GUARD_LOG")" 1
-# Seven since WO-20261011-616c: monitors, the monitor seat and five reserved panes (lease and guard joined events and queue in
-# WO-20261010-8fa8, the factory board watch in WO-20261011-616c).
-assert_eq "--check wrote no note 100 beyond bringup's seven" "$(( $(event_count note 100) - notes0 ))" 7
+# Ten since WO-20261011-ceea: monitors, the monitor seat and eight reserved panes (lease and guard joined events and queue in
+# WO-20261010-8fa8, the factory board watch in WO-20261011-616c, the three blueprint servers in WO-20261011-ceea).
+assert_eq "--check wrote no note 100 beyond bringup's ten" "$(( $(event_count note 100) - notes0 ))" 10
 
 echo "-- AC-H3: the halt flag stops both modes and changes nothing"
 touch "$STATE/HALT"; before="$(find "$EVENTS" -name '*.json' | wc -l)"; : > "$GUARD_LOG"
@@ -82,7 +84,8 @@ run --check
 echo "$out" | sed 's/^/    /'
 assert_eq "--check exits 1" "$rc" 1
 assert_match "it names the seat and the reason" "$out" "^FAILED $N \(agent gone\)$"
-assert_eq "the healthy objects still print ok" "$(grep -c '^ok ' <<<"$out")" 4
+# Four objects (herdr, monitors, the monitor seat, the guard) plus the eight reserved panes recover.sh also checks since WO-20261011-ceea.
+assert_eq "the healthy objects still print ok" "$(grep -c '^ok ' <<<"$out")" 12
 assert_eq "no event was written" "$(find "$EVENTS" -name '*.json' | wc -l)" "$before"
 assert_eq "the seat record has no ended_at" "$(jq -r '.ended_at // "null"' "$STATE/seats/$N/seat.json")" null
 assert_eq "no seat.down was recorded" "$(( $(event_count seat.down 100) - downs0 ))" 0

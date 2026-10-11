@@ -81,14 +81,23 @@ fi
 #   pane. JSON has no comments, so the reason lives here. Cost: bringup now fails (500) when it cannot start either
 #   pane, and the watcher panes need unfreeze.sh and compaction-guard on PATH wherever herdr was started.
 MC="${COQ_MONITORS_CONFIG:-$SL_HERDR/config/monitors.json}"
-while IFS=$'\t' read -r name what cmd; do
-  cmd="${cmd//\$\{repo\}/$SL_REPO}"
+# BREADCRUMB 2026-10-11 - WO-20261011-ceea. What broke: this loop judged a pane by its label alone, and the label outlives the
+#   process: a blueprint server killed in its pane left "2.2.2 blueprint dev server - blueprint-dev [..] in use", so --check said ok
+#   and a rerun repaired nothing while the page was down (AC-H3 asks that a killed server pane be restarted). Why this fix: a
+#   reserved slot may carry `check` beside `command` in monitors.json, a command that exits 0 while the process answers; a slot
+#   that is labelled but fails its check is restarted by `monitors.sh take`, which restarts in the slot's own pane. Slots with no
+#   `check` behave as before. Rejected: probing the pane's foreground process (herdr does not expose it to this script) and
+#   dropping the label on failure (take already restarts in place). Cost: the check runs once per slot per run, and a server
+#   restarted by this run is not re-checked until the next one, because it needs a moment to listen.
+while IFS=$'\t' read -r name what cmd chk; do
+  cmd="${cmd//\$\{repo\}/$SL_REPO}"; chk="${chk//\$\{repo\}/$SL_REPO}"
   st="$("$MON" status 2>/dev/null)"
-  if grep -qF " $what - $name  [" <<<"$st"; then okln "pane-$name"
-  elif [ "$mode" = check ]; then failln "pane-$name" "slot $name is not running $what"
-  elif "$MON" take "$name" "$name" -- "$cmd" >/dev/null 2>&1; then fixedln "pane-$name" "$what plugged in"
+  up=0; grep -qF " $what - $name  [" <<<"$st" && up=1
+  if [ "$up" = 1 ] && { [ -z "$chk" ] || bash -c "$chk" >/dev/null 2>&1; }; then okln "pane-$name"
+  elif [ "$mode" = check ]; then failln "pane-$name" "$([ "$up" = 1 ] && echo "slot $name is up but its check failed" || echo "slot $name is not running $what")"
+  elif "$MON" take "$name" "$name" -- "$cmd" >/dev/null 2>&1; then fixedln "pane-$name" "$what $([ "$up" = 1 ] && echo restarted || echo 'plugged in')"
   else failln "pane-$name" "monitors.sh take $name failed"; fi
-done < <(jq -r '.tabs[].reserved[] | select(.command != null) | [.name, .what, .command] | @tsv' "$MC")
+done < <(jq -r '.tabs[].reserved[] | select(.command != null) | [.name, .what, .command, (.check // "")] | @tsv' "$MC")
 
 [ "$mode" = check ] || [ "$fixed" = 0 ] || sl_h notification show "bringup: $fixed node(s) repaired, system up" >/dev/null 2>&1 || true
 exit 0

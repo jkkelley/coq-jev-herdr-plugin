@@ -11,6 +11,7 @@
 #   5 every seat     each seat record with no ended_at: seat.sh --check
 #                    "agent not running" -> check FAILED <name> (agent gone); apply seat.sh --down, fixed <name>
 #                    any other difference -> FAILED <name> (<difference>), reported in both modes and never repaired
+#   5b panes         every reserved monitors.json slot with a command: label up and its `check` passing, else restarted (apply)
 #   6 guard          compaction-guard recover [--apply], once, only when config .require_guard is true
 #   7 tickets        one WARN per in-progress ticket with no live seat (the queue resumes it; WARN never fails the run)
 # Lines: ok <object> | fixed <object> (what) | skipped <object> (why) | FAILED <object> (why) | WARN <ticket> - <title> (..)
@@ -119,6 +120,26 @@ for f in "$STATE"/seats/*/seat.json; do
     else failln "$n" "agent gone, seat.sh --down failed: $(tail -n 1 <<<"$out")"; fi
   else failln "$n" "$SEAT_WHY"; fi
 done
+
+# 5b. the reserved monitor panes that carry a command in monitors.json (event tail, queue list, board watch, the three blueprint
+#    servers). Same rule as bringup.sh's loop: a slot is ok when its label is up and its `check`, when it has one, passes; a slot
+#    that is down or fails its check is restarted by `monitors.sh take` in apply mode and FAILED in check mode.
+# BREADCRUMB 2026-10-11 - WO-20261011-ceea. What broke: recover.sh repaired the grid, the monitor seat and the seats, and no
+#   pane that bringup.sh plugs in, so a blueprint server killed in its pane stayed dead until someone reran bringup.sh by hand
+#   (AC-H3: recover.sh restarts a killed one). Why this fix: the loop is the same few lines as bringup.sh's, kept here so recover
+#   needs no second bringup run (bringup also repairs the monitor seat and sends its own notification). Rejected: calling
+#   bringup.sh from here for panes (it stops at its first failure and its note records would double recover's). It runs after
+#   the seats so the order of the lines above it is unchanged. Cost: the loop exists twice; monitors.json is the one source.
+MC="${COQ_MONITORS_CONFIG:-$SL_HERDR/config/monitors.json}"
+while IFS=$'\t' read -r pname pwhat pcmd pchk; do
+  pcmd="${pcmd//\$\{repo\}/$SL_REPO}"; pchk="${pchk//\$\{repo\}/$SL_REPO}"
+  pst="$("$MON" status 2>/dev/null)"
+  pup=0; grep -qF " $pwhat - $pname  [" <<<"$pst" && pup=1
+  if [ "$pup" = 1 ] && { [ -z "$pchk" ] || bash -c "$pchk" >/dev/null 2>&1; }; then okln "pane-$pname"
+  elif ! apply; then failln "pane-$pname" "$([ "$pup" = 1 ] && echo "slot is up but its check failed" || echo "slot is not running $pwhat")"
+  elif "$MON" take "$pname" "$pname" -- "$pcmd" >/dev/null 2>&1; then fixedln "pane-$pname" "$pwhat $([ "$pup" = 1 ] && echo restarted || echo 'plugged in')"
+  else failln "pane-$pname" "monitors.sh take $pname failed"; fi
+done < <(jq -r '.tabs[].reserved[] | select(.command != null) | [.name, .what, .command, (.check // "")] | @tsv' "$MC")
 
 # 6. the guard, once. The count is of sessions whose pane is gone and that the guard can re-arm; see the breadcrumb for why
 #    that is a WARN and not a FAILED.
