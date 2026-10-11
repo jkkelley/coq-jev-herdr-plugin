@@ -32,6 +32,45 @@
 
 
 
+
+## Checkpoint 2026-10-11 04:55 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-c077 on branch feat/seat-sh-checks-out-the-ticket-branch-in-the-slot in treehouse slot 1 (lease holder WO-20261011-c077). Test pane wD3:p1V, shell parked in the main checkout, never inside the slot.
+- No live seat, herdr or bearings change from this worker; the architect owns the seat down and the slot return after the merge.
+
+#### Toolchain
+
+- herdr/bin/seat.sh: door 1 without --worktree reads the ticket frontmatter branch before any lease (null or invalid refuses with exit 3, nothing leased), then slot_to_branch fetches origin and checks the leased slot out on that branch, tracking origin. A fresh lease that cannot reach the branch is returned once; a lease the ticket already held is left alone.
+- herdr/tests/stubs/treehouse: TREEHOUSE_STUB_ORIGIN makes get clone a bare origin and detach at origin/main. Case 08 builds that origin and covers AC-H1, the rerun repair, AC-H2 and a branch no repository has.
+- make -C herdr test: 8 passed, 0 failed. make lint: rc 0. Both run from wD3:p1V through herdr/bin/testpane.sh.
+
+#### Active Tasks
+
+- WO-20261011-c077 - seat.sh checks out the ticket branch in the slot it leases, so a worker starts on its branch without the architect touching the slot: code and tests landed on the branch, PR next. AC-H1 and AC-H2 are human criteria for the architect.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-11 04:5x UTC, worker: only a seat that leases its own slot is checked out; --worktree stays exactly as given. A missing branch refuses rather than leaving the slot detached.
+
+#### Lessons Learned
+
+- A test pane command that starts with cd into the slot leaves the pane shell inside the lease; reset it with cd to the main checkout through testpane.sh, or run in a subshell.
+- lease_abandon ran twice on a refused fresh lease (once in lease_up, once from the EXIT trap); it now clears lease_new after the return.
+
+### Hydration prompt
+
+Run from /home/luna/projects/coq-jev-herdr-plugin on main. WO-20261011-c077 - seat.sh checks out the ticket branch in the slot it leases, so a worker starts on its branch without the architect touching the slot: review the PR from wD3:p1V in a subshell, merge, cleanup, seat.sh --down worker-wo-20261011-c077. Then WO-20261011-36d7 - The labelled test pane never keeps its cwd inside a treehouse slot, so treehouse return --force cannot kill it. Every step lands with make step; never lint, commit, checkpoint or compact by hand.
+
 ## Checkpoint 2026-10-11 03:47 UTC
 
 ### Current state
