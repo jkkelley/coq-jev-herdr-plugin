@@ -45,6 +45,35 @@
 
 
 
+
+## Checkpoint 2026-10-11 19:15 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-6842 in slot 5 on WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (gate record with no consumer, belt heartbeat stale, runner pane gone) and recover.sh restarts the belt. Branch feat/flow-watch-a-shell-watcher-in-a-monitors-pane-tu, pushed. work.started 100 record 20261011T185747Z-100-3rtr5. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- The runner pane is not in bringup.sh on this branch (WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped is still draft), so step 4 adds both the runner and the flow reserved slots to herdr/config/monitors.json; bringup's pane loop needs no code change.
+
+#### Toolchain
+
+- Landed: lint/check-conflict-markers.sh (AC-H3, case 08); factory/bin/flow.sh once|run|status with factory/config/flow.json and flow.schema.json (gate stall latched per record id, belt via route.sh status, runner pane via herdr pane list and process-info), factory/Makefile flow-once and flow-status, suite cases 09 (AC-H1) and 10 (belt and pane half of AC-H2). make -C factory test is 10 passed from the test pane.
+- Pane labels the config expects: the runner pane label ends in "route runner - runner"; step 4 must name the slot so monitors.sh gives that label (used_label is "<pos> <what> - <name>", so what = "route runner", name = "runner").
+
+#### Active Tasks
+
+- Step 3: recover.sh belt node (--check prints FAILED belt when the runner pane is missing or the belt is stale; --apply restarts through monitors.sh take and prints fixed belt), herdr case 05 extended or a new case, using the herdr world stub.
+- Step 4: monitors.json reserved slots runner (2.2.2) and flow (2.2.3), bringup --check lists both ok, herdr case 04 updated.
+- Step 5: factory/RUNBOOK.md flow watch section, ticket evidence per criterion, retro note, PR, submit, done.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-6842 as worker-wo-20261011-6842 in slot 5. Read playbooks/worker.md, the ticket and this checkpoint. Steps 1 and 2 are committed. Start step 3, the recover.sh belt node: read herdr/bin/recover.sh and herdr/tests/cases/05-recover.test.sh first. Run make only through herdr/bin/testpane.sh wD3:p1V, and run make step through it too because lint takes longer than the harness timeout.
+
 ## Checkpoint 2026-10-11 19:06 UTC
 
 ### Current state
