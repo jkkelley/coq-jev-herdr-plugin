@@ -58,7 +58,7 @@
 
   # --- the records, normalised and in order ---
   ([$events_f[0][] | . + {fk: fkind, rl: (.role // role_of(.seat)), att: (.attempt // 1)}] | sort_by(.at, .id)) as $ev
-  | ($ev | map(select(.seat != null)) | group_by(.seat) | map(sort_by(.at, .id) | last | {seat, rl, pane, up: (.fk != "seat.down"), ticket})) as $seatst
+  | ($ev | map(select(.seat != null and .kind != "break.glass")) | group_by(.seat) | map(sort_by(.at, .id) | last | {seat, rl, pane, up: (.fk != "seat.down"), ticket})) as $seatst
   | ($panes_ok | not) as $nopanes
   | ($panes_ok and ($panes | any(.label | contains($cfg.inputs.owner_pane_label)))) as $owner_up
 
@@ -97,7 +97,7 @@
         + (if $s.role == "worker" and $byhand then {hand: true} else {} end);
 
     def line($T):
-      ($ev | map(select(.ticket == $T.id))) as $recs
+      ($ev | map(select(.ticket == $T.id and .kind != "break.glass"))) as $recs
       | ($recs | map(select(.fk | IN("seat.up", "seat.down", "compaction", "note") | not))) as $work
       | ($recs | map(select(.fk == "escalated")) | length) as $esc
       | ($work | last) as $last
@@ -123,6 +123,22 @@
   | ($cfg.board | map(. as $b | ($tickets | map(select(.id == $b.ticket)) | first) as $t
       | {k: $b.k, ticket: $b.ticket, t: (if $t != null then ($t.title | clean) else "ticket file not found" end),
          sub: "\($b.ticket) · \($t.status // "missing")", step: step($t)})) as $board
+  # BREADCRUMB 2026-10-11 - WO-20261011-4562, AC-H3 "the board shows every break glass as a line". What broke: nothing yet; a break
+  #   glass is the owner allowing one command, and the owner has to see each one on the floor. Why this shape: the records of one
+  #   request id (the 300, and the 200, 423, 100, 201 and 204 that name it as `answer`) fold to one row whose state is the latest
+  #   record's, so a row moves asked, granted, in effect, done, restored without a hand edit. The records are kept out of the
+  #   per-ticket lines and the seat table above: they are not a pipeline step, and a 423 written after a seat went down would
+  #   otherwise read as that seat being up. Rejected: one line per record (six rows for one command) and a station of their own
+  #   (the design's markup is locked). Cost: only the newest 24 requests show, and an expired-but-unrestored break glass still reads
+  #   in effect here; seat.sh --audit is what calls it out.
+  | ($ev | map(select(.kind == "break.glass"))
+      | group_by(if .code == 300 then .id else (.answer // .id) end)
+      | map(sort_by(.at, .id) | . as $g | ($g | last) as $l | (($g | map(select(.code == 300)) | first) // $g[0]) as $q
+          | {id: ($q.id | split("-") | last), request: (if $q.code == 300 then $q.id else ($q.answer // $q.id) end), seat: $q.seat,
+             action: (($q.action // "") | clean),
+             state: ({"300": "asked", "200": "granted", "423": "refused", "100": "in effect", "201": "done", "204": "restored"}[($l.code | tostring)] // "asked"),
+             at: $l.at})
+      | sort_by(.request) | .[-24:]) as $glass
   | ([$lines[].ticket] + [$cfg.board[].ticket] | unique | map(. as $id | ($tickets | map(select(.id == $id)) | first) as $t
       | select($t != null) | [($id | split("-") | last), "\($id) - \($t.title | clean)"])) as $legend
 
@@ -140,7 +156,7 @@
        | (first($routes.routes[] | select(.match.kind == $k.route.kind and .match.code == $k.route.code and .do == $k.route.do))
           // error("kickback \($k.from) to \($k.to) names no row of the routes table")) as $row
        | {from: $k.from, to: $k.to, tag: tag($row)} + (if $k.esc == true then {esc: true} else {} end))),
-     lines: $lines}
+     lines: $lines, glass: $glass}
     + (if $cfg.board_title != null then {board_title: $cfg.board_title} else {} end)
     + {board: $board,
        legend: ($legend + $cfg.legend_notes),
