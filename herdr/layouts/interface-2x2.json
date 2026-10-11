@@ -1,0 +1,34 @@
+{
+  "id": "interface-2x2",
+  "grid": "2x2",
+  "panes": [
+    {
+      "slot": "a",
+      "kind": "agent",
+      "label": "${MODEL} - ${effort} - ${seat}",
+      "command": ""
+    },
+    {
+      "slot": "b",
+      "kind": "monitor",
+      "label": "MONITOR - ${name}",
+      "command": "while :; do clear; ${repo}/events/bin/event.sh tail; sleep 15; done"
+    },
+    {
+      "slot": "c",
+      "kind": "tool",
+      "label": "bearings-stable",
+      "command": ""
+    },
+    {
+      "slot": "d",
+      "kind": "tool",
+      "label": "bearings-stable-wait",
+      "command": ""
+    }
+  ],
+  "pre_start": [
+    "${repo}/tools/bearings/scripts/bearings.sh stable status --json | jq -e .alive >/dev/null || ${repo}/tools/bearings/scripts/bearings.sh stable serve --join >/dev/null",
+    "${repo}/tools/bearings/scripts/bearings.sh stable wait --to ${agent_pane} >/dev/null"
+  ]
+}

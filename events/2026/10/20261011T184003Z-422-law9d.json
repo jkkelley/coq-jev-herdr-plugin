@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T184003Z-422-law9d",
+  "at": "2026-10-11T18:40:03Z",
+  "code": 422,
+  "seat": "tester-wo-20261011-e618",
+  "kind": "test.failed",
+  "ticket": "WO-20261011-e618",
+  "pane": "wD3:p1V",
+  "note": "Case 1 failed: seat.sh --check interface-agent exit 3, no interface-agent seat under seats/. Repro: herdr/bin/seat.sh --check interface-agent",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-3-coq-jev-herdr-plugin/1337b038-f592-4e53-933f-8ec5b160f256/scratchpad/case1-check.txt"
+  ],
+  "observations": [],
+  "attempt": 1
+}

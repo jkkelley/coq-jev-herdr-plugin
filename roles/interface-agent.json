@@ -10,7 +10,7 @@
   "effort": "high",
   "context_threshold_percent": 30,
   "max_seats": 1,
-  "pane_layout": "seat-1x2",
+  "pane_layout": "interface-2x2",
   "inputs": [
     "bearings.answer",
     "bearings.message",
@@ -49,7 +49,8 @@
       "make bearings-*",
       "tools/bearings/scripts/bearings.sh *",
       "events/bin/event.sh list|tail",
-      "graph/bin/graph.sh get|find"
+      "graph/bin/graph.sh get|find",
+      "interface/bin/interface.sh forward|line|snapshot *"
     ]
   },
   "deny": {

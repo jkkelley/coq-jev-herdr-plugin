@@ -20,9 +20,11 @@ flowchart LR
   CMP-route-runner["CMP-route-runner<br/>factory/bin/route.sh: the orchestrator's"]
   CMP-rust-terminal["CMP-rust-terminal<br/>Rust terminal with Kitty graphics: fallb"]
   CMP-sitrep-site["CMP-sitrep-site<br/>SITREP site: Go server, websocket owner "]
+  DEC-architect-becomes-interface-agent["DEC-architect-becomes-interface-agent<br/>The architect session becomes the interf"]
   DEC-automate-recover-retry["DEC-automate-recover-retry<br/>Templates, scripts, automation, recovery"]
   DEC-bearings-vendored-tiers["DEC-bearings-vendored-tiers<br/>Bearings is vendored into tools/bearings"]
   DEC-blueprint-first["DEC-blueprint-first<br/>Design from the blueprint, never improvi"]
+  DEC-break-glass-one-time["DEC-break-glass-one-time<br/>Break glass: the owner alone authorises "]
   DEC-clear-schemas-codes-token-efficiency["DEC-clear-schemas-codes-token-efficiency<br/>Clear schemas and status codes, token ef"]
   DEC-components-first["DEC-components-first<br/>Components are the design unit: every pi"]
   DEC-functional-style["DEC-functional-style<br/>Functional programming mindset: pure fun"]
@@ -151,10 +153,14 @@ flowchart LR
   CMP-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
   CMP-sitrep-site -- decided_by --> DEC-sitrep-local-first
   CMP-sitrep-site -- depends_on --> IFC-owner-channel
+  DEC-architect-becomes-interface-agent -- implements --> REQ-north-star
+  DEC-architect-becomes-interface-agent -- depends_on --> DEC-blueprint-first
   DEC-automate-recover-retry -- implements --> REQ-north-star
   DEC-automate-recover-retry -- depends_on --> DEC-system-runs-the-loop
   DEC-blueprint-first -- implements --> REQ-north-star
   DEC-blueprint-first -- depends_on --> DEC-system-runs-the-loop
+  DEC-break-glass-one-time -- implements --> REQ-north-star
+  DEC-break-glass-one-time -- depends_on --> DEC-system-runs-the-loop
   DEC-clear-schemas-codes-token-efficiency -- implements --> REQ-north-star
   DEC-clear-schemas-codes-token-efficiency -- depends_on --> DEC-system-runs-the-loop
   DEC-components-first -- implements --> REQ-north-star

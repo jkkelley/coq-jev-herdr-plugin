@@ -526,6 +526,28 @@ ensure_trust() {
   jq -e --arg p "$wt" '.projects[$p].hasTrustDialogAccepted == true' "$f" >/dev/null 2>&1 && return 0
   jq --arg p "$wt" '.projects[$p] = ((.projects[$p] // {}) + {hasTrustDialogAccepted: true})' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
 }
+# BREADCRUMB 2026-10-11 - WO-20261011-e618. What broke: nothing yet, this is the missing half of "the bearings serve and wait panes
+#   move into the interface agent's tab" (DEC-interface-agent-owns-bearings). tools/bearings/scripts/bearings.sh claims the
+#   panes labelled bearings-stable and bearings-stable-wait in the tab of the pane that calls it (HERDR_TAB_ID), so only a
+#   process inside the seat's own tab can put them there, and the seat is read only and must not be the one to type the
+#   commands. Why this fix: a layout may list `pre_start` shell lines; they are typed into the agent pane's shell, which is
+#   already in that tab, after the environment line and before the agent starts. Each line ends in a counter echo that this
+#   function waits for, so the next line (or the agent start) never queues behind a command still running. The
+#   wait target is ${agent_pane}, known only here. Rejected: a second seat.sh door for bearings (two ways to bring a seat up),
+#   and typing the lines after the agent started (the agent's TUI owns the pane then). Cost: it runs only when the agent is
+#   started; a live seat whose wait loop died is repaired by --down and a fresh up, which the runbook says. A line that does
+#   not finish within prompt_timeout_ms refuses the up (exit 4), and a rerun repeats it from the top.
+run_pre_start() {
+  local n i cmd marker
+  n="$(jq '(.pre_start // []) | length' "$layout_file")"; [ "$n" -gt 0 ] || return 0
+  for ((i = 0; i < n; i++)); do
+    cmd="$(jq -r --argjson i "$i" '.pre_start[$i]' "$layout_file" | sub | sed -e "s|\${agent_pane}|$a|g")"
+    marker=$((4000 + i))
+    sl_mut pane run "$a" "$cmd; echo pre-start-done-\$(($marker))" >/dev/null
+    sl_mut pane wait-output "$a" --regex "pre-start-done-$marker" --timeout "$(sl_cfg .prompt_timeout_ms)" >/dev/null 2>&1 \
+      || { [ "$DRY" = 1 ] || SL_EXIT=4 sl_die "pre_start line $((i + 1)) of layout $layout_id did not finish in pane $a within $(sl_cfg .prompt_timeout_ms) ms; read it with: herdr pane read $a"; }
+  done
+}
 started=0
 if [ "$DRY" != 1 ] && sl_agent_live "$name"; then sl_log "seat $name: agent already running, left as is"
 else
@@ -547,6 +569,7 @@ else
     || { [ "$DRY" = 1 ] || { SL_EXIT=4 sl_die "pane $a showed no shell prompt within $(sl_cfg .prompt_timeout_ms) ms; rerun to repair"; }; }
   sl_mut pane run "$a" "$line" >/dev/null
   [ "$DRY" = 1 ] || ensure_trust
+  run_pre_start
   case "$runtime" in
     claude) flags=(--model "$MODEL" --effort "$effort" --permission-mode "$pmode" --settings "$settings") ;;
     codex) flags=(-m "$MODEL" -c "model_reasoning_effort=\"$effort\"") ;;

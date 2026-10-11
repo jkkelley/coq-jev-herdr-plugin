@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T183923Z-100-p073g",
+  "at": "2026-10-11T18:39:23Z",
+  "code": 100,
+  "seat": "tester-wo-20261011-e618",
+  "kind": "work.started",
+  "ticket": "WO-20261011-e618",
+  "pane": "wD3:p1V",
+  "note": "Tester seat up for WO-20261011-e618 on PR 17; running the ticket test plan only, in the test pane",
+  "evidence": [],
+  "observations": []
+}

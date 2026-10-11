@@ -1,0 +1,26 @@
+{
+  "id": "DEC-architect-becomes-interface-agent",
+  "type": "Decision",
+  "title": "The architect session becomes the interface agent seat with its context intact: seat.sh adopts a running session as a seat, the role schema is roles/interface-agent.json, the model is Fable first (Opus or Sonnet allowed), never Sonnet by default",
+  "status": "locked",
+  "text": "Owner, 2026-10-11 18:42Z: 'Hurry up and turn yourself into that interface agent, you transfer the seat to it, keep all context, I don't want sonnet right off the bat. It can be fable, opus or sonnet. I want it with you and all the same context we have here, but I want your schema to be it when this loop is ready.' Binding: seat.sh gains an adopt path (a seat comes up from an existing claude session id, keeping its transcript, under the role's settings and label); roles/interface-agent.json model order is fable, opus, sonnet; the switch happens when WO-20261011-e618 lands, with the architect's session id.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat-wD3-p2",
+      "at": "2026-10-11T18"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-north-star"
+    },
+    {
+      "kind": "depends_on",
+      "to": "DEC-blueprint-first"
+    }
+  ],
+  "created": "2026-10-11T18:40Z",
+  "updated": "2026-10-11T18:40Z"
+}

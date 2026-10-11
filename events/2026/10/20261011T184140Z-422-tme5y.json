@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T184140Z-422-tme5y",
+  "at": "2026-10-11T18:41:40Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261011-e618",
+  "kind": "review.changes",
+  "ticket": "WO-20261011-e618",
+  "pane": "wD3:p1V",
+  "note": "PR 17 head 8d5ea72 changes requested. AC-H1 to AC-H5 have observed evidence and make lint is ok, but two misses and one scope note below.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-3-coq-jev-herdr-plugin/7977683b-235a-40db-bed0-e00f4fa04dec/scratchpad/lint.log"
+  ],
+  "observations": [
+    {
+      "path": "interface/RUNBOOK.md",
+      "line": 3,
+      "saw": "Contents list has no GOOD and NEVER entry and the file has no GOOD",
+      "expected": " or NEVER"
+    },
+    {
+      "path": "interface/bin/interface.sh",
+      "line": 80,
+      "saw": "line also turns a 201 test.passed or review.passed into an owner page line",
+      "expected": "only a verified 201 (AC-H3, RUNBOOK line 23); drop test.passed and review.passed or add a breadcrumb and test case"
+    },
+    {
+      "path": "roles/merger.json",
+      "line": 1,
+      "saw": "PR 17 carries PR 15 content via merge 7335edc (merger role, playbooks/merger.md, SOP-0001, graph nodes, bin/md-contents.sh, other tickets)",
+      "expected": "no file outside this ticket's paths; rebase after PR 15 merges so the diff is only e618"
+    }
+  ],
+  "attempt": 1,
+  "to": "worker"
+}

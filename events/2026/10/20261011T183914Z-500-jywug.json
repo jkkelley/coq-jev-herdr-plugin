@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T183914Z-500-jywug",
+  "at": "2026-10-11T18:39:14Z",
+  "code": 500,
+  "seat": "route-runner",
+  "kind": "note",
+  "ticket": "WO-20261011-e618",
+  "pane": null,
+  "note": "no route for note 100, record 20261011T183909Z-100-g94u8",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}
