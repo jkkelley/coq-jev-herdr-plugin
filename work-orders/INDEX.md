@@ -23,7 +23,6 @@ Status `ready` with every dependency `done`. Hand one of these straight to an ag
 | `WO-20261010-7083` | p0 | Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume | [WO-20261010-7083-quiet-window-in-compaction-guard-quiet-json-5-se.md](WO-20261010-84f1/WO-20261010-7083-quiet-window-in-compaction-guard-quiet-json-5-se.md) |
 | `WO-20261010-c6e9` | p0 | Spike 9: Haiku 5.5 seat with bypassPermissions, remote-control, hooks and compaction-guard | [WO-20261010-c6e9-spike-9-haiku-5-5-seat-with-bypasspermissions-re.md](WO-20261010-da54/WO-20261010-c6e9-spike-9-haiku-5-5-seat-with-bypasspermissions-re.md) |
 | `WO-20261010-98ea` | p1 | Owner surface: bearings page, SITREP site and factory dashboard | [WO-20261010-98ea-owner-surface-bearings-page-sitrep-site-and-fact.md](WO-20261010-98ea/WO-20261010-98ea-owner-surface-bearings-page-sitrep-site-and-fact.md) |
-| `WO-20261011-3d78` | p1 | SITREP page renders from a data file through one script, so every SITREP has the locked shape | [WO-20261011-3d78-sitrep-page-renders-from-a-data-file-through-one.md](WO-20261010-98ea/WO-20261011-3d78-sitrep-page-renders-from-a-data-file-through-one.md) |
 
 ## Tree
 
@@ -71,8 +70,7 @@ WO-20261010-98ea  ready       p1 Owner surface: bearings page, SITREP site and f
 |-- WO-20261010-3593  draft       p0 Handoff to the interface agent: page state, transcript, mem...
 |-- WO-20261010-090c  draft       p0 SITREP site: Go server, websocket owner channel, wireframe ...
 |-- WO-20261010-7c55  draft       p0 Wireframes: herdr tab and pane layouts, SITREP site, factor...
-|-- WO-20261010-c180  draft       p1 Factory dashboard: live view of the queue, seats, records a...
-`-- WO-20261011-3d78  ready       p1 SITREP page renders from a data file through one script, so...
+`-- WO-20261010-c180  draft       p1 Factory dashboard: live view of the queue, seats, records a...
 ```
 
 ## Active
@@ -105,7 +103,6 @@ WO-20261010-98ea  ready       p1 Owner surface: bearings page, SITREP site and f
 | `WO-20261010-7c55` | draft | p0 | feature | WO-20261010-98ea | - | [Wireframes: herdr tab and pane layouts, SITREP site, factory dashboard, game pane](WO-20261010-98ea/WO-20261010-7c55-wireframes-herdr-tab-and-pane-layouts-sitrep-sit.md) |
 | `WO-20261010-98ea` | ready | p1 | feature | - | - | [Owner surface: bearings page, SITREP site and factory dashboard](WO-20261010-98ea/WO-20261010-98ea-owner-surface-bearings-page-sitrep-site-and-fact.md) |
 | `WO-20261010-c180` | draft | p1 | feature | WO-20261010-98ea | WO-20261010-090c | [Factory dashboard: live view of the queue, seats, records and leases, Factorio feel](WO-20261010-98ea/WO-20261010-c180-factory-dashboard-live-view-of-the-queue-seats-r.md) |
-| `WO-20261011-3d78` | ready | p1 | feature | WO-20261010-98ea | - | [SITREP page renders from a data file through one script, so every SITREP has the locked shape](WO-20261010-98ea/WO-20261011-3d78-sitrep-page-renders-from-a-data-file-through-one.md) |
 | `WO-20261010-0651` | draft | p1 | feature | WO-20261010-da54 | WO-20261010-d58d | [Spike 4: Haiku 5.5 on the text map vs a screenshot](WO-20261010-da54/WO-20261010-0651-spike-4-haiku-5-5-on-the-text-map-vs-a-screensho.md) |
 | `WO-20261010-5f68` | draft | p2 | feature | WO-20261010-da54 | WO-20261010-d58d | [Spike 7: share of turns a deterministic layer absorbs](WO-20261010-da54/WO-20261010-5f68-spike-7-share-of-turns-a-deterministic-layer-abs.md) |
 | `WO-20261010-6624` | draft | p1 | feature | WO-20261010-da54 | WO-20261010-d58d | [Spike 3: file IPC vs socket for the adapter](WO-20261010-da54/WO-20261010-6624-spike-3-file-ipc-vs-socket-for-the-adapter.md) |
@@ -133,6 +130,7 @@ WO-20261010-98ea  ready       p1 Owner surface: bearings page, SITREP site and f
 | `WO-20261010-ba08` | done | Vendor bearings into tools/bearings with stable, uat and dev tiers | [WO-20261010-ba08-vendor-bearings-into-tools-bearings-with-stable-.md](archive/2026/WO-20261010-ba08-vendor-bearings-into-tools-bearings-with-stable-.md) |
 | `WO-20261010-c274` | done | recover.sh --check|--apply per RUN-recover with its Podman case | [WO-20261010-c274-recover-sh-check-apply-per-run-recover-with-its-.md](archive/2026/WO-20261010-c274-recover-sh-check-apply-per-run-recover-with-its-.md) |
 | `WO-20261011-36d7` | done | The labelled test pane never keeps its cwd inside a treehouse slot, so treehouse return --force cannot kill it | [WO-20261011-36d7-the-labelled-test-pane-never-keeps-its-cwd-insid.md](archive/2026/WO-20261011-36d7-the-labelled-test-pane-never-keeps-its-cwd-insid.md) |
+| `WO-20261011-3d78` | done | SITREP page renders from a data file through one script, so every SITREP has the locked shape | [WO-20261011-3d78-sitrep-page-renders-from-a-data-file-through-one.md](archive/2026/WO-20261011-3d78-sitrep-page-renders-from-a-data-file-through-one.md) |
 | `WO-20261011-4c5e` | done | Worker fence paths resolve against the worktree: render_settings substitutes ${worktree} in allow.paths and deny paths name the slot, not the main checkout | [WO-20261011-4c5e-worker-fence-paths-resolve-against-the-worktree-.md](archive/2026/WO-20261011-4c5e-worker-fence-paths-resolve-against-the-worktree-.md) |
 | `WO-20261011-9639` | done | Worker role closes its own ticket: roles/worker.json allows work-order.sh submit and done | [WO-20261011-9639-worker-role-closes-its-own-ticket-roles-worker-j.md](archive/2026/WO-20261011-9639-worker-role-closes-its-own-ticket-roles-worker-j.md) |
 | `WO-20261011-c077` | done | seat.sh checks out the ticket branch in the slot it leases, so a worker starts on its branch without the architect touching the slot | [WO-20261011-c077-seat-sh-checks-out-the-ticket-branch-in-the-slot.md](archive/2026/WO-20261011-c077-seat-sh-checks-out-the-ticket-branch-in-the-slot.md) |

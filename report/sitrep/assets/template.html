@@ -1,0 +1,304 @@
+<title>__TITLE__</title>
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap"
+/>
+<style>
+  /* SITREP shape locked by the owner 2026-10-11 (WO-20261011-3d78). One column, 720px, board-style rows, no paragraphs.
+     Every ticket is a 4-char id chip; full titles live in one folded legend at the end. Dark-first ops console, light mirrored.
+     Placeholders (a NAME between double underscores) are filled once by report/sitrep/sitrep.sh with escaped text or renderer-built HTML; nothing else changes here. */
+  :root {
+    --ground: #0c1117;
+    --surface: #131a22;
+    --surface-2: #1a232d;
+    --line: #263241;
+    --ink: #e6edf3;
+    --ink-2: #9fb0c0;
+    --ink-3: #6b7d8f;
+    --accent: #ffb000;
+    --good: #3fd27f;
+    --bad: #ff5c5c;
+    --warn: #ffb000;
+    --info: #5ab0ff;
+    --font-display: "Barlow Condensed", Impact, "Arial Narrow", sans-serif;
+    --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --ground: #f3f1ec;
+      --surface: #ffffff;
+      --surface-2: #ebe8e1;
+      --line: #d6d1c6;
+      --ink: #141a20;
+      --ink-2: #3f4d5a;
+      --ink-3: #6b7a88;
+      --accent: #b86e00;
+      --good: #1f8f52;
+      --bad: #c62f2f;
+      --warn: #b86e00;
+      --info: #1f6fc2;
+      color-scheme: light;
+    }
+  }
+  :root[data-theme="light"] {
+    --ground: #f3f1ec;
+    --surface: #ffffff;
+    --surface-2: #ebe8e1;
+    --line: #d6d1c6;
+    --ink: #141a20;
+    --ink-2: #3f4d5a;
+    --ink-3: #6b7a88;
+    --accent: #b86e00;
+    --good: #1f8f52;
+    --bad: #c62f2f;
+    --warn: #b86e00;
+    --info: #1f6fc2;
+    color-scheme: light;
+  }
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.4;
+    padding-inline: 16px;
+    padding-block: 0 48px;
+  }
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  h1,
+  h2 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+    letter-spacing: 0.01em;
+    margin: 0;
+  }
+  h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    margin-top: 6px;
+  }
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-2);
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .top {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    background: var(--ground);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 0 10px;
+    z-index: 2;
+  }
+  .strip {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .pill {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 3px;
+    border: 1px solid var(--line);
+    color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .pill.go {
+    color: var(--good);
+    border-color: var(--good);
+  }
+  .pill.hold {
+    color: var(--warn);
+    border-color: var(--warn);
+  }
+  .pill.ask {
+    color: var(--info);
+    border-color: var(--info);
+  }
+  .pill.risk {
+    color: var(--bad);
+    border-color: var(--bad);
+  }
+  .blk {
+    border-left: 3px solid var(--line);
+    padding-left: 14px;
+    margin-top: 26px;
+  }
+  .blk[data-s="go"] {
+    border-color: var(--good);
+  }
+  .blk[data-s="hold"] {
+    border-color: var(--warn);
+  }
+  .blk[data-s="ask"] {
+    border-color: var(--info);
+  }
+  .blk[data-s="risk"] {
+    border-color: var(--bad);
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin-top: 8px;
+  }
+  th {
+    text-align: left;
+    font-family: var(--font-mono);
+    font-size: 0.66rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  td {
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .tbl {
+    overflow-x: auto;
+    min-width: 0;
+  }
+  .id {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .phases {
+    display: grid;
+    grid-template-columns: repeat(__PHASE_COUNT__, 1fr);
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .ph {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 8px 6px;
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--ink-3);
+  }
+  .ph.now {
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  .ph.done {
+    border-color: var(--good);
+    color: var(--good);
+  }
+  .ph small {
+    display: block;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-top: 3px;
+  }
+  .q {
+    background: var(--surface);
+    border: 1px solid var(--info);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-top: 8px;
+  }
+  .opt {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 10px;
+    padding: 7px 0;
+    border-top: 1px solid var(--line);
+    font-size: 0.92rem;
+  }
+  .opt b {
+    font-family: var(--font-mono);
+    color: var(--accent);
+  }
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+    background: var(--surface-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  details {
+    margin-top: 10px;
+  }
+  summary {
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  footer {
+    margin-top: 28px;
+  }
+  @media (max-width: 480px) {
+    .phases {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="eyebrow">__EYEBROW__</div>
+    <h1>__HEADLINE__</h1>
+    <div class="strip">__STRIP__</div>
+  </header>
+
+  <section class="blk" data-s="hold">
+    <h2>Phase</h2>
+    <div class="phases">__PHASES__</div>
+    <div class="tbl">__GATE__</div>
+  </section>
+
+  <section class="blk" data-s="go">
+    <h2>Tickets</h2>
+    <div class="tbl">__TICKETS__</div>
+  </section>
+
+  __BLOCKS__
+
+  <section class="blk" data-s="ask">
+    <h2>__Q_TITLE__</h2>
+    <div class="q">__Q_OPTIONS__</div>
+    __Q_QUEUED__
+  </section>
+
+  <details>
+    <summary>Ticket legend · full titles</summary>
+    <div class="tbl">__LEGEND__</div>
+  </details>
+
+  <footer class="eyebrow">__SOURCES__</footer>
+</div>
