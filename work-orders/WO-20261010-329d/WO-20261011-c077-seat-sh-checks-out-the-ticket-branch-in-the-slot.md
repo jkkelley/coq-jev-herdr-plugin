@@ -82,6 +82,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` Worker: seat.sh reads the ticket frontmatter branch before any lease (null refuses, exit 3, nothing leased) and slot_to_branch fetches origin and checks the slot out on it, tracking origin; a fresh lease that cannot reach the branch is returned once (lease_abandon no longer returns twice, found by the new case). Stub treehouse clones a bare origin when TREEHOUSE_STUB_ORIGIN is set. Case 08 extended; make -C herdr test: 8 passed 0 failed, make lint rc 0, both from the labelled test pane. AC-H1 and AC-H2 are human: the architect confirms the live seat-up on the next ticket seat.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._

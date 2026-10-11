@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # seat.sh - the one way a seat comes up, is checked, is taken down and is audited (SPEC-04 RUN-seat-up).
-#   seat.sh --ticket WO-ID --role R [--runtime claude|codex] [--worktree DIR]   door 1: the ticket names the seat (worker-WO-...); no --worktree leases a treehouse slot to the ticket
+#   seat.sh --ticket WO-ID --role R [--runtime claude|codex] [--worktree DIR]   door 1: the ticket names the seat (worker-WO-...); no --worktree leases a treehouse slot to the ticket and checks it out on the ticket's branch
 #   seat.sh --role R --task "text" [--worktree DIR]                             door 2: a fixed seat (monitor, merger, orchestrator)
 #   seat.sh --check NAME        one line per difference, exit 1 if any; a downed seat prints "down since", exit 3
 #   seat.sh --down NAME         retire.sh, close the tab, return the slot this seat leased, record seat.down 100; a second --down records nothing
@@ -11,7 +11,7 @@
 # waited for, `herdr agent start` with the role's model, effort and permission mode, then the brief (roles/bin/brief.sh)
 # as the first prompt. A rerun repairs: a pane with the right label is kept, strays are relabelled, missing ones split.
 # Prints one JSON line. DRY_RUN=1 prints every mutating herdr call and writes nothing.
-# Exit: 0 ok, 1 check differences, 2 usage, 3 refused (gate, cap, guard, name, no test pane for a ticket seat, no treehouse slot), 4 herdr failure
+# Exit: 0 ok, 1 check differences, 2 usage, 3 refused (gate, cap, guard, name, no test pane for a ticket seat, no treehouse slot, a ticket with no branch, a slot that cannot reach it), 4 herdr failure
 #   or a slot that would not come back on --down.
 #
 # BREADCRUMB 2026-10-10 - ported from ~/tools/bearings-v2/bin/seat.sh (644 lines, proven on the rime fleet) and
@@ -119,8 +119,30 @@ th_row() {
 }
 # lease_abandon: the EXIT trap of a run that leased a slot and died before seat.json recorded it, so a refused or failed
 # bring-up leaves no lease behind.
-lease_abandon() { if [ "$lease_new" = 1 ] && [ "$recorded" != 1 ]; then treehouse return "$wt" --if-lease-holder "$id" --force >/dev/null 2>&1 || true; fi; }
-# lease_up: sets wt, lease and lease_new for door 1 without --worktree.
+lease_abandon() {
+  # lease_new goes to 0 once the slot is back: lease_up calls this before refusing and the EXIT trap calls it again, and
+  # the second `treehouse return` (found by case 08 on WO-20261011-c077, which counts calls) failed on a slot already gone.
+  if [ "$lease_new" = 1 ] && [ "$recorded" != 1 ]; then treehouse return "$wt" --if-lease-holder "$id" --force >/dev/null 2>&1 || true; lease_new=0; fi
+}
+# slot_to_branch: put the leased slot on the ticket's branch (BREADCRUMB 2026-10-11 above, the ticket's branch). A fresh slot
+# is detached at origin/main. git fetch origin first, then the local branch when the repository has it (a slot is a linked
+# worktree of the main checkout, so it shares that checkout's branches), else a new local branch tracking origin/<branch>.
+# A local branch that has no upstream while origin has the branch is pointed at it, so the worker's push goes to origin.
+# Prints the reason and returns 1 when the slot cannot be put there. Under DRY_RUN it prints the two git calls and runs none.
+slot_to_branch() {
+  local g=(git -C "$wt") out
+  if [ "$DRY" = 1 ]; then sl_run "${g[@]}" fetch origin; sl_run "${g[@]}" checkout "$branch"; return 0; fi
+  out="$("${g[@]}" fetch --quiet origin 2>&1)" || { echo "git fetch origin failed in $wt: $out"; return 1; }
+  if "${g[@]}" show-ref --verify --quiet "refs/heads/$branch"; then out="$("${g[@]}" checkout --quiet "$branch" 2>&1)"
+  elif "${g[@]}" show-ref --verify --quiet "refs/remotes/origin/$branch"; then out="$("${g[@]}" checkout --quiet -b "$branch" --track "origin/$branch" 2>&1)"
+  else echo "branch $branch is on neither the repository nor origin"; return 1; fi \
+    || { echo "git checkout $branch failed in $wt: $out"; return 1; }
+  if ! "${g[@]}" rev-parse --abbrev-ref --symbolic-full-name "$branch@{upstream}" >/dev/null 2>&1 \
+    && "${g[@]}" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+    "${g[@]}" branch --quiet --set-upstream-to="origin/$branch" "$branch" >/dev/null 2>&1 || true
+  fi
+}
+# lease_up: sets wt, lease and lease_new for door 1 without --worktree, then puts the slot on the ticket's branch.
 lease_up() {
   local row owned=true
   command -v treehouse >/dev/null 2>&1 || refuse "treehouse is not on PATH; a ticket seat without --worktree leases its slot from the pool"
@@ -134,11 +156,13 @@ lease_up() {
     row="$(th_row "$id")" || refuse "treehouse status failed after leasing a slot for $id"
     if [ -z "$row" ]; then
       [ "$DRY" = 1 ] || refuse "treehouse get --lease succeeded but treehouse status lists no lease held by $id"
-      wt="/dry-run/treehouse-slot"; lease="$(jq -nc --arg h "$id" '{holder:$h,id:"dry-run",owned:true}')"; return 0
+      wt="/dry-run/treehouse-slot"; lease="$(jq -nc --arg h "$id" '{holder:$h,id:"dry-run",owned:true}')"; slot_to_branch; return 0
     fi
     lease_new=1; trap lease_abandon EXIT
   fi
   wt="$(jq -r .path <<<"$row")"; [ -d "$wt" ] || { lease_abandon; refuse "treehouse leased $wt to $id but it is not a directory"; }
+  # A fresh lease that cannot reach the branch is given back by the EXIT trap; a lease the ticket already held is left alone.
+  why="$(slot_to_branch)" || { lease_abandon; refuse "slot $wt could not be put on $branch for $id: $why"; }
   lease="$(jq -nc --arg h "$id" --arg i "$(jq -r .lease_id <<<"$row")" --argjson o "$owned" '{holder:$h,id:$i,owned:$o}')"
 }
 # lease_down: give back the slot this seat leased. A slot treehouse no longer lists for the holder counts as returned.
@@ -245,7 +269,27 @@ if [ -n "$ticket" ]; then [ -z "$task" ] || sl_die "--ticket and --task are diff
 else [ -n "$task" ] || usage; id=""; fi
 role_file="$(sl_role_file "$role")"
 # Door 1 needs a ticket file to brief from; refused before anything is built rather than after the agent is up.
-if [ -n "$ticket" ] && [ -z "$(find "$SL_REPO/work-orders" -name "$ticket-*.md" -not -path '*/archive/*' 2>/dev/null | head -1)" ]; then refuse "no ticket $ticket under work-orders/ (archived or never cut)"; fi
+branch=""
+if [ -n "$ticket" ]; then
+  ticket_file="$(find "$SL_REPO/work-orders" -name "$ticket-*.md" -not -path '*/archive/*' 2>/dev/null | head -1)"
+  [ -n "$ticket_file" ] || refuse "no ticket $ticket under work-orders/ (archived or never cut)"
+  # BREADCRUMB 2026-10-11 - WO-20261011-c077, the ticket's branch. What broke: a slot leased below comes up detached at
+  #   origin/main while `work-order start` made feat/<slug> in the main checkout, and the worker role may run git add,
+  #   commit and push only, so the architect ran `git checkout` in the slot by hand before seating WO-20261010-2d04, and
+  #   that hand step left the lease owned false (so --down would not return it). Why this fix: the branch is read from
+  #   the ticket frontmatter (`branch`, stamped by work-order start) here, with the other refusals, so a ticket not yet
+  #   started is refused before any lease or herdr call (AC-H2); lease_up then checks the slot out onto it. Only a seat
+  #   that leases its own slot is touched: --worktree names a directory the caller already prepared and stays as given.
+  #   Rejected: the worker running git checkout (the role denies it by design, and the 2d04 stall again if it is
+  #   forgotten) and falling back to a detached slot when the branch is null (the worker would commit on no branch).
+  #   Cost: a door 1 seat without --worktree now needs the ticket started first; `work-order start` is the step before
+  #   seating anyway.
+  if [ "$wt_given" = 0 ]; then
+    branch="$(awk '/^---$/{c++; next} c==1' "$ticket_file" | jq -r '.branch // empty' 2>/dev/null)" || branch=""
+    [ -n "$branch" ] || refuse "ticket $ticket has no branch yet (frontmatter branch is null); run work-order start first, nothing leased"
+    git check-ref-format "refs/heads/$branch" || refuse "ticket $ticket names branch '$branch', which is not a valid branch name; nothing leased"
+  fi
+fi
 rname="$(jq -r .name "$role_file")"; [ "$rname" = "$role" ] || refuse "role file $role_file names $rname, not $role"
 runtime="${runtime_arg:-$(jq -r .runtime.default "$role_file")}"
 jq -e --arg r "$runtime" '.runtime.allowed | index($r) != null' "$role_file" >/dev/null || refuse "role $role does not allow runtime $runtime"
