@@ -84,8 +84,6 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
-- `2026-10-11` Owner law 2026-10-11 15:34Z (graph DEC-system-runs-the-loop, on REQ-north-star): the system runs the loop, not agents. Notification sound, automated, deterministic; cleanup done by the system; no idle agents; greens visible from records. Every hand step in SOP-0001 (wake by prompt, down after record, salvage, cleanup) must be owned by the belt when this lands.
-
 ## Outcome
 
 _Written by `work-order done`. Empty until then._

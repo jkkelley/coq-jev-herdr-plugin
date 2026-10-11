@@ -261,15 +261,6 @@ if [ "$mode" = down ]; then
   if [ -n "$ended_at" ]; then echo "$name: already down since $ended_at"; exit 0; fi
   [ "$lease_owned" != true ] || sl_require treehouse
   seat_own=""; [ "$lease_owned" != true ] || seat_own="$(seat_pids)"
-  # Second net for records (first: COQ_EVENTS_ROOT above). lease_down runs `treehouse return --force`, which resets the slot
-  # and takes every untracked file with it; PR 13's test 201 went that way on 2026-10-11 (WO-20261011-23df). Any record a seat
-  # in this slot wrote and nobody committed is copied to this checkout's events/ first, never overwriting, one log line each.
-  if [ "$lease_owned" = true ] && [ -d "$wt/events" ] && [ "$DRY" != 1 ]; then
-    while IFS= read -r rel; do
-      [ -n "$rel" ] || continue; dst="$SL_REPO/$rel"
-      [ -e "$dst" ] || { mkdir -p "$(dirname "$dst")" && cp "$wt/$rel" "$dst" && sl_log "seat $name: salvaged uncommitted record $rel from the slot into $SL_REPO"; }
-    done < <(git -C "$wt" ls-files --others --exclude-standard -- events 2>/dev/null)
-  fi
   "$SL_HERE/retire.sh" "$name" --pane "$agent_pane" || sl_log "seat $name: retire did not finish cleanly; closing the tab anyway"
   sl_run sleep "$(sl_cfg .down_wait_seconds)"
   sl_mut tab close "$tab" >/dev/null 2>&1 || true
@@ -346,20 +337,7 @@ role_file="$(sl_role_file "$role")"
 branch=""
 if [ -n "$ticket" ]; then
   ticket_file="$(find "$SL_REPO/work-orders" -name "$ticket-*.md" -not -path '*/archive/*' 2>/dev/null | head -1)"
-  # BREADCRUMB 2026-10-11 - WO-20261011-23df. What broke: the close-out law runs `work-order done` on the feature branch
-  #   before the PR lands, which archives the ticket; a checkout carrying that branch (here, after merging PR 13's branch)
-  #   then has WO-20261011-9639 only under work-orders/archive/, and the line above refused the tester seat on PR 13 as
-  #   "archived or never cut" while the PR was still open and still needed its test, review and merge. Why this fix: the
-  #   tester, reviewer and merger act on a PR, and a PR in review is exactly a ticket that is done on its branch, so for
-  #   those roles the archive is the expected place; the worker keeps the refusal, because a worker on a done ticket is a
-  #   defect. The branch check below still refuses when origin has no feat/<slug>. Rejected: moving `done` to after the
-  #   merge (the close-out law puts the archive move in the PR's own commit range on purpose) and a --force flag (an
-  #   operator would learn to pass it always). Cost: none; the find walks one more directory for three roles.
-  if [ -z "$ticket_file" ] && [ "$role" != worker ]; then
-    ticket_file="$(find "$SL_REPO/work-orders/archive" -name "$ticket-*.md" 2>/dev/null | head -1)"
-    [ -z "$ticket_file" ] || sl_log "ticket $ticket is archived in this checkout (done on its branch, PR still open); $role seat reads the archived copy"
-  fi
-  [ -n "$ticket_file" ] || refuse "no ticket $ticket under work-orders/ (never cut, or archived and role is worker)"
+  [ -n "$ticket_file" ] || refuse "no ticket $ticket under work-orders/ (archived or never cut)"
   # BREADCRUMB 2026-10-11 - WO-20261011-c077, the ticket's branch. What broke: a slot leased below comes up detached at
   #   origin/main while `work-order start` made feat/<slug> in the main checkout, and the worker role may run git add,
   #   commit and push only, so the architect ran `git checkout` in the slot by hand before seating WO-20261010-2d04, and
@@ -373,22 +351,7 @@ if [ -n "$ticket" ]; then
   #   seating anyway.
   if [ "$wt_given" = 0 ]; then
     branch="$(awk '/^---$/{c++; next} c==1' "$ticket_file" | jq -r '.branch // empty' 2>/dev/null)" || branch=""
-    # BREADCRUMB 2026-10-11 - WO-20261011-23df. What broke: `work-order start` stamps the branch into the ticket's frontmatter
-    #   and commits that on the new branch, so the copy of the ticket on main (which this script reads) kept branch null and
-    #   the line above refused WO-20261011-616c, 38c7 and 3d78 as "not started" minutes after they were; the architect
-    #   cherry-picked the start commits onto main to get past it, twice. Why this fix: the branch name is deterministic,
-    #   feat/<slug> from the same frontmatter, so when branch is null it is derived and accepted only when origin already has
-    #   that branch (the start was pushed); a ticket nobody started still has no such branch and is refused before any lease,
-    #   as before. Rejected: reading the ticket from origin/<branch> (circular: the branch is what we are looking for) and
-    #   committing every start on main (a record commit per start on main, which is what this script exists to avoid).
-    #   Cost: one `git ls-remote` against origin per seat bring-up, and the slug must stay the branch's basis in work-order.sh.
-    if [ -z "$branch" ]; then
-      slug="$(awk '/^---$/{c++; next} c==1' "$ticket_file" | jq -r '.slug // empty' 2>/dev/null)" || slug=""
-      if [ -n "$slug" ] && git -C "$SL_REPO" ls-remote --exit-code --heads origin "feat/$slug" >/dev/null 2>&1; then
-        branch="feat/$slug"; sl_log "ticket $ticket has no branch in this checkout's frontmatter; origin has $branch, using it"
-      fi
-    fi
-    [ -n "$branch" ] || refuse "ticket $ticket has no branch yet (frontmatter branch is null and origin has no feat/<slug>); run work-order start and push it first, nothing leased"
+    [ -n "$branch" ] || refuse "ticket $ticket has no branch yet (frontmatter branch is null); run work-order start first, nothing leased"
     git check-ref-format "refs/heads/$branch" || refuse "ticket $ticket names branch '$branch', which is not a valid branch name; nothing leased"
   fi
 fi
@@ -528,28 +491,6 @@ ensure_trust() {
   jq -e --arg p "$wt" '.projects[$p].hasTrustDialogAccepted == true' "$f" >/dev/null 2>&1 && return 0
   jq --arg p "$wt" '.projects[$p] = ((.projects[$p] // {}) + {hasTrustDialogAccepted: true})' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
 }
-# BREADCRUMB 2026-10-11 - WO-20261011-e618. What broke: nothing yet, this is the missing half of "the bearings serve and wait panes
-#   move into the interface agent's tab" (DEC-interface-agent-owns-bearings). tools/bearings/scripts/bearings.sh claims the
-#   panes labelled bearings-stable and bearings-stable-wait in the tab of the pane that calls it (HERDR_TAB_ID), so only a
-#   process inside the seat's own tab can put them there, and the seat is read only and must not be the one to type the
-#   commands. Why this fix: a layout may list `pre_start` shell lines; they are typed into the agent pane's shell, which is
-#   already in that tab, after the environment line and before the agent starts. Each line ends in a counter echo that this
-#   function waits for, so the next line (or the agent start) never queues behind a command still running. The
-#   wait target is ${agent_pane}, known only here. Rejected: a second seat.sh door for bearings (two ways to bring a seat up),
-#   and typing the lines after the agent started (the agent's TUI owns the pane then). Cost: it runs only when the agent is
-#   started; a live seat whose wait loop died is repaired by --down and a fresh up, which the runbook says. A line that does
-#   not finish within prompt_timeout_ms refuses the up (exit 4), and a rerun repeats it from the top.
-run_pre_start() {
-  local n i cmd marker
-  n="$(jq '(.pre_start // []) | length' "$layout_file")"; [ "$n" -gt 0 ] || return 0
-  for ((i = 0; i < n; i++)); do
-    cmd="$(jq -r --argjson i "$i" '.pre_start[$i]' "$layout_file" | sub | sed -e "s|\${agent_pane}|$a|g")"
-    marker=$((4000 + i))
-    sl_mut pane run "$a" "$cmd; echo pre-start-done-\$(($marker))" >/dev/null
-    sl_mut pane wait-output "$a" --regex "pre-start-done-$marker" --timeout "$(sl_cfg .prompt_timeout_ms)" >/dev/null 2>&1 \
-      || { [ "$DRY" = 1 ] || SL_EXIT=4 sl_die "pre_start line $((i + 1)) of layout $layout_id did not finish in pane $a within $(sl_cfg .prompt_timeout_ms) ms; read it with: herdr pane read $a"; }
-  done
-}
 # BREADCRUMB 2026-10-11 - WO-20261011-dc0d, the seat that acks the guard memo and stops. What broke: compaction-guard sends every
 #   new session a GOV-100 memo whose last action is "reply with the ack line below and nothing else". A worker whose turn had
 #   already ended (brief read, first record posted) acked and stopped dead, because the memo's last word was the last thing it
@@ -608,19 +549,12 @@ else
   # runtime (dotfiles Rule 19; owner 2026-09-22).
   surface=lavish; [ "$runtime" = claude ] && surface=artifact
   unset_markers='for v in $(env | sed -n '\''s/^\(CLAUDECODE\|CLAUDE_CODE_[A-Z0-9_]*\|CLAUDE_PID\|CLAUDE_EFFORT\|AI_AGENT\)=.*/\1/p'\''); do unset "$v"; done; '
-  # Every seat writes its records to this checkout's events/ (COQ_EVENTS_ROOT, read by events/bin/event.sh), never to the slot:
-  # a record left untracked in a slot dies with `treehouse return --force` on --down (PR 13's test 201, 2026-10-11,
-  # WO-20261011-23df; the full reason is the breadcrumb at ROOT in event.sh). One root also means the route runner and the
-  # board read one log; a per-role rule (only roles without git) was tried first and left the reviewer's and merger's records
-  # in PR 12's slot, since those roles may run git but never push from a shared slot.
-  ev_root="$SL_REPO/events"
-  line="$unset_markers$(printf 'cd %q && export COQ_SEAT=%q COQ_TEST_PANE=%q COQ_ROLE=%q COQ_TICKET=%q COQ_ROLE_FILE=%q COQ_WORKTREE=%q COQ_REPO=%q COQ_EVENTS_ROOT=%q RAIL_SURFACE=%q PATH=%q:"$PATH"' \
-    "$wt" "$name" "$tpane" "$role" "$id" "$role_file" "$wt" "$SL_REPO" "$ev_root" "$surface" "$SL_REPO/bin")"
+  line="$unset_markers$(printf 'cd %q && export COQ_SEAT=%q COQ_TEST_PANE=%q COQ_ROLE=%q COQ_TICKET=%q COQ_ROLE_FILE=%q COQ_WORKTREE=%q COQ_REPO=%q RAIL_SURFACE=%q PATH=%q:"$PATH"' \
+    "$wt" "$name" "$tpane" "$role" "$id" "$role_file" "$wt" "$SL_REPO" "$surface" "$SL_REPO/bin")"
   sl_mut pane wait-output "$a" --regex "$SL_PROMPT_RE" --timeout "$(sl_cfg .prompt_timeout_ms)" >/dev/null 2>&1 \
     || { [ "$DRY" = 1 ] || { SL_EXIT=4 sl_die "pane $a showed no shell prompt within $(sl_cfg .prompt_timeout_ms) ms; rerun to repair"; }; }
   sl_mut pane run "$a" "$line" >/dev/null
   [ "$DRY" = 1 ] || ensure_trust
-  run_pre_start
   case "$runtime" in
     claude) flags=(--model "$MODEL" --effort "$effort" --permission-mode "$pmode" --settings "$settings") ;;
     codex) flags=(-m "$MODEL" -c "model_reasoning_effort=\"$effort\"") ;;

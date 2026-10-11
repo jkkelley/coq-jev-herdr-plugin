@@ -13,11 +13,6 @@
       "pattern": "^[1-9]x[1-9]$",
       "description": "rows x columns, row major"
     },
-    "pre_start": {
-      "type": "array",
-      "description": "Shell lines typed into the agent pane, in order, after the environment line and before the agent starts; each must finish (seat.sh waits for it) and takes the same tokens as a command plus ${agent_pane}. Run only when the agent is started, never on a repair of a live seat.",
-      "items": { "type": "string", "minLength": 1 }
-    },
     "panes": {
       "type": "array",
       "minItems": 1,

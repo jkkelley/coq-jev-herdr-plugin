@@ -7,20 +7,16 @@
   "sources": [],
   "edges": [
     {
-      "kind": "decided_by",
-      "to": "DEC-system-before-agents"
-    },
-    {
-      "kind": "decided_by",
-      "to": "DEC-system-runs-the-loop"
-    },
-    {
       "kind": "implements",
       "to": "REQ-event-log"
+    },
+    {
+      "kind": "decided_by",
+      "to": "DEC-system-before-agents"
     }
   ],
   "created": "2026-10-10T18:55Z",
-  "updated": "2026-10-11T15:36Z",
+  "updated": "2026-10-10T19:54Z",
   "schema": "events/schema/event.schema.json",
   "data": [
     "events/2026"
