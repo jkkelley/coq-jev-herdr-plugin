@@ -48,6 +48,33 @@
 
 
 
+
+## Checkpoint 2026-10-11 20:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-6842 in slot 5 on WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (gate record with no consumer, belt heartbeat stale, runner pane gone) and recover.sh restarts the belt. Branch feat/flow-watch-a-shell-watcher-in-a-monitors-pane-tu, pushed. work.started 100 record 20261011T185747Z-100-3rtr5. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped is still draft; this ticket added the runner (2.2.2) and flow (2.2.3) reserved slots to herdr/config/monitors.json, so bringup plugs both in with no code change (breadcrumb in bringup.sh).
+
+#### Toolchain
+
+- Landed: lint conflict-marker check (AC-H3, factory case 08); factory/bin/flow.sh with flow.json and schema (factory cases 09 and 10); monitors.json slots runner and flow with the herdr world running them as sleep loops (cases 04 and 05); recover.sh belt node with herdr.json belt.slot, belt.status and belt.settle_seconds plus schema (herdr case 13 runs the real runner; case 05 counts ok belt). make -C factory test 10 passed; make -C herdr test CASES="05 13" 2 passed.
+- make -C factory test is 10 passed; make -C herdr test CASES='04 05' is 2 passed.
+
+#### Active Tasks
+
+- Close-out: full make -C factory test and make -C herdr test were queued from the test pane after this step (outputs in the scratchpad: f5.txt and h5.txt); read them. Then ticket evidence per criterion with work-order.sh evidence --observed, a retro note that hands the graph nodes to the architect (graph/ is denied to workers: RUN-recover gains the belt node, a flow watch component, monitors slots runner and flow), push, gh pr create, work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened 100 with sha and pr, stop.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-6842 as worker-wo-20261011-6842 in slot 5. Read playbooks/worker.md, the ticket and this checkpoint. All five build steps are committed (conflict lint, flow.sh, bringup slots, recover belt node, RUNBOOK section). Do the close-out: read the full suite results, evidence each acceptance criterion, retro note, PR, submit, done, pr.opened 100. Run make only through herdr/bin/testpane.sh wD3:p1V, and expect to queue behind other seats there.
+
 ## Checkpoint 2026-10-11 19:53 UTC
 
 ### Current state
