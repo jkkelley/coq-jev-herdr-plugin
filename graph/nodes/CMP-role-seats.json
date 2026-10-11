@@ -1,0 +1,24 @@
+{
+  "id": "CMP-role-seats",
+  "type": "Component",
+  "title": "Tester, reviewer and merger seats: one record each on a real PR, brought up by seat.sh on the PR's ticket, records written to the bring-up checkout",
+  "status": "draft",
+  "text": "herdr/bin/seat.sh, roles/bin/brief.sh, roles/tester.json, roles/reviewer.json, roles/merger.json; records via events/bin/event.sh with COQ_EVENTS_ROOT",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "defined_in",
+      "to": "RUN-role-seats-on-a-pr"
+    },
+    {
+      "kind": "decided_by",
+      "to": "DEC-system-before-agents"
+    },
+    {
+      "kind": "implements",
+      "to": "REQ-event-log"
+    }
+  ],
+  "created": "2026-10-11T15:28Z",
+  "updated": "2026-10-11T15:28Z"
+}

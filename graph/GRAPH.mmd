@@ -16,6 +16,7 @@ flowchart LR
   CMP-player-seat["CMP-player-seat<br/>Player seat: runtime-pluggable (claude, "]
   CMP-qud-adapter["CMP-qud-adapter<br/>Qud adapter: Harmony C# mod exporting st"]
   CMP-queue["CMP-queue<br/>queue/: directory queue with p0..p3 prio"]
+  CMP-role-seats["CMP-role-seats<br/>Tester, reviewer and merger seats: one r"]
   CMP-rust-terminal["CMP-rust-terminal<br/>Rust terminal with Kitty graphics: fallb"]
   CMP-sitrep-site["CMP-sitrep-site<br/>SITREP site: Go server, websocket owner "]
   DEC-bearings-vendored-tiers["DEC-bearings-vendored-tiers<br/>Bearings is vendored into tools/bearings"]
@@ -77,6 +78,7 @@ flowchart LR
   RUN-kickback["RUN-kickback<br/>Kickback: events/bin/event.sh add --kind"]
   RUN-recover["RUN-recover<br/>recover.sh --check|--apply: halt flag, h"]
   RUN-retire["RUN-retire<br/>retire: agent send-keys esc, agent promp"]
+  RUN-role-seats-on-a-pr["RUN-role-seats-on-a-pr<br/>SOP-0001: bring up a tester, reviewer or"]
   RUN-seat-up["RUN-seat-up<br/>seat.sh --ticket WO --role R: workspace "]
   SCH-factory-record["SCH-factory-record<br/>factory/schema/record.schema.json: id, a"]
   SCH-routes["SCH-routes<br/>factory/config/routes.json: first matchi"]
@@ -128,6 +130,9 @@ flowchart LR
   CMP-qud-adapter -- verified_by --> SPK-02-harmony-mod
   CMP-queue -- implements --> REQ-locks-and-queues
   CMP-queue -- owned_by --> ROL-orchestrator
+  CMP-role-seats -- defined_in --> RUN-role-seats-on-a-pr
+  CMP-role-seats -- decided_by --> DEC-system-before-agents
+  CMP-role-seats -- implements --> REQ-event-log
   CMP-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
   CMP-sitrep-site -- decided_by --> DEC-sitrep-local-first
   CMP-sitrep-site -- depends_on --> IFC-owner-channel
@@ -167,6 +172,8 @@ flowchart LR
   RUN-kickback -- defined_in --> SCH-factory-record
   RUN-recover -- depends_on --> RUN-seat-up
   RUN-retire -- owned_by --> ROL-monitor
+  RUN-role-seats-on-a-pr -- depends_on --> RUN-seat-up
+  RUN-role-seats-on-a-pr -- depends_on --> RUN-kickback
   RUN-seat-up -- depends_on --> WFL-bringup
   RUN-seat-up -- implements --> DEC-no-process-under-agent
   SCH-factory-record -- implements --> REQ-factory-node-contract

@@ -67,8 +67,10 @@ The three roles exist as files but no seat has ever run them; PR 11 and PR 12 wa
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* tester seat up, runs the PR's test plan, writes exactly one test record with repro and observation
-- [ ] `AC-H2` *(human)* reviewer seat up, verifies the evidence against the acceptance criteria, writes exactly one review record
+- [x] `AC-H1` *(human)* tester seat up, runs the PR's test plan, writes exactly one test record with repro and observation
+  - observed `2026-10-11` tester-wo-20261011-3d78 came up via seat.sh door 1 on PR 12 (slot 4, branch derived from origin), ran make -C report/sitrep test and make lint through testpane.sh in wD3:p1V, posted one test 201 (20261011T151036Z-201-u7zur) with the observation; tester-wo-20261011-9639 did the same on PR 13 (ftoqv, lost to the slot return, rerun after the fix)
+- [x] `AC-H2` *(human)* reviewer seat up, verifies the evidence against the acceptance criteria, writes exactly one review record
+  - observed `2026-10-11` reviewer-wo-20261011-3d78 came up on PR 12 sharing the ticket's lease, woken with the test record id, checked the evidence against AC-H1..H3 and posted one review 201 (20261011T151228Z-201-9bpqo); reviewer-wo-20261011-9639 posted review 201 gkkza on PR 13 the same way
 - [ ] `AC-H3` *(human)* merger seat up, squash-merges a review-passed PR, runs work-order.sh cleanup, releases the slot, writes merged 200
 - [ ] `AC-H4` *(human)* the event log shows the three records from three different seats and no git or gh command typed by the architect in the chain
 - [ ] `AC-H5` *(human)* RUNBOOK.md section exists and a fresh reader can bring up one of the three seats from it
