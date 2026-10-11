@@ -39,6 +39,33 @@
 
 
 
+
+## Checkpoint 2026-10-11 06:11 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-dc0d in treehouse slot 1 on branch feat/seat-sh-nudges-a-fresh-seat-past-the-compaction-, test pane wD3:p1V. No PR yet.
+- Blocked record 423 (20261011T060054Z-423-qkuw4) stays open for the roles/ file: roles/bin/nudge.sh is outside the worker fence. seat.sh uses it when it exists and an inline line naming the ticket and its title when not.
+
+#### Toolchain
+
+- Landed: config keys nudge_wait_seconds (180) and nudge_settle_seconds (10); seat.sh nudge_seat (waits for "● ACK compaction-guard " with pane wait-output, polls agent_status twice idle, one agent prompt, seat.json nudged_at); stub claude mode file; Podman case 11-guard-ack-nudge, which passes from wD3:p1V (ack+idle nudged once, ack+working not, no ack not, rerun not, nudge.sh wording, DRY_RUN).
+- Still to run: make lint, roles/bin/render-playbook.sh roles playbooks --check, the full make -C herdr test (cases 01-11) from wD3:p1V, then the PR with the three ACs as the body.
+
+#### Active Tasks
+
+- WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else': in progress, code and case 11 landed, full verification and PR left.
+
+#### Blockers
+
+- roles/bin/nudge.sh is the architect's to add (contract: --role R --ticket ID --project DIR, prints one line). Not a blocker for the PR.
+
+### Hydration prompt
+
+Resume WO-20261011-dc0d from verification: run make lint and the full make -C herdr test from wD3:p1V through herdr/bin/testpane.sh, check render-playbook, then open the PR.
+
 ## Checkpoint 2026-10-11 06:06 UTC
 
 ### Current state
