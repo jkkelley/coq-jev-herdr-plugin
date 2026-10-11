@@ -44,6 +44,35 @@
 
 
 
+
+## Checkpoint 2026-10-11 19:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-6842 in slot 5 on WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (gate record with no consumer, belt heartbeat stale, runner pane gone) and recover.sh restarts the belt. Branch feat/flow-watch-a-shell-watcher-in-a-monitors-pane-tu. work.started 100 record 20261011T185747Z-100-3rtr5. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- The runner pane is not in bringup.sh on this branch (WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped is still draft), so this ticket adds both the runner and the flow reserved slots to herdr/config/monitors.json; bringup's pane loop needs no code change.
+
+#### Toolchain
+
+- Step 1 landed: lint/check-conflict-markers.sh, called from lint/lint.sh, and suite case factory/tests/cases/08-conflict-lint.test.sh (green from the test pane). AC-H3 is covered.
+
+#### Active Tasks
+
+- Step 2: factory/config/flow.json + flow.schema.json and factory/bin/flow.sh once (stalled gate record with no consumer record -> one 500 note to the monitor, latched so a second tick repeats nothing), suite case 09.
+- Step 3: belt stale and runner pane gone in flow.sh, case 10; recover.sh belt node (--check FAILED belt, --apply restart through monitors.sh take, fixed), herdr case.
+- Step 4: monitors.json reserved slots runner and flow, bringup --check lists both, case 04 updated.
+- Step 5: RUNBOOK section in factory/RUNBOOK.md, ticket evidence per criterion, retro note, PR, submit, done.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-6842 as worker-wo-20261011-6842 in slot 5. Read playbooks/worker.md, the ticket and this checkpoint. Step 1 (conflict marker lint) is committed; start step 2, flow.sh once with its config and schema. Run make only through herdr/bin/testpane.sh wD3:p1V.
+
 ## Checkpoint 2026-10-11 17:59 UTC
 ## Checkpoint 2026-10-11 17:03 UTC
 
