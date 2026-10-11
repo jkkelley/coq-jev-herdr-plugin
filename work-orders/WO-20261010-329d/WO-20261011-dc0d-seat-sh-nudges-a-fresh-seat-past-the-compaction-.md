@@ -4,7 +4,7 @@
   "slug": "seat-sh-nudges-a-fresh-seat-past-the-compaction-",
   "title": "seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else'",
   "type": "bug",
-  "status": "draft",
+  "status": "ready",
   "priority": "p2",
   "created": "2026-10-11",
   "updated": "2026-10-11",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
+    "at": "2026-10-11"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
@@ -79,6 +83,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-11` Decision 2026-10-11 05:5x UTC (architect): approved --no-lavish (Claude seat, Lavish prohibited by the owner hard rule). Fixed points: the nudge watches the agent pane for the line '● ACK compaction-guard' with herdr pane wait-output (milliseconds), then polls agent_status via herdr pane list; idle after the ack means nudge, working means do not. Config key nudge_wait_seconds in herdr config, default 180. The nudge text names the ticket and says 'continue your brief from the step you reached'. seat.json nudged_at is null when no nudge was needed.
 
 ## Outcome
 
