@@ -45,6 +45,39 @@
 
 
 
+
+## Checkpoint 2026-10-11 21:35 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 4, branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-. Test pane wD3:p1V, shared and serial: a command can wait 20 to 40 minutes behind other seats. Run it as a harness background job and poll its log; never resend.
+- The branch was rebuilt on origin/main on the architect's order (record 20261011T203650Z-422-4xk1v): the first cut came from the records branch and carried other tickets' files. Old tip kept locally as backup/4db1-old-base. The architect pushed the rebuilt branch (record 20261011T205133Z-100-12zp4); a worker may not push --force*.
+- The ticket file is not on origin/main (it was cut on the records branch), so the rebuilt branch does not carry it yet.
+
+#### Toolchain
+
+- All five steps are in code: do ignore, event.sh --sha and --pr with the wake line, do seat, the down field, RUNBOOK row by row. make -C factory test = 11 passed on the rebuilt tree. make lint failed once on three unused variables in case 11-down (fixed in this step); this step reruns it.
+- Rebuild notes: events/bin/event.sh on main has no COQ_EVENTS_ROOT block (that is PR 15's), so only the --sha and --pr breadcrumb was kept. CHANGELOG.md is generated: restore from main, then bin/changelog.sh render.
+- A formatter hook rewrites .json files on Edit and Write. Use python replace through Bash.
+
+#### Active Tasks
+
+- Close-out: restore the ticket file (git checkout 74ace3b -- work-orders/WO-20261010-329d/WO-20261011-4db1-*.md), work-order.sh evidence --observed for AC-H1 to AC-H5, a retro note, work-order.sh submit --pr N after gh pr create, done, push the archive move, post pr.opened 100 with --sha and --pr.
+
+#### Blockers
+
+- None. WO-20261011-4562 in slot 6 also edits route.sh, event.sh and routes.json; the merge overlap is the architect's.
+
+### New this checkpoint
+
+- Findings for the retro: work.started 100 has no row (four 500s in the live log) and is left alone because an ignore row with no to would move a ticket's board line to the owner station (report/loop/lib/collect.jq route_of needs select(.do != "ignore")); ticket.cut still wakes a worker that does not exist yet; a bring-up can outlast stale_seconds (WO-20261011-5355); the merger is one shared seat so down merger is safe for one ticket at a time.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 4. Read playbooks/worker.md, the ticket and this checkpoint. Code and RUNBOOK are committed. Do the close-out in Active Tasks, run work-order.sh evidence per criterion, then open one PR. Run commands only through the scratchpad tp.sh as a background job.
+
 ## Checkpoint 2026-10-11 17:49 UTC
 ## Checkpoint 2026-10-11 15:54 UTC
 ## Checkpoint 2026-10-11 16:30 UTC
