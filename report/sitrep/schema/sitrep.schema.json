@@ -1,0 +1,186 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SITREP entry",
+  "description": "One SITREP for the owner. The shape was locked by the owner on 2026-10-11 (SITREP 003 iteration 2, WO-20261011-3d78): header strip, phase strip with gate table, ticket board with 4-char id chips, zero or more row blocks, one question, a folded legend of full ticket titles. Cell text may carry [[kind:text]] for a pill (kind: go, hold, ask, risk, plain) and `code` for code; everything else is escaped.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "number",
+    "at",
+    "actor",
+    "state",
+    "headline",
+    "strip",
+    "phase",
+    "tickets",
+    "blocks",
+    "question",
+    "legend",
+    "sources"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "number": { "type": "integer", "minimum": 1 },
+    "at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2})?Z$",
+      "description": "UTC, always"
+    },
+    "actor": { "type": "string", "minLength": 1, "maxLength": 60 },
+    "state": {
+      "type": "string",
+      "enum": ["RUNNING", "HELD", "BLOCKED", "DONE"]
+    },
+    "headline": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "strip": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/pill" }
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["now", "phases", "gate"],
+      "properties": {
+        "now": { "type": "string" },
+        "phases": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 8,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "label"],
+            "properties": {
+              "id": { "type": "string", "maxLength": 4 },
+              "label": { "type": "string", "maxLength": 16 },
+              "done": { "type": "boolean" }
+            }
+          }
+        },
+        "gate": { "$ref": "#/$defs/table" }
+      }
+    },
+    "tickets": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "what", "state", "kind"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{4}$",
+            "description": "last four hex characters of the WO id; the legend carries the full id and title"
+          },
+          "what": { "type": "string", "minLength": 1, "maxLength": 48 },
+          "state": { "type": "string", "minLength": 1, "maxLength": 20 },
+          "kind": { "$ref": "#/$defs/kind" },
+          "pr": { "type": ["integer", "null"] }
+        }
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "kind", "rows"],
+        "properties": {
+          "title": { "type": "string", "minLength": 1, "maxLength": 32 },
+          "kind": { "$ref": "#/$defs/kind" },
+          "rows": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": { "$ref": "#/$defs/row2" }
+          }
+        }
+      }
+    },
+    "question": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "options"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 48 },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "text"],
+            "properties": {
+              "key": { "type": "string", "pattern": "^[A-D]$" },
+              "text": { "type": "string", "minLength": 1, "maxLength": 140 },
+              "rec": { "type": "boolean" }
+            }
+          }
+        },
+        "queued": { "type": "string", "maxLength": 120 }
+      }
+    },
+    "legend": {
+      "type": "object",
+      "description": "4-char id to 'WO-YYYYMMDD-xxxx - full title'. Every ticket id on the board must be here (sitrep.sh refuses otherwise).",
+      "propertyNames": { "pattern": "^[0-9a-f]{4}$" },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^WO-[0-9]{8}-[0-9a-f]{4} - .+"
+      }
+    },
+    "sources": { "type": "string", "minLength": 1, "maxLength": 200 }
+  },
+  "$defs": {
+    "kind": {
+      "type": "string",
+      "enum": ["go", "hold", "ask", "risk", "plain"]
+    },
+    "pill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "text"],
+      "properties": {
+        "kind": { "$ref": "#/$defs/kind" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 24 }
+      }
+    },
+    "row2": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "string", "maxLength": 120 }
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["columns", "rows"],
+      "properties": {
+        "columns": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 4,
+          "items": { "type": "string", "maxLength": 16 }
+        },
+        "rows": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 8,
+          "items": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 4,
+            "items": { "type": "string", "maxLength": 120 }
+          }
+        }
+      }
+    }
+  }
+}

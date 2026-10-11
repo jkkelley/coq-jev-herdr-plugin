@@ -1,0 +1,153 @@
+#!/usr/bin/env bash
+# route.sh - the route runner (SPEC-03 s-routes). It reads each new record in the event log, matches it against
+# factory/config/routes.json top to bottom, performs the first row's action, and writes one record.routed 300.
+# It applies the table and nothing else: no branch below reads a kind, a code or a note except to match a row.
+# New behaviour is a routes.json row, never a line here (ticket WO-20261011-38c7, hard cap).
+#
+#   route.sh once   [flags]      one tick: route every new record, touch the belt file, exit
+#   route.sh run    [flags]      ticks forever, every poll_seconds; run it in a labelled herdr pane, never as a background job
+#   route.sh status [flags]      print the belt age; exit 0 when fresher than stale_seconds, 1 when stale or missing
+# Flags: --config FILE (default factory/config/runner.json)   --repo DIR (what ${repo} means)   --routes FILE   --state DIR
+#        --from-start   on the first start only, route the records already in the log (default: only records written after it)
+# Actions: wake and notify_owner = herdr agent prompt <seat> "record <id> playbook <path>"; enqueue = queue.sh enqueue;
+#          escalate = event.sh add --kind escalated --to <role>. A record no row matches, or an action that fails, becomes a
+#          500 note addressed to the monitor.
+# Exit: 0 ok, 1 belt stale (status only), 2 usage, 3 validation, 4 io.
+#
+# BREADCRUMB 2026-10-11 - WO-20261011-38c7. Three choices that look arbitrary:
+#   1. Records whose seat is runner_seat are never routed. What would break: record.routed 300 matches no row, so it would
+#      become a 500, whose own receipt would become another 500, without end. A kind-based skip was rejected because the
+#      escalated 423 and the 500 note must stay visible to everything else; only the runner's own seat is excluded.
+#      Cost: a record some other seat writes under the runner's seat name is never routed.
+#   2. A record is claimed in the ledger (state/routed/<id>) before its action runs and finished after. What broke without it:
+#      a cursor that advances after the action routes a record twice if the runner dies in between, and one that advances
+#      before loses the route silently. Here a runner that dies mid-action leaves "claimed", and the next start writes a 500
+#      to the monitor naming the record instead of repeating a wake. Rejected: a high-water cursor file, because records
+#      written in the same second by two seats sort by a random suffix and a mark could skip one. Cost: one small file per
+#      record under factory/state/, gitignored.
+#   3. The first start routes nothing already in the log (state/since holds the boundary) unless --from-start is given.
+#      What would break: starting on a log of hundreds of old records would wake every seat that ever existed.
+#   A record with no attempt counts as attempt 1; escalations is the number of escalated records the runner wrote for the
+#   ticket before this one, which is how the table tells a first 423 from a second.
+set -uo pipefail
+export LC_ALL=C
+HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd); FACTORY=$(cd "$HERE/.." && pwd)
+REPO=$(cd "$FACTORY/.." && pwd); CONFIG=$FACTORY/config/runner.json; ROUTES=""; STATE=""; FROM_START=0
+die() { local c=$1; shift; printf 'route: %s\n' "$*" >&2; exit "$c"; }
+log() { printf '%s route: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
+command -v jq >/dev/null || die 4 "jq is required"
+VERB=${1:-}; shift || true
+while [ $# -gt 0 ]; do case $1 in
+  --config) CONFIG=${2:?}; shift 2;; --repo) REPO=$(cd "${2:?}" && pwd) || die 4 "no such --repo"; shift 2;;
+  --routes) ROUTES=${2:?}; shift 2;; --state) STATE=${2:?}; shift 2;; --from-start) FROM_START=1; shift;;
+  *) die 2 "unknown flag $1";; esac; done
+case $VERB in once|run|status) ;; *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2;; esac
+
+[ -f "$CONFIG" ] || die 4 "config $CONFIG missing"
+cfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$CONFIG") || die 3 "config $CONFIG is not JSON"; [ -n "$v" ] || die 3 "config key $1 missing"; printf '%s' "${v//\$\{repo\}/$REPO}"; }
+POLL=$(cfg poll_seconds); SEAT=$(cfg runner_seat); SESSION=${COQ_HERDR_SESSION:-$(cfg herdr_session)}
+EVENTS=$(cfg events_dir); EVENT_BIN=$(cfg event_bin); QUEUE_BIN=$(cfg queue_bin)
+ROLES=$(cfg roles_dir); PLAYBOOKS=$(cfg playbooks_dir); STALE=$(cfg stale_seconds)
+[ -n "$ROUTES" ] || ROUTES=$(cfg routes_file); [ -n "$STATE" ] || STATE=$(cfg state_dir)
+LEDGER=$STATE/routed; BELT=$STATE/belt; SINCE=$STATE/since
+
+now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+stamp() { date -u +%Y%m%dT%H%M%SZ; }
+belt_touch() { printf '%s pid %s\n' "$(now)" "$$" > "$BELT"; }
+belt_age() { local m; m=$(stat -c %Y "$BELT" 2>/dev/null) || return 1; echo $(( $(date +%s) - m )); }
+
+# match_route RECORD_JSON ESCALATIONS: the first routes row whose match holds, as JSON, empty when none.
+match_route() {
+  jq -c --argjson r "$1" --argjson esc "$2" '
+    def ok: ($r.attempt // 1) as $a
+      | (.kind == null or .kind == $r.kind) and (.code == null or .code == $r.code) and (.code_gte == null or $r.code >= .code_gte)
+        and (.attempt == null or $a == .attempt) and (.attempt_lt == null or $a < .attempt_lt)
+        and (.escalations == null or $esc == .escalations) and (.escalations_lt == null or $esc < .escalations_lt);
+    first(.routes[] | select(.match | ok)) // empty' "$ROUTES"
+}
+# escalations_before TICKET ID: escalated records the runner wrote for TICKET with an id before ID.
+escalations_before() {
+  grep -rl 'escalated' "$EVENTS" --include='*.json' 2>/dev/null | xargs -r jq -r --arg s "$SEAT" --arg t "$1" --arg id "$2" \
+    'select(.seat == $s and .kind == "escalated" and .ticket == $t and .id < $id) | .id' 2>/dev/null | wc -l | tr -d ' '
+}
+# seat_of ROLE TICKET: the seat name seat.sh gives that role (roles/<role>.json label, ${ticket} lowercased), empty when unresolvable.
+seat_of() {
+  local label; label=$(jq -r '.label // empty' "$ROLES/$1.json" 2>/dev/null) || return 1
+  label=${label//\$\{ticket\}/${2,,}}; case $label in ''|*'${'*) return 1;; esac; printf '%s' "${label,,}"
+}
+emit() { "$EVENT_BIN" add --seat "$SEAT" "$@" >/dev/null; }
+# trouble ID TICKET TEXT: a 500 note addressed to the monitor; the monitor wakes on new events.
+trouble() {
+  local args=(--code 500 --kind note --to monitor --note "$(printf '%s' "$3" | cut -c1-240)")
+  [ "$2" = - ] || args+=(--ticket "$2"); emit "${args[@]}" || log "could not write the 500 for $1"
+}
+herdr_prompt() { env -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_SOCKET_PATH herdr --session "$SESSION" agent prompt "$1" "$2" >/dev/null 2>&1; }
+
+# perform ROW ID TICKET RECORD_JSON: the row's action; prints a reason and returns 1 when it fails.
+perform() {
+  local row=$1 id=$2 ticket=$3 rec=$4 act to seat text prio qargs=()
+  act=$(jq -r .do <<<"$row"); to=$(jq -r .to <<<"$row")
+  case $act in
+    wake|notify_owner)
+      seat=$(seat_of "$to" "$ticket") || { echo "no seat name for role $to on ticket $ticket"; return 1; }
+      text="record $id playbook $PLAYBOOKS/$to.md"
+      [ "$act" = wake ] || text="record $id line $(jq -r .line <<<"$row") playbook $PLAYBOOKS/$to.md"
+      herdr_prompt "$seat" "$text" || { echo "herdr agent prompt $seat failed"; return 1; } ;;
+    enqueue)
+      [ "$ticket" != - ] || { echo "enqueue needs a ticket"; return 1; }
+      prio=$(jq -r '.priority // empty' <<<"$rec"); [[ $prio =~ ^p[0-3]$ ]] && qargs=(--priority "$prio")
+      "$QUEUE_BIN" enqueue --ticket "$ticket" --from "$id" "${qargs[@]}" >/dev/null 2>&1 || { echo "queue.sh enqueue $ticket failed"; return 1; } ;;
+    escalate)
+      local args=(--code "$(jq -r .code <<<"$row")" --kind escalated --to "$to" --note "escalated record $id"); [ "$ticket" = - ] || args+=(--ticket "$ticket")
+      emit "${args[@]}" || { echo "event.sh escalated record failed"; return 1; } ;;
+    *) echo "unknown action $act"; return 1;;
+  esac
+}
+
+# route_file FILE: claim, match, perform, receipt. At most once per record id.
+route_file() {
+  local f=$1 line id rseat ticket kind code rec row esc why to act
+  rec=$(jq -c . "$f" 2>/dev/null) || { id=$(basename "$f" .json); ( set -C; echo unreadable > "$LEDGER/$id" ) 2>/dev/null && trouble "$id" - "unreadable record $id"; return; }
+  line=$(jq -r '[.id, .seat, (.ticket // "-"), .kind, (.code | tostring)] | @tsv' <<<"$rec") || return
+  IFS=$'\t' read -r id rseat ticket kind code <<<"$line"
+  ( set -C; printf 'claimed %s\n' "$(now)" > "$LEDGER/$id" ) 2>/dev/null || return
+  if [ "$rseat" = "$SEAT" ]; then echo own > "$LEDGER/$id"; return; fi
+  esc=$(escalations_before "$ticket" "$id"); row=$(match_route "$rec" "${esc:-0}")
+  if [ -z "$row" ]; then trouble "$id" "$ticket" "no route for $kind $code, record $id"; echo unrouted > "$LEDGER/$id"; return; fi
+  if why=$(perform "$row" "$id" "$ticket" "$rec"); then
+    to=$(jq -r .to <<<"$row"); act=$(jq -r .do <<<"$row")
+    local r=(--code 300 --kind record.routed --to "$to" --note "routed $kind $code ($id): $act $to" --evidence "${f#"$REPO"/}"); [ "$ticket" = - ] || r+=(--ticket "$ticket")
+    emit "${r[@]}" || log "could not write the receipt for $id"; echo "done $act" > "$LEDGER/$id"
+  else trouble "$id" "$ticket" "route failed for $kind $code, record $id: $why"; echo failed > "$LEDGER/$id"; fi
+}
+
+# recover_interrupted: a ledger entry still "claimed" at start was cut off mid-action; say so, never repeat it.
+recover_interrupted() {
+  local e id
+  for e in "$LEDGER"/*; do [ -f "$e" ] || continue; grep -q '^claimed' "$e" || continue
+    id=$(basename "$e"); trouble "$id" - "routing of record $id was interrupted; not repeated"; echo interrupted > "$e"; done
+}
+tick() {
+  local f base boundary
+  belt_touch; boundary=$(cat "$SINCE")
+  while IFS= read -r f; do base=$(basename "$f" .json)
+    [[ $base < $boundary ]] && continue; [ -e "$LEDGER/$base" ] && continue
+    route_file "$f"
+  done < <(find "$EVENTS" -path '*/20*/*.json' -name '*.json' 2>/dev/null | awk -F/ '{print $NF"\t"$0}' | sort | cut -f2-)
+}
+start() {
+  mkdir -p "$LEDGER" || die 4 "cannot create $LEDGER"; [ -x "$EVENT_BIN" ] || die 4 "event.sh not executable: $EVENT_BIN"
+  jq -e '.routes | type == "array"' "$ROUTES" >/dev/null 2>&1 || die 3 "routes file $ROUTES is not a routes table"
+  if [ ! -f "$SINCE" ]; then if [ "$FROM_START" = 1 ]; then echo 00000000T000000Z > "$SINCE"; else stamp > "$SINCE"; fi; fi
+  recover_interrupted
+}
+
+case $VERB in
+  status) age=$(belt_age) || { echo "belt: stopped (no belt file at $BELT)"; exit 1; }
+    if [ "$age" -le "$STALE" ]; then echo "belt: running (touched ${age}s ago)"; else echo "belt: stopped (last touched ${age}s ago, stale after ${STALE}s)"; exit 1; fi ;;
+  once) start; tick ;;
+  run) start; trap 'log "stopping"; exit 0' TERM INT; log "running: events $EVENTS, routes $ROUTES, every ${POLL}s"
+    # `read -t` rather than `sleep`: bash defers a trap until the foreground command ends, so a TERM sent during a sleep waited
+    #   out the whole poll interval before the runner stopped. read is interrupted by the signal and the trap runs at once.
+    while true; do tick; read -r -t "$POLL" <> <(:) || true; done ;;
+esac

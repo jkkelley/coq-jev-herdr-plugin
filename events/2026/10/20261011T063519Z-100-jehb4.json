@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T063519Z-100-jehb4",
+  "at": "2026-10-11T06:35:19Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-dc0d",
+  "kind": "note",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p1V",
+  "note": "pr.opened: PR 11 at cbe16f9; lint ok, playbooks in sync, suite 11 passed 0 failed; roles/bin/nudge.sh left to the architect (423 open)",
+  "evidence": [],
+  "observations": []
+}

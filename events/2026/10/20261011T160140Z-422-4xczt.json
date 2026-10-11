@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T160140Z-422-4xczt",
+  "at": "2026-10-11T16:01:40Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261011-dc0d",
+  "kind": "review",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p1V",
+  "note": "review.changes PR 11: code and tests sound, lint ok, no em dash; but no AC has an evidence line, ticket not done, nudge.sh absent.",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261011-dc0d-seat-sh-nudges-a-fresh-seat-past-the-compaction-.md",
+      "line": 65,
+      "saw": "AC-H1 unchecked, no --observed evidence line",
+      "expected": "evidence line from case 11 recorded via work-order.sh done --observed"
+    },
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261011-dc0d-seat-sh-nudges-a-fresh-seat-past-the-compaction-.md",
+      "line": 66,
+      "saw": "AC-H2 unchecked, no --observed evidence line",
+      "expected": "evidence line from case 11 recorded via work-order.sh done --observed"
+    },
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261011-dc0d-seat-sh-nudges-a-fresh-seat-past-the-compaction-.md",
+      "line": 67,
+      "saw": "AC-H3 unchecked, no --observed evidence line",
+      "expected": "evidence line from case 11 recorded via work-order.sh done --observed"
+    },
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261011-dc0d-seat-sh-nudges-a-fresh-seat-past-the-compaction-.md",
+      "line": 7,
+      "saw": "status in-progress and evidence null (line 21) in the PR",
+      "expected": "ticket reaches done on the branch with retro note before the PR (AGENTS.md close-out flow)"
+    },
+    {
+      "path": "roles/bin/nudge.sh",
+      "line": 1,
+      "saw": "file absent, seat.sh falls back to inline wording at herdr/bin/seat.sh nudge_text",
+      "expected": "ticket scope puts nudge text in roles/ (423 qkuw4 already posted; architect adds it, then re-review)"
+    }
+  ],
+  "attempt": 1
+}

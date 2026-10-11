@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T155410Z-201-95jso",
+  "at": "2026-10-11T15:54:10Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-dc0d",
+  "kind": "test",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p1V",
+  "note": "make -C herdr test: 11 passed, 0 failed; make lint all ok; render-playbook --check ok",
+  "evidence": [],
+  "observations": []
+}
