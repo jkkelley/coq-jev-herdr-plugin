@@ -52,3 +52,27 @@ run_once() { "$ROUTE" once --from-start --repo "$R" --state "$STATE" "$@"; }
 ids_of() { "$R/events/bin/event.sh" list --json | jq -r --arg k "$1" 'select(.kind == $k) | .id'; }
 rec_json() { find "$R/events" -name "$1.json" -exec cat {} +; }
 hcalls() { wc -l < "$HLOG" | tr -d ' '; }
+
+# --- the flow watch (WO-20261011-6842) ---
+#   flow_world               after world_up: FLOW (the watcher), FSTATE, a herdr stub that answers pane list and process-info
+#                            from $W/panes.json and $W/procinfo.json, a fresh belt file, and a runner pane that is up
+#   runner_pane up|idle|gone the runner pane running a job, its shell sitting at a prompt, or no such pane
+#   backdate ID SECONDS      rewrite the record's "at" to SECONDS ago (ids keep their order; the watcher judges age by "at")
+#   flow_once [flags]        flow.sh once --from-start --repo $R --state $FSTATE
+#   flow_notes               the 500 notes the watcher wrote, as JSON lines
+flow_world() {
+  FLOW="$R/factory/bin/flow.sh"; FSTATE="$W/fstate"; mkdir -p "$R/factory/state"
+  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s"\ncase "$*" in\n *"pane list"*) cat "%s/panes.json" ;;\n *"process-info"*) cat "%s/procinfo.json" ;;\nesac\n' "$HLOG" "$W" "$W" > "$W/bin/herdr"
+  chmod +x "$W/bin/herdr"; runner_pane up; : > "$R/factory/state/belt"
+}
+runner_pane() {
+  case $1 in
+    gone) echo '{"result":{"panes":[{"pane_id":"w1:p1","label":"2.1.1 event log tail - events"}]}}' > "$W/panes.json" ;;
+    *) echo '{"result":{"panes":[{"pane_id":"w1:p9","label":"2.2.2 route runner - runner"}]}}' > "$W/panes.json"
+       if [ "$1" = up ]; then echo '{"result":{"process_info":{"foreground_process_group_id":200,"shell_pid":100}}}' > "$W/procinfo.json"
+       else echo '{"result":{"process_info":{"foreground_process_group_id":100,"shell_pid":100}}}' > "$W/procinfo.json"; fi ;;
+  esac
+}
+backdate() { local f; f=$(find "$R/events" -name "$1.json"); jq --arg at "$(date -u -d "-$2 seconds" +%Y-%m-%dT%H:%M:%SZ)" '.at = $at' "$f" > "$f.tmp" && mv "$f.tmp" "$f"; }
+flow_once() { "$FLOW" once --from-start --repo "$R" --state "$FSTATE" "$@"; }
+flow_notes() { "$R/events/bin/event.sh" list --json | jq -c 'select(.seat == "flow-watch")'; }

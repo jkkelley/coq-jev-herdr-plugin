@@ -11,6 +11,7 @@
 - When something goes wrong
 - What it never does
 - GOOD and NEVER
+- Flow watch
 
 ## What it does
 
@@ -184,3 +185,75 @@ NEVER: two runners on one `--state` directory, because both would claim the same
 NEVER: a record written under the runner's own seat name by hand, because the runner skips it and it is never routed.
 NEVER: a skip list of kinds inside `route.sh` for housekeeping, because an `ignore` row says the same thing where everyone can read it.
 NEVER: `seat.sh &` or a seat started outside `seat.sh`, because the wake would race a seat nobody can see.
+
+## Flow watch
+
+Ticket: WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (gate record with no consumer, belt heartbeat stale, runner pane gone) and recover.sh restarts the belt.
+The runner above routes records.
+`factory/bin/flow.sh` watches that the line is moving, and says so when it is not.
+Without it a stalled line looks identical to a quiet one: on 2026-10-11 the line sat still from 18:01Z to 18:23Z with every gate record posted and nothing woken.
+
+It writes three kinds of 500 note, seat `flow-watch`, kind `note`, addressed to the monitor.
+The route runner turns a 500 into a wake of the monitor seat, and the monitor raises the owner notification.
+
+| Stall       | Condition                                                                                                                     | Latch                                                              |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Gate record | a `gates` row of `flow.json` (kind and code) older than `stall_seconds` with no record of a `consumers` kind on the same ticket after it | `factory/state/flow/<record id>`, never removed                    |
+| Belt        | `route.sh status` exits 1 (belt file stale or missing, `stale_seconds` of `runner.json`)                                      | `factory/state/flow/belt-stale`, removed when the belt is fresh    |
+| Runner pane | no herdr pane labelled like `runner_pane_label_regex`, or its foreground is the shell                                         | `factory/state/flow/runner-gone`, removed when the pane runs again |
+
+A note is written once per latch.
+A gate record is noted once for good, even if it stays stuck: the monitor owns it from there.
+A belt or pane stall that clears and comes back is noted again.
+
+### Run it here
+
+Bring-up starts both watchers in monitors 2 (`herdr/config/monitors.json`): the runner in `2.2.2 route runner - runner`, then the flow watch in `2.2.3 flow watch - flow`.
+Never start them from a shell of your own.
+
+```sh
+herdr/bin/bringup.sh --check     # lists pane-runner and pane-flow ok
+herdr/bin/recover.sh --check     # lists ok belt, or FAILED belt (why)
+herdr/bin/recover.sh --apply     # restarts the runner pane through monitors.sh take runner, then waits for a fresh belt
+make -C factory flow-status      # the stalls present now; exit 1 when there is one; writes nothing
+make -C factory flow-once        # one tick, writes any new note
+```
+
+`recover.sh` reads `belt.slot`, `belt.status` and `belt.settle_seconds` from `herdr/config/herdr.json`.
+The pane and command come from the slot of the same name in `monitors.json`, so a restart is the same call bring-up makes.
+
+### Tune it
+
+Everything is `factory/config/flow.json`, validated by `flow.schema.json` in `make -C factory lint`.
+
+- `poll_seconds` and `stall_seconds`: their sum may not pass `visible_within_seconds` (120), or `flow.sh` refuses to start with exit 3.
+  A stall is then on the board within two minutes of when it began.
+- `gates`: one row per record the line must pick up.
+  A new gate is a new row with its `kind`, `code`, the `role` named in the note and the `consumers` kinds that mean someone took it.
+  The script is not touched.
+- The first start judges only records written after it (`factory/state/flow/since`).
+  Pass `--from-start` on that first start to judge the log already there.
+
+### When something goes wrong
+
+| Symptom                                                   | Cause and fix                                                                                                                      |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| A 500: `stall: <kind> <code> <id> has no <role> record`   | The record was not picked up. Check `route.sh status`, then the role's seat; the monitor decides. It is not noted again.         |
+| A 500: `stall: belt stopped (last touched Ns ago ...)`    | The runner is not ticking. `herdr/bin/recover.sh --apply` restarts it in its own pane.                                            |
+| A 500: `stall: the route runner pane is not running`      | The pane is gone or sits at a prompt. `herdr/bin/recover.sh --apply` draws the grid and restarts it.                              |
+| `flow.sh` exits 3 at start                                | `poll_seconds` plus `stall_seconds` passes `visible_within_seconds`, or `flow.json` is not JSON.                                  |
+| No note for a stuck record                                | It was written before the first start without `--from-start`, it has no ticket, or its kind and code match no `gates` row.        |
+
+To note a gate record again on purpose, delete its file under `factory/state/flow/`.
+
+### What it never does
+
+- It never restarts anything: `recover.sh` does, and only when asked.
+- It never reads a note or a prose field; it matches kinds, codes, tickets and ids.
+- It never talks to the owner; the monitor does, on the 500.
+- It never runs as a background job; it lives in its labelled monitors pane.
+
+GOOD: a new record the line must pick up is one `gates` row in `flow.json`, `make lint`, a PR.
+GOOD: the runner dies at 18:01Z, the belt note lands by 18:03Z, `recover.sh --apply` restarts it, and the next tick is silent.
+NEVER: a second threshold for a stale belt in `flow.json`, because `route.sh status` and `runner.json` are the one definition.
+NEVER: `flow.sh run &`, `nohup` or `setsid`, because a background watcher is invisible and invisible work reads as nothing happening.

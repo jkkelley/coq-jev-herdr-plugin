@@ -19,6 +19,15 @@ world_up() {
   #   absolute count in a case means "this world made it". Rejected: pointing the cases at a ticket that is still open
   #   (the test would break again the day that one closes), and baselining each count in each case (five places to
   #   forget). Cost: a case cannot assert anything about the repo's real events or about archive/ staying archived.
+  # BREADCRUMB 2026-10-11 - WO-20261011-6842. What would break: bringup now plugs the route runner (2.2.2) and the flow watch
+  #   (2.2.3) into the world, and a live runner writes a 500 note for every record it has no route for (seat.up, seat.down, the
+  #   closing notes), so the cases that assert "no event was written" or count records would see events they did not make.
+  #   Why this fix: both slots keep their name, label and place but run a sleep loop here; case 13 puts the real commands back
+  #   with world_real_belt. Rejected: leaving them live and loosening every count, which hides the next real change.
+  #   Cost: cases 01-12 do not exercise route.sh or flow.sh through a pane; the factory suite and case 13 do. The same goes
+#   for recover.sh's belt node: .belt.status is `true` in the world's config, so the node reads ok; case 13 sets the real one.
+  jq '(.tabs[].reserved[] | select(.name == "runner" or .name == "flow") | .command) = "while :; do sleep 30; done"' \
+    "$REPO/herdr/config/monitors.json" > "$REPO/herdr/config/monitors.json.new" && mv "$REPO/herdr/config/monitors.json.new" "$REPO/herdr/config/monitors.json"
   find "$REPO/work-orders/archive" -name 'WO-*.md' -exec cp -n {} "$REPO/work-orders/" \; 2>/dev/null
   rm -rf "$REPO"/events/20*
   # shellcheck disable=SC2034  # SEAT, EVENTS and STATE are the case's handles
@@ -37,7 +46,7 @@ world_up() {
   #   in its own filter, the only case that plays the memo. Rejected: a stub that always acks (it would send the nudge prompt
   #   into every case's agent read) and skipping the nudge when require_guard is false (the production path would go untested).
   #   Cost: a case that wants the ack must write the mode file and set the keys itself, as 11 does. Record: WO-20261011-dc0d.
-  jq --arg s "t-$name" --arg st "$STATE" '.session=$s | .state_dir=$st | .require_guard=false | .bringup_gate=false | .down_wait_seconds=0 | .retire_poll_seconds=3 | .nudge_wait_seconds=1 | .nudge_settle_seconds=1' \
+  jq --arg s "t-$name" --arg st "$STATE" '.session=$s | .state_dir=$st | .require_guard=false | .bringup_gate=false | .down_wait_seconds=0 | .retire_poll_seconds=3 | .nudge_wait_seconds=1 | .nudge_settle_seconds=1 | .belt.status="true"' \
     "$REPO/herdr/config/herdr.json" | jq "$filt" > "$COQ_HERDR_CONFIG"
   unset HERDR_PANE_ID HERDR_TAB_ID HERDR_WORKSPACE_ID HERDR_SOCKET_PATH HERDR_SESSION
   (herdr --session "t-$name" server > "$WORLD/server.log" 2>&1 &)
@@ -70,3 +79,5 @@ world_down() {
 event_count() { local n=0 f; for f in "$EVENTS"/2*/*/*.json; do [ -f "$f" ] || continue; jq -e --arg k "$1" --argjson c "$2" '.kind == $k and .code == $c' "$f" >/dev/null 2>&1 && n=$((n + 1)); done; echo "$n"; }
 # pane_labels WS TAB: labels of a tab's panes, sorted, pipe-joined.
 pane_labels() { h pane list --workspace "$1" | jq -r --arg t "$2" '[.result.panes[] | select(.tab_id == $t) | .label // ""] | sort | join("|")'; }
+# world_real_belt: put the repo's own runner and flow commands back in the world's monitors.json (before bringup runs).
+world_real_belt() { cp "${REPO_ROOT:-/repo}/herdr/config/monitors.json" "$REPO/herdr/config/monitors.json"; }
