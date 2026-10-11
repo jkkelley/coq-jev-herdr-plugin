@@ -45,6 +45,45 @@
 
 
 
+
+## Checkpoint 2026-10-11 22:38 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4562 on WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day.
+  Branch feat/break-glass-one-owner-authorised-action-at-a-tim, treehouse slot 6, test pane wD3:p1V through herdr/bin/testpane.sh only (scratchpad tp.sh).
+- Branch history: rebuilt on origin/main by the architect's order (422 record 20261011T203650Z-422-z8261), then steps 1 to 4, then a merge of origin/main (PR 19, the route runner and flow watch slots) resolved additively.
+  Pushes are plain fast-forward pushes; my role denies force pushes, so the branch is never rewritten from here.
+- This step: herdr/RUNBOOK.md (break glass: rules, records, flow, ask, verify, failures, limits) and two rows (break-glass, none) in the do table of factory/RUNBOOK.md.
+
+#### Toolchain
+
+- After the merge, cases 04 and 05 count ten bringup note 100 records (monitors, the monitor seat, eight reserved panes: lease, guard, events, queue, board, runner, flow, glass).
+- Verified green on this tree before this step committed: make lint, make -C factory test, make -C herdr test (13-break-glass among them), make -C report/loop test (08-glass among them).
+- Not run here: make -C report/loop test-browser (needs a browser), and the live AC-H1 run on a real seat with the owner's answer.
+
+#### Active Tasks
+
+- Close-out is blocked on two things only the architect can do: the ticket file work-orders/WO-20261010-329d/WO-20261011-4562-*.md exists only on origin/chore/architect-records-20261011, not on this branch, so work-order.sh cannot record evidence or finish it; and interface/ (PR 17) is not on main, so the Grant or Refuse card and the verdict are not on this branch.
+- The interface part is ready as origin/backup/4562-before-rebuild (commit 9907813, interface/ files) and as scratchpad/interface-card-verdict.patch; interface/tests/run.sh cases 6 and 6b (56 checks) passed on it.
+- Open the PR (criteria as the body, AC-H1 and AC-H3's card half stated as not yet observed and why) and post pr.opened 100 once the architect answers.
+
+#### Blockers
+
+- Ticket file and PR 17, both architect-owned.
+
+### New this checkpoint
+
+- Lesson: when main moves under an open branch, merge it in (additive conflicts in herdr/config and cases 04 and 05) rather than rebase, because a rebase needs a force push.
+- Lesson: take the generated files (CHANGELOG.md, CONTEXT_STATE.md) from main during a merge and re-render, never hand-merge them.
+
+### Hydration prompt
+
+Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 6. Read playbooks/worker.md, the ticket (on origin/chore/architect-records-20261011) and this checkpoint.
+The code is done and pushed. Post a blocked 423 asking the architect for the ticket file on this branch and for PR 17 to merge so the interface patch can be applied; if they answer, run the close-out (evidence, retro note, gh pr create, submit, done, pr.opened 100). Do not rewrite pushed history.
+
 ## Checkpoint 2026-10-11 20:06 UTC
 
 ### Current state
