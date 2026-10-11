@@ -4,6 +4,9 @@
 # started with --worktree touching the pool at all (AC-H4), --down returning a lease it did not take, a refused or failed
 # bring-up leaving a lease behind, and --check missing a lost lease. The pool is the stub treehouse (tests/stubs), so no real
 # slot of the host is leased, reset or returned; its argv log is how a case counts calls (WO-20261010-a429).
+# WO-20261011-c077 adds: a leased slot left detached instead of on the ticket's branch (AC-H1), a local branch put back after a
+# rerun with its upstream restored, a ticket whose branch is null being leased a slot instead of refused first (AC-H2), and a
+# branch no repository has leaving the fresh lease behind. The stub's slots are clones of a bare origin made below.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../lib/assert.sh"; . "$HERE/../lib/world.sh"
@@ -18,6 +21,23 @@ pool() { treehouse status --json; }
 held() { pool | jq --arg h "$1" '[.[] | select(.lease_holder == $h)] | length'; }
 calls() { grep -c "^$1 " "$TREEHOUSE_STUB_LOG"; }
 ws_count() { h workspace list | jq '[.result.workspaces[] | select(.label == "coq")] | length'; }
+# The slots are clones of a bare origin that holds main (the stub treehouse reads TREEHOUSE_STUB_ORIGIN). tfile ID is the world's
+# copy of a ticket, stamp_branch ID BRANCH writes the frontmatter branch work-order start would, origin_branch BRANCH puts that
+# branch on origin so a fresh slot has to fetch it.
+ORIGIN="$WORLD/origin.git"; SEED="$WORLD/seed"
+git init -q --bare "$ORIGIN"; git clone -q "$ORIGIN" "$SEED" 2>/dev/null
+git -C "$SEED" commit -q --allow-empty -m "seed main" && git -C "$SEED" push -q origin main || { echo "case 08: could not seed the origin"; exit 1; }
+export TREEHOUSE_STUB_ORIGIN="$ORIGIN"
+tfile() { find "$REPO/work-orders" -name "$1-*.md" -not -path '*/archive/*' | head -1; }
+branch_of() { awk '/^---$/{c++; next} c==1' "$(tfile "$1")" | jq -r .branch; }
+stamp_branch() {
+  local f; f="$(tfile "$1")"
+  { echo '---'; awk 'c<2 && /^---$/{c++; next} c==1' "$f" | jq --arg b "$2" '.branch=$b'; echo '---'; awk 'c<2 && /^---$/{c++; next} c>=2' "$f"; } > "$f.tmp" && mv "$f.tmp" "$f"
+}
+origin_branch() { git -C "$SEED" checkout -q -b "$1" main && git -C "$SEED" commit -q --allow-empty -m "work on $1" && git -C "$SEED" push -q origin "$1" && git -C "$SEED" checkout -q main; }
+slot_branch() { git -C "$1" rev-parse --abbrev-ref HEAD; }
+for t in $A $B; do origin_branch "$(branch_of "$t")"; done
+stamp_branch "$D" feat/nats-jetstream-bus; origin_branch feat/nats-jetstream-bus
 
 echo "-- AC-H1: --ticket with no --worktree leases a slot to the ticket"
 out="$("$SEAT" --ticket "$A" --role worker)"; rc=$?
@@ -38,6 +58,11 @@ sleep 1
 assert_match "the brief says to work only in the slot" "$(h agent read "$NA" --source recent-unwrapped --lines 200)" "Work only in $slot"
 assert_eq "the rendered settings allow edits under the slot" "$(jq -r --arg s "$slot" '[.permissions.allow[] | select(startswith("Edit(") and contains($s))] | length' "$STATE/seats/$NA/settings.json")" 1
 "$SEAT" --check "$NA" >/dev/null; assert_eq "--check exits 0 with the lease held" "$?" 0
+BA="$(branch_of "$A")"
+assert_eq "the slot is on the ticket's feat branch, not detached at origin/main" "$(slot_branch "$slot")" "$BA"
+assert_eq "that branch tracks origin" "$(git -C "$slot" rev-parse --abbrev-ref "$BA@{upstream}")" "origin/$BA"
+assert_eq "the slot holds the tip origin has for it" "$(git -C "$slot" rev-parse HEAD)" "$(git -C "$ORIGIN" rev-parse "refs/heads/$BA")"
+assert_eq "the checkout left the slot clean" "$(git -C "$slot" status --porcelain | wc -l | tr -d ' ')" 0
 
 echo "-- AC-H2: the worker's step 1 read finds the lease by ticket and path"
 assert_eq "a status read keyed by ticket and worktree returns the entry" \
@@ -50,6 +75,14 @@ assert_eq "the rerun kept the same slot" "$(jq -r .worktree <<<"$out2")" "$slot"
 assert_eq "still one lease in the pool" "$(pool | jq length)" 1
 assert_eq "still one get" "$(calls get)" 1
 assert_eq "the rerun kept ownership" "$(jq -r .lease.owned "$R")" true
+assert_eq "the rerun left the slot on the branch" "$(slot_branch "$slot")" "$BA"
+
+echo "-- a slot found detached with its branch already local is put back, and tracks origin again"
+git -C "$slot" checkout -q --detach && git -C "$slot" branch -q --unset-upstream "$BA"
+"$SEAT" --ticket "$A" --role worker >/dev/null; assert_eq "the repair rerun exits 0" "$?" 0
+assert_eq "the slot is back on the ticket's branch" "$(slot_branch "$slot")" "$BA"
+assert_eq "its upstream is origin's branch again" "$(git -C "$slot" rev-parse --abbrev-ref "$BA@{upstream}")" "origin/$BA"
+assert_eq "still one lease in the pool" "$(pool | jq length)" 1
 
 echo "-- AC-H3: --down returns the slot"
 "$SEAT" --down "$NA" >/dev/null; assert_eq "--down exits 0" "$?" 0
@@ -92,10 +125,32 @@ assert_eq "exit 0" "$rc" 0
 assert_eq "the seat works in the slot the ticket already held" "$(jq -r .worktree <<<"$out")" "$pre"
 assert_eq "no second lease was taken" "$(calls get)" "$gets"
 assert_eq "the seat does not own it" "$(jq -r .lease.owned "$STATE/seats/$ND/seat.json")" false
+assert_eq "the slot it did not lease was put on the ticket's branch" "$(slot_branch "$pre")" feat/nats-jetstream-bus
 "$SEAT" --down "$ND" >/dev/null; assert_eq "--down exits 0" "$?" 0
 assert_eq "the other holder's lease is still there" "$(held "$D")" 1
 assert_eq "no return was made" "$(calls return)" "$returns"
 treehouse return "$pre" --force
+
+echo "-- AC-H2: a ticket whose frontmatter branch is null is refused with exit 3 and no lease is taken"
+assert_eq "the fixture ticket has no branch" "$(branch_of "$E")" null
+gets=$(calls get); before=$(ws_count)
+"$SEAT" --ticket "$E" --role worker >/dev/null 2>"$WORLD/err"; rc=$?
+assert_eq "exit 3" "$rc" 3
+assert_match "the refusal names the ticket and says it has no branch" "$(cat "$WORLD/err")" "ticket $E has no branch yet"
+assert_eq "no get was made" "$(calls get)" "$gets"
+assert_eq "the pool is empty" "$(pool | jq length)" 0
+assert_eq "no workspace was built" "$(ws_count)" "$before"
+
+echo "-- a branch no repository has: refused, and the lease it took is given back"
+stamp_branch "$E" feat/never-pushed
+gets=$(calls get); returns=$(calls return)
+"$SEAT" --ticket "$E" --role worker >/dev/null 2>"$WORLD/err"; rc=$?
+assert_eq "exit 3" "$rc" 3
+assert_match "the refusal names the slot, the branch and the ticket" "$(cat "$WORLD/err")" "could not be put on feat/never-pushed for $E: branch feat/never-pushed is on neither the repository nor origin"
+assert_eq "a slot had been leased" "$(calls get)" "$((gets + 1))"
+assert_eq "and given back" "$(calls return)" "$((returns + 1))"
+assert_eq "the pool is empty again" "$(pool | jq length)" 0
+stamp_branch "$E" feat/dated-entry-files; origin_branch feat/dated-entry-files
 
 echo "-- a refused bring-up leases nothing"
 gets=$(calls get)

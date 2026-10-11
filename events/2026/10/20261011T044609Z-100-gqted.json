@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T044609Z-100-gqted",
+  "at": "2026-10-11T04:46:09Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-c077",
+  "kind": "note",
+  "ticket": "WO-20261011-c077",
+  "pane": "wD3:p1V",
+  "note": "work.started: worker seat begins seat.sh checks out the ticket branch in the slot it leases",
+  "evidence": [],
+  "observations": []
+}

@@ -7,6 +7,9 @@
 #   get --lease [--lease-holder H] [--no-fetch] [--json]   lowest free slot number, a directory, an entry; prints the entry (--json) or the path
 #   status [--json]                                        the leased entries; --json is the array, otherwise one line per slot
 #   return <path> [--force] [--if-lease-holder H]          removes the entry and the directory; exit 1 when the path is not leased or the holder differs
+# TREEHOUSE_STUB_ORIGIN=<bare repo> makes `get` clone it into the slot and detach at origin/main, which is what a fresh slot of the
+# real pool is (WO-20261011-c077: seat.sh checks the ticket branch out there, so the case needs a repository to check out in).
+# Unset, a slot is an empty directory, as before.
 # TREEHOUSE_STUB_FAIL=1 makes `get` exit 1 with a pool-exhausted message, to prove a failed acquire builds nothing.
 # Every call's argv is appended to $TREEHOUSE_STUB_LOG when it is set, so a case can count and read them.
 root="${TREEHOUSE_STUB_ROOT:-$HOME/.treehouse-stub}"; db="$root/pool.json"
@@ -29,6 +32,10 @@ case "$verb" in
     [ "${TREEHOUSE_STUB_FAIL:-0}" != 1 ] || { echo "stub treehouse: no free worktree in the pool" >&2; exit 1; }
     n="$(jq -r '[.[].name | tonumber] as $u | first(range(1; 100) | select(. as $i | any($u[]; . == $i) | not))' "$db")"
     path="$root/slots/$n"; mkdir -p "$path"
+    if [ -n "${TREEHOUSE_STUB_ORIGIN:-}" ]; then
+      git clone -q "$TREEHOUSE_STUB_ORIGIN" "$path" && git -C "$path" checkout -q --detach origin/main \
+        || { echo "stub treehouse: could not clone $TREEHOUSE_STUB_ORIGIN into $path" >&2; rm -rf "$path"; exit 1; }
+    fi
     id="$(printf '%s' "$holder-$n-$(date -u +%s%N)" | sha256sum | cut -c1-32)"
     entry="$(jq -nc --arg n "$n" --arg p "$path" --arg i "$id" --arg h "$holder" --arg at "$(date -u +%Y-%m-%dT%H:%M:%S.%NZ)" \
       '{name:$n,path:$p,status:"leased",flavor:"git",lease_id:$i,lease_holder:$h,leased_at:$at,processes:[]}')"

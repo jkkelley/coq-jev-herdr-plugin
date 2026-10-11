@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T045547Z-100-cbzvh",
+  "at": "2026-10-11T04:55:47Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-c077",
+  "kind": "note",
+  "ticket": "WO-20261011-c077",
+  "pane": "wD3:p1V",
+  "note": "pr.opened: PR 8 at 7b23d18 (checkpoint 3d1c605), seat.sh checks out the ticket branch in the leased slot; suite 8 passed, lint ok; AC-H1 and AC-H2 await the architect's live seat-up",
+  "evidence": [],
+  "observations": []
+}
