@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T191229Z-100-6ntfc",
+  "at": "2026-10-11T19:12:29Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4562",
+  "kind": "work.started",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p4R",
+  "note": "Worker seat up for WO-20261011-4562 - Break glass: one owner-authorised action at a time; checking slot lease, then reading the ticket",
+  "evidence": [],
+  "observations": []
+}

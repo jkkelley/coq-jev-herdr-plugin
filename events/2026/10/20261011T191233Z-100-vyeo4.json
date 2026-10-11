@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T191233Z-100-vyeo4",
+  "at": "2026-10-11T19:12:33Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-8fb3",
+  "kind": "work.started",
+  "ticket": "WO-20261011-8fb3",
+  "pane": "wD3:p4T",
+  "note": "worker started on seat.sh adopt ticket; reading ticket and seat.sh",
+  "evidence": [],
+  "observations": []
+}
