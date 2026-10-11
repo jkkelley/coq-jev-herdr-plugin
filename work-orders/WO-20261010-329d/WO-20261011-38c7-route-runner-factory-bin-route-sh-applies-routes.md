@@ -4,7 +4,7 @@
   "slug": "route-runner-factory-bin-route-sh-applies-routes",
   "title": "Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else",
   "type": "feature",
-  "status": "draft",
+  "status": "ready",
   "priority": "p0",
   "created": "2026-10-11",
   "updated": "2026-10-11",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
+    "at": "2026-10-11"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
