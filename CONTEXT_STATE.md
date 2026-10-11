@@ -45,6 +45,46 @@
 
 
 
+
+## Checkpoint 2026-10-11 21:44 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4562 on WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day.
+  Branch feat/break-glass-one-owner-authorised-action-at-a-tim, treehouse slot 6, test pane wD3:p1V through herdr/bin/testpane.sh only (scratchpad tp.sh).
+- The branch was REBUILT on origin/main on 2026-10-11 20:4x UTC after the architect's blocked 422 (20261011T203650Z-422-z8261, wrong base): two commits, e509805 (record kind and routes) and e131b33 (seat.sh --break-glass), pushed by the architect with --force-with-lease (my role denies it).
+  The old tip, with the interface card and verdict, is on origin/backup/4562-before-rebuild (917d978); the interface part as a patch is scratchpad/interface-card-verdict.patch.
+- Verified on the rebuilt branch before this step: make lint, make -C factory test (8 passed), make -C herdr test (12 passed, case 13 among them).
+
+#### Toolchain
+
+- Landed on the branch: event.sh break.glass (--action, --answer), routes rows and the break-glass and none route actions, seat.sh --break-glass / --break-glass-restore / --break-glass-sweep, break-glass-lib.sh, break-glass-guard.sh, herdr.json break_glass.ttl_seconds, monitors slot 2.3.1, cases factory 08 and herdr 13 (04 and 05 count the sixth reserved pane).
+- This step: the board shows every break glass as a line. report/loop/schema/loop.schema.json has an optional glass array (glassline), lib/collect.jq folds the records of one request id to one row and keeps break.glass out of the per-ticket lines and the seat table, assets/template.html script draws a table under the floor, tests/cases/08-glass.test.sh (15 checks, passed on the host; the mutation of removing the seat exclusion fails it).
+
+#### Active Tasks
+
+- BLOCKED on a merge, not on me: interface/ is PR 17's and is not on main, so the Grant or Refuse card (`interface.sh line` on a break.glass 300) and the verdict (`interface.sh forward` on an ANSWER) are not on this branch.
+  After PR 17 merges: git apply scratchpad/interface-card-verdict.patch (or cherry-pick 9907813's interface/ part from origin/backup/4562-before-rebuild); interface/tests/run.sh case 6 and 6b prove it (56 checks passed on the old branch).
+- Step 5: runbook (herdr/ side, living-docs), evidence per criterion with work-order.sh evidence --observed, retro note, push, gh pr create with the criteria as body, work-order.sh submit then done, pr.opened 100.
+  The ticket file lives on the records branch, not on main: work-order.sh needs it; ask the architect how the ticket reaches this branch before running done.
+
+#### Blockers
+
+- Ticket file absent on this branch (work-orders/WO-20261010-329d/WO-20261011-4562-*.md exists only on chore/architect-records-20261011), and interface/ absent; both need the architect.
+- AC-H1 live claim (a running Claude Code re-reads --settings and the hook) is proved at file level only.
+
+### New this checkpoint
+
+- Lesson: make step runs git add -A, which swept the architect's 422 record from the shared events root into my commit in the slot; check git show --stat before pushing and keep foreign events out.
+- Lesson: a branch cut from the records branch carries every open PR's files; cherry-picking onto main exposed that interface/ and the ticket file are not there.
+
+### Hydration prompt
+
+Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 6 on the rebuilt branch (3 commits over origin/main after this step).
+Steps 1 to 4 are done; the interface part waits for PR 17 and the ticket file waits for the architect. Do step 5 as far as it can go: the runbook under herdr/ (read living-docs, follow its format), then ask the architect through a blocked 423 record for the ticket file and the interface patch, and stop.
+
 ## Checkpoint 2026-10-11 17:49 UTC
 ## Checkpoint 2026-10-11 15:54 UTC
 ## Checkpoint 2026-10-11 16:30 UTC
