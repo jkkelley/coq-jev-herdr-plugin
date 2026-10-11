@@ -30,7 +30,14 @@ world_up() {
   local stubs; stubs="$(cd "$(dirname "${BASH_SOURCE[0]}")/../stubs" && pwd)"; export PATH="$stubs:$PATH"
   export COQ_HERDR_SESSION="t-$name" COQ_STATE="$STATE" DRY_RUN=0
   export COQ_HERDR_CONFIG="$WORLD/herdr.json"
-  jq --arg s "t-$name" --arg st "$STATE" '.session=$s | .state_dir=$st | .require_guard=false | .bringup_gate=false | .down_wait_seconds=0 | .retire_poll_seconds=3' \
+  # BREADCRUMB 2026-10-11 - WO-20261011-dc0d. What broke: the first full run after seat.sh learned to nudge sat in case 03 for
+  #   8 minutes, because every claude seat now waits nudge_wait_seconds (180 in herdr.json) for the guard's ack line and the
+  #   stub claude never sends one unless a case writes its mode file, so each seat of every case paid 3 minutes. Why this fix:
+  #   the world's config shortens both nudge keys to 1 s, which is a seat with no memo moving on at once; case 11 raises them
+  #   in its own filter, the only case that plays the memo. Rejected: a stub that always acks (it would send the nudge prompt
+  #   into every case's agent read) and skipping the nudge when require_guard is false (the production path would go untested).
+  #   Cost: a case that wants the ack must write the mode file and set the keys itself, as 11 does. Record: WO-20261011-dc0d.
+  jq --arg s "t-$name" --arg st "$STATE" '.session=$s | .state_dir=$st | .require_guard=false | .bringup_gate=false | .down_wait_seconds=0 | .retire_poll_seconds=3 | .nudge_wait_seconds=1 | .nudge_settle_seconds=1' \
     "$REPO/herdr/config/herdr.json" | jq "$filt" > "$COQ_HERDR_CONFIG"
   unset HERDR_PANE_ID HERDR_TAB_ID HERDR_WORKSPACE_ID HERDR_SOCKET_PATH HERDR_SESSION
   (herdr --session "t-$name" server > "$WORLD/server.log" 2>&1 &)

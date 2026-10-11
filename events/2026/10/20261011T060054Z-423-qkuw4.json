@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T060054Z-423-qkuw4",
+  "at": "2026-10-11T06:00:54Z",
+  "code": 423,
+  "seat": "worker-wo-20261011-dc0d",
+  "kind": "blocked",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p1V",
+  "note": "Scope puts the nudge text in roles/ next to brief.sh; worker deny list and playbook forbid editing roles/. No code written.",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "roles/worker.json",
+      "line": 1,
+      "saw": "deny.paths holds ${repo}/roles/ (rendered Edit(.../roles/**))",
+      "expected": "ticket scope needs a new file under roles/ (nudge text, roles/bin)"
+    }
+  ]
+}

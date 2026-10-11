@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T154229Z-201-jbis3",
+  "at": "2026-10-11T15:42:29Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-38c7",
+  "kind": "test.passed",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p1V",
+  "note": "make -C factory test from wD3:p1V on PR 14: 7 passed, 0 failed, exit 0 (cases 01-wake to 07-other-repo)",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-3-coq-jev-herdr-plugin/f72e6a46-6e4e-405e-b16c-89299702bfbf/scratchpad/wo38c7-make-factory-test.log"
+  ],
+  "observations": []
+}

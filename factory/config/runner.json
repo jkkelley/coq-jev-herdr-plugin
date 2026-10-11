@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "poll_seconds": 10,
+  "runner_seat": "route-runner",
+  "herdr_session": "stable",
+  "events_dir": "${repo}/events",
+  "routes_file": "${repo}/factory/config/routes.json",
+  "state_dir": "${repo}/factory/state",
+  "event_bin": "${repo}/events/bin/event.sh",
+  "queue_bin": "${repo}/queue/bin/queue.sh",
+  "roles_dir": "${repo}/roles",
+  "playbooks_dir": "${repo}/playbooks",
+  "stale_seconds": 60
+}

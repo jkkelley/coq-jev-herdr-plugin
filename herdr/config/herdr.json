@@ -8,6 +8,8 @@
   "agent_start_timeout_ms": 30000,
   "down_wait_seconds": 3,
   "retire_poll_seconds": 10,
+  "nudge_wait_seconds": 180,
+  "nudge_settle_seconds": 10,
   "max_agents": 8,
   "bringup_gate": true,
   "require_guard": true,

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T144745Z-100-pleyz",
+  "at": "2026-10-11T14:47:45Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-38c7",
+  "kind": "note",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p1V",
+  "note": "work.started: worker seat begins Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else",
+  "evidence": [],
+  "observations": []
+}

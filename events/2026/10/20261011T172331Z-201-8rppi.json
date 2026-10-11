@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T172331Z-201-8rppi",
+  "at": "2026-10-11T17:23:31Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261011-dc0d",
+  "kind": "review",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p1V",
+  "note": "review.passed PR 11: AC-H1 to H3 evidenced, ticket done on branch, lint ok, no em dash, files in scope. Open for architect: roles/bin/nudge.sh absent (423 qkuw4); PR conflicts with main in generated files.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/b870281d-1e33-43af-87db-d118c70f6004/scratchpad/rv-lint.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/b870281d-1e33-43af-87db-d118c70f6004/scratchpad/rv-merge.log"
+  ],
+  "observations": [
+    {
+      "path": "herdr/bin/seat.sh",
+      "line": 520,
+      "saw": "nudge_text falls back to inline wording because roles/bin/nudge.sh is absent",
+      "expected": "roles/bin/nudge.sh added by the architect per ticket scope, 423 qkuw4 still open"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "line": 1,
+      "saw": "merge-tree against origin/main conflicts in CHANGELOG.md, CONTEXT_STATE.md, work-orders/INDEX.md",
+      "expected": "merger re-merges main and re-renders the generated files before the merge"
+    }
+  ],
+  "attempt": 2
+}
