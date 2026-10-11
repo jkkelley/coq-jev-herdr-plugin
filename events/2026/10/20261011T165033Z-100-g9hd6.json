@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T165033Z-100-g9hd6",
+  "at": "2026-10-11T16:50:33Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "crash 16:37Z to 16:45Z: herdr lost every agent (seats, monitor, bearings serve); slots and their untracked records survived. Recovery: bearings stable serve and wait back on p1N/pG, monitor seat up, pages reopened on the ASUS",
+  "evidence": [],
+  "observations": []
+}

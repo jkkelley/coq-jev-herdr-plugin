@@ -4,7 +4,7 @@
 # conflicts (REQ-event-log). Only important items: code >= 300, seat up/down, a
 # gate result, a merge, a compaction. Routine progress is not an event.
 #
-#   event.sh add --code NNN --seat NAME --kind KIND [--ticket WO-...] [--pane P] [--note "<=240 chars"]
+#   event.sh add --code NNN --seat NAME --kind KIND [--ticket WO-...] [--pane P] [--to ROLE] [--note "<=240 chars"]
 #                [--evidence PATH]... [--observe "path:line:saw:expected"]... [--attempt N] [--json]
 #   event.sh list [--since YYYY-MM-DD] [--code NNN] [--seat NAME] [--ticket WO-...] [--json]
 #   event.sh check                      every file matches events/schema/event.schema.json; exit 3 names offenders
@@ -24,25 +24,36 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); SCHEMA=$HERE/../schema/event
 ROOT=${COQ_EVENTS_ROOT:-$(cd "$HERE/.." && pwd)}
 die() { local c=$1; shift; printf 'event: %s\n' "$*" >&2; exit "$c"; }
 command -v jq >/dev/null || die 4 "jq is required"
-KINDS='seat.up|seat.down|seat.stalled|gate|test|review|merge|deploy|compaction|blocked|escalation|note'
+# BREADCRUMB 2026-10-11 - WO-20261011-38c7. What broke: KINDS held only the twelve event-log kinds, so a factory record of
+#   kind pr.opened, test.failed, review.passed, merged and the rest (factory/schema/record.schema.json, SPEC-03 s-records) could
+#   not be written here, and the route runner (factory/bin/route.sh) would never see a real record; the runner's own receipt
+#   record.routed 300 could not be written either. Seats had been posting these as kind note with the kind in the note text,
+#   which nothing may branch on. Why this fix: the runner routes on kind and code only, so the kinds belong in the enum; `--to`
+#   adds the addressee (AC-H2 and AC-H3 of the ticket ask for a record "to the monitor" and "to the architect") as a field, not
+#   as note text. Rejected: a second writer script for factory records (two formats in one log) and routing on the note prefix.
+#   Cost: the enum is now a superset of the event kinds, so a typo'd factory kind is no longer a validation error here; the
+#   routes file and make lint own the meaning of a kind.
+KINDS='seat.up|seat.down|seat.stalled|gate|test|review|merge|deploy|compaction|blocked|escalation|note|request\.forwarded|request\.accepted|request\.rejected|ticket\.cut|work\.started|pr\.opened|test\.passed|test\.failed|review\.passed|review\.changes|merged|merge\.conflict|verified|rejected|escalated|record\.routed'
+ROLES='interface-agent|orchestrator|architect|worker|tester|reviewer|merger|player|monitor'
 line_of() { jq -r '"\(.at)\t\(.code)\t\(.kind)\t\(.seat)\t\(.ticket // "-")\t\(.note // "")"' "$1"; }
 VERB=${1:-}; shift || true
 case $VERB in
   add)
-    code=""; seat=""; kind=""; ticket=null; pane=null; note=""; attempt=null; ev=(); obs=(); JSON=0
+    code=""; seat=""; kind=""; ticket=null; pane=null; to=null; note=""; attempt=null; ev=(); obs=(); JSON=0
     while [ $# -gt 0 ]; do case $1 in
-      --code) code=$2; shift 2;; --seat) seat=$2; shift 2;; --kind) kind=$2; shift 2;; --ticket) ticket=$2; shift 2;; --pane) pane=$2; shift 2;;
+      --code) code=$2; shift 2;; --seat) seat=$2; shift 2;; --kind) kind=$2; shift 2;; --ticket) ticket=$2; shift 2;; --pane) pane=$2; shift 2;; --to) to=$2; shift 2;;
       --note) note=$2; shift 2;; --attempt) attempt=$2; shift 2;; --evidence) ev+=("$2"); shift 2;; --observe) obs+=("$2"); shift 2;; --json) JSON=1; shift;; *) die 2 "unknown flag $1";; esac; done
     [[ $code =~ ^[1-5][0-9]{2}$ ]] || die 2 "--code must be 100..599"; [[ $seat =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || die 2 "--seat must match ^[a-z][a-z0-9_-]{0,31}$"
     [[ $kind =~ ^($KINDS)$ ]] || die 2 "--kind must be one of $KINDS"; [ ${#note} -le 240 ] || die 3 "--note over 240 chars"
+    [ "$to" = null ] || [[ $to =~ ^($ROLES)$ ]] || die 2 "--to must be one of $ROLES"
     [ "$ticket" = null ] || [[ $ticket =~ ^WO-[0-9]{8}-[0-9a-f]{4}$ ]] || die 3 "--ticket must be WO-YYYYMMDD-xxxx"
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ); stamp=$(date -u +%Y%m%dT%H%M%SZ); suf=$(head -c 200 /dev/urandom | LC_ALL=C tr -dc 'a-z0-9' | cut -c1-5)
     id="$stamp-$code-$suf"; dir="$ROOT/$(date -u +%Y/%m)"; mkdir -p "$dir"
     evj=$(printf '%s\n' "${ev[@]:-}" | { grep -v '^$' || true; } | jq -R . | jq -s .)
     obj=$(printf '%s\n' "${obs[@]:-}" | { grep -v '^$' || true; } | jq -R 'split(":") | {path:.[0], line:(.[1]|tonumber? // 0), saw:.[2], expected:.[3]}' | jq -s .)
     tq() { if [ "$1" = null ]; then echo null; else jq -n --arg v "$1" '$v'; fi; }
-    jq -n --arg id "$id" --arg at "$now" --argjson code "$code" --arg seat "$seat" --arg kind "$kind" --argjson ticket "$(tq "$ticket")" --argjson pane "$(tq "$pane")" --arg note "$note" --argjson evidence "$evj" --argjson observations "$obj" --argjson attempt "$attempt" \
-      '{schema_version:"1.0.0", id:$id, at:$at, code:$code, seat:$seat, kind:$kind, ticket:$ticket, pane:$pane, note:$note, evidence:$evidence, observations:$observations} + (if $attempt==null then {} else {attempt:$attempt} end)' > "$dir/$id.json.tmp"
+    jq -n --arg id "$id" --arg at "$now" --argjson code "$code" --arg seat "$seat" --arg kind "$kind" --argjson ticket "$(tq "$ticket")" --argjson pane "$(tq "$pane")" --argjson to "$(tq "$to")" --arg note "$note" --argjson evidence "$evj" --argjson observations "$obj" --argjson attempt "$attempt" \
+      '{schema_version:"1.0.0", id:$id, at:$at, code:$code, seat:$seat, kind:$kind, ticket:$ticket, pane:$pane, note:$note, evidence:$evidence, observations:$observations} + (if $attempt==null then {} else {attempt:$attempt} end) + (if $to==null then {} else {to:$to} end)' > "$dir/$id.json.tmp"
     mv "$dir/$id.json.tmp" "$dir/$id.json"
     if [ "$JSON" = 1 ]; then cat "$dir/$id.json"; else printf '%s\n' "$id"; fi ;;
   list)

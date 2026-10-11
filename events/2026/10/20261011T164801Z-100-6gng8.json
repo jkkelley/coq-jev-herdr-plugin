@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T164801Z-100-6gng8",
+  "at": "2026-10-11T16:48:01Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "seat.up",
+  "ticket": null,
+  "pane": "wD3:p1E",
+  "note": "monitor seat up: claude-haiku-5-5 low dontAsk",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,30 @@
+{
+  "id": "RUN-route-runner",
+  "type": "Runbook",
+  "title": "factory/bin/route.sh once|run|status: read each new record, match routes.json top to bottom, perform the first row (wake, enqueue, escalate, notify_owner), write record.routed 300; a record with no row is a 500 to the monitor; the belt file is touched every tick",
+  "status": "proposed",
+  "text": "Procedure for starting, stopping and pointing the route runner at another repo: factory/RUNBOOK.md. Ticket WO-20261011-38c7.",
+  "sources": [
+    {
+      "kind": "ticket",
+      "id": "WO-20261011-38c7",
+      "at": null
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "SCH-routes"
+    },
+    {
+      "kind": "depends_on",
+      "to": "CMP-queue"
+    }
+  ],
+  "created": "2026-10-11T15:00Z",
+  "updated": "2026-10-11T15:00Z",
+  "schema": "factory/config/runner.schema.json",
+  "data": [
+    "factory/config/runner.json"
+  ]
+}

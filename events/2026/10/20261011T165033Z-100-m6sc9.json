@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T165033Z-100-m6sc9",
+  "at": "2026-10-11T16:50:33Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-e618",
+  "pane": "wD3:p2",
+  "note": "crash recovery 16:50Z: worker-wo-20261011-e618 re-seated in slot 5 on its branch at 8e3550e; interface/ untracked and blocked 423 hyrzb (role file) found in the slot",
+  "evidence": [],
+  "observations": []
+}

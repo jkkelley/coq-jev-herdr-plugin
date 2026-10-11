@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T165033Z-100-7qlyv",
+  "at": "2026-10-11T16:50:33Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p2",
+  "note": "crash recovery 16:50Z: review.passed 201 rtu39 on PR 14 (head 08f5621) found in slot 3; merger re-seated in slot 3 for it",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T155501Z-100-v8ysc",
+  "at": "2026-10-11T15:55:01Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-38c7",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p1V",
+  "note": "pr.opened: PR 14 head 08c2c30, RUNBOOK GOOD and NEVER added. Scope: event.sh, event.schema.json, .gitignore are in scope, architect-widened, runner cannot route kinds event.sh refuses to write",
+  "evidence": [],
+  "observations": []
+}
