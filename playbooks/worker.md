@@ -22,8 +22,8 @@ Runtime claude (allowed: claude, codex). Model claude-sonnet-5-5 / codex gpt-5.6
 ## Permissions
 
 Mode `bypassPermissions`.
-Allowed tools: Read, Grep, Glob, Write, Edit, Bash. Allowed paths: ${worktree}/. Allowed commands: make *, git add|commit|push|fetch|merge, gh pr create, work-order.sh note|evidence|submit|done, events/bin/event.sh add, herdr/bin/testpane.sh *, treehouse status *.
-Denied tools: Agent, Task. Denied paths: ${repo}/specs/, ${repo}/graph/, ${repo}/roles/. Denied commands: gh pr merge *, git push --force*, treehouse destroy *, herdr pane run *.
+Allowed tools: Read, Grep, Glob, Write, Edit, Bash. Allowed paths: ${worktree}/. Allowed commands: make *, git add|commit|push|push --force-with-lease|fetch|merge, gh pr create, work-order.sh note|evidence|submit|done, events/bin/event.sh add, herdr/bin/testpane.sh *, treehouse status *.
+Denied tools: Agent, Task. Denied paths: ${repo}/specs/, ${repo}/graph/, ${repo}/roles/. Denied commands: gh pr merge *, git push --force, git push --force *, git push -f, git push -f *, herdr pane run *, treehouse destroy *.
 Inputs: ticket. Outputs: pr, record.pr_opened, record.evidence.
 
 ## Steps

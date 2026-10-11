@@ -50,7 +50,7 @@
     ],
     "commands": [
       "make *",
-      "git add|commit|push|fetch|merge",
+      "git add|commit|push|push --force-with-lease|fetch|merge",
       "gh pr create",
       "work-order.sh note|evidence|submit|done",
       "events/bin/event.sh add",
@@ -70,9 +70,12 @@
     ],
     "commands": [
       "gh pr merge *",
-      "git push --force*",
-      "treehouse destroy *",
-      "herdr pane run *"
+      "git push --force",
+      "git push --force *",
+      "git push -f",
+      "git push -f *",
+      "herdr pane run *",
+      "treehouse destroy *"
     ]
   },
   "records": {
@@ -103,6 +106,7 @@
   ],
   "breadcrumbs": [
     "2026-10-11 WO-20261011-9639. What broke: allow.commands listed work-order.sh note|evidence only, so a worker could never run submit or done and every ticket reached its PR still in-progress; the architect then ran submit, evidence, done and cleanup from main by hand for WO-20261011-c077, WO-20261011-36d7 and WO-20261011-4c5e, playing reviewer and merger (AGENTS.md close-out flow says the ticket reaches done on the work branch, then one PR). Why this fix: the two verbs join the same allow entry and the close-out order is a must line, so the playbook renders it. Rejected: a separate closer seat (one more seat to close a record the worker already holds every fact for). Cost: a worker can mark its own ticket done before review; reopen exists for a rejected PR, and the reviewer verifies the evidence, not the status.",
-    "2026-10-11 WO-20261010-329d. What broke: PR 18 (WO-20261011-8fb3) and PR 19 (WO-20261011-6842) both opened CONFLICTING against main in herdr/bin/seat.sh, events/bin/event.sh and herdr/config/herdr.json because their branches were cut before PR 11 and PR 14 merged and the worker never took main before gh pr create; the merger refuses a conflict by design (409 8100r, u4dye), so every such PR cost a 409, a hand wake and a second test and review pass. Why this fix: the take-main step sits in must before close-out and git fetch|merge join the allow entry, so the branch the tester and reviewer see is already mergeable; wakes_on names record.merge_conflict because routes.json already routes a 409 to the worker. Rejected: the merger merging main itself (WO-20261011-5064 covers generated files only; code conflicts belong to the author). Cost: one more lint run per ticket."
+    "2026-10-11 WO-20261010-329d. What broke: PR 18 (WO-20261011-8fb3) and PR 19 (WO-20261011-6842) both opened CONFLICTING against main in herdr/bin/seat.sh, events/bin/event.sh and herdr/config/herdr.json because their branches were cut before PR 11 and PR 14 merged and the worker never took main before gh pr create; the merger refuses a conflict by design (409 8100r, u4dye), so every such PR cost a 409, a hand wake and a second test and review pass. Why this fix: the take-main step sits in must before close-out and git fetch|merge join the allow entry, so the branch the tester and reviewer see is already mergeable; wakes_on names record.merge_conflict because routes.json already routes a 409 to the worker. Rejected: the merger merging main itself (WO-20261011-5064 covers generated files only; code conflicts belong to the author). Cost: one more lint run per ticket.",
+    "2026-10-11 WO-20261010-329d. What broke: deny listed `git push --force*`, which also matches `git push --force-with-lease`, so a worker that rebuilt its branch on origin/main after the wrong-base 422s of 20:36Z could not publish it and posted 423 (a9ief, WO-20261011-ceea); the architect pushed by hand. Why this fix: the deny names the bare forms (--force, -f) that can overwrite a colleague, and --force-with-lease joins the allow entry because it refuses when the remote moved, which is the only safety the bare form lacks. Rejected: keeping the blanket deny and having the architect push every rebuilt branch (a hand step per ticket on a line that must run itself). Cost: a worker can rewrite its own branch history; the branch is its own and the merger squashes."
   ]
 }
