@@ -27,6 +27,8 @@ No line in the script reads a kind, a code or a note except to match a row.
 | `notify_owner` | the same prompt to the interface agent, with `line <done or decision>` between the id and the playbook    |
 | `enqueue`      | `queue/bin/queue.sh enqueue --ticket <ticket> --from <id>`, with `--priority` when the record carries one |
 | `escalate`     | `events/bin/event.sh add --kind escalated --code <row code> --to <role>` for the ticket                   |
+| `break-glass`  | `herdr/bin/seat.sh --break-glass <record's seat> --record <id>`; exit 3 is a refusal seat.sh already recorded as a 423, not a failure (herdr/RUNBOOK.md) |
+| `none`         | nothing: the record is seen and receipted (the break glass lifecycle records 100, 201 and 204)              |
 
 After every action it writes one `record.routed` 300, addressed to the row's `to`.
 A record that matches no row, and an action that fails, each become a 500 `note` addressed to the monitor.
