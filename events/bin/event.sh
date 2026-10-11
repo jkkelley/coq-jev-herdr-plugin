@@ -11,7 +11,22 @@
 #   event.sh tail                       newest 10, one line each (what the monitor pane shows)
 # Exit codes: 0 ok, 2 usage, 3 validation, 4 io.
 set -euo pipefail
-HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); ROOT=$(cd "$HERE/.." && pwd); SCHEMA=$ROOT/schema/event.schema.json
+HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); SCHEMA=$HERE/../schema/event.schema.json
+# BREADCRUMB 2026-10-11 - WO-20261011-23df (PR 15), adopted here by WO-20261011-e618. What broke: ROOT was always this script's
+#   own events/, so a seat running in a leased treehouse slot wrote its record as an untracked file there, and
+#   `treehouse return --force` (seat.sh --down) wiped it: tester-wo-20261011-9639's test 201 20261011T151907Z-201-ftoqv on PR 13
+#   is gone. A tester or reviewer cannot commit (its role denies git), so nothing in the slot could have kept it. Why this fix:
+#   seat.sh exports COQ_EVENTS_ROOT, the events/ of the checkout that brought the seat up, for every seat, so the record lands
+#   where the architect's own commits (later: the route runner) pick it up and no slot return can reach it; the schema still
+#   comes from this tree. Rejected: letting those roles run `git add events && git commit` (the deny on git is the fence that
+#   keeps a reviewer from touching history) and copying on --down alone (a seat killed before --down still loses the file;
+#   seat.sh salvages as a second net). Cost: a record from such a seat is an untracked file on the architect's checkout until
+#   the next make step.
+#   Why it is here too (e618, 16:5x UTC): this branch was cut before PR 15, so its event.sh ignored COQ_EVENTS_ROOT. This seat's
+#   first work.started landed in the slot, and interface/tests/run.sh, which exports a temp COQ_EVENTS_ROOT, wrote seven fake
+#   records (a fake 423 blocked among them) into the slot's real events/ instead of the temp dir. Same change as PR 15, so the
+#   two branches merge clean whichever lands first.
+ROOT=${COQ_EVENTS_ROOT:-$(cd "$HERE/.." && pwd)}
 die() { local c=$1; shift; printf 'event: %s\n' "$*" >&2; exit "$c"; }
 command -v jq >/dev/null || die 4 "jq is required"
 # BREADCRUMB 2026-10-11 - WO-20261011-38c7. What broke: KINDS held only the twelve event-log kinds, so a factory record of
