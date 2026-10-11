@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T050701Z-100-mjfg2",
+  "at": "2026-10-11T05:07:01Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-36d7",
+  "kind": "note",
+  "ticket": "WO-20261011-36d7",
+  "pane": "wD3:p1V",
+  "note": "work.started: worker seat begins the labelled test pane never keeps its cwd inside a treehouse slot, so treehouse return --force cannot kill it",
+  "evidence": [],
+  "observations": []
+}

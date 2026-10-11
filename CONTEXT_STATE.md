@@ -34,6 +34,35 @@
 
 
 
+
+## Checkpoint 2026-10-11 05:27 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-36d7 holds treehouse slot 1 (lease holder WO-20261011-36d7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/1/coq-jev-herdr-plugin on branch feat/the-labelled-test-pane-never-keeps-its-cwd-insid, tracking origin. Test pane wD3:p1V, reached only through herdr/bin/testpane.sh.
+- Public repo jkkelley/coq-jev-herdr-plugin, main at the c077 merge. No PR open for this branch yet.
+
+#### Toolchain
+
+- herdr/bin/testpane.sh now sends `( <command> )` to the test pane, so a cd in the command cannot leave the pane's own shell inside a slot.
+- herdr/bin/seat.sh --down captures the seat's pane shells and their descendants (herdr pane process-info shell_pid) before retire, then lease_down logs every live process treehouse status lists for the slot with pid and name, and refuses `treehouse return --force` with exit 3 when one is not the seat's own or a child of this run. The seat stays un-ended, a rerun retries.
+- herdr/tests/stubs/treehouse lists processes by cwd from /proc and ends them on return --force, as the real tool does.
+- herdr/tests/cases: 07 expects the parenthesised command, 09 proves the real pane's cwd is unchanged (with a control that a bare pane run does move it), 10 proves the foreign refusal, the rerun and the seat-own classification. make -C herdr test: 10 passed, 0 failed. make lint: all ok.
+
+#### Active Tasks
+
+- WO-20261011-36d7 - The labelled test pane never keeps its cwd inside a treehouse slot, so treehouse return --force cannot kill it: implemented and green, this step commits it. Next: push, open the PR with the acceptance criteria as the body, post pr.opened 100 with the sha, stop.
+
+#### Blockers
+
+- None. Known limit, written in the seat.sh breadcrumb: a process that holds the slot only through a bind mount or an open file is not listed by treehouse, so the return can still end it; the ticket's second kill looked like that.
+
+### Hydration prompt
+
+Resume as worker-wo-20261011-36d7 in the slot above. The change is committed. Remaining: gh pr create with AC-H1, AC-H2 and AC-H3 as the body, then post pr.opened 100 with the commit sha through events/bin/event.sh add, then stop. AC-H3 (a full seat up, review and down cycle on the live architect tab) is the architect's to observe.
+
 ## Checkpoint 2026-10-11 05:04 UTC
 
 ### Current state
