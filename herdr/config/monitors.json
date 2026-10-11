@@ -57,6 +57,18 @@
           "name": "board",
           "what": "factory board watch",
           "command": "${repo}/report/loop/loop.sh watch"
+        },
+        {
+          "pos": "2.2.2",
+          "name": "runner",
+          "what": "route runner",
+          "command": "${repo}/factory/bin/route.sh run"
+        },
+        {
+          "pos": "2.2.3",
+          "name": "flow",
+          "what": "flow watch",
+          "command": "${repo}/factory/bin/flow.sh run"
         }
       ]
     },
