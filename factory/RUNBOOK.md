@@ -9,6 +9,7 @@
 - Read the belt
 - When something goes wrong
 - What it never does
+- GOOD and NEVER
 
 Graph: `RUN-route-runner` is this runbook, `CMP-route-runner` is the component, and `CMP-route-runner` carries `defined_in RUN-route-runner`.
 Ticket: WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else.
@@ -115,3 +116,14 @@ That is the only supported way, and it is a decision, not a retry loop.
 - It never reads a note.
 - It never talks to the owner except through the `notify_owner` row and the interface agent.
 - It never runs as a background job; every process is a labelled herdr pane.
+
+## GOOD and NEVER
+
+GOOD: a new failure class is a row in `factory/config/routes.json`, `make lint`, a PR, and `route.sh` is not touched.
+GOOD: a second runner for another repo gets its own `--state` directory, so the two ledgers never meet.
+GOOD: a 500 `note` for `route failed` is read by the monitor, the target seat is brought up with `herdr/bin/seat.sh`, and the record is re-routed on purpose by deleting its ledger file.
+GOOD: `route.sh run` lives in a labelled herdr pane, and Ctrl-C in that pane stops it at once.
+NEVER: an `if` on a kind, a code or a note inside `route.sh`, because behaviour that is not a routes row is behaviour nobody can read from the table.
+NEVER: `route.sh run &`, `nohup` or `setsid`, because a background runner is invisible and invisible work reads as nothing happening.
+NEVER: two runners on one `--state` directory, because both would claim the same records.
+NEVER: a record written under the runner's own seat name by hand, because the runner skips it and it is never routed.
