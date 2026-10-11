@@ -44,6 +44,56 @@
 
 
 
+
+## Checkpoint 2026-10-11 19:39 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4562 on WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day.
+  Branch feat/break-glass-one-owner-authorised-action-at-a-tim, treehouse slot 6 (lease holder is the ticket id), test pane wD3:p1V through herdr/bin/testpane.sh only.
+  The wrapper is the scratchpad tp.sh: `tp.sh NAME 'cmd'` runs cmd in the worktree inside the test pane and logs to scratchpad/NAME.log; the pane is shared, so a command can queue behind other seats for several minutes.
+- work.started 100 posted (events 20261011T191229Z-100-6ntfc).
+- Step 1 of 5 landed: the break.glass record kind and its routes.
+
+#### Toolchain
+
+- events/bin/event.sh accepts kind break.glass with --action (required, 240 chars) and --answer (a record id); both refused on any other kind.
+  events/schema/event.schema.json has the kind and the two fields.
+- factory: routes.json rows for break.glass 300 (notify_owner to interface-agent, line decision), 200 (do break-glass), 423 (wake monitor), 100/201/204 (do none).
+  routes.schema.json allows do break-glass and none; runner.json and runner.schema.json carry seat_bin; route.sh performs both actions (exit 3 from seat.sh is a handled refusal, anything else non-zero is a 500).
+  factory/tests/cases/08-break-glass.test.sh passes, and make -C factory lint and make -C factory test were green (8 passed).
+
+#### Active Tasks
+
+- Step 2: herdr/bin/seat.sh --break-glass SEAT --record ID, --break-glass-restore, the guard script, ttl_seconds in herdr.json and its schema, --check and --audit awareness, monitors sweep, herdr case 13.
+- Step 3: interface/bin/interface.sh, `line --record <break.glass 300>` posts the bearings decision card and `forward` turns an ANSWER on that card into break.glass 200 (Grant) or 423 (Refuse); interface tests.
+- Step 4: report/loop board shows every break glass as a line (collect.jq and its test).
+- Step 5: runbook (herdr or docs), lint, evidence per AC, retro note, commit, push, gh pr create, work-order.sh submit then done, pr.opened 100.
+
+#### Blockers
+
+- None. roles/, specs/ and graph/ are denied paths for this seat, so nothing there is touched; interface.sh `line` is reused so roles/interface-agent.json needs no change.
+
+### New this checkpoint
+
+Design, locked for the remaining steps.
+
+- Record lifecycle, kind break.glass, the record's seat is the seat the glass is broken for: 300 request (the seat or the architect, --action), 200 granted (written by interface.sh forward when the owner's answer to card R is Grant, --answer R), 423 refused (interface.sh on Refuse, or seat.sh on any refusal), 100 in effect (seat.sh after the flip), 201 action done (the guard's PostToolUse hook), 204 restored (seat.sh).
+- The owner answer is a line in the bearings page's answers.jsonl whose id is the 300 record's id, choice label Grant (latest line per id wins). seat.sh finds the page dir with `$BEARINGS stable status --json | .dir` (BEARINGS env overrides the path, as interface.sh does, so tests use a stub) and never trusts the 200 record: it takes the seat and the action from the 300 request R, refuses when the 200 names another seat.
+- One use per answer: a state file under the state dir, created with noclobber, survives the restore, so a second 200 for the same R is refused 423 (AC-H3).
+- Flip: the seat's settings.json is rewritten from the role render with defaultMode bypassPermissions, the deny rules that cover the action removed, and a PreToolUse Bash hook (herdr/bin/break-glass-guard.sh) that allows exactly the action once and denies any other command that contains a lifted rule's head, so a second command is still denied (degree of freedom). Then herdr agent prompt with the record id.
+- Restore: seat.sh --break-glass-restore SEAT renders the role settings back, verifies with the same cmp --check uses, writes 204; triggered by the monitors tick when a 201 for R exists or ttl_seconds (herdr.json, under 3600) passed. --check names an active break glass; --audit calls an expired unrestored one OUT OF COMPLIANCE and records seat.stalled 500.
+- Non-Bash actions are out of scope: the action is one shell command.
+- Test pane lesson: a bare `grep -qE "--record ..."` treats the pattern as a flag; start such patterns with a space.
+
+### Hydration prompt
+
+Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 6. Read playbooks/worker.md, the ticket, and this checkpoint.
+Step 1 is committed and pushed; start step 2: herdr/bin/seat.sh --break-glass per the design above, then herdr/tests/cases/13-break-glass.test.sh.
+Land every step with make step through the test pane (tp.sh in the scratchpad), write a checkpoint per step, and post blocked 423 after three failed attempts.
+
 ## Checkpoint 2026-10-11 17:59 UTC
 ## Checkpoint 2026-10-11 17:03 UTC
 
