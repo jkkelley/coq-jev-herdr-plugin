@@ -4,13 +4,14 @@
 #   make -C report/loop image          build the suite image once
 #   make -C report/loop lint           config and fixtures against their schemas, shellcheck on loop.sh and the tests
 #   make -C report/loop render         validate and draw out/data.json into out/index.html
+#   make -C report/loop watch          collect every watch_seconds and rewrite out/ only on a change (run it in a labelled herdr pane)
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 HERE := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-.PHONY: help test test-browser image lint render
+.PHONY: help test test-browser image lint render watch
 help:
-	@sed -n '1,7p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
+	@sed -n '1,8p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
 test:
 	bash $(HERE)tests/run.sh
 test-browser:
@@ -23,3 +24,5 @@ lint:
 	shellcheck -S warning $(HERE)loop.sh $(HERE)tests/run.sh $(HERE)tests/browser.sh $(HERE)tests/lib/*.sh $(HERE)tests/cases/*.sh
 render:
 	$(HERE)loop.sh render
+watch:
+	$(HERE)loop.sh watch

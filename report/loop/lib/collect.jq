@@ -144,4 +144,9 @@
     + (if $cfg.board_title != null then {board_title: $cfg.board_title} else {} end)
     + {board: $board,
        legend: ($legend + $cfg.legend_notes),
-       sources: ("\($cfg.inputs.events_dir) (\($ev | length) records in \($cfg.inputs.events_days) days, \($routed) with a route) · \($cfg.inputs.work_orders_dir) (\($tickets | length) tickets) · \($cfg.inputs.roles_dir)/*.json · \($cfg.inputs.routes) · herdr pane list (\(if $panes_ok then "\($panes | length) panes" else "unavailable" end)) · belt state (\(if $belt.running then "running" elif $belt.age != null then "stale, \($belt.age)s old" else "absent" end))")}
+       # BREADCRUMB (WO-20261011-616c, step 3): a stale belt used to print its age in seconds here ("stale, 105s old"). The
+       # age grows every pass, so loop.sh watch saw a changed entry every watch_seconds while the belt sat stopped (its normal
+       # state until the route runner exists) and rewrote the page for nothing, which AC-H4 forbids. The age is not in the entry
+       # at all now: "over N s old" says the same thing and holds still. Rejected: ignoring `sources` in watch's comparison, which
+       # would hide a real change in what was read. Cost: the page no longer says how stale; the state file's mtime does.
+       sources: ("\($cfg.inputs.events_dir) (\($ev | length) records in \($cfg.inputs.events_days) days, \($routed) with a route) · \($cfg.inputs.work_orders_dir) (\($tickets | length) tickets) · \($cfg.inputs.roles_dir)/*.json · \($cfg.inputs.routes) · herdr pane list (\(if $panes_ok then "\($panes | length) panes" else "unavailable" end)) · belt state (\(if $belt.running then "running" elif $belt.age != null then "stale, over \($cfg.inputs.belt_max_age_seconds)s old" else "absent" end))")}

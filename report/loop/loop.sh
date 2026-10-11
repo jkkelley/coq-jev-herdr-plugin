@@ -6,6 +6,9 @@
 #   loop.sh validate FILE                     FILE against schema/loop.schema.json, plus the cross-checks a schema cannot say
 #   loop.sh render [--in FILE] [--out DIR]    validate, then write DIR/data.json and DIR/index.html, each atomically
 #                                             (--in default: DIR/data.json; --out default: out_dir from config/board.json)
+#   loop.sh watch [--out DIR] [--iterations N] [--sleep S] [collect's --root --now --panes --no-panes]
+#                                             collect every watch_seconds and rewrite DIR only when the entry changed apart from
+#                                             `at` and `number`; run it in a labelled herdr pane (monitors.sh take), never detached
 # Env: LOOP_CONFIG overrides config/board.json, LOOP_ROOT the tree collect reads, LOOP_PANES_FILE a saved herdr pane list.
 # Exit: 0 ok, 2 usage, 3 validation, 4 io.
 set -euo pipefail
@@ -18,7 +21,7 @@ TEMPLATE=$HERE/assets/template.html
 die() { local c=$1; shift; printf 'loop: %s\n' "$*" >&2; exit "$c"; }
 command -v jq >/dev/null || die 4 "jq is required"
 command -v python3 >/dev/null || die 4 "python3 with jsonschema is required"
-usage() { sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 # schema_check INSTANCE SCHEMA: exit 3 with the first violation on stderr.
 schema_check() {
@@ -162,10 +165,66 @@ cmd_collect() {
   if [ -n "$out" ]; then mkdir -p "$(dirname "$out")" && mv "$t/entry.json" "$out" || die 4 "cannot write $out"; else cat "$t/entry.json"; fi
 }
 
+# --- watch: keep the page current, and touch nothing when nothing changed ---
+
+# cmd_watch [--out DIR] [--iterations N] [--sleep S] [--root DIR] [--now UTC] [--panes FILE | --no-panes]
+# One pass = collect into a scratch file, compare it with DIR/data.json ignoring `at` and `number`, and only when it differs
+# render it into DIR (render places data.json and index.html atomically) and then record the new build number in DIR/.watch.json.
+# A pass that finds nothing changed leaves every file under DIR alone, mtime included: that is what lets the page's own poll, a monitor
+# and a reader's eye trust "the file moved" to mean "the floor moved".
+# --iterations N stops after N passes (0, the default, never stops) and --sleep S replaces watch_seconds: both are the seam the
+# tests use, so no test needs a background process or a real ten-second wait. A pass that cannot collect (a ticket caught
+# half-written, herdr slow) says so on stderr, keeps the last good page, and the loop goes on; a finite run exits with the
+# last pass's status.
+cmd_watch() {
+  local out="" iterations=0 sleep_s="" pass=0 rc=0 last=0 passthrough=() cur_number t cand a b state
+  while [ $# -gt 0 ]; do case $1 in
+    --out) out=${2:-}; shift 2 ;;
+    --iterations) iterations=${2:-}; shift 2 ;;
+    --sleep) sleep_s=${2:-}; shift 2 ;;
+    --root|--now|--panes) passthrough+=("$1" "${2:-}"); shift 2 ;;
+    --no-panes) passthrough+=("$1"); shift ;;
+    *) usage ;;
+  esac; done
+  [[ $iterations =~ ^[0-9]+$ ]] || die 2 "--iterations must be a number (0 runs until stopped)"
+  [ -z "$sleep_s" ] || [[ $sleep_s =~ ^[0-9]+$ ]] || die 2 "--sleep must be whole seconds"
+  config_check || exit 3
+  [ -n "$out" ] || out=$ROOT/$(jq -er .out_dir "$CONFIG")
+  mkdir -p "$out" || die 4 "cannot create $out"
+  state=$out/.watch.json
+  t=$(mktemp -d "$out/.watch.XXXXXX") || die 4 "cannot write in $out"
+  # shellcheck disable=SC2064 # $t is expanded now on purpose
+  trap "rm -rf '$t'" EXIT
+  printf 'watch: %s every %ss into %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${sleep_s:-$(jq -r .watch_seconds "$CONFIG")}" "$out" >&2
+  while :; do
+    pass=$((pass + 1)); rc=0
+    # The number is the count of builds: the one the last build recorded (or the page's own, if the record is gone), plus one.
+    cur_number=$(jq -r '.number // empty' "$state" 2>/dev/null || true)
+    [ -n "$cur_number" ] || cur_number=$(jq -r '.number // 0' "$out/data.json" 2>/dev/null || echo 0)
+    cand=$t/entry.json
+    # In a subshell: collect ends in `exit`, and an exit there must end the pass, not the loop.
+    if ( cmd_collect "${passthrough[@]}" --number "$((cur_number + 1))" --out "$cand" ) 2>"$t/err"; then
+      a=$(jq -S -c 'del(.at, .number)' "$cand"); b=$(jq -S -c 'del(.at, .number)' "$out/data.json" 2>/dev/null || true)
+      if [ "$a" != "$b" ] || [ ! -f "$out/index.html" ]; then
+        if (cmd_render --in "$cand" --out "$out" >/dev/null) 2>"$t/err"; then
+          printf '{"number":%s}\n' "$((cur_number + 1))" > "$t/state" && mv "$t/state" "$state" || rc=4
+          printf 'watch: %s build %s written (%s lines)\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$((cur_number + 1))" "$(jq '.lines | length' "$cand")" >&2
+        else rc=$?; fi
+      fi
+    else rc=$?; fi
+    if [ "$rc" != 0 ]; then printf 'watch: %s pass %s failed (%s), keeping the last page\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$pass" "$rc" >&2; sed 's/^/watch:   /' "$t/err" >&2; fi
+    last=$rc
+    [ "$iterations" = 0 ] || [ "$pass" -lt "$iterations" ] || break
+    sleep "${sleep_s:-$(jq -r .watch_seconds "$CONFIG")}"
+  done
+  return "$last"
+}
+
 verb=${1:-}; [ $# -eq 0 ] || shift
 case $verb in
   validate) [ $# -eq 1 ] || usage; validate "$1" ;;
   render) cmd_render "$@" ;;
   collect) cmd_collect "$@" ;;
+  watch) cmd_watch "$@" ;;
   *) usage ;;
 esac
