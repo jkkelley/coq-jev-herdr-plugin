@@ -28,6 +28,33 @@
 
 
 
+
+## Checkpoint 2026-10-11 03:35 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261010-2d04 (pane wD3:p1S, test pane wD3:p1R) holds treehouse slot 1 for WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat, on branch feat/bearings-sh-serve-and-wait-place-their-panes-in-.
+- The live stable tier was not touched by this worker; AC-H1 needs the architect to run stop then serve on stable from the architect seat after the merge.
+
+#### Toolchain
+
+- tools/bearings/scripts/bearings.sh: pane_for claims the first pane of the caller's tab whose label starts with open_label_prefix (config key, value "OPEN - any tool") and relabels it; it splits the calling pane only when the tab has none and COQ_SEAT is unset, else exits 3 naming the tab. stop relabels each pane with the label it had (open_slots in server.json, re-added after every start because server.mjs rewrites that file) and closes nothing.
+- tools/bearings/tests/inside.sh T8 drives bearings.sh against a stub herdr on PATH and asserts no split, relabel on serve and wait, relabel back on stop, zero close calls, the refusal, and the no-seat split. make -C tools/bearings test: 38 passed, 0 failed, run in wD3:p1R.
+
+#### Active Tasks
+
+- WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat: code, test case and docs done on the branch. Left: root make lint through the step, push, pull request with the acceptance criteria, work-order note with the evidence, post pr.opened 100.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume as worker for WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat: the change is committed; open the pull request with gh pr create (acceptance criteria as the body), add the work-order note, post pr.opened 100 with the sha, then stop.
+
 ## Checkpoint 2026-10-11 03:25 UTC
 
 ### Current state
