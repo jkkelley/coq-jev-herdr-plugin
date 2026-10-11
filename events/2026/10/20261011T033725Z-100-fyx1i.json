@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T033725Z-100-fyx1i",
+  "at": "2026-10-11T03:37:25Z",
+  "code": 100,
+  "seat": "worker-wo-20261010-2d04",
+  "kind": "note",
+  "ticket": "WO-20261010-2d04",
+  "pane": "wD3:p1S",
+  "note": "pr.opened: PR 7 at afe1c4f, bearings.sh places serve and wait panes in the tool grid; AC-H2 evidenced, AC-H1 awaits the architect's live stable restart",
+  "evidence": [],
+  "observations": []
+}

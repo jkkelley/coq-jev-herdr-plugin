@@ -3,8 +3,10 @@
 # tier through config/bearings.json (via lib/config.mjs) and never carries a
 # default of its own. Inside herdr (HERDR_ENV=1) the server and the wait each get
 # a labelled pane in the current tab (Rule 18: nothing backgrounded, every
-# watcher visible). Outside herdr it refuses, unless --no-herdr is given, which
-# the Podman test harness uses because no herdr runs there.
+# watcher visible). That pane is an OPEN tool-grid slot (label starts with
+# open_label_prefix) relabelled for the job, never a split of the calling seat's
+# pane; stop relabels it OPEN again and closes nothing. Outside herdr it refuses,
+# unless --no-herdr is given, which the Podman test harness uses where no herdr runs.
 #
 #   bearings.sh <tier> serve    [--ticket ID] [--config P] [--session S] [--join] [--model M] [--working-on TEXT] [--no-herdr]
 #   bearings.sh <tier> stop     [--ticket ID] [--config P]
@@ -27,7 +29,7 @@ die() { local code=$1; shift; printf 'bearings: %s\n' "$*" >&2; exit "$code"; }
 note() { printf 'bearings: %s\n' "$*" >&2; }
 need() { command -v "$1" >/dev/null 2>&1 || die "$EX_IO" "$1 is required and not on PATH"; }
 
-[ $# -ge 2 ] || { sed -n '2,20p' "$0" >&2; exit "$EX_USAGE"; }
+[ $# -ge 2 ] || { sed -n '2,22p' "$0" >&2; exit "$EX_USAGE"; }
 TIER=$1; VERB=$2; shift 2
 TICKET=""; CONFIG="${BEARINGS_CONFIG:-$TOOL/config/bearings.json}"; NO_HERDR=0; JSON=0; FORCE=0
 SESSION=""; MODEL=""; CWD=""; WORKING_ON=""; TO=""; JOIN=0
@@ -45,7 +47,7 @@ while [ $# -gt 0 ]; do
     --json) JSON=1; shift ;;
     --force) FORCE=1; shift ;;
     --join) JOIN=1; shift ;;
-    --help|-h) sed -n '2,20p' "$0" >&2; exit "$EX_OK" ;;
+    --help|-h) sed -n '2,22p' "$0" >&2; exit "$EX_OK" ;;
     --*) die "$EX_USAGE" "unknown flag $1" ;;
     *) POS+=("$1"); shift ;;
   esac
@@ -59,11 +61,12 @@ RESOLVED=$(node --input-type=module -e '
   import { loadConfig, resolveTier } from "'"$HERE"'/lib/config.mjs";
   const { cfg } = loadConfig(process.argv[1]);
   const T = resolveTier(cfg, process.argv[2], process.argv[3] || undefined);
-  console.log(JSON.stringify({ ...T, split: cfg.pane_split }));
+  console.log(JSON.stringify({ ...T, split: cfg.pane_split, openPrefix: cfg.open_label_prefix }));
 ' "$CONFIG" "$TIER" "$TICKET")
 PAGE=$(jq -r .page <<<"$RESOLVED"); DIR=$(jq -r .stateDir <<<"$RESOLVED")
 PANE_LABEL=$(jq -r .paneLabel <<<"$RESOLVED"); WAIT_LABEL=$(jq -r .waitPaneLabel <<<"$RESOLVED")
 SPLIT_DIR=$(jq -r .split.direction <<<"$RESOLVED"); SPLIT_RATIO=$(jq -r .split.ratio <<<"$RESOLVED")
+OPEN_PREFIX=$(jq -r .openPrefix <<<"$RESOLVED")
 TICKET_ARGS=(); [ -n "$TICKET" ] && TICKET_ARGS=(--ticket "$TICKET")
 COMMON=(--tier "$TIER" "${TICKET_ARGS[@]}" --config "$CONFIG")
 
@@ -84,16 +87,50 @@ pane_by_label() {
   herdr pane list 2>/dev/null | jq -r --arg l "$1" --arg t "${HERDR_TAB_ID:-}" \
     '.result.panes[]? | select(.label == $l and ($t == "" or .tab_id == $t)) | .pane_id' | head -1 || true
 }
+# pane_for <label>: sets P to the pane that carries <label> in this tab and P_WAS to the label an OPEN slot had before
+# it was taken (empty when the pane already carried <label>, or was split). Sets globals instead of printing because
+# a command substitution would lose P_WAS.
+#
+# BREADCRUMB 2026-10-11 UTC - WO-20261010-2d04. What broke: this function split $HERDR_PANE_ID, the pane of whichever
+#   seat ran the verb, whenever no pane carried the label. Restarting the stable tier from the architect seat at
+#   22:25 UTC on 2026-10-10 closed the two grid panes (the old stop) and then carved two new ones out of the architect
+#   column (line `herdr pane split "$HERDR_PANE_ID"`), so the owner's 3x3 arc broke: one agent on the left, two tool
+#   slots gone. Why this fix: the tool grid already holds panes labelled "<open_label_prefix> ..." for exactly these
+#   jobs, so a missing pane is claimed from them (relabelled) and nothing is ever split inside a seat layout. The
+#   split stays only for a caller with no seat (COQ_SEAT unset), where there is no layout to break. A seat with no
+#   OPEN slot left dies naming the tab: a clear stop beats a silently re-carved column. Rejected: a config key naming a
+#   pane id (changes with every herdr restart), and splitting the last pane of the tab (still lands in a seat's space).
+#   Cost: a full grid refuses a third tool until the owner frees a slot, which is the point of a fixed grid.
+#   Record: work-orders/WO-20261010-329d/WO-20261010-2d04-*.md, Notes, decision of 2026-10-11 UTC.
 pane_for() {
-  local label=$1 p
-  p=$(pane_by_label "$label")
-  if [ -z "$p" ]; then
-    p=$(herdr pane split "$HERDR_PANE_ID" --direction "$SPLIT_DIR" --ratio "$SPLIT_RATIO" --cwd "$TOOL" --no-focus | jq -r '.result.pane.pane_id')
-    [ -n "$p" ] || die "$EX_IO" "herdr pane split returned no pane id"
-    herdr pane rename "$p" "$label" >/dev/null
+  local label=$1 open
+  P_WAS=""
+  P=$(pane_by_label "$label")
+  if [ -z "$P" ]; then
+    open=$(herdr pane list 2>/dev/null | jq -r --arg pre "$OPEN_PREFIX" --arg t "${HERDR_TAB_ID:-}" --arg self "${HERDR_PANE_ID:-}" \
+      '[.result.panes[]? | select((.label // "") | startswith($pre)) | select(.pane_id != $self and ($t == "" or .tab_id == $t))] | first // empty | [.pane_id, .label] | @tsv' || true)
+    if [ -n "$open" ]; then
+      P=${open%%$'\t'*}; P_WAS=${open#*$'\t'}
+      herdr pane rename "$P" "$label" >/dev/null || die "$EX_IO" "herdr pane rename $P failed"
+    elif [ -z "${COQ_SEAT:-}" ]; then
+      P=$(herdr pane split "$HERDR_PANE_ID" --direction "$SPLIT_DIR" --ratio "$SPLIT_RATIO" --cwd "$TOOL" --no-focus | jq -r '.result.pane.pane_id')
+      [ -n "$P" ] || die "$EX_IO" "herdr pane split returned no pane id"
+      herdr pane rename "$P" "$label" >/dev/null
+    else
+      die "$EX_VALIDATION" "tab ${HERDR_TAB_ID:-?} has no pane labelled '$OPEN_PREFIX...' for $label, and seat ${COQ_SEAT} must not be split; free a tool slot (relabel a pane '$OPEN_PREFIX') and run it again"
+    fi
   fi
-  printf '%s\n' "$p"
 }
+# slots_save <kept> <kind> <was>: server.json keeps open_slots {server, wait} = the label each slot had before it was
+# taken. server.mjs rewrites server.json whole at every start and drops extra keys, so serve and rotate-key hand the
+# slots they read before the start back in as <kept>. A no-op while server.json does not exist yet.
+slots_save() {
+  local kept=$1 kind=$2 was=$3
+  [ -f "$DIR/server.json" ] || return 0
+  jq --argjson k "$kept" --arg kind "$kind" --arg was "$was" \
+    '.open_slots = ($k + (if $was == "" then {} else {($kind): $was} end))' "$DIR/server.json" >"$DIR/server.json.tmp" && mv "$DIR/server.json.tmp" "$DIR/server.json"
+}
+slots_kept() { jq -c '.open_slots // {}' <<<"$(server_json)"; }
 wait_for_server() {
   local _; for _ in $(seq 1 60); do server_alive && [ -n "$(jq -r '.url // empty' <<<"$(server_json)")" ] && return 0; sleep 0.25; done
   return 1
@@ -113,9 +150,11 @@ case $VERB in
     rm -f "$DIR/stopped.json"
     if in_herdr && [ "$NO_HERDR" = 0 ]; then
       need herdr
-      P=$(pane_for "$PANE_LABEL")
+      KEPT=$(slots_kept)
+      pane_for "$PANE_LABEL"
       herdr pane run "$P" "node $HERE/server.mjs $(printf '%q ' "${ARGS[@]}")" >/dev/null
       wait_for_server || die "$EX_IO" "server did not come up in pane $P; read it with: herdr pane read $P"
+      slots_save "$KEPT" server "$P_WAS"
       note "server in pane $P ($PANE_LABEL)"
     elif [ "$NO_HERDR" = 1 ]; then
       mkdir -p "$DIR"
@@ -127,11 +166,26 @@ case $VERB in
     jq -r .url <<<"$(server_json)"
     ;;
   stop)
+    # BREADCRUMB 2026-10-11 UTC - WO-20261010-2d04. What broke: this closed the wait and server panes (herdr pane close),
+    #   so every restart removed two tool-grid cells and the next serve had to carve new ones out of the caller's column
+    #   (see pane_for). Why this fix: the grid is fixed and nothing closes a pane (monitors.sh says the same); a stopped
+    #   tier hands each pane back as an OPEN slot with the label it had when it was taken, kept in server.json open_slots,
+    #   else the bare open_label_prefix. The wait loop ends by itself on stopped.json and the server process is gone, so
+    #   the pane is an idle shell again. Cost: the pane keeps its scrollback; a clear is the next job's first command.
+    SLOTS=$(slots_kept)
     node "$HERE/server.mjs" "${COMMON[@]}" --stop
     if in_herdr && [ "$NO_HERDR" = 0 ] && command -v herdr >/dev/null 2>&1; then
-      for l in "$WAIT_LABEL" "$PANE_LABEL"; do
-        p=$(pane_by_label "$l"); [ -n "$p" ] && herdr pane close "$p" >/dev/null 2>&1 && note "closed pane $p ($l)"
+      for k in wait server; do
+        if [ "$k" = wait ]; then l=$WAIT_LABEL; else l=$PANE_LABEL; fi
+        p=$(pane_by_label "$l")
+        if [ -n "$p" ]; then
+          was=$(jq -r --arg k "$k" '.[$k] // empty' <<<"$SLOTS")
+          herdr pane rename "$p" "${was:-$OPEN_PREFIX}" >/dev/null 2>&1 && note "pane $p ($l) is an open slot again: ${was:-$OPEN_PREFIX}"
+        fi
       done
+      if [ -f "$DIR/server.json" ]; then
+        jq 'del(.open_slots)' "$DIR/server.json" >"$DIR/server.json.tmp" && mv "$DIR/server.json.tmp" "$DIR/server.json"
+      fi
     fi
     ;;
   wait)
@@ -150,7 +204,8 @@ case $VERB in
     LOOP="while [ ! -f $(printf '%q' "$DIR/stopped.json") ]; do out=\$(node $(printf '%q' "$HERE/wait.mjs") $(printf '%q ' "${COMMON[@]}")); printf '%s\\n' \"\$out\"; $FWD sleep 1; done"
     if in_herdr && [ "$NO_HERDR" = 0 ]; then
       need herdr
-      P=$(pane_for "$WAIT_LABEL")
+      pane_for "$WAIT_LABEL"
+      slots_save "$(slots_kept)" wait "$P_WAS"
       # A loop already running in that pane is stopped first, so the new one is never typed into it.
       if herdr pane process-info --pane "$P" 2>/dev/null | jq -e '.result.process_info | .foreground_process_group_id != null and .shell_pid != null and .foreground_process_group_id != .shell_pid' >/dev/null 2>&1; then
         herdr pane send-keys "$P" C-c >/dev/null 2>&1 || true; sleep 1; herdr pane send-keys "$P" C-c >/dev/null 2>&1 || true
@@ -177,6 +232,7 @@ case $VERB in
     SESS=$(jq -r '.session // empty' "$DIR/session.json" 2>/dev/null || true)
     SMODEL=$(jq -r '.model // empty' "$DIR/session.json" 2>/dev/null || true)
     SWORK=$(jq -r '.working_on // empty' "$DIR/session.json" 2>/dev/null || true)
+    KEPT=$(slots_kept)
     node "$HERE/server.mjs" "${COMMON[@]}" --stop >/dev/null
     for _ in $(seq 1 40); do server_alive || break; sleep 0.25; done
     server_alive && die "$EX_IO" "$PAGE did not stop"
@@ -187,9 +243,10 @@ case $VERB in
     [ -n "$SESS" ] && ARGS+=(--session "$SESS"); [ -n "$SMODEL" ] && ARGS+=(--model "$SMODEL"); [ -n "$SWORK" ] && ARGS+=(--working-on "$SWORK")
     if in_herdr && [ "$NO_HERDR" = 0 ]; then
       need herdr
-      P=$(pane_for "$PANE_LABEL")
+      pane_for "$PANE_LABEL"
       herdr pane run "$P" "node $HERE/server.mjs $(printf '%q ' "${ARGS[@]}")" >/dev/null
       wait_for_server || die "$EX_IO" "server did not come back in pane $P; read it with: herdr pane read $P"
+      slots_save "$KEPT" server "$P_WAS"
       note "server back in pane $P ($PANE_LABEL) with a new key"
       # The wait loop ended on stopped.json; the wait verb restarts it in its own labelled pane.
       "$0" "$TIER" wait "${TICKET_ARGS[@]}" --config "$CONFIG" ${TO:+--to "$TO"} >/dev/null

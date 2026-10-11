@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T032754Z-100-2po7s",
+  "at": "2026-10-11T03:27:54Z",
+  "code": 100,
+  "seat": "worker-wo-20261010-2d04",
+  "kind": "note",
+  "ticket": "WO-20261010-2d04",
+  "pane": "wD3:p1S",
+  "note": "work.started: worker seat begins bearings.sh serve and wait placing their panes in the tool grid, never under the calling seat",
+  "evidence": [],
+  "observations": []
+}
