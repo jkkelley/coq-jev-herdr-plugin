@@ -53,7 +53,8 @@
       "gh pr create",
       "work-order.sh note|evidence",
       "events/bin/event.sh add",
-      "herdr/bin/testpane.sh *"
+      "herdr/bin/testpane.sh *",
+      "treehouse status *"
     ]
   },
   "deny": {
@@ -80,7 +81,7 @@
     "blocked": 423
   },
   "must": [
-    "post work.started 100 first; if the slot lease is not yours, stop",
+    "post work.started 100 first; then treehouse status --json must show lease_holder equal to your ticket id at path $COQ_WORKTREE, else stop and post blocked 423; seat.sh leases the slot, you never run treehouse get or return",
     "read the ticket; the degrees of freedom are the only choices you make",
     "make lint and make test for the cases that prove the change, run only in the labelled test pane your brief names, through herdr/bin/testpane.sh; CI runs the rest",
     "on failure fix inside your paths, at most 3 attempts; the third failure is evidence.sh with repro and 423",

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # seat.sh - the one way a seat comes up, is checked, is taken down and is audited (SPEC-04 RUN-seat-up).
-#   seat.sh --ticket WO-ID --role R [--runtime claude|codex] [--worktree DIR]   door 1: the ticket names the seat (worker-WO-...)
+#   seat.sh --ticket WO-ID --role R [--runtime claude|codex] [--worktree DIR]   door 1: the ticket names the seat (worker-WO-...); no --worktree leases a treehouse slot to the ticket
 #   seat.sh --role R --task "text" [--worktree DIR]                             door 2: a fixed seat (monitor, merger, orchestrator)
 #   seat.sh --check NAME        one line per difference, exit 1 if any; a downed seat prints "down since", exit 3
-#   seat.sh --down NAME         retire.sh, close the tab, record seat.down 100; a second --down records nothing
+#   seat.sh --down NAME         retire.sh, close the tab, return the slot this seat leased, record seat.down 100; a second --down records nothing
 #   seat.sh --audit             every agent process on the host: COMPLIANT or OUT OF COMPLIANCE + seat.stalled 500; exit 1 if any
 # Reads roles/<role>.json and the layout it names (herdr/layouts/<pane_layout>.json). Workspace by label, tab by label,
 # panes from the layout with their labels, settings rendered from the role's allow and deny into
@@ -11,7 +11,8 @@
 # waited for, `herdr agent start` with the role's model, effort and permission mode, then the brief (roles/bin/brief.sh)
 # as the first prompt. A rerun repairs: a pane with the right label is kept, strays are relabelled, missing ones split.
 # Prints one JSON line. DRY_RUN=1 prints every mutating herdr call and writes nothing.
-# Exit: 0 ok, 1 check differences, 2 usage, 3 refused (gate, cap, guard, name, no test pane for a ticket seat), 4 herdr failure.
+# Exit: 0 ok, 1 check differences, 2 usage, 3 refused (gate, cap, guard, name, no test pane for a ticket seat, no treehouse slot), 4 herdr failure
+#   or a slot that would not come back on --down.
 #
 # BREADCRUMB 2026-10-10 - ported from ~/tools/bearings-v2/bin/seat.sh (644 lines, proven on the rime fleet) and
 #   reduced to what SPEC-04 asks: the role file is the whole contract (no ticket-side model or layout override, the
@@ -30,14 +31,14 @@ sl_require jq herdr
 
 usage() { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 refuse() { SL_EXIT=3 sl_die "$@"; }
-mode=up; ticket=""; role=""; task=""; wt="$SL_REPO"; name_arg=""; runtime_arg=""
+mode=up; ticket=""; role=""; task=""; wt="$SL_REPO"; wt_given=0; name_arg=""; runtime_arg=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --ticket) ticket="${2:?--ticket needs an id}"; shift 2 ;;
     --role) role="${2:?--role needs a role}"; shift 2 ;;
     --task) task="${2:?--task needs text}"; shift 2 ;;
     --runtime) runtime_arg="${2:?--runtime needs claude or codex}"; shift 2 ;;
-    --worktree) wt="${2:?--worktree needs a directory}"; shift 2 ;;
+    --worktree) wt="${2:?--worktree needs a directory}"; wt_given=1; shift 2 ;;
     --check) mode=check; name_arg="${2:?--check needs a seat name}"; shift 2 ;;
     --down) mode=down; name_arg="${2:?--down needs a seat name}"; shift 2 ;;
     --audit) mode=audit; shift ;;
@@ -90,8 +91,62 @@ load_seat() {
   layout_file="$(jq -r .layout_file "$seat_file")"; ws="$(jq -r .workspace "$seat_file")"; tab="$(jq -r .tab "$seat_file")"
   settings="$(jq -r .settings "$seat_file")"; HS="$(jq -r .session "$seat_file")"; agent_pane="$(jq -r '.pane // empty' "$seat_file")"
   ended_at="$(jq -r '.ended_at // empty' "$seat_file")"
+  lease_holder="$(jq -r '.lease.holder // empty' "$seat_file")"; lease_owned="$(jq -r '.lease.owned // false' "$seat_file")"
 }
 tab_live() { sl_h tab list --workspace "$ws" 2>/dev/null | jq -e --arg t "$tab" '[(.result.tabs // [])[] | select(.tab_id == $t)] | length > 0' >/dev/null 2>&1; }
+
+# BREADCRUMB 2026-10-11 - WO-20261010-a429, the treehouse lease. What broke: AGENTS.md (Where your workspace comes from) allows
+#   one source of worktrees, the treehouse pool, but this script took --worktree and defaulted to the main checkout, so the
+#   architect hand-rolled /home/luna/worktrees/<ticket> for WO-20261010-c274 and WO-20261010-8fa8, and playbooks/worker.md
+#   step 1 named slot.sh, which never existed, so the 8fa8 worker sat at step 1 from 21:47 to 22:2x UTC until the architect
+#   answered by hand. Why this fix: a ticket seat with no --worktree leases its slot here, with the ticket id as the lease
+#   holder (`treehouse get --lease --lease-holder <ticket> --no-fetch --json`), so `treehouse status` is keyed by ticket as
+#   AGENTS.md says and the worker finds its lease with a read, never an acquire: the slot is the seat's, not the agent's.
+#   The path and lease id are read back from `treehouse status --json` (a shape seen live: name, path, lease_id,
+#   lease_holder), not from get's own output, whose keys this script never had to guess. seat.json carries
+#   lease {holder, id, owned}, null for --worktree (AC-H4): --down and --check need to know whether this seat leased the
+#   slot, and a plain directory must never reach `treehouse return`. A ticket that already holds a lease (hydration-prompt
+#   leased it for the architect) is reused with owned false, so --down never returns a workbench another process leased.
+#   Rejected: the worker running `treehouse get` itself (two parties leasing one slot, and the 8fa8 stall again if it
+#   fails), the hydration-prompt lease path (an interactive skill, not a command a seat can call), and returning every
+#   lease the ticket holds on --down (it would wipe the architect's workbench). Cost: `treehouse return --force` resets
+#   the slot and ends every process in it, so --down runs it after retire.sh and the tab close, and anything the worker
+#   left uncommitted in the slot is gone; a lease that will not come back keeps the seat un-ended so a rerun retries.
+# th_row HOLDER [PATH]: the newest lease row held by HOLDER (at PATH), empty when none; status 1 when treehouse status failed.
+th_row() {
+  local st; st="$(treehouse status --json 2>/dev/null)" || return 1
+  jq -c --arg h "$1" --arg p "${2:-}" '[.[]? | select(.lease_holder == $h and ($p == "" or .path == $p))] | sort_by(.leased_at) | last // empty' <<<"$st"
+}
+# lease_abandon: the EXIT trap of a run that leased a slot and died before seat.json recorded it, so a refused or failed
+# bring-up leaves no lease behind.
+lease_abandon() { if [ "$lease_new" = 1 ] && [ "$recorded" != 1 ]; then treehouse return "$wt" --if-lease-holder "$id" --force >/dev/null 2>&1 || true; fi; }
+# lease_up: sets wt, lease and lease_new for door 1 without --worktree.
+lease_up() {
+  local row owned=true
+  command -v treehouse >/dev/null 2>&1 || refuse "treehouse is not on PATH; a ticket seat without --worktree leases its slot from the pool"
+  row="$(th_row "$id")" || refuse "treehouse status failed; cannot tell whether $id already holds a lease"
+  if [ -n "$row" ]; then
+    owned=false
+    if [ -f "$seat_file" ] && [ -z "$(jq -r '.ended_at // empty' "$seat_file")" ]; then owned="$(jq -r '.lease.owned // false' "$seat_file")"; fi
+    sl_log "seat $name: ticket $id already holds a treehouse lease, using it"
+  else
+    sl_run treehouse get --lease --lease-holder "$id" --no-fetch --json >/dev/null || refuse "no treehouse slot for $id: treehouse get --lease failed"
+    row="$(th_row "$id")" || refuse "treehouse status failed after leasing a slot for $id"
+    if [ -z "$row" ]; then
+      [ "$DRY" = 1 ] || refuse "treehouse get --lease succeeded but treehouse status lists no lease held by $id"
+      wt="/dry-run/treehouse-slot"; lease="$(jq -nc --arg h "$id" '{holder:$h,id:"dry-run",owned:true}')"; return 0
+    fi
+    lease_new=1; trap lease_abandon EXIT
+  fi
+  wt="$(jq -r .path <<<"$row")"; [ -d "$wt" ] || { lease_abandon; refuse "treehouse leased $wt to $id but it is not a directory"; }
+  lease="$(jq -nc --arg h "$id" --arg i "$(jq -r .lease_id <<<"$row")" --argjson o "$owned" '{holder:$h,id:$i,owned:$o}')"
+}
+# lease_down: give back the slot this seat leased. A slot treehouse no longer lists for the holder counts as returned.
+lease_down() {
+  local row; row="$(th_row "$lease_holder" "$wt")" || return 1
+  [ -n "$row" ] || { sl_log "seat $name: $wt is no longer leased to $lease_holder, nothing to return"; return 0; }
+  sl_run treehouse return "$wt" --if-lease-holder "$lease_holder" --force
+}
 
 # ---- --check ----
 if [ "$mode" = check ]; then
@@ -110,6 +165,10 @@ if [ "$mode" = check ]; then
   if [ ! -f "$role_file" ]; then say "role file missing: $role_file"
   elif [ ! -f "$settings" ]; then say "settings missing: $settings"
   elif ! render_settings | cmp -s - "$settings"; then say "settings drifted from $role_file: $settings"; fi
+  if [ -n "$lease_holder" ]; then
+    if ! row="$(th_row "$lease_holder" "$wt")"; then say "treehouse status failed; the lease on $wt is unchecked"
+    elif [ -z "$row" ]; then say "lease missing: treehouse status lists no lease held by $lease_holder at $wt"; fi
+  fi
   [ "$diffs" = 0 ]; exit $?
 fi
 
@@ -117,9 +176,13 @@ fi
 if [ "$mode" = down ]; then
   load_seat "$name_arg"
   if [ -n "$ended_at" ]; then echo "$name: already down since $ended_at"; exit 0; fi
+  [ "$lease_owned" != true ] || sl_require treehouse
   "$SL_HERE/retire.sh" "$name" --pane "$agent_pane" || sl_log "seat $name: retire did not finish cleanly; closing the tab anyway"
   sl_run sleep "$(sl_cfg .down_wait_seconds)"
   sl_mut tab close "$tab" >/dev/null 2>&1 || true
+  if [ "$lease_owned" = true ]; then
+    lease_down || { SL_EXIT=4 sl_die "seat $name: slot $wt would not come back to the pool; the seat stays un-ended, rerun --down once treehouse return works"; }
+  fi
   sl_record seat.down 100 "$name" ${id:+--ticket "$id"} --pane "$agent_pane" --note "seat retired"
   [ "$DRY" = 1 ] || { jq --arg at "$(sl_now)" '.ended_at=$at' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }
   jq -nc --arg name "$name" '{name:$name,down:true}'; exit 0
@@ -232,6 +295,11 @@ if [ -n "$ticket" ] && [ -z "$tpane" ]; then
   [ "$DRY" = 1 ] && tpane=dry-test-pane || refuse "no pane labelled 'test - herdr' in the tab this was started from (HERDR_TAB_ID=${HERDR_TAB_ID:-unset}); start seats from the architect tab"
 fi
 
+# Door 1 without --worktree: lease the ticket's slot now, after every refusal above so a refused seat leases nothing, and
+# before the first herdr call that names a directory. --worktree leases nothing and returns nothing (AC-H4).
+lease=null; lease_new=0; recorded=0
+if [ -n "$ticket" ] && [ "$wt_given" = 0 ]; then lease_up; fi
+
 # Workspace by label else create; tab by label else create. A fresh workspace's root tab is renamed and used.
 sl_h workspace list >/dev/null 2>&1 || { [ "$DRY" = 1 ] || { SL_EXIT=4 sl_die "herdr session $HS is not running; bringup.sh starts it"; }; }
 ws="$(sl_ws_id || true)"; tab=""
@@ -293,10 +361,11 @@ if [ "$DRY" != 1 ]; then
   render_settings > "$settings.tmp" && mv "$settings.tmp" "$settings"
   jq -n --arg name "$name" --arg ticket "$id" --arg role "$role" --arg role_file "$role_file" --arg runtime "$runtime" --arg model "$MODEL" \
     --arg effort "$effort" --arg wt "$wt" --arg layout_file "$layout_file" --arg ws "$ws" --arg tab "$tab" --arg hs "$HS" \
-    --arg settings "$settings" --arg pane "$a" --arg at "$(sl_now)" --arg task "$task" \
+    --arg settings "$settings" --arg pane "$a" --arg at "$(sl_now)" --arg task "$task" --argjson lease "$lease" \
     '{name:$name,ticket:$ticket,task:$task,role:$role,role_file:$role_file,runtime:$runtime,model:$model,effort:$effort,worktree:$wt,
-      layout_file:$layout_file,workspace:$ws,tab:$tab,session:$hs,settings:$settings,pane:$pane,started_at:$at,ended_at:null}' > "$seat_file.tmp" \
+      lease:$lease,layout_file:$layout_file,workspace:$ws,tab:$tab,session:$hs,settings:$settings,pane:$pane,started_at:$at,ended_at:null}' > "$seat_file.tmp" \
     && mv "$seat_file.tmp" "$seat_file"
+  recorded=1
 fi
 
 # BREADCRUMB 2026-10-10 20:5x UTC - first live bring-up: the monitor seat's claude opened the "Is this a project you trust?"
@@ -343,5 +412,5 @@ if [ "$started" = 1 ]; then
   sl_mut agent prompt "$name" "$prompt" >/dev/null || sl_log "seat $name: brief could not be sent; the monitor will re-prompt"
 fi
 jq -nc --arg name "$name" --arg ticket "$id" --arg role "$role" --arg ws "$ws" --arg tab "$tab" --arg agent "$a" --arg settings "$settings" \
-  --arg model "$MODEL" --arg effort "$effort" --arg panes "${pane[*]}" --argjson started "$started" \
-  '{name:$name,ticket:$ticket,role:$role,workspace:$ws,tab:$tab,agent:$agent,panes:($panes|split(" ")),settings:$settings,model:$model,effort:$effort,started:($started==1)}'
+  --arg model "$MODEL" --arg effort "$effort" --arg panes "${pane[*]}" --argjson started "$started" --arg wt "$wt" --argjson lease "$lease" \
+  '{name:$name,ticket:$ticket,role:$role,workspace:$ws,tab:$tab,agent:$agent,panes:($panes|split(" ")),settings:$settings,model:$model,effort:$effort,worktree:$wt,lease:$lease,started:($started==1)}'

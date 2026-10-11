@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T025315Z-100-0mpyp",
+  "at": "2026-10-11T02:53:15Z",
+  "code": 100,
+  "seat": "worker-wo-20261010-a429",
+  "kind": "note",
+  "ticket": "WO-20261010-a429",
+  "pane": "wD3:pF",
+  "note": "work.started: worker seat begins seat.sh treehouse lease for the worker and the worker playbook naming the real lease tool",
+  "evidence": [],
+  "observations": []
+}

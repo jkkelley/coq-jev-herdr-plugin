@@ -22,13 +22,13 @@ Runtime claude (allowed: claude, codex). Model claude-sonnet-5-5 / codex gpt-5.6
 ## Permissions
 
 Mode `bypassPermissions`.
-Allowed tools: Read, Grep, Glob, Write, Edit, Bash. Allowed paths: ${worktree}/. Allowed commands: make *, git add|commit|push, gh pr create, work-order.sh note|evidence, events/bin/event.sh add, herdr/bin/testpane.sh *.
+Allowed tools: Read, Grep, Glob, Write, Edit, Bash. Allowed paths: ${worktree}/. Allowed commands: make *, git add|commit|push, gh pr create, work-order.sh note|evidence, events/bin/event.sh add, herdr/bin/testpane.sh *, treehouse status *.
 Denied tools: Agent, Task. Denied paths: ${repo}/specs/, ${repo}/graph/, ${repo}/roles/. Denied commands: gh pr merge *, git push --force*, treehouse destroy *, herdr pane run *.
 Inputs: ticket. Outputs: pr, record.pr_opened, record.evidence.
 
 ## Steps
 
-1. post work.started 100 first; if the slot lease is not yours, stop
+1. post work.started 100 first; then treehouse status --json must show lease_holder equal to your ticket id at path $COQ_WORKTREE, else stop and post blocked 423; seat.sh leases the slot, you never run treehouse get or return
 2. read the ticket; the degrees of freedom are the only choices you make
 3. make lint and make test for the cases that prove the change, run only in the labelled test pane your brief names, through herdr/bin/testpane.sh; CI runs the rest
 4. on failure fix inside your paths, at most 3 attempts; the third failure is evidence.sh with repro and 423
