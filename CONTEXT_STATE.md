@@ -29,6 +29,32 @@
 
 
 
+
+## Checkpoint 2026-10-11 03:37 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261010-2d04 (pane wD3:p1S, test pane wD3:p1R) holds treehouse slot 1 for WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat, on branch feat/bearings-sh-serve-and-wait-place-their-panes-in-, pushed at 639704f plus checkpoints.
+- The live stable tier was not touched by this worker; AC-H1 needs the architect to run stop then serve on stable from the architect seat after the merge.
+
+#### Toolchain
+
+- tools/bearings/scripts/bearings.sh claims an OPEN tool-grid pane of the caller's tab for serve and wait, relabels it back on stop, closes nothing, splits only a caller with no seat. make -C tools/bearings test: 38 passed, 0 failed from wD3:p1R.
+
+#### Active Tasks
+
+- WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat: AC-H2 evidenced, worker note recorded. Left: push, gh pr create with the acceptance criteria as the body, post pr.opened 100 with the sha, stop.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume as worker for WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat: everything is committed and pushed; run gh pr create (acceptance criteria as the body), post pr.opened 100 with the head sha through events/bin/event.sh add, then stop.
+
 ## Checkpoint 2026-10-11 03:35 UTC
 
 ### Current state
