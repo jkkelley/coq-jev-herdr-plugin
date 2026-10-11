@@ -1,0 +1,26 @@
+{
+  "id": "DEC-blueprint-first",
+  "type": "Decision",
+  "title": "Design from the blueprint, never improvise: the graph is the system design, every piece is a node before it is a ticket, and a blueprint page renders it as done and coming up in the loop board's format",
+  "status": "locked",
+  "text": "Owner, 2026-10-11 18:30Z to 18:36Z: 'This whole system we have better have a blueprint to it, mermaid or what the fuck ever. But you better be designing off something and not making shit up as you go.' 'When I want to see it, you better have it ready showing what's done, what's coming up etc, we can reuse the same thing we're doing for the loop view for the factory. No sense in reinventing the wheel.' 'The full on blueprint: taking the system design doc and presenting it to the user as a blueprint but in that beautiful format you already have for the loops.' Binding: graph/ (nodes, GRAPH.mmd) is the blueprint; a component is added as a CMP node with its RUN runbook edge before its ticket is cut; report/loop gains a blueprint view fed from graph/ and work-orders/ (done, in flight, coming up) and bearings serves it beside /board.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat-wD3-p2",
+      "at": "2026-10-11T18"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-north-star"
+    },
+    {
+      "kind": "depends_on",
+      "to": "DEC-system-runs-the-loop"
+    }
+  ],
+  "created": "2026-10-11T18:36Z",
+  "updated": "2026-10-11T18:36Z"
+}

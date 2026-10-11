@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T183523Z-100-c3ral",
+  "at": "2026-10-11T18:35:23Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p2",
+  "note": "hand step 18:35Z: merger moved from PR 15 to PR 16 (slot 2) for test 201 a51gv and review 201 9e7xk on head 434dae2; belt started 18:27Z in monitors pane wD3:p0 so the next wakes are its",
+  "evidence": [],
+  "observations": []
+}

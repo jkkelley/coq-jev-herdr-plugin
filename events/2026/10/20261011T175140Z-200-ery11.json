@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T175140Z-200-ery11",
+  "at": "2026-10-11T17:51:40Z",
+  "code": 200,
+  "seat": "merger",
+  "kind": "merge",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p3W",
+  "note": "merged PR 11 squash at 5790abd into main, merge commit 57c60fb. Cleanup done, branch deleted. Slot 1 NOT released: seat.sh --down refused, foreign processes in slot",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "herdr/bin/seat.sh",
+      "line": 0,
+      "saw": "slot 1 still leased to WO-20261011-dc0d",
+      "expected": "return slot after foreign processes are moved out or ended"
+    }
+  ]
+}

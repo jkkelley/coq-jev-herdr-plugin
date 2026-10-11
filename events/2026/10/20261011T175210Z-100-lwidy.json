@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T175210Z-100-lwidy",
+  "at": "2026-10-11T17:52:10Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "seat.down",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p3W",
+  "note": "seat retired",
+  "evidence": [],
+  "observations": []
+}

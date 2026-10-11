@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T175842Z-201-9e7xk",
+  "at": "2026-10-11T17:58:42Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261011-616c",
+  "kind": "review",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p46",
+  "note": "review.passed: PR 16 head 434dae2, AC-H1..H6 all have evidence, no file outside scope, no em dash, UTC, config not literals. Non-blocking: stale graph-handoff comment 08-graph.test.sh:5, PR body AC-H3/H6 unticked",
+  "evidence": [],
+  "observations": []
+}

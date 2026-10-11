@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T173445Z-100-3z929",
+  "at": "2026-10-11T17:34:45Z",
+  "code": 100,
+  "seat": "tester-wo-20261011-dc0d",
+  "kind": "note",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p1V",
+  "note": "work.started: tester seat begins the test plan for seat.sh first-turn nudge (WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else')",
+  "evidence": [],
+  "observations": []
+}

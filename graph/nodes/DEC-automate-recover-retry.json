@@ -1,0 +1,26 @@
+{
+  "id": "DEC-automate-recover-retry",
+  "type": "Decision",
+  "title": "Templates, scripts, automation, recovery and retry: every piece is scripted from a template, restarts from its files, retries a bounded number of times and no agent drives it",
+  "status": "locked",
+  "text": "Owner, 2026-10-11 18:33Z: 'All that shit you create better be automated and no agent needs to drive it.' 'Templates, scripts, automation, recovery and retry logic is awesome.' Binding: bringup starts it, recover restarts it, a bounded retry (attempt 1 to 3) precedes a 423, failure is a record and a notification, and the owner never asks an agent to kick it.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat-wD3-p2",
+      "at": "2026-10-11T18"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-north-star"
+    },
+    {
+      "kind": "depends_on",
+      "to": "DEC-system-runs-the-loop"
+    }
+  ],
+  "created": "2026-10-11T18:36Z",
+  "updated": "2026-10-11T18:36Z"
+}

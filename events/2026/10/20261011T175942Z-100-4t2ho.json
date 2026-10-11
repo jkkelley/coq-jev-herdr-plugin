@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T175942Z-100-4t2ho",
+  "at": "2026-10-11T17:59:42Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-e618",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-e618",
+  "pane": "wD3:p3E",
+  "note": "PR 17 head 8d5ea72: interface seat scripts, interface-2x2 layout with seat.sh pre_start, runbook; interface suite and herdr 12 cases green in the test pane",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

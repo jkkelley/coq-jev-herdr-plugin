@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T183225Z-100-evqgo",
+  "at": "2026-10-11T18:32:25Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "hand step 18:28Z: six seats downed after their records (PR 16 tester and reviewer, PR 15 tester and reviewer, spec seat, PR 17 worker); the line sat 22 min because nothing but the architect wakes a seat and his watch was dead",
+  "evidence": [],
+  "observations": []
+}

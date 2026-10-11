@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T173822Z-100-da4oc",
+  "at": "2026-10-11T17:38:22Z",
+  "code": 100,
+  "seat": "architect-write-the-generic-ac13",
+  "kind": "note",
+  "ticket": null,
+  "pane": "wD3:p42",
+  "note": "REQ-AB16-001 started: reading BRIEF.md, request and schema; will write specs/exports/factory-spec.xml only, then post one 201 note and stop",
+  "evidence": [],
+  "observations": []
+}

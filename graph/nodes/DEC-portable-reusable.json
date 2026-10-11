@@ -1,0 +1,26 @@
+{
+  "id": "DEC-portable-reusable",
+  "type": "Decision",
+  "title": "Portability and reusability: every component works in another repo by config alone and ships with its runbook",
+  "status": "locked",
+  "text": "Owner, 2026-10-11 18:37Z: 'PORTABILITY AND REUSABILITY.' Earlier the same day: 'keep that shit here, but portable from the get go.' Binding: no component depends on this repo's names; each has a RUN runbook a fresh reader can follow on another repo; the factory spec export (specs/exports) is the proof.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat-wD3-p2",
+      "at": "2026-10-11T18"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-north-star"
+    },
+    {
+      "kind": "depends_on",
+      "to": "DEC-never-hardcode"
+    }
+  ],
+  "created": "2026-10-11T18:36Z",
+  "updated": "2026-10-11T18:36Z"
+}

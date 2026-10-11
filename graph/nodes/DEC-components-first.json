@@ -1,0 +1,22 @@
+{
+  "id": "DEC-components-first",
+  "type": "Decision",
+  "title": "Components are the design unit: every piece is a composable component with one job, declared inputs and outputs and a schema, assembled by config",
+  "status": "locked",
+  "text": "Owner, 2026-10-11 18:33Z: 'Components are our best friend, that's why react is dope as fuck. Keep this in mind and use as a design principle moving forward.' Binding: scripts, pages, seats and watchers are components (CMP nodes) with explicit interfaces (IFC nodes) and no shared hidden state; a page is built from components the way the board's stations are; reuse before writing.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "chat-wD3-p2",
+      "at": "2026-10-11T18"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-north-star"
+    }
+  ],
+  "created": "2026-10-11T18:36Z",
+  "updated": "2026-10-11T18:36Z"
+}

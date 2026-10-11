@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T175017Z-201-vvsh6",
+  "at": "2026-10-11T17:50:17Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-dc0d",
+  "kind": "test.passed",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p1V",
+  "note": "test.passed: make -C herdr test 11 passed 0 failed (case 11 guard-ack nudge: AC-H1, AH-H2, nudged_at); make lint all ok; render-playbook --check exit 0",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/3b67bfdc-6af3-4169-989f-6cc51fa24e7a/scratchpad/dc0d-suite.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/3b67bfdc-6af3-4169-989f-6cc51fa24e7a/scratchpad/dc0d-lint.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/3b67bfdc-6af3-4169-989f-6cc51fa24e7a/scratchpad/dc0d-render.log"
+  ],
+  "observations": []
+}

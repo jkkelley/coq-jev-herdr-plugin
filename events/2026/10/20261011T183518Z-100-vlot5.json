@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T183518Z-100-vlot5",
+  "at": "2026-10-11T18:35:18Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "seat.down",
+  "ticket": "WO-20261011-23df",
+  "pane": "wD3:p4C",
+  "note": "seat retired",
+  "evidence": [],
+  "observations": []
+}
