@@ -97,6 +97,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` Review fix 2026-10-11 (record 20261011T163507Z-422-uii0r): report/loop/RUNBOOK.md now opens with a contents list, the binding rules and GOOD/NEVER lines inside its first 100 lines; make lint rc 0. AC-H3 and AC-H6 stay unchecked on purpose and are the architect's, no evidence line is faked: AC-H3 needs a live bearings stable restart with board_dir set (a worker may not restart a tier, and the key never goes in a record), then post a record and watch /board redraw inside 30 seconds; AC-H6 needs a role that may write graph/, run bash report/loop/graph-handoff/apply.sh (adds CMP-factory-board and RUN-factory-board with defined_in, patches graph.sh, runs graph.sh check) then remove the edge and confirm make lint fails. After each, work-order.sh evidence --id WO-20261011-616c --match AC-H3 (or AC-H6) --observed ...
 - `2026-10-11` Retro 2026-10-11: AC-H1, H2, H4 and H5 observed and ticked; AC-H3 (live stable restart, which is the architect's) and AC-H6 (graph/ is denied to workers, blocked 423 lvhaz; apply report/loop/graph-handoff/apply.sh) left unchecked on purpose. Findings: the global prettier hook re-indents the locked template (now .prettierignore); the belt age in the entry made every watch pass a change (now 'over 30s old'); the test pane is shared and a long herdr suite from another seat queues your commands behind it; the graph rule is a ratchet with a closed list of 19 Components because a global rule fails all of them.
 
 ## Outcome

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T161026Z-100-uzk8g",
+  "at": "2026-10-11T16:10:26Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-616c",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p1V",
+  "note": "pr.opened: PR 16 at fb48fac, AC-H3 and AC-H6 graph half open (see PR)",
+  "evidence": [],
+  "observations": []
+}

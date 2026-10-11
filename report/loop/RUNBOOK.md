@@ -1,5 +1,36 @@
 # Runbook - the factory board on a repository
 
+## Contents
+
+- Rules that bind
+- What this is
+- What you get
+- Needs
+- 1. Put the tool in the repository
+- 2. Edit `config/board.json`
+- 3. Look before you serve
+- 4. Keep it current
+- 5. Serve it
+- 6. Prove it
+- Changing the page
+- When it goes wrong
+- Graph
+
+## Rules that bind
+
+- The page is drawn from records, tickets, roles, routes, the herdr pane list and the belt state file; no value on it is typed in.
+- The watcher runs in a labelled pane, never detached.
+- The template is owner-locked: no formatter, no hand edit that moves it off the design.
+- The config is the only thing a second repository changes.
+
+GOOD: `report/loop/loop.sh watch` in a labelled monitors pane, `out_dir` gitignored, `board_dir` in the bearings config pointing at the same path.
+GOOD: a new record shows on the open `/board` within 30 seconds, with every folded line still folded.
+NEVER: `loop.sh watch &`, `nohup` or `setsid`; a background watcher is invisible and reads as nothing happening.
+NEVER: a hand-written station state, seat count or bar in `data.json`; fix the record or the ticket that it comes from.
+NEVER: running the prettier hook over `assets/template.html` or `design/`; the page stops matching the design byte for byte.
+
+## What this is
+
 This sets up the factory board (WO-20261011-616c) so the open page shows the lines on the factory floor, drawn from the records.
 A reader who has never seen this repository can do it on another one by editing one config file.
 Nothing on the page is typed in: every value comes from event records, ticket files, role files, the routes table, the herdr pane list and the route runner's state file.
