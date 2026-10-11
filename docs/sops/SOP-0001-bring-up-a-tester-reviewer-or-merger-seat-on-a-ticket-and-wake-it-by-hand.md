@@ -35,3 +35,19 @@ A PR has pr.opened (tester), test.passed 201 (reviewer) or review.passed 201 (me
 
 A step that cannot be verified is a wish.
 Record what the successful run actually printed.
+
+Step 2, seat up: `seat.sh` prints one JSON line ending `"started":true`; its `agent` field is the pane to wake and `lease.owned` says whether this seat returns the slot.
+The second seat on the same ticket first prints `seat <name>: ticket <WO> already holds a treehouse lease, using it`.
+Observed 2026-10-11 21:38Z: `{"name":"tester-wo-20261011-f896", ... "agent":"wD3:p5M", ... "lease":{"holder":"WO-20261011-f896", ... "owned":false},"started":true}`.
+Within three minutes `events/bin/event.sh tail` shows the seat's own `100 seat.up <name> <WO> <role> seat up: <model> <effort> bypassPermissions` line, then a `100 work.started` line.
+A seat that printed `no guard ack within 180s, no nudge` still came up; that line is a timing note, not a failure.
+
+Steps 3 to 5, the gate records: `event.sh tail` prints one tab separated line per record, `<UTC> <code> <kind> <seat> <WO> <note>`, and the note names the PR and the head sha.
+Observed 2026-10-11 on PR 13: `201 test.passed tester-wo-20261011-9639` (a24h8), `201 review.passed reviewer-wo-20261011-9639` (gkkza), `200 merged merger` (66gbp).
+A record whose note names a sha other than the PR head is stale and the merger refuses it; observed 21:17Z: `PR 15 head 798dad3 not mergeable: no test 201 or review 201 on this sha`.
+`herdr/bin/seat.sh --check <name>` prints nothing and exits 0 while the seat is healthy; each difference prints as `<name>: <what differs>` and the exit is 1; a finished seat prints `<name>: down since <UTC>` and exits 3.
+
+Step 6, seat down: `--down` writes a `100 seat.down` record and the name leaves `herdr agent list`; the lease owner's down also prints the treehouse return of the slot.
+A refused down prints `refusing treehouse return --force on <worktree> while a foreign process is in it`; end that process and rerun, never force the return (a forced return killed parked shells twice on 2026-10-11).
+
+Step 7: `events/bin/event.sh list --since <date> --seat architect` lists every hand step; a hand step with no record did not happen.

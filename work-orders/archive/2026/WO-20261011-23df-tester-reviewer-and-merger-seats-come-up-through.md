@@ -96,6 +96,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` review 422 zlhu2: AC-H3 slot release clause is not met by this ticket by design: the merger shares the PR ticket's lease and the lease owner returns the slot; the release moves to WO-20261011-af9d (merger seat leases its own slot). SOP-0001 Verification filled in the same fix.
 - `2026-10-11` Suite CASES='01 08 10 11' bash herdr/tests/run.sh ran in test pane wD3:p1V at 15:47Z: 4 passed, 0 failed (log suite-b3.log in the architect scratchpad). make lint green on every step.
 - `2026-10-11` Slot 4 release blocked a third time: a forked Claude session (claude --fork-session under a claude daemon bg-pty-host, cwd slot 4, with its MCP servers) outlived seat.sh --down of the merger. retire.sh ends the agent pane but not forks the agent spawned through the daemon. Killed by hand at 15:45Z. Fix belongs with WO-20261011-af9d or a retire.sh ticket: retire must end every process whose cwd is the slot before the tab closes.
 - `2026-10-11` Found after PR 12 merged: (1) treehouse slots are git worktrees of the project checkout, so the merger's cleanup (git checkout main in slot 4) blocked 'checkout main' here until the slot returned; WO-20261011-af9d covers the merger's own slot. (2) seat.sh --down merger left a 5-minute orphan shell in slot 4 (bfs over / for work-order.sh, started by the merger's Bash) that blocked the lease owner's return; killed by hand. retire.sh should end the seat's child shells before the tab closes.
