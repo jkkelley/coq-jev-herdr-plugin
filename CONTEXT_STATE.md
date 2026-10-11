@@ -44,6 +44,36 @@
 
 
 
+
+## Checkpoint 2026-10-11 15:54 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- factory/bin/route.sh (once, run, status), factory/config/runner.json and runner.schema.json, factory/Makefile, factory/tests (run.sh, lib/world.sh, cases 01-07), factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner.
+- events/bin/event.sh accepts the factory record kinds and an optional --to ROLE; events/schema/event.schema.json carries both.
+- make -C factory test from the test pane: 7 passed, 0 failed.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: PR 14 open; review.changes 422 (20261011T154551Z-422-kuyed) asked for GOOD and NEVER lines in factory/RUNBOOK.md, added; the architect widened scope to event.sh, event.schema.json and .gitignore. Remaining: post one pr.opened for the new head (note records the scope widening) and stop.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
+Post one pr.opened 100 for the new head through events/bin/event.sh, naming the scope widening in its note, then stop.
+
 ## Checkpoint 2026-10-11 15:05 UTC
 
 ### Current state
