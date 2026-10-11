@@ -1,0 +1,10 @@
+{
+  "schema_version": "1.0.0",
+  "tier": "dev",
+  "host": "127.0.0.1",
+  "port": 44910,
+  "out_dir": "report/blueprint/out/dev",
+  "pane_label": "blueprint-dev",
+  "mode": "live",
+  "promotes_from": null
+}
