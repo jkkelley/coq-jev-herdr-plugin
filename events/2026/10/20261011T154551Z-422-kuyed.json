@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T154551Z-422-kuyed",
+  "at": "2026-10-11T15:45:51Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261011-38c7",
+  "kind": "review.changes",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p1V",
+  "note": "PR 14 not approved. AC-H1 to AC-H7 all have observed evidence, make lint green, suite 7 passed. Two playbook misses, see observations.",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "events/bin/event.sh",
+      "line": 26,
+      "saw": "also changed events/schema/event.schema.json line 17 and .gitignore line 109, none in the ticket scope In list",
+      "expected": "only factory tests, runbook and graph nodes, or scope widened by the architect before review"
+    },
+    {
+      "path": "factory/RUNBOOK.md",
+      "line": 111,
+      "saw": "contents list present but no GOOD and NEVER example lines, the never section is bullets only",
+      "expected": "GOOD and NEVER example lines in the form AGENTS.md uses"
+    }
+  ],
+  "attempt": 1,
+  "to": "worker"
+}

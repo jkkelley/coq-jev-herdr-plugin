@@ -1,0 +1,10 @@
+# factory/tests/Containerfile - the route runner suite image (WO-20261011-38c7).
+# The runner needs bash, jq, find, grep, xargs and awk; event.sh needs jq. Nothing else, so every case runs with --network=none
+# and herdr is a stub on PATH. Pinned by digest, the same base as herdr/tests/Containerfile (Rule 15); repin both together:
+#   podman pull docker.io/library/debian:stable-slim
+#   podman image inspect docker.io/library/debian:stable-slim --format '{{index .RepoDigests 0}}'
+FROM docker.io/library/debian@sha256:520c7157b4b1c3c46fa56bac0e748ea21d60956c0512b300e3b16d8757f68e2d
+# debian:stable-slim, pulled 2026-09-21
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends bash jq ca-certificates procps \
+  && rm -rf /var/lib/apt/lists/*
