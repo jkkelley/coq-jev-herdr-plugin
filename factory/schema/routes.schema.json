@@ -9,7 +9,7 @@
       "allOf": [ { "if": { "properties": { "do": { "const": "ignore" } }, "required": ["do"] }, "then": { "not": { "required": ["to"] } }, "else": { "required": ["to"] } } ],
       "properties": {
         "match": { "type": "object", "additionalProperties": false, "properties": { "kind": { "type": "string" }, "code": { "type": "integer" }, "code_gte": { "type": "integer" }, "attempt": { "type": "integer" }, "attempt_lt": { "type": "integer" }, "escalations": { "type": "integer" }, "escalations_lt": { "type": "integer" } } },
-        "do": { "enum": ["enqueue", "wake", "escalate", "notify_owner", "ignore"] },
+        "do": { "enum": ["enqueue", "wake", "seat", "escalate", "notify_owner", "ignore"] },
         "to": { "enum": ["interface-agent", "orchestrator", "architect", "worker", "tester", "reviewer", "merger", "player", "monitor"] },
         "with": { "enum": ["ticket", "pr", "record", "verify"] }, "code": { "type": "integer" }, "priority_from": { "type": "string" }, "line": { "enum": ["done", "decision"] }
       } } }

@@ -4,7 +4,7 @@
   "title": "route runner configuration",
   "description": "Tunables of factory/bin/route.sh. ${repo} is the directory above factory/ (or the --repo flag). No tunable lives in the script.",
   "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "poll_seconds", "runner_seat", "herdr_session", "events_dir", "routes_file", "state_dir", "event_bin", "queue_bin", "roles_dir", "playbooks_dir", "stale_seconds"],
+  "required": ["schema_version", "poll_seconds", "runner_seat", "herdr_session", "events_dir", "routes_file", "state_dir", "event_bin", "queue_bin", "seat_bin", "roles_dir", "playbooks_dir", "stale_seconds"],
   "properties": {
     "schema_version": { "const": "1.0.0" },
     "poll_seconds": { "type": "integer", "minimum": 5, "maximum": 30, "description": "seconds between ticks; the belt file is touched every tick, so this bounds how fresh it is" },
@@ -15,6 +15,7 @@
     "state_dir": { "type": "string" },
     "event_bin": { "type": "string" },
     "queue_bin": { "type": "string" },
+    "seat_bin": { "type": "string", "description": "herdr/bin/seat.sh: the one way a seat comes up or goes down; the seat and down parts of a row call it, nothing else does" },
     "roles_dir": { "type": "string" },
     "playbooks_dir": { "type": "string" },
     "stale_seconds": { "type": "integer", "minimum": 30, "maximum": 120, "description": "age of the belt file past which route.sh status reports the belt stopped" }

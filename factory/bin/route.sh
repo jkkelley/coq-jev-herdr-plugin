@@ -39,6 +39,18 @@
 #   here: report/loop/lib/collect.jq reads the first matching row's `to` to place a line on the board, and a row with no `to`
 #   would put a ticket whose newest record is work.started at the owner station; that file is WO-20261011-616c's, so the row
 #   waits for a one-line route_of change there (finding in the 4db1 retro note).
+#   The seat action: a row with do seat runs `seat.sh --ticket T --role R` and then sends the same wake line a wake row sends. What
+#   broke: the route runner only prompted, so pr.opened 100 for WO-20261011-23df (muiv4, 18:31Z) failed as "route failed ...
+#   herdr agent prompt tester-... failed" because no tester seat existed, and the architect seated every tester, reviewer and
+#   merger by hand (DEC-system-runs-the-loop). Why this fix: seat.sh already leaves a live seat as is ("agent already running"),
+#   so the runner calls it for every record and never asks whether the seat is up; asking would be a second copy of that check
+#   (`seat.sh --check` exits 3 both for "down since" and for "no seat named", and a herdr agent get here would be a component
+#   reading another's state). Rejected: a background seat.sh (AGENTS.md: no background process; the wake would race the seat).
+#   The name for the prompt comes from seat_of, the same label rule seat.sh uses. Cost: the runner is serial, so a bring-up
+#   (prompt 15 s, agent start 30 s, the brief) holds every later record; belt_touch after the call keeps the belt fresh between
+#   records, but one bring-up past stale_seconds (60) still reads as stopped while it runs (WO-20261011-5355 owns the belt). seat.sh
+#   needs HERDR_TAB_ID to find the architect tab's "test - herdr" pane, so the runner pane must sit in that tab, or every bring-up
+#   is refused and becomes a 500 naming the refusal. The prompt follows seat.sh's own brief; a prompt herdr refuses is a 500.
 #   The sha on the wake line: a row that says `with pr` appends " pr N" and " sha S" from the record, so the merger gate
 #   compares fields, not a note (event.sh --sha and --pr write them). What broke: playbooks/merger.md step 1 gates on "the
 #   same sha" and the only copy of it was prose. A value that is not a PR number or 7 to 40 hex characters is a 500 and
@@ -64,7 +76,7 @@ case $VERB in once|run|status) ;; *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' 
 cfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$CONFIG") || die 3 "config $CONFIG is not JSON"; [ -n "$v" ] || die 3 "config key $1 missing"; printf '%s' "${v//\$\{repo\}/$REPO}"; }
 POLL=$(cfg poll_seconds); SEAT=$(cfg runner_seat); SESSION=${COQ_HERDR_SESSION:-$(cfg herdr_session)}
 EVENTS=$(cfg events_dir); EVENT_BIN=$(cfg event_bin); QUEUE_BIN=$(cfg queue_bin)
-ROLES=$(cfg roles_dir); PLAYBOOKS=$(cfg playbooks_dir); STALE=$(cfg stale_seconds)
+SEAT_BIN=$(cfg seat_bin); ROLES=$(cfg roles_dir); PLAYBOOKS=$(cfg playbooks_dir); STALE=$(cfg stale_seconds)
 [ -n "$ROUTES" ] || ROUTES=$(cfg routes_file); [ -n "$STATE" ] || STATE=$(cfg state_dir)
 LEDGER=$STATE/routed; BELT=$STATE/belt; SINCE=$STATE/since
 
@@ -111,13 +123,20 @@ herdr_prompt() { env -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u H
 
 # perform ROW ID TICKET RECORD_JSON: the row's action; prints a reason and returns 1 when it fails.
 perform() {
-  local row=$1 id=$2 ticket=$3 rec=$4 act to seat text more prio qargs=()
+  local row=$1 id=$2 ticket=$3 rec=$4 act to seat text more rc prio qargs=()
   act=$(jq -r .do <<<"$row"); to=$(jq -r .to <<<"$row")
   case $act in
-    wake|notify_owner)
+    wake|notify_owner|seat)
       seat=$(seat_of "$to" "$ticket") || { echo "no seat name for role $to on ticket $ticket"; return 1; }
-      if [ "$act" = wake ]; then more=$(wake_extras "$row" "$id" "$rec") || { echo "$more"; return 1; }; text="record $id$more playbook $PLAYBOOKS/$to.md"
-      else text="record $id line $(jq -r .line <<<"$row") playbook $PLAYBOOKS/$to.md"; fi
+      if [ "$act" = notify_owner ]; then text="record $id line $(jq -r .line <<<"$row") playbook $PLAYBOOKS/$to.md"
+      else more=$(wake_extras "$row" "$id" "$rec") || { echo "$more"; return 1; }; text="record $id$more playbook $PLAYBOOKS/$to.md"; fi
+      if [ "$act" = seat ]; then
+        [ "$ticket" != - ] || { echo "seat needs a ticket"; return 1; }
+        # seat.sh leaves a live seat as is, so it is called for every record and the table never asks whether the seat is up.
+        # Its stdout is one JSON line nobody here reads; its stderr is the reason a refusal gives, last line only.
+        more=$("$SEAT_BIN" --ticket "$ticket" --role "$to" 2>&1 >/dev/null); rc=$?; belt_touch
+        [ "$rc" = 0 ] || { echo "seat.sh --ticket $ticket --role $to failed (exit $rc): $(tail -n 1 <<<"$more" | cut -c1-120)"; return 1; }
+      fi
       herdr_prompt "$seat" "$text" || { echo "herdr agent prompt $seat failed"; return 1; } ;;
     enqueue)
       [ "$ticket" != - ] || { echo "enqueue needs a ticket"; return 1; }
