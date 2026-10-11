@@ -93,6 +93,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` Hand steps in the PR 12 and PR 13 chains, 2026-10-11 15:09-15:30Z: woke each seat with the record id (SOP-0001 step 3); resolved merge.conflict 409 enmnn on PR 12 as the ticket's worker (origin/main merged in slot 4, CHANGELOG.md and INDEX.md regenerated, f266924); downed finished seats to free the agent cap; told the merger to skip work-order cleanup on PR 13 because its slot is PR 12's worktree and cleanup checks out main. Design gap: a fixed merger seat needs its own leased worktree, cut as its own ticket.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
