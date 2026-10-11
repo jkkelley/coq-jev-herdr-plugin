@@ -41,6 +41,42 @@
 
 
 
+
+## Checkpoint 2026-10-11 17:48 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-e618 on WO-20261011-e618 - Interface agent seat owns the bearings page: owner requests become records and the done line comes from it. Slot 5 of the treehouse pool, branch feat/interface-agent-seat-owns-the-bearings-page-owne. Test pane wD3:p1V is shared with other seats, so a command can queue behind a long suite; poll the output file, do not resend.
+- Steps 1 to 3 are on the branch (da21b78 for step 3, with the architect's role edit and the re-rendered playbook). PR 14 (route runner) and PR 16 (board) are open, not merged. The live stable bearings page still runs in the architect tab; the cutover into the interface seat's tab is the runbook's Hand over section and is the owner's or architect's act, not a test of this ticket.
+
+#### Toolchain
+
+- interface/bin/interface.sh: forward, line, snapshot. snapshot takes --to m-id and then replies under that owner message with the path, plus the Windows UNC form when WSL_DISTRO_NAME is set, because a bearings reply carries text only.
+- interface/brief.txt is the seat's task text; make -C interface up | check | down call herdr/bin/seat.sh with it.
+- interface/RUNBOOK.md: hand over, verify table, what the architect does from now on, repair, another repository, limits. make -C interface test passes (all ok, snapshot --to assertions included).
+- factory/config/routes.json routes verified 201, and a blocked 423 already escalated once, to interface-agent; the first blocked 423 goes to the architect.
+
+#### Active Tasks
+
+- WO-20261011-e618 plan, one commit and checkpoint each: (1) event kinds - done; (2) interface.sh and its Podman test - done; (3) layout, seat.sh pre_start, herdr case 12, role, playbook - done; (4) snapshot --to, brief.txt, Makefile targets, RUNBOOK.md - this step; (5) live proof if the owner's page can be used without disturbing it, evidence per AC with work-order.sh evidence --observed, retro note, commit, push, gh pr create with the criteria as body, work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened 100.
+
+#### Blockers
+
+- None. AC-H1 to AC-H4 are human-verified criteria that need the live page; the evidence records what the suites observed and says plainly that the live cutover has not been run by this seat.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-11 17:4x UTC, this seat: a snapshot is linked on the page as a path reply, not an http link, because bearings replies are text only and bearings code is out of scope for this ticket; recorded in the link() breadcrumb in interface.sh and in the runbook Limits.
+- 2026-10-11 17:4x UTC, this seat: the runbook lives at interface/RUNBOOK.md next to the scripts it describes and travels with them; no second copy in docs/sops (one destination per document).
+
+### Hydration prompt
+
+Resume WO-20261011-e618 at step 5: read the ticket's acceptance criteria, gather evidence per AC with work-order.sh evidence --observed (cite make -C interface test, herdr case 12 and the full herdr suite from the test pane, and say the live cutover was not run), add the retro note, commit, push, gh pr create, work-order.sh submit --pr N then done, push the archive move, post pr.opened 100 with sha and pr, and stop.
+
 ## Checkpoint 2026-10-11 17:33 UTC
 
 ### Current state
