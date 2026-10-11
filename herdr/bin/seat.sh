@@ -2,6 +2,9 @@
 # seat.sh - the one way a seat comes up, is checked, is taken down and is audited (SPEC-04 RUN-seat-up).
 #   seat.sh --ticket WO-ID --role R [--runtime claude|codex] [--worktree DIR]   door 1: the ticket names the seat (worker-WO-...); no --worktree leases a treehouse slot to the ticket and checks it out on the ticket's branch
 #   seat.sh --role R --task "text" [--worktree DIR]                             door 2: a fixed seat (monitor, merger, orchestrator)
+#   seat.sh --adopt --role R --pane P --session ID [--ticket WO-ID] [--worktree DIR]   adopt: the claude already running in pane P becomes the role's seat in place
+#                               (seat.json, agent name, pane label, settings.json for the next restart, seat.up 100); no agent is started or stopped
+#   seat.sh ... --resume ID     on door 1 or door 2: start claude with --resume ID, so a seat can be re-started from a session transcript in a fresh pane
 #   seat.sh --check NAME        one line per difference, exit 1 if any; a downed seat prints "down since", exit 3
 #   seat.sh --down NAME         retire.sh, close the tab, return the slot this seat leased, record seat.down 100; a second --down records nothing
 #                               the log names each process in the slot (pid, name) first; a foreign one refuses the return, exit 3
@@ -35,7 +38,7 @@ sl_require jq herdr
 
 usage() { sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 refuse() { SL_EXIT=3 sl_die "$@"; }
-mode=up; ticket=""; role=""; task=""; wt="$SL_REPO"; wt_given=0; name_arg=""; runtime_arg=""; record_arg=""; why_arg=manual
+mode=up; ticket=""; role=""; task=""; wt="$SL_REPO"; wt_given=0; name_arg=""; runtime_arg=""; record_arg=""; why_arg=manual; adopt_pane=""; claude_sid=""; resume_id=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --ticket) ticket="${2:?--ticket needs an id}"; shift 2 ;;
@@ -43,6 +46,10 @@ while [ $# -gt 0 ]; do
     --task) task="${2:?--task needs text}"; shift 2 ;;
     --runtime) runtime_arg="${2:?--runtime needs claude or codex}"; shift 2 ;;
     --worktree) wt="${2:?--worktree needs a directory}"; wt_given=1; shift 2 ;;
+    --adopt) mode=adopt; shift ;;
+    --pane) adopt_pane="${2:?--pane needs a pane id}"; shift 2 ;;
+    --session) claude_sid="${2:?--session needs a claude session id}"; shift 2 ;;
+    --resume) resume_id="${2:?--resume needs a claude session id}"; shift 2 ;;
     --check) mode=check; name_arg="${2:?--check needs a seat name}"; shift 2 ;;
     --down) mode=down; name_arg="${2:?--down needs a seat name}"; shift 2 ;;
     --audit) mode=audit; shift ;;
@@ -112,7 +119,16 @@ load_seat() {
   settings="$(jq -r .settings "$seat_file")"; HS="$(jq -r .session "$seat_file")"; agent_pane="$(jq -r '.pane // empty' "$seat_file")"
   ended_at="$(jq -r '.ended_at // empty' "$seat_file")"
   lease_holder="$(jq -r '.lease.holder // empty' "$seat_file")"; lease_owned="$(jq -r '.lease.owned // false' "$seat_file")"
+  adopted="$(jq -r '.adopted // false' "$seat_file")"
 }
+# agent_label: the label the layout gives its agent slot, with this seat's tokens filled in. An adopted seat owns that one pane.
+agent_label() {
+  local i n; n="$(slot_count)"
+  for ((i = 0; i < n; i++)); do [ "$(slot_field "$i" kind)" = agent ] && { slot_field "$i" label; return 0; }; done
+  return 1
+}
+# pane_row P: the pane list entry for pane P as one JSON object, empty when the pane is gone.
+pane_row() { sl_h pane list 2>/dev/null | jq -c --arg p "$1" 'first((.result.panes // [])[] | select(.pane_id == $p)) // empty'; }
 tab_live() { sl_h tab list --workspace "$ws" 2>/dev/null | jq -e --arg t "$tab" '[(.result.tabs // [])[] | select(.tab_id == $t)] | length > 0' >/dev/null 2>&1; }
 
 # BREADCRUMB 2026-10-11 - WO-20261010-a429, the treehouse lease. What broke: AGENTS.md (Where your workspace comes from) allows
@@ -254,6 +270,11 @@ if [ "$mode" = check ]; then
   if [ -n "$ended_at" ]; then echo "$name: down since $ended_at"; exit 3; fi
   [ -f "$layout_file" ] || say "layout missing: $layout_file"
   if ! tab_live; then say "tab $tab is gone from workspace $ws"
+  elif [ "$adopted" = true ]; then
+    # An adopted seat owns the one pane it was adopted in; the layout's other panes were never built (WO-20261011-8fb3).
+    want="$(agent_label)"; prow="$(pane_row "$agent_pane")"
+    if [ -z "$prow" ]; then say "pane gone: $agent_pane"
+    elif [ "$(jq -r '.label // ""' <<<"$prow")" != "$want" ]; then say "pane $agent_pane label is '$(jq -r '.label // ""' <<<"$prow")', want '$want'"; fi
   elif [ -f "$layout_file" ]; then
     live="$(sl_panes_of_tab "$ws" "$tab")"
     while IFS= read -r want; do jq -e --arg l "$want" 'any(.[]; .label == $l)' <<<"$live" >/dev/null || say "pane missing: $want"; done < <(want_labels)
@@ -261,6 +282,8 @@ if [ "$mode" = check ]; then
     while IFS= read -r l; do jq -e --arg l "$l" 'index($l) != null' <<<"$want" >/dev/null || say "pane unexpected: $l"; done < <(jq -r '.[].label' <<<"$live")
   fi
   sl_agent_live "$name" || say "agent not running"
+  if [ "$adopted" = true ] && sl_agent_live "$name" \
+    && [ "$(sl_h agent get "$name" 2>/dev/null | jq -r '.result.agent.pane_id // empty')" != "$agent_pane" ]; then say "agent $name is no longer in pane $agent_pane"; fi
   if [ ! -f "$role_file" ]; then say "role file missing: $role_file"
   elif [ ! -f "$settings" ]; then say "settings missing: $settings"
   elif ! render_settings | cmp -s - "$settings"; then
@@ -281,6 +304,24 @@ fi
 if [ "$mode" = down ]; then
   load_seat "$name_arg"
   if [ -n "$ended_at" ]; then echo "$name: already down since $ended_at"; exit 0; fi
+  if [ "$adopted" = true ]; then
+    # BREADCRUMB 2026-10-11 - WO-20261011-8fb3. What broke (would break): the sequence below is retire.sh (/exit), tab close and
+    #   `treehouse return --force`, all of which end the agent, and an adopted seat is the owner's own live session in a pane
+    #   seat.sh did not build: running it would kill the architect session the adoption exists to keep. Why this fix: --down of
+    #   an adopted seat only undoes what --adopt did, the herdr agent name and the pane label go back to what adopt read, the
+    #   record is retired and seat.down 100 is written; the agent, the pane and its tab are never touched. Rejected: a --force
+    #   path that kills an adopted agent (retire.sh on its own already does that for anyone who wants it) and leaving the label
+    #   and name on the pane (a downed seat would keep claiming a name that the next adopt then refuses as taken). Cost: the
+    #   agent keeps running with the role's name gone, so it is unmanaged again until the next --adopt.
+    prior_label="$(jq -r '.prior.label // empty' "$seat_file")"; prior_name="$(jq -r '.prior.agent_name // empty' "$seat_file")"
+    if [ -n "$prior_name" ]; then sl_mut agent rename "$agent_pane" "$prior_name" >/dev/null 2>&1 || true
+    else sl_mut agent rename "$agent_pane" --clear >/dev/null 2>&1 || true; fi
+    if [ -n "$prior_label" ]; then sl_mut pane rename "$agent_pane" "$prior_label" >/dev/null 2>&1 || true
+    else sl_mut pane rename "$agent_pane" --clear >/dev/null 2>&1 || true; fi
+    sl_record seat.down 100 "$name" ${id:+--ticket "$id"} --pane "$agent_pane" --note "adopted seat retired in place; the agent keeps running in $agent_pane"
+    [ "$DRY" = 1 ] || { jq --arg at "$(sl_now)" '.ended_at=$at' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }
+    jq -nc --arg name "$name" '{name:$name,down:true,adopted:true}'; exit 0
+  fi
   [ "$lease_owned" != true ] || sl_require treehouse
   seat_own=""; [ "$lease_owned" != true ] || seat_own="$(seat_pids)"
   "$SL_HERE/retire.sh" "$name" --pane "$agent_pane" || sl_log "seat $name: retire did not finish cleanly; closing the tab anyway"
@@ -321,7 +362,17 @@ if [ "$mode" = audit ]; then
     pane="$(envof HERDR_PANE_ID)"; seatn="$(envof COQ_SEAT)"; rec=""
     [ -z "$seatn" ] || { rec="$(sl_seat_record "$seatn")"; [ -f "$rec" ] && [ -z "$(jq -r '.ended_at // empty' "$rec")" ] || rec=""; }
     why=""
-    if [ -z "$rec" ]; then why="hand-started: no live seat record (COQ_SEAT=${seatn:-unset})"
+    # An adopted agent was started by hand before seat.sh knew it, so its environment has no COQ_SEAT and its flags are whatever the
+    # owner typed; it is matched by the pane herdr gave it instead, and only the role's settings at the next restart bind it.
+    adopted_seat=""
+    if [ -z "$rec" ] && [ -n "$pane" ]; then
+      for ar in "$STATE"/seats/*/seat.json; do
+        [ -f "$ar" ] || continue
+        jq -e --arg p "$pane" '(.adopted // false) == true and .ended_at == null and .pane == $p' "$ar" >/dev/null 2>&1 && { adopted_seat="$(jq -r .name "$ar")"; break; }
+      done
+    fi
+    if [ -n "$adopted_seat" ]; then echo "COMPLIANT ${pane:--} $adopted_seat pid $pid (adopted: mode and settings apply at the next restart)"; continue
+    elif [ -z "$rec" ]; then why="hand-started: no live seat record (COQ_SEAT=${seatn:-unset})"
     else
       rf="$(jq -r .role_file "$rec")"; want_mode="$(jq -r .permission_mode "$rf" 2>/dev/null || echo "?")"
       want_set="$(jq -r .settings "$rec")"; want_model="$(jq -r .model "$rec")"; pm=""; st=""; md=""; i=0
@@ -357,11 +408,11 @@ fi
 # ---- doors ----
 [ -n "$role" ] || usage
 if [ -n "$ticket" ]; then [ -z "$task" ] || sl_die "--ticket and --task are different doors"; id="$ticket"
-else [ -n "$task" ] || usage; id=""; fi
+else [ -n "$task" ] || [ "$mode" = adopt ] || usage; id=""; fi
 role_file="$(sl_role_file "$role")"
 # Door 1 needs a ticket file to brief from; refused before anything is built rather than after the agent is up.
 branch=""
-if [ -n "$ticket" ]; then
+if [ -n "$ticket" ] && [ "$mode" != adopt ]; then
   ticket_file="$(find "$SL_REPO/work-orders" -name "$ticket-*.md" -not -path '*/archive/*' 2>/dev/null | head -1)"
   [ -n "$ticket_file" ] || refuse "no ticket $ticket under work-orders/ (archived or never cut)"
   # BREADCRUMB 2026-10-11 - WO-20261011-c077, the ticket's branch. What broke: a slot leased below comes up detached at
@@ -384,6 +435,10 @@ fi
 rname="$(jq -r .name "$role_file")"; [ "$rname" = "$role" ] || refuse "role file $role_file names $rname, not $role"
 runtime="${runtime_arg:-$(jq -r .runtime.default "$role_file")}"
 jq -e --arg r "$runtime" '.runtime.allowed | index($r) != null' "$role_file" >/dev/null || refuse "role $role does not allow runtime $runtime"
+[ -z "$resume_id" ] || [ "$runtime" = claude ] || refuse "--resume restarts a claude session; runtime $runtime has none"
+[ -z "$resume_id" ] || [[ "$resume_id" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || sl_die "--resume $resume_id is not a session id"
+[ "$mode" != adopt ] || [ -z "$resume_id" ] || sl_die "--adopt takes the session of a live agent with --session; --resume starts a new one"
+[ "$mode" != adopt ] || [ "$runtime" = claude ] || refuse "--adopt is for a claude session; runtime $runtime has no session id to keep"
 MODEL="$(jq -r --arg r "$runtime" '.model[$r] // empty' "$role_file")"; [ -n "$MODEL" ] || refuse "role $role names no model for $runtime"
 effort="$(jq -r .effort "$role_file")"; pmode="$(jq -r .permission_mode "$role_file")"; layout_id="$(jq -r .pane_layout "$role_file")"
 max_seats="$(jq -r .max_seats "$role_file")"; label="$(jq -r .label "$role_file")"
@@ -394,7 +449,8 @@ bin="$(sl_cfg ".runtime_bin.\"$runtime\"")"
 # herdr agent names are lowercase (invalid_agent_name on the first live run, 2026-10-10), so the ticket id is lowered: worker-wo-20261010-8777.
 if [ -n "$ticket" ]; then name="${label//\$\{ticket\}/${ticket,,}}"
 elif [[ "$label" != *'${'* ]]; then name="$label"
-else slug="$(tr 'A-Z' 'a-z' <<<"$task" | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//')"; name="$role-$slug"; fi
+else [ "$mode" != adopt ] || refuse "role $role names its seat from a ticket (label $label); give --ticket"
+  slug="$(tr 'A-Z' 'a-z' <<<"$task" | tr -cs 'a-z0-9' '-' | sed 's/^-//; s/-$//')"; name="$role-$slug"; fi
 name="${name,,}"
 if [ "${#name}" -gt 32 ] && [ -z "$ticket" ]; then h="$(printf %s "$name" | sha256sum | cut -c1-4)"; name="$(cut -c1-27 <<<"$name" | sed 's/-$//')-$h"; fi
 [ "${#name}" -le 32 ] && [[ "$name" =~ ^[a-z][a-z0-9_-]*$ ]] || refuse "seat name $name is ${#name} characters; herdr agent names are 1 to 32 of a-z 0-9 _ - starting with a letter"
@@ -421,6 +477,63 @@ if [ "$DRY" != 1 ] && ! sl_agent_live "$name"; then
     sl_record note 429 "$name" ${id:+--ticket "$id"} --note "seat refused: $live_all agents live, max_agents $max_all"
     refuse "seat $name refused: $live_all agents already live (max_agents $max_all); nothing built"
   fi
+fi
+
+# ---- --adopt ----
+# BREADCRUMB 2026-10-11 - WO-20261011-8fb3, DEC-architect-becomes-interface-agent. What broke (would break): the owner ordered the
+#   architect session to become the interface agent with everything the day put in its context, and every door above ends in
+#   `herdr agent start`, a fresh claude with none of it; the only way to "become a seat" was to lose the session. Why this fix:
+#   --adopt does the bookkeeping of a seat-up and none of the starting. It reads the agent herdr already runs in --pane,
+#   names it for the role (`herdr agent rename`, which is what makes --check, --down and the monitor's wakes find it), labels
+#   the pane with the layout's agent slot, writes the role's settings.json and a seat.json marked adopted with the session id and
+#   what the pane was called before, and records seat.up 100. Nothing is typed into the pane, so the session, its context and
+#   its permission mode are untouched; the owner changes mode and model in the pane (the ticket's non-goal), and the settings
+#   file takes effect at the next start of this seat. --session is checked against the session herdr reports for the pane when
+#   it reports one, because a wrong id would make that next start resume somebody else's conversation. Rejected: a second
+#   script (two writers for seat.json) and `agent start` on the running pane (it types into the live TUI). Cost: the agent's
+#   environment has no COQ_SEAT, COQ_ROLE or COQ_EVENTS_ROOT (a process cannot be given them from outside), so it posts records
+#   with its own --seat, and --audit matches it by pane instead of by environment; the other layout panes are not built.
+if [ "$mode" = adopt ]; then
+  [ -n "$adopt_pane" ] || sl_die "--adopt needs --pane"
+  [ -n "$claude_sid" ] || sl_die "--adopt needs --session (the claude session id the live agent runs)"
+  [[ "$claude_sid" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || sl_die "--session $claude_sid is not a session id"
+  ag="$(sl_h agent list 2>/dev/null | jq -c --arg p "$adopt_pane" 'first((.result.agents // [])[] | select(.pane_id == $p)) // empty')"
+  [ -n "$ag" ] || refuse "no agent runs in pane $adopt_pane; --adopt keeps a live session and starts nothing"
+  [ "$(jq -r .agent <<<"$ag")" = claude ] || refuse "the agent in pane $adopt_pane is $(jq -r .agent <<<"$ag"), not claude"
+  cur_name="$(jq -r '.name // empty' <<<"$ag")"
+  [ -z "$cur_name" ] || [ "$cur_name" = "$name" ] || refuse "the agent in pane $adopt_pane is already named $cur_name; rename it first or adopt under that role"
+  seen_sid="$(jq -r '.agent_session.value // empty' <<<"$ag")"
+  [ -z "$seen_sid" ] || [ "$seen_sid" = "$claude_sid" ] || refuse "pane $adopt_pane runs session $seen_sid, not $claude_sid"
+  if [ -z "$cur_name" ] && sl_agent_live "$name"; then refuse "seat name $name is taken by the agent in pane $(sl_h agent get "$name" | jq -r '.result.agent.pane_id // "?"')"; fi
+  if [ -f "$seat_file" ] && [ -z "$(jq -r '.ended_at // empty' "$seat_file")" ] && [ "$(jq -r '.pane // empty' "$seat_file")" != "$adopt_pane" ] && sl_agent_live "$name"; then
+    refuse "seat $name is live in pane $(jq -r .pane "$seat_file"); --down it first"
+  fi
+  prow="$(pane_row "$adopt_pane")"; [ -n "$prow" ] || refuse "pane $adopt_pane is not in herdr session $HS"
+  ws="$(jq -r .workspace_id <<<"$prow")"; tab="$(jq -r .tab_id <<<"$prow")"
+  # A rerun keeps what the first adopt read, or --down would "restore" the role's own label.
+  prior_label="$(jq -r '.label // ""' <<<"$prow")"; prior_name="$cur_name"; first=1
+  if [ -f "$seat_file" ] && [ "$(jq -r '.adopted // false' "$seat_file")" = true ] && [ -z "$(jq -r '.ended_at // empty' "$seat_file")" ]; then
+    prior_label="$(jq -r '.prior.label // ""' "$seat_file")"; prior_name="$(jq -r '.prior.agent_name // ""' "$seat_file")"; first=0
+  fi
+  layout_file="$SL_HERDR/layouts/$layout_id.json"; [ -f "$layout_file" ] || refuse "no layout $layout_file"
+  a="$adopt_pane"; want_label="$(agent_label)" || refuse "layout $layout_id has no agent slot"
+  [ "$cur_name" = "$name" ] || sl_mut agent rename "$adopt_pane" "$name" >/dev/null || SL_EXIT=4 sl_die "herdr agent rename $adopt_pane $name failed"
+  [ "$(jq -r '.label // ""' <<<"$prow")" = "$want_label" ] || sl_mut pane rename "$adopt_pane" "$want_label" >/dev/null || SL_EXIT=4 sl_die "herdr pane rename $adopt_pane failed"
+  if [ "$DRY" != 1 ]; then
+    render_settings > "$settings.tmp" && mv "$settings.tmp" "$settings"
+    jq -n --arg name "$name" --arg ticket "$id" --arg role "$role" --arg role_file "$role_file" --arg runtime "$runtime" --arg model "$MODEL" \
+      --arg effort "$effort" --arg wt "$wt" --arg layout_file "$layout_file" --arg ws "$ws" --arg tab "$tab" --arg hs "$HS" \
+      --arg settings "$settings" --arg pane "$a" --arg at "$(sl_now)" --arg sid "$claude_sid" --arg pl "$prior_label" --arg pn "$prior_name" \
+      '{name:$name,ticket:$ticket,task:"",role:$role,role_file:$role_file,runtime:$runtime,model:$model,effort:$effort,worktree:$wt,
+        lease:null,layout_file:$layout_file,workspace:$ws,tab:$tab,session:$hs,settings:$settings,pane:$pane,started_at:$at,ended_at:null,
+        adopted:true,claude_session:$sid,prior:{label:$pl,agent_name:(if $pn == "" then null else $pn end)}}' > "$seat_file.tmp" \
+      && mv "$seat_file.tmp" "$seat_file"
+  fi
+  [ "$first" = 0 ] || sl_record seat.up 100 "$name" ${id:+--ticket "$id"} --pane "$a" \
+    --note "adopt: live claude session $claude_sid in $a becomes the $role seat; settings apply at the next restart"
+  jq -nc --arg name "$name" --arg ticket "$id" --arg role "$role" --arg pane "$a" --arg sid "$claude_sid" --arg settings "$settings" --arg wt "$wt" \
+    --argjson first "$first" '{name:$name,ticket:$ticket,role:$role,pane:$pane,claude_session:$sid,settings:$settings,worktree:$wt,adopted:true,started:false,new:($first==1)}'
+  exit 0
 fi
 
 # A ticket seat needs the labelled test pane in the architect tab: it is how the worker proves its acceptance criteria, and
@@ -582,7 +695,7 @@ else
   sl_mut pane run "$a" "$line" >/dev/null
   [ "$DRY" = 1 ] || ensure_trust
   case "$runtime" in
-    claude) flags=(--model "$MODEL" --effort "$effort" --permission-mode "$pmode" --settings "$settings") ;;
+    claude) flags=(--model "$MODEL" --effort "$effort" --permission-mode "$pmode" --settings "$settings"); [ -z "$resume_id" ] || flags+=(--resume "$resume_id") ;;
     codex) flags=(-m "$MODEL" -c "model_reasoning_effort=\"$effort\"") ;;
     *) refuse "runtime $runtime is not launched by this door" ;;
   esac
@@ -591,7 +704,9 @@ else
   sl_record seat.up 100 "$name" ${id:+--ticket "$id"} --pane "$a" --note "$role seat up: $MODEL $effort $pmode"
 fi
 if [ "$started" = 1 ]; then
-  if [ -n "$ticket" ]; then prompt="$("$SL_REPO/roles/bin/brief.sh" --role "$role" --ticket "$id" --project "$SL_REPO" --test-pane "$tpane")" \
+  # A resumed session already holds its brief, so a second one would only make it post a second work.started.
+  if [ -n "$resume_id" ]; then prompt="seat.sh resumed session $resume_id as the $role seat $name${id:+ on $id}. Playbook playbooks/$role.md. Carry on from where the session stopped."
+  elif [ -n "$ticket" ]; then prompt="$("$SL_REPO/roles/bin/brief.sh" --role "$role" --ticket "$id" --project "$SL_REPO" --test-pane "$tpane")" \
       || prompt="$id. Playbook playbooks/$role.md. The ticket file could not be read; post blocked 423 before anything else."
   else prompt="You are the $role seat named $name. Read playbooks/$role.md first. Your task: $task. Post your first record before anything else."; fi
   prompt+=" Work only in $wt."
