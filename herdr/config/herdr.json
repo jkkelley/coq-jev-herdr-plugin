@@ -27,6 +27,10 @@
   "control_plane": {
     "health_url": null
   },
+  "break_glass": {
+    "ttl_seconds": 600,
+    "bearings_tier": "stable"
+  },
   "halt_flag": "${state_dir}/HALT",
   "monitor_task": "watch the event log, the seats and the guard; wake a waiting seat on status change with one line; raise owner notifications for 423 and any 5xx; run cleanup every tick"
 }

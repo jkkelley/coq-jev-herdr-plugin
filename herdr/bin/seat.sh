@@ -6,6 +6,9 @@
 #   seat.sh --down NAME         retire.sh, close the tab, return the slot this seat leased, record seat.down 100; a second --down records nothing
 #                               the log names each process in the slot (pid, name) first; a foreign one refuses the return, exit 3
 #   seat.sh --audit             every agent process on the host: COMPLIANT or OUT OF COMPLIANCE + seat.stalled 500; exit 1 if any
+#   seat.sh --break-glass SEAT --record ID      one owner-authorised command: bypass permissions for that command only (herdr/bin/break-glass-lib.sh); ID is the break.glass 200 record, or its 300 request
+#   seat.sh --break-glass-restore SEAT [--why done|ttl|manual]   the role's settings back, verified, break.glass 204
+#   seat.sh --break-glass-sweep                 restore every break glass whose follow-up 201 landed or whose ttl passed (the watcher pane runs this)
 # Reads roles/<role>.json and the layout it names (herdr/layouts/<pane_layout>.json). Workspace by label, tab by label,
 # panes from the layout with their labels, settings rendered from the role's allow and deny into
 # <state_dir>/seats/<name>/settings.json, COQ_* exported on one physical line into the agent pane only, a shell prompt
@@ -30,9 +33,9 @@ set -euo pipefail
 . "$(dirname "$(readlink -f "$0")")/seat-lib.sh"
 sl_require jq herdr
 
-usage() { sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 refuse() { SL_EXIT=3 sl_die "$@"; }
-mode=up; ticket=""; role=""; task=""; wt="$SL_REPO"; wt_given=0; name_arg=""; runtime_arg=""
+mode=up; ticket=""; role=""; task=""; wt="$SL_REPO"; wt_given=0; name_arg=""; runtime_arg=""; record_arg=""; why_arg=manual
 while [ $# -gt 0 ]; do
   case "$1" in
     --ticket) ticket="${2:?--ticket needs an id}"; shift 2 ;;
@@ -43,6 +46,11 @@ while [ $# -gt 0 ]; do
     --check) mode=check; name_arg="${2:?--check needs a seat name}"; shift 2 ;;
     --down) mode=down; name_arg="${2:?--down needs a seat name}"; shift 2 ;;
     --audit) mode=audit; shift ;;
+    --break-glass) mode=glass; name_arg="${2:?--break-glass needs a seat name}"; shift 2 ;;
+    --break-glass-restore) mode=glass_restore; name_arg="${2:?--break-glass-restore needs a seat name}"; shift 2 ;;
+    --break-glass-sweep) mode=glass_sweep; shift ;;
+    --record) record_arg="${2:?--record needs a record id}"; shift 2 ;;
+    --why) why_arg="${2:?--why needs done, ttl or manual}"; shift 2 ;;
     -h|--help) usage ;;
     *) sl_die "unknown argument $1" ;;
   esac
@@ -231,6 +239,14 @@ lease_down() {
   sl_run treehouse return "$wt" --if-lease-holder "$lease_holder" --force
 }
 
+# ---- break glass (WO-20261011-4562) ----
+. "$SL_HERE/break-glass-lib.sh"
+case "$mode" in
+  glass) [ -n "$record_arg" ] || usage; bg_grant "$name_arg" "$record_arg"; exit 0 ;;
+  glass_restore) bg_restore "$name_arg" "$why_arg"; exit $? ;;
+  glass_sweep) bg_sweep; exit 0 ;;
+esac
+
 # ---- --check ----
 if [ "$mode" = check ]; then
   load_seat "$name_arg"; diffs=0
@@ -247,7 +263,13 @@ if [ "$mode" = check ]; then
   sl_agent_live "$name" || say "agent not running"
   if [ ! -f "$role_file" ]; then say "role file missing: $role_file"
   elif [ ! -f "$settings" ]; then say "settings missing: $settings"
-  elif ! render_settings | cmp -s - "$settings"; then say "settings drifted from $role_file: $settings"; fi
+  elif ! render_settings | cmp -s - "$settings"; then
+    # A break glass is a difference by design (the owner allowed one command); say so, and say when it is overdue.
+    bgst="$(bg_active_state "$name")"
+    if [ -z "$bgst" ]; then say "settings drifted from $role_file: $settings"
+    elif [[ "$(sl_now)" > "$(jq -r .expires_at "$bgst")" ]]; then say "break glass $(jq -r .request "$bgst") is past its ttl ($(jq -r .expires_at "$bgst")) and the role settings are not back"
+    else say "break glass $(jq -r .request "$bgst") active until $(jq -r .expires_at "$bgst"): settings differ from the role by design"; fi
+  fi
   if [ -n "$lease_holder" ]; then
     if ! row="$(th_row "$lease_holder" "$wt")"; then say "treehouse status failed; the lease on $wt is unchecked"
     elif [ -z "$row" ]; then say "lease missing: treehouse status lists no lease held by $lease_holder at $wt"; fi
@@ -313,11 +335,15 @@ if [ "$mode" = audit ]; then
       if [ "$bin" = claude ]; then
         if [ "$pm" != "$want_mode" ]; then why="permission mode $pm, role says $want_mode"
         elif [ "$st" != "$want_set" ]; then why="settings $st, seat.sh rendered $want_set"
-        elif [ ! -f "$want_set" ] || ! (role_file="$rf"; wt="$(jq -r .worktree "$rec")"; render_settings) | cmp -s - "$want_set"; then why="settings drifted from $rf"
+        elif [ ! -f "$want_set" ] || ! (role_file="$rf"; wt="$(jq -r .worktree "$rec")"; render_settings) | cmp -s - "$want_set"; then
+          why="settings drifted from $rf"; bgst="$(bg_active_state "$seatn")"
+          # An active break glass inside its ttl, with the settings it wrote, is compliant; one that outlived its ttl kept bypass (a 500).
+          if [ -n "$bgst" ] && [[ "$(sl_now)" < "$(jq -r .expires_at "$bgst")" ]] && cmp -s "$want_set" "$(bg_copy_of "$bgst")"; then why=""; bgnote=" (break glass $(jq -r .request "$bgst") until $(jq -r .expires_at "$bgst"))"
+          elif [ -n "$bgst" ]; then why="break glass $(jq -r .request "$bgst") kept bypass past its ttl or drifted from the settings it wrote"; fi
         elif [ "$md" != "$want_model" ]; then why="model $md, seat record says $want_model"; fi
       elif [ "$md" != "$want_model" ]; then why="model $md, seat record says $want_model"; fi
     fi
-    if [ -z "$why" ]; then echo "COMPLIANT ${pane:--} $seatn pid $pid"
+    if [ -z "$why" ]; then echo "COMPLIANT ${pane:--} $seatn pid $pid${bgnote:-}"; bgnote=""
     elif sl_exempt seat.audit "$seatn" "$pane"; then echo "EXEMPT ${pane:--} ${seatn:-$bin} pid $pid: $why"
     else
       echo "OUT OF COMPLIANCE ${pane:--} ${seatn:-$bin} pid $pid: $why"; bad=1
