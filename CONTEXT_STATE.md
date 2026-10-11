@@ -41,6 +41,33 @@
 
 
 
+
+## Checkpoint 2026-10-11 16:30 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-dc0d in treehouse slot 1 on branch feat/seat-sh-nudges-a-fresh-seat-past-the-compaction-, test pane wD3:p1V. PR 11 is open; main was merged into the branch (CHANGELOG.md re-rendered, not hand-merged).
+- Blocked record 423 (20261011T060054Z-423-qkuw4) stays open for the roles/ file: roles/bin/nudge.sh is the architect's to add.
+
+#### Toolchain
+
+- Verified on the merged head from wD3:p1V: make lint ok, render-playbook --check ok, make -C herdr test: tests: 11 passed, 0 failed.
+- Close-out done on the branch: evidence on AC-H1 to AC-H3 (stub claude only), retro note, submit --pr 11, done, ticket archived.
+
+#### Active Tasks
+
+- WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else': done on the branch, awaiting the reviewer and the merge.
+
+#### Blockers
+
+- None for the PR. A live bring-up with a real Claude seat is the one observation nobody has made.
+
+### Hydration prompt
+
+Nothing to resume for WO-20261011-dc0d; hold until the reviewer answers.
+
 ## Checkpoint 2026-10-11 06:35 UTC
 
 ### Current state
