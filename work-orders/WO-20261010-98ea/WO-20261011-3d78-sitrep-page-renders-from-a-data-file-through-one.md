@@ -62,9 +62,12 @@ The owner locked the SITREP shape on 2026-10-11 (SITREP 003, iteration 2): heade
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* sitrep.sh render report/sitrep/entries/2026/10/20261011-sitrep-003.json produces the locked SITREP 003 page
-- [ ] `AC-H2` *(human)* an entry with a ticket id missing from the legend is refused with exit 3 and names the id
-- [ ] `AC-H3` *(human)* make lint all ok and the sitrep case passes from the labelled test pane
+- [x] `AC-H1` *(human)* sitrep.sh render report/sitrep/entries/2026/10/20261011-sitrep-003.json produces the locked SITREP 003 page
+  - observed `2026-10-11` sitrep.sh render on entries/2026/10/20261011-sitrep-003.json wrote the page published as SITREP 003 version 3 (claude.ai artifact MfWvU6Q3HLd6g4jYTvxVvy); case 1 asserts title, phase strip, id chips, blocks, question, folded legend, no placeholder left
+- [x] `AC-H2` *(human)* an entry with a ticket id missing from the legend is refused with exit 3 and names the id
+  - observed `2026-10-11` case 2: an entry with ticket id beef and no legend row exits 3 with 'ticket id beef has no legend title', nothing written
+- [x] `AC-H3` *(human)* make lint all ok and the sitrep case passes from the labelled test pane
+  - observed `2026-10-11` from wD3:p1V 2026-10-11 14:0x UTC: make -C report/sitrep test (lint image, --network=none) 'sitrep tests: pass'; make lint all ok
 
 ## Test plan
 
@@ -84,6 +87,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` Retro: two misses found by the suite, a relative $id in the schema broke $ref resolution under jsonschema 4.10 (dropped) and a backslash inside an f-string failed on the lint image's older python (moved out). Done on the branch before the PR, per the close-out law; merge waits for the owner's Q1 answer (reviewer and merger seats), the architect does not merge it.
 - `2026-10-11` Decision 2026-10-11 13:4x UTC (owner): 'lock this aspect in'. The shape is SITREP 003 iteration 2 at the claude.ai artifact of 13:30 UTC: header strip, phase strip, ticket board with 4-char id chips, fault, spike, held, one question, folded legend. Done by the architect on its branch because the owner's hold on all other work is in force and the item was ordered directly; approved --no-lavish (Claude seat). Renderer is bash plus python3 like report/rail, no jq; the test runs in the lint image.
 
 ## Outcome
