@@ -53,14 +53,15 @@ echo "-- AC-H1: --check on a healthy world prints ok per object and exits 0"
 run --check
 echo "$out" | sed 's/^/    /'
 assert_eq "--check exits 0" "$rc" 0
-assert_match "herdr, monitors, the monitor seat and the worker are ok, in that order" "$(tr '\n' ' ' <<<"$out")" "^ok herdr ok monitors ok monitor ok $N "
+assert_match "herdr, monitors, the monitor seat, the belt and the worker are ok, in that order" "$(tr '\n' ' ' <<<"$out")" "^ok herdr ok monitors ok monitor ok belt ok $N "
 assert_match "the guard ran and was ok" "$out" "^ok compaction-guard$"
 assert_match "the ticket nobody holds is warned, with its title" "$out" "^WARN $T2 - fixture ticket nobody holds \(no live seat"
 assert_eq "the ticket with a seat is not warned" "$(grep -c "^WARN $T " <<<"$out")" 0
 assert_eq "--check called the guard once, without --apply" "$(grep -c '^recover$' "$GUARD_LOG")" 1
-# Eight since WO-20261011-4562: monitors, the monitor seat and six reserved panes (lease and guard joined events and queue in
-# WO-20261010-8fa8, the factory board watch in WO-20261011-616c, the break glass restore watch in WO-20261011-4562).
-assert_eq "--check wrote no note 100 beyond bringup's eight" "$(( $(event_count note 100) - notes0 ))" 8
+# Ten since WO-20261011-4562: monitors, the monitor seat and eight reserved panes (lease and guard joined events and queue in
+# WO-20261010-8fa8, the factory board watch in WO-20261011-616c, the route runner and the flow watch in WO-20261011-6842, the
+# break glass restore watch in WO-20261011-4562).
+assert_eq "--check wrote no note 100 beyond bringup's ten" "$(( $(event_count note 100) - notes0 ))" 10
 
 echo "-- AC-H3: the halt flag stops both modes and changes nothing"
 touch "$STATE/HALT"; before="$(find "$EVENTS" -name '*.json' | wc -l)"; : > "$GUARD_LOG"
@@ -82,7 +83,7 @@ run --check
 echo "$out" | sed 's/^/    /'
 assert_eq "--check exits 1" "$rc" 1
 assert_match "it names the seat and the reason" "$out" "^FAILED $N \(agent gone\)$"
-assert_eq "the healthy objects still print ok" "$(grep -c '^ok ' <<<"$out")" 4
+assert_eq "the healthy objects still print ok" "$(grep -c '^ok ' <<<"$out")" 5
 assert_eq "no event was written" "$(find "$EVENTS" -name '*.json' | wc -l)" "$before"
 assert_eq "the seat record has no ended_at" "$(jq -r '.ended_at // "null"' "$STATE/seats/$N/seat.json")" null
 assert_eq "no seat.down was recorded" "$(( $(event_count seat.down 100) - downs0 ))" 0

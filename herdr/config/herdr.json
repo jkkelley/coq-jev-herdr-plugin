@@ -27,6 +27,11 @@
   "control_plane": {
     "health_url": null
   },
+  "belt": {
+    "slot": "runner",
+    "status": "${repo}/factory/bin/route.sh status",
+    "settle_seconds": 20
+  },
   "break_glass": {
     "ttl_seconds": 600,
     "bearings_tier": "stable"

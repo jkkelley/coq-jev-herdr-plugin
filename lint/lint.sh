@@ -39,5 +39,6 @@ step "changelog: entries + CHANGELOG.md rendered"; if bash "$R/bin/changelog.sh"
 step "events: every file valid"; if (cd "$R/events" && bin/event.sh check >/dev/null); then echo ok; else echo FAIL; FAIL=1; fi
 step "shell: shellcheck"; mapfile -t SH < <(find "$R" -name '*.sh' -not -path '*/node_modules/*' -not -path '*/.claude/*' -not -path '*/report/rail/*')
 if shellcheck -S warning "${SH[@]}" 2>/tmp/sc; then echo ok; else echo FAIL; head -40 /tmp/sc >&2; FAIL=1; fi
+step "conflicts: no merge markers"; if out=$(bash "$R/lint/check-conflict-markers.sh" "$R" 2>&1); then echo ok; else echo FAIL; printf '%s\n' "$out" >&2; FAIL=1; fi
 step "markdown: contents list in sync"; ok=1; for m in "$R"/AGENTS.md "$R"/tools/*/AGENTS.md; do [ -f "$m" ] || continue; bash "$R/bin/md-contents.sh" --check "$m" || ok=0; done; if [ "$ok" = 1 ]; then echo ok; else echo FAIL; FAIL=1; fi
 [ "$FAIL" = 0 ] && echo "lint: all ok" || { echo "lint: failures" >&2; exit 3; }

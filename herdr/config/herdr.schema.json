@@ -24,6 +24,7 @@
     "runtime_bin",
     "keys",
     "control_plane",
+    "belt",
     "break_glass",
     "halt_flag",
     "monitor_task"
@@ -144,6 +145,33 @@
             "null"
           ],
           "description": "null until WO-20261010-539f stands the bus up; bringup.sh then requires a 200"
+        }
+      }
+    },
+    "belt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot",
+        "status",
+        "settle_seconds"
+      ],
+      "properties": {
+        "slot": {
+          "type": "string",
+          "minLength": 1,
+          "description": "the reserved monitors slot (herdr/config/monitors.json name) that runs the route runner; recover.sh restarts it through monitors.sh take"
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1,
+          "description": "command whose exit 0 means the belt file is fresh; ${repo} is the checkout. The definition of stale stays in factory/config/runner.json"
+        },
+        "settle_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 120,
+          "description": "how long recover.sh --apply waits for a fresh belt after restarting the runner"
         }
       }
     },

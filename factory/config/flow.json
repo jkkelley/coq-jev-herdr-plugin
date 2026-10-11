@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "poll_seconds": 15,
+  "stall_seconds": 90,
+  "visible_within_seconds": 120,
+  "watcher_seat": "flow-watch",
+  "events_dir": "${repo}/events",
+  "event_bin": "${repo}/events/bin/event.sh",
+  "state_dir": "${repo}/factory/state/flow",
+  "runner_script": "${repo}/factory/bin/route.sh",
+  "runner_config": "${repo}/factory/config/runner.json",
+  "runner_pane_label_regex": "route runner - runner$",
+  "gates": [
+    { "kind": "pr.opened", "code": 100, "role": "tester", "consumers": ["test.passed", "test.failed", "blocked"] },
+    { "kind": "test.passed", "code": 201, "role": "reviewer", "consumers": ["review.passed", "review.changes", "blocked"] },
+    { "kind": "test.failed", "code": 422, "role": "worker", "consumers": ["pr.opened", "blocked", "escalated"] },
+    { "kind": "review.passed", "code": 201, "role": "merger", "consumers": ["merged", "merge.conflict", "blocked"] },
+    { "kind": "review.changes", "code": 422, "role": "worker", "consumers": ["pr.opened", "blocked", "escalated"] },
+    { "kind": "merge.conflict", "code": 409, "role": "worker", "consumers": ["pr.opened", "blocked", "escalated"] },
+    { "kind": "merged", "code": 200, "role": "architect", "consumers": ["verified", "rejected", "blocked"] }
+  ]
+}
