@@ -4,14 +4,16 @@
 #   make -C factory lint      runner.json and routes.json against their schemas, shellcheck on bin/ and tests/
 #   make -C factory once      one tick of the runner against this checkout (bin/route.sh once)
 #   make -C factory status    the belt age (bin/route.sh status); exit 1 when stale
+#   make -C factory flow-once   one tick of the flow watch (bin/flow.sh once)
+#   make -C factory flow-status the stalls now present (bin/flow.sh status); exit 1 when there is one
 # The long-running form is bin/route.sh run, started in a labelled herdr pane by herdr/bin/bringup.sh, never from here.
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 HERE := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-.PHONY: help test image lint once status
+.PHONY: help test image lint once status flow-once flow-status
 help:
-	@sed -n '1,7p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
+	@sed -n '1,9p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
 test:
 	bash $(HERE)tests/run.sh
 image:
@@ -19,8 +21,13 @@ image:
 lint:
 	python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" $(HERE)config/runner.json $(HERE)config/runner.schema.json
 	python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" $(HERE)config/routes.json $(HERE)config/routes.schema.json
+	python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" $(HERE)config/flow.json $(HERE)config/flow.schema.json
 	shellcheck -S warning $(HERE)bin/*.sh $(HERE)tests/run.sh $(HERE)tests/lib/*.sh $(HERE)tests/cases/*.sh
 once:
 	$(HERE)bin/route.sh once
 status:
 	$(HERE)bin/route.sh status
+flow-once:
+	$(HERE)bin/flow.sh once
+flow-status:
+	$(HERE)bin/flow.sh status
