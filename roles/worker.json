@@ -9,7 +9,7 @@
   },
   "effort": "high",
   "context_threshold_percent": 30,
-  "max_seats": 4,
+  "max_seats": 8,
   "pane_layout": "seat-1x2",
   "inputs": [
     "ticket"

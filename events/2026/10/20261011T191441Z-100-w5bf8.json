@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T191441Z-100-w5bf8",
+  "at": "2026-10-11T19:14:41Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-e618",
+  "pane": "wD3:p2",
+  "note": "18:58Z: PR 17 test 422 (no interface-agent seat) and review 422 wait on WO-20261011-8fb3 (seat adopt makes the architect session the interface seat); a worker cannot be re-seated on an archived ticket, a belt defect for 4db1",
+  "evidence": [],
+  "observations": []
+}
