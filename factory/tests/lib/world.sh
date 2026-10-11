@@ -6,7 +6,8 @@
 #   --ticket T --role R   brings seat <R>-<t> up (name "merger" for the merger, the label in roles/merger.json), writes a seat.up 100
 #                         record, and on a seat already up prints "left as is" and writes nothing
 #   --down NAME           writes a seat.down 100 record for NAME, once; a second --down prints "already down" and writes nothing
-#   $W/seat.fail          its text is the refusal: stderr, exit 3, nothing written   $W/seat.slow  writes the belt's mtime (ns) to $W/seat.belt, then sleeps a second
+#   $W/seat.fail          its text is the refusal: stderr, exit 3, nothing written   $W/seat.fail.down  the same, for --down only
+#   $W/seat.slow  writes the belt's mtime (ns) to $W/seat.belt, then sleeps a second
 #   world_up <name>          sets W (case root), R (repo copy), ROUTE (the runner), STATE (runner state dir), HLOG (herdr log)
 #   rec KIND CODE SEAT [TICKET] [ATTEMPT]   one record through the copy's event.sh; prints its id
 #   run_once [flags]         route.sh once --from-start --repo $R --state $STATE
@@ -27,10 +28,11 @@ world_up() {
 printf '%s\n' "$*" >> "__W__/seat.log"; printf 'seat %s\n' "$*" >> "__W__/order.log"
 [ ! -e "__W__/seat.slow" ] || { date -r "__STATE__/belt" +%s%N > "__W__/seat.belt"; sleep 1; }
 if [ -e "__W__/seat.fail" ]; then cat "__W__/seat.fail" >&2; exit 3; fi
+if [ "$1" = --down ] && [ -e "__W__/seat.fail.down" ]; then cat "__W__/seat.fail.down" >&2; exit 3; fi
 ev() { "__R__/events/bin/event.sh" add --code 100 --seat "$1" --kind "$2" ${3:+--ticket "$3"} --note "stub seat.sh"; }
 case "$1" in
   --down) name=$2; [ ! -e "__W__/seats/$name.down" ] || { echo "$name: already down since stub"; exit 0; }
-    : > "__W__/seats/$name.down"; t=$(sed -n 's/.*\(wo-[0-9]\{8\}-[0-9a-f]\{4\}\)$/\1/p' <<<"$name" | tr a-z A-Z)
+    : > "__W__/seats/$name.down"; t=$(sed -n 's/.*-wo-\([0-9]\{8\}-[0-9a-f]\{4\}\)$/WO-\1/p' <<<"$name")
     ev "$name" seat.down "$t" >/dev/null; printf '{"name":"%s","down":true}\n' "$name" ;;
   --ticket) t=$2; r=$4; name=$(jq -r .label "__R__/roles/$r.json"); name=${name//\$\{ticket\}/${t,,}}
     [ ! -e "__W__/seats/$name.up" ] || { echo "seat $name: agent already running, left as is" >&2; printf '{"name":"%s"}\n' "$name"; exit 0; }

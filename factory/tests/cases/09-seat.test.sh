@@ -8,7 +8,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${REPO_ROOT:-/repo}/herdr/tests/lib/assert.sh"; . "$HERE/../lib/world.sh"
 T=WO-20261011-aaaa
 world_up seat
-seats() { grep -c . "$W/seat.log" | tr -d ' '; }
+seats() { grep -c -e '^--ticket' "$W/seat.log" | tr -d ' '; }   # bring-ups only: a row with a down also calls --down
 
 echo "-- AC-H1: a pr.opened 100 for a ticket with no tester seat brings it up through seat.sh and prompts it"
 id=$(rec pr.opened 100 worker-wo-20261011-aaaa $T)
@@ -36,7 +36,7 @@ assert_eq "the seat.up record the stub wrote is ignored, not a 500" "$(find "$R/
 echo "-- the merger is one shared seat named merger"
 sleep 1; id3=$(rec review.passed 201 reviewer-wo-20261011-aaaa $T)
 run_once
-assert_match "seat.sh --ticket --role merger" "$(tail -1 "$W/seat.log")" "^--ticket $T --role merger$"
+assert_match "seat.sh --ticket --role merger" "$(grep -e '--role merger' "$W/seat.log")" "^--ticket $T --role merger$"
 assert_match "the prompt went to merger" "$(tail -1 "$HLOG")" "^--session stable agent prompt merger record $id3 playbook $R/playbooks/merger.md$"
 
 echo "-- a refused bring-up is a 500 that says what seat.sh said, and nothing is prompted"

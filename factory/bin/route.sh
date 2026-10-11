@@ -51,6 +51,17 @@
 #   records, but one bring-up past stale_seconds (60) still reads as stopped while it runs (WO-20261011-5355 owns the belt). seat.sh
 #   needs HERDR_TAB_ID to find the architect tab's "test - herdr" pane, so the runner pane must sit in that tab, or every bring-up
 #   is refused and becomes a 500 naming the refusal. The prompt follows seat.sh's own brief; a prompt herdr refuses is a 500.
+#   The down field: a row with `down: <role>` runs `seat.sh --down <that role's seat for the ticket>` after its own action. What
+#   broke: a tester, reviewer or merger seat stayed up after its gate record until the architect took it down by hand, holding
+#   max_seats and its treehouse slot (AGENTS.md: nothing is run by hand). Why a field and not a row of its own: a record matches
+#   one row, first match wins, and the same test.passed that wakes the reviewer must also release the tester, so a second row
+#   never gets its turn. The down runs after the action, and runs even when the action failed: the gate record is on disk either
+#   way, the seat is finished, and a failed action is never retried (a 500 names it). Rejected: down first (a refused bring-up
+#   would leave neither seat), down only on success (a failed prompt would strand a finished seat), and the next seat's seat.sh
+#   doing it (it would have to know what the previous seat was). Costs: the merger is ONE shared seat named merger (roles/merger.json
+#   label has no ${ticket}), so merged 200 for one ticket takes down a merger another ticket's review.passed just woke when two are in
+#   flight; the label belongs to roles/, which a worker may not edit. A gate record hand-posted for a ticket whose seat never existed
+#   makes seat.sh refuse ("no seat named") and that becomes a 500; the runner does not read seat records to tell the cases apart.
 #   The sha on the wake line: a row that says `with pr` appends " pr N" and " sha S" from the record, so the merger gate
 #   compares fields, not a note (event.sh --sha and --pr write them). What broke: playbooks/merger.md step 1 gates on "the
 #   same sha" and the only copy of it was prose. A value that is not a PR number or 7 to 40 hex characters is a 500 and
@@ -121,8 +132,8 @@ wake_extras() {
 }
 herdr_prompt() { env -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_SOCKET_PATH herdr --session "$SESSION" agent prompt "$1" "$2" >/dev/null 2>&1; }
 
-# perform ROW ID TICKET RECORD_JSON: the row's action; prints a reason and returns 1 when it fails.
-perform() {
+# act_primary ROW ID TICKET RECORD_JSON: the row's own action; prints a reason and returns 1 when it fails.
+act_primary() {
   local row=$1 id=$2 ticket=$3 rec=$4 act to seat text more rc prio qargs=()
   act=$(jq -r .do <<<"$row"); to=$(jq -r .to <<<"$row")
   case $act in
@@ -148,10 +159,28 @@ perform() {
     *) echo "unknown action $act"; return 1;;
   esac
 }
+# act_down ROLE TICKET: take the seat that role holds for the ticket down. seat.sh --down is idempotent (a second one prints "already
+# down" and exits 0), so a second gate record for the same ticket costs nothing.
+act_down() {
+  local seat out rc
+  [ "$2" != - ] || { echo "down needs a ticket"; return 1; }
+  seat=$(seat_of "$1" "$2") || { echo "no seat name for role $1 on ticket $2"; return 1; }
+  out=$("$SEAT_BIN" --down "$seat" 2>&1 >/dev/null); rc=$?; belt_touch
+  [ "$rc" = 0 ] || { echo "seat.sh --down $seat failed (exit $rc): $(tail -n 1 <<<"$out" | cut -c1-120)"; return 1; }
+}
+# perform ROW ID TICKET RECORD_JSON: the row's action, then its down when it has one, the down even when the action failed (the
+# gate record is on disk either way, so the seat is finished); prints every reason, joined, and returns 1 when either failed.
+perform() {
+  local row=$1 id=$2 ticket=$3 rec=$4 down why="" more
+  more=$(act_primary "$row" "$id" "$ticket" "$rec") || why=$more
+  down=$(jq -r '.down // empty' <<<"$row")
+  if [ -n "$down" ]; then more=$(act_down "$down" "$ticket") || why=${why:+$why; }$more; fi
+  [ -z "$why" ] || { echo "$why"; return 1; }
+}
 
 # route_file FILE: claim, match, perform, receipt. At most once per record id.
 route_file() {
-  local f=$1 line id rseat ticket kind code rec row esc why to act
+  local f=$1 line id rseat ticket kind code rec row esc why to act down
   rec=$(jq -c . "$f" 2>/dev/null) || { id=$(basename "$f" .json); ( set -C; echo unreadable > "$LEDGER/$id" ) 2>/dev/null && trouble "$id" - "unreadable record $id"; return; }
   line=$(jq -r '[.id, .seat, (.ticket // "-"), .kind, (.code | tostring)] | @tsv' <<<"$rec") || return
   IFS=$'\t' read -r id rseat ticket kind code <<<"$line"
@@ -163,8 +192,8 @@ route_file() {
   #   going down does not write a second record for every first one (see the breadcrumb at the top, item 4).
   if [ "$(jq -r .do <<<"$row")" = ignore ]; then echo ignored > "$LEDGER/$id"; return; fi
   if why=$(perform "$row" "$id" "$ticket" "$rec"); then
-    to=$(jq -r .to <<<"$row"); act=$(jq -r .do <<<"$row")
-    local r=(--code 300 --kind record.routed --to "$to" --note "routed $kind $code ($id): $act $to" --evidence "${f#"$REPO"/}"); [ "$ticket" = - ] || r+=(--ticket "$ticket")
+    to=$(jq -r .to <<<"$row"); act=$(jq -r .do <<<"$row"); down=$(jq -r '.down // empty' <<<"$row")
+    local r=(--code 300 --kind record.routed --to "$to" --note "routed $kind $code ($id): $act $to${down:+, down $down}" --evidence "${f#"$REPO"/}"); [ "$ticket" = - ] || r+=(--ticket "$ticket")
     emit "${r[@]}" || log "could not write the receipt for $id"; echo "done $act" > "$LEDGER/$id"
   else trouble "$id" "$ticket" "route failed for $kind $code, record $id: $why"; echo failed > "$LEDGER/$id"; fi
 }
