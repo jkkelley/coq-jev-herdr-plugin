@@ -4,6 +4,7 @@
 #   seat.sh --role R --task "text" [--worktree DIR]                             door 2: a fixed seat (monitor, merger, orchestrator)
 #   seat.sh --check NAME        one line per difference, exit 1 if any; a downed seat prints "down since", exit 3
 #   seat.sh --down NAME         retire.sh, close the tab, return the slot this seat leased, record seat.down 100; a second --down records nothing
+#                               the log names each process in the slot (pid, name) first; a foreign one refuses the return, exit 3
 #   seat.sh --audit             every agent process on the host: COMPLIANT or OUT OF COMPLIANCE + seat.stalled 500; exit 1 if any
 # Reads roles/<role>.json and the layout it names (herdr/layouts/<pane_layout>.json). Workspace by label, tab by label,
 # panes from the layout with their labels, settings rendered from the role's allow and deny into
@@ -11,7 +12,7 @@
 # waited for, `herdr agent start` with the role's model, effort and permission mode, then the brief (roles/bin/brief.sh)
 # as the first prompt. A rerun repairs: a pane with the right label is kept, strays are relabelled, missing ones split.
 # Prints one JSON line. DRY_RUN=1 prints every mutating herdr call and writes nothing.
-# Exit: 0 ok, 1 check differences, 2 usage, 3 refused (gate, cap, guard, name, no test pane for a ticket seat, no treehouse slot, a ticket with no branch, a slot that cannot reach it), 4 herdr failure
+# Exit: 0 ok, 1 check differences, 2 usage, 3 refused (gate, cap, guard, name, no test pane for a ticket seat, no treehouse slot, a ticket with no branch, a slot that cannot reach it, --down with a foreign process in the slot), 4 herdr failure
 #   or a slot that would not come back on --down.
 #
 # BREADCRUMB 2026-10-10 - ported from ~/tools/bearings-v2/bin/seat.sh (644 lines, proven on the rime fleet) and
@@ -29,7 +30,7 @@ set -euo pipefail
 . "$(dirname "$(readlink -f "$0")")/seat-lib.sh"
 sl_require jq herdr
 
-usage() { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 refuse() { SL_EXIT=3 sl_die "$@"; }
 mode=up; ticket=""; role=""; task=""; wt="$SL_REPO"; wt_given=0; name_arg=""; runtime_arg=""
 while [ $# -gt 0 ]; do
@@ -165,10 +166,57 @@ lease_up() {
   why="$(slot_to_branch)" || { lease_abandon; refuse "slot $wt could not be put on $branch for $id: $why"; }
   lease="$(jq -nc --arg h "$id" --arg i "$(jq -r .lease_id <<<"$row")" --argjson o "$owned" '{holder:$h,id:$i,owned:$o}')"
 }
+# BREADCRUMB 2026-10-11 - WO-20261011-36d7, the pane `treehouse return --force` killed twice. What broke: lease_down below ran
+#   `treehouse return --force`, which ends every process whose cwd is in the slot, without looking at what those were; during
+#   the PR 6 review it ended the zsh of the architect's test pane (wD3:pF, then wD3:p1R) and herdr closed the pane, so the
+#   architect tab lost its "test - herdr" pane and the next ticket seat would have been refused. Why this fix: before the
+#   return, the processes `treehouse status --json` lists for the slot are written to the log, one line each with pid and name,
+#   and `--force` is refused (exit 3, the seat stays un-ended) when any live one is not this seat's own, so the architect sees
+#   the list and decides; moving the shell out of the slot or ending the process and rerunning --down is the decision. "Own"
+#   is every pane shell of the seat's tab plus everything under those shells, read from `herdr pane process-info` BEFORE
+#   retire.sh and the tab close, because afterwards the tree is gone; this run's own children (the treehouse status call)
+#   are never foreign, and a pid that has already exited by the time it is read is not listed (the status call lists itself).
+#   Rejected: an override flag that forces past a foreign process (no caller needs it: the refusal names what to move, and a
+#   flag is what the next hurried run would reach for) and killing the foreign process here (it is somebody's shell). Cost:
+#   treehouse lists by cwd, so a process holding the slot only through a bind mount or an open file is not listed and the
+#   return can still end it; the ticket's second kill looked like that, with nothing listed. This guards the listed case only.
+# pid_tree PID: PID and every process under it, one pid per line (empty when ps is unavailable).
+pid_tree() {
+  ps -e -o pid= -o ppid= 2>/dev/null | awk -v r="$1" 'BEGIN { keep[r] = 1 } { p[NR] = $1; q[NR] = $2 }
+    END { do { ch = 0; for (i = 1; i <= NR; i++) if (!(p[i] in keep) && (q[i] in keep)) { keep[p[i]] = 1; ch = 1 } } while (ch); for (k in keep) print k }'
+}
+# pid_live PID: true while PID exists and is not a zombie.
+pid_live() { local st; st="$(ps -o stat= -p "$1" 2>/dev/null)" || return 1; case "$st" in "" | Z*) return 1 ;; esac; }
+# seat_pids: the pane shells of this seat's tab and everything under them, space separated. Taken before the panes are closed.
+seat_pids() {
+  local p sp out=""
+  [ "$DRY" != 1 ] || return 0
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    sp="$(sl_h pane process-info --pane "$p" 2>/dev/null | jq -r '.result.process_info.shell_pid // empty' 2>/dev/null)" || sp=""
+    [ -z "$sp" ] || out="$out $(pid_tree "$sp" | tr '\n' ' ')"
+  done < <(sl_panes_of_tab "$ws" "$tab" | jq -r '.[].pane_id')
+  printf '%s' "$out"
+}
 # lease_down: give back the slot this seat leased. A slot treehouse no longer lists for the holder counts as returned.
+# Returns 0 when the slot is back, 1 when treehouse failed, 2 when a live process that is not this seat's is still in the slot.
 lease_down() {
-  local row; row="$(th_row "$lease_holder" "$wt")" || return 1
+  local row pr pid nm kind foreign=0 mine; row="$(th_row "$lease_holder" "$wt")" || return 1
   [ -n "$row" ] || { sl_log "seat $name: $wt is no longer leased to $lease_holder, nothing to return"; return 0; }
+  if [ "$DRY" != 1 ]; then
+    mine=" $(pid_tree $$ | tr '\n' ' ') "
+    while IFS= read -r pr; do
+      [ -n "$pr" ] || continue
+      pid="$(jq -r .pid <<<"$pr")"; nm="$(jq -r .name <<<"$pr")"
+      pid_live "$pid" || continue
+      case " $seat_own $mine" in *" $pid "*) kind="this seat's own" ;; *) kind="FOREIGN"; foreign=1 ;; esac
+      sl_log "seat $name: slot $wt holds process $pid $nm ($kind); treehouse return --force ends it"
+    done < <(jq -c '(.processes // [])[]' <<<"$row")
+    if [ "$foreign" = 1 ]; then
+      sl_log "seat $name: refusing treehouse return --force on $wt while a foreign process is in it; move that shell out of the slot or end it, then rerun --down"
+      return 2
+    fi
+  fi
   sl_run treehouse return "$wt" --if-lease-holder "$lease_holder" --force
 }
 
@@ -201,11 +249,17 @@ if [ "$mode" = down ]; then
   load_seat "$name_arg"
   if [ -n "$ended_at" ]; then echo "$name: already down since $ended_at"; exit 0; fi
   [ "$lease_owned" != true ] || sl_require treehouse
+  seat_own=""; [ "$lease_owned" != true ] || seat_own="$(seat_pids)"
   "$SL_HERE/retire.sh" "$name" --pane "$agent_pane" || sl_log "seat $name: retire did not finish cleanly; closing the tab anyway"
   sl_run sleep "$(sl_cfg .down_wait_seconds)"
   sl_mut tab close "$tab" >/dev/null 2>&1 || true
   if [ "$lease_owned" = true ]; then
-    lease_down || { SL_EXIT=4 sl_die "seat $name: slot $wt would not come back to the pool; the seat stays un-ended, rerun --down once treehouse return works"; }
+    lease_down && rc=0 || rc=$?
+    case "$rc" in
+      0) ;;
+      2) SL_EXIT=3 sl_die "seat $name: slot $wt still holds a foreign process (listed above); the seat stays un-ended, rerun --down once it is out of the slot" ;;
+      *) SL_EXIT=4 sl_die "seat $name: slot $wt would not come back to the pool; the seat stays un-ended, rerun --down once treehouse return works" ;;
+    esac
   fi
   sl_record seat.down 100 "$name" ${id:+--ticket "$id"} --pane "$agent_pane" --note "seat retired"
   [ "$DRY" = 1 ] || { jq --arg at "$(sl_now)" '.ended_at=$at' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }

@@ -7,6 +7,10 @@
 #   get --lease [--lease-holder H] [--no-fetch] [--json]   lowest free slot number, a directory, an entry; prints the entry (--json) or the path
 #   status [--json]                                        the leased entries; --json is the array, otherwise one line per slot
 #   return <path> [--force] [--if-lease-holder H]          removes the entry and the directory; exit 1 when the path is not leased or the holder differs
+# `processes` is live, as in the real tool (WO-20261011-36d7): every process on the host whose cwd is the slot or under it, read
+# from /proc as [{pid,name}], this call included when the caller stands in the slot. `return --force` ends them first (SIGTERM, then
+# SIGKILL), which is what the real tool does to a shell parked in a slot ("Terminated lingering processes"), so a case can prove
+# a process survived because seat.sh refused to return, and that it was named before the return.
 # TREEHOUSE_STUB_ORIGIN=<bare repo> makes `get` clone it into the slot and detach at origin/main, which is what a fresh slot of the
 # real pool is (WO-20261011-c077: seat.sh checks the ticket branch out there, so the case needs a repository to check out in).
 # Unset, a slot is an empty directory, as before.
@@ -15,6 +19,20 @@
 root="${TREEHOUSE_STUB_ROOT:-$HOME/.treehouse-stub}"; db="$root/pool.json"
 mkdir -p "$root/slots"; [ -f "$db" ] || echo '[]' > "$db"
 [ -z "${TREEHOUSE_STUB_LOG:-}" ] || printf '%s\n' "$*" >> "$TREEHOUSE_STUB_LOG"
+# procs_of PATH: JSON [{pid,name}] of the processes whose cwd is PATH or below it.
+procs_of() {
+  local d c out="[]"
+  for d in /proc/[0-9]*; do
+    c="$(readlink "$d/cwd" 2>/dev/null)" || continue
+    case "$c" in "$1" | "$1"/*) out="$(jq -c --argjson p "${d#/proc/}" --arg n "$(cat "$d/comm" 2>/dev/null)" '. + [{pid:$p,name:$n}]' <<<"$out")" ;; esac
+  done
+  printf '%s' "$out"
+}
+status_json() {
+  local m="{}" p
+  while IFS= read -r p; do [ -n "$p" ] || continue; m="$(jq -c --arg p "$p" --argjson v "$(procs_of "$p")" '.[$p] = $v' <<<"$m")"; done < <(jq -r '.[].path' "$db")
+  jq -c --argjson m "$m" 'map(.processes = ($m[.path] // []))' "$db"
+}
 save() { printf '%s\n' "$1" > "$db.tmp" && mv "$db.tmp" "$db"; }
 verb="${1:-}"; [ $# -eq 0 ] || shift
 case "$verb" in
@@ -42,13 +60,13 @@ case "$verb" in
     save "$(jq -c --argjson e "$entry" '. + [$e]' "$db")"
     if [ "$json" = 1 ]; then echo "$entry"; else echo "$path"; fi ;;
   status)
-    if [ "${1:-}" = --json ]; then jq -c . "$db"
+    if [ "${1:-}" = --json ]; then status_json
     else jq -r '.[] | "\(.name)\t\(.status)\t\(.path)  (held by \(.lease_holder))"' "$db"; fi ;;
   return)
-    path="${1:?return needs a path}"; shift; holder=""
+    path="${1:?return needs a path}"; shift; holder=""; force=0
     while [ $# -gt 0 ]; do
       case "$1" in
-        --force) ;; --if-lease-holder) holder="${2:?--if-lease-holder needs a value}"; shift ;;
+        --force) force=1 ;; --if-lease-holder) holder="${2:?--if-lease-holder needs a value}"; shift ;;
         *) echo "stub treehouse: return: unknown flag $1" >&2; exit 2 ;;
       esac
       shift
@@ -57,6 +75,11 @@ case "$verb" in
     [ -n "$row" ] || { echo "stub treehouse: $path is not a leased worktree" >&2; exit 1; }
     [ -z "$holder" ] || [ "$(jq -r .lease_holder <<<"$row")" = "$holder" ] \
       || { echo "stub treehouse: $path is held by $(jq -r .lease_holder <<<"$row"), not $holder" >&2; exit 1; }
+    if [ "$force" = 1 ]; then
+      for pid in $(procs_of "$path" | jq -r '.[].pid'); do [ "$pid" = "$$" ] || kill "$pid" 2>/dev/null || true; done
+      sleep 0.2
+      for pid in $(procs_of "$path" | jq -r '.[].pid'); do [ "$pid" = "$$" ] || kill -9 "$pid" 2>/dev/null || true; done
+    fi
     save "$(jq -c --arg p "$path" 'map(select(.path != $p))' "$db")"
     rm -rf "$path" ;;
 esac
