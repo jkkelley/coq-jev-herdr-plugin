@@ -4,7 +4,7 @@
   "slug": "the-labelled-test-pane-never-keeps-its-cwd-insid",
   "title": "The labelled test pane never keeps its cwd inside a treehouse slot, so treehouse return --force cannot kill it",
   "type": "bug",
-  "status": "draft",
+  "status": "ready",
   "priority": "p2",
   "created": "2026-10-11",
   "updated": "2026-10-11",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
+    "at": "2026-10-11"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
