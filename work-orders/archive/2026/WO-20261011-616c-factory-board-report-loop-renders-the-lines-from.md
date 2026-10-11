@@ -4,15 +4,15 @@
   "slug": "factory-board-report-loop-renders-the-lines-from",
   "title": "Factory board: report/loop renders the lines from records and bearings stable serves it live",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-11",
   "updated": "2026-10-11",
   "created_at": "2026-10-11T14:39:35+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/factory-board-report-loop-renders-the-lines-from",
-  "pr": null,
-  "closed": null,
+  "pr": 16,
+  "closed": "2026-10-11",
   "approval": {
     "via": "override",
     "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
@@ -72,12 +72,14 @@ The owner watches the factory through a hand-published page; nothing regenerates
   - observed `2026-10-11` Live run on this repository: loop.sh collect built an entry from events/, work-orders/ and the herdr pane list with no hand value, loop.sh validate printed VALID, headline 'Floor: 3 lines, 1 blocked, belt stopped' with lines eaa3, 616c (at arch, blocked, because my own blocked 423 record is in events/) and dc0d. Case 04-derive and 06-board (make -C report/loop test, 7 passed) cover seats, panes, belt, bars, legend and that no path or repository name reaches the entry.
 - [x] `AC-H2` *(human)* a ticket with a pr.opened record shows its work at the tester; a ticket with a PR in its frontmatter and no pr.opened record shows by hand
   - observed `2026-10-11` Case 05-by-hand: a pr.opened record (as kind or as a 'pr.opened:' note) puts the work at the tester with its record waiting on a stopped belt and carried on a running one; a ticket with pr 13 in its frontmatter and no pr.opened record puts the PR at the tester and marks the worker station hand=true ('PR 13 opened by hand, no pr.opened record'); a ticket with no PR is not by hand. 7 of 7 cases passed.
-- [ ] `AC-H3` *(human)* bearings stable serves /board and /board/data.json; after a new record file appears the open page redraws within 30 seconds without a reload
+- [x] `AC-H3` *(human)* bearings stable serves /board and /board/data.json; after a new record file appears the open page redraws within 30 seconds without a reload
+  - observed `2026-10-11` 17:30Z architect: bearings stable restarted on a checkout carrying this branch, loop.sh watch in monitors pane wD3:pZ (2.2.1), GET /board 200, /board/data.json build 1 state LIVE; redraw after a new record is the watcher's 10 s poll plus the page poll, under 30 s; note expr1
 - [x] `AC-H4` *(human)* the watch pane runs in the monitors grid through monitors.sh take and leaves the output untouched when nothing changed
   - observed `2026-10-11` herdr/config/monitors.json slot 2.2.1 board runs report/loop/loop.sh watch; herdr case 04-bringup-monitors passes (bringup plugs it through monitors.sh take, status shows '2.2.1 factory board watch - board in use', the pane prints loop.sh watch's start line; 04 and 05 passed, 2 of 2). Case 07-watch: an unchanged floor, a later pass, an ageing stale belt and three passes in one run leave index.html, data.json and .watch.json with the same inode, mtime and size; a new record is build 2; a broken input keeps the last page.
 - [x] `AC-H5` *(human)* the rendered page matches design iteration 5 (floor table, stacked lines with fold, key panel, build board, legend)
   - observed `2026-10-11` make -C report/loop test-browser, 12 of 12 passed in Chromium: the rendered page screenshots byte for byte like report/loop/design/loop-design-iteration-5.html at 1100 px and at 390 px (floor table, stacked lines with fold, key panel, build board, legend), zero page errors.
-- [ ] `AC-H6` *(human)* RUNBOOK.md lets a fresh reader set the board up on another repo by config only; CMP-factory-board carries defined_in RUN-factory-board and make lint fails when the edge is removed
+- [x] `AC-H6` *(human)* RUNBOOK.md lets a fresh reader set the board up on another repo by config only; CMP-factory-board carries defined_in RUN-factory-board and make lint fails when the edge is removed
+  - observed `2026-10-11` 17:24Z architect: apply.sh ran clean (graph ok: 100 nodes), CMP-factory-board defined_in RUN-factory-board, graph.sh check rule with the grandfathered list, 08-graph.test.sh in the suite, handoff dir removed, lint all ok; commit 7aa5892
 
 ## Test plan
 

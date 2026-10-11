@@ -191,6 +191,8 @@ Resume WO-20261011-6842 as worker-wo-20261011-6842 in slot 5. Read playbooks/wor
 
 Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. Step 4: tools/bearings/scripts/server.mjs serves the board. Add keyed GET /board (the page at report/loop/out/index.html, same cookie handling as /, no-store, a 503 JSON body when the page is not built) and GET /board/data.json; declare the board directory in config/bearings.json and its schema; cases in tools/bearings/tests/inside.sh; run make -C tools/bearings test from the test pane only.
 
+## Checkpoint 2026-10-11 17:49 UTC
+
 ## Checkpoint 2026-10-11 17:48 UTC
 ### Hydration prompt
 
@@ -263,6 +265,30 @@ Read the top checkpoint, then do step 5: factory/RUNBOOK.md, graph nodes CMP-rou
 
 ## Checkpoint 2026-10-11 17:03 UTC
 
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, PR 16 open, slot 2.
+- Reviewer record 20261011T163507Z-422-uii0r asked for evidence on AC-H3 and AC-H6 and a contents list in report/loop/RUNBOOK.md. Worker work.started record: 20261011T165015Z-100-kdyzx.
+
+#### Toolchain
+
+- report/loop/RUNBOOK.md now opens with a contents list, the binding rules and GOOD/NEVER lines, all inside the first 100 lines. make lint rc 0 from the test pane.
+- AC-H3 and AC-H6 stay unchecked on purpose: a live stable restart and graph/ writes belong to the architect. The ticket note carries the exact steps (graph-handoff/apply.sh, then work-order.sh evidence).
+
+#### Active Tasks
+
+- Landed: RUNBOOK review fix and the ticket note. Next: push, then post pr.opened 100 naming the new sha, then stop.
+
+#### Blockers
+
+- None for the worker; AC-H3 and AC-H6 wait on the architect.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. The RUNBOOK review fix is committed; push it, post pr.opened 100 with the sha and stop. Do not tick AC-H3 or AC-H6.
+
 ## Checkpoint 2026-10-11 16:36 UTC
 - Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
 - Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
@@ -317,6 +343,44 @@ Read the top checkpoint, then do step 4: factory/Makefile and factory/tests (run
 Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
 Post one pr.opened 100 for the new head through events/bin/event.sh, naming the scope widening in its note, then stop.
 
+### Concurrent checkpoint written in the same minute on main
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, PR 16 open, slot 2.
+- The architect applied the graph half (7aa5892) and evidenced AC-H3 and AC-H6; every acceptance criterion is evidenced.
+
+#### Toolchain
+
+- work-order.sh submit --pr 16 and done ran; the ticket is archived under work-orders/archive/2026/ and INDEX.md and the epic README follow.
+
+#### Active Tasks
+
+- Landed: close-out step. Next: push (done by step.sh), post pr.opened 100 naming the new head, then stop. The architect merges.
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- factory/bin/route.sh (once, run, status), factory/config/runner.json and runner.schema.json, factory/Makefile, factory/tests (run.sh, lib/world.sh, cases 01-07), factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner.
+- events/bin/event.sh accepts the factory record kinds and an optional --to ROLE; events/schema/event.schema.json carries both.
+- make -C factory test from the test pane: 7 passed, 0 failed.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: PR 14 open; review.changes 422 (20261011T154551Z-422-kuyed) asked for GOOD and NEVER lines in factory/RUNBOOK.md, added; the architect widened scope to event.sh, event.schema.json and .gitignore. Remaining: post one pr.opened for the new head (note records the scope widening) and stop.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume nothing: WO-20261011-616c is done and archived on its branch. Post pr.opened 100 with the head sha if not yet posted, then hold for the merge.
+
 ## Checkpoint 2026-10-11 16:10 UTC
 
 ### Current state
@@ -341,6 +405,11 @@ Post one pr.opened 100 for the new head through events/bin/event.sh, naming the 
 ### Hydration prompt
 
 Resume WO-20261011-616c as worker-wo-20261011-616c. The branch is pushed. Run gh pr create with the ticket's acceptance criteria as the body (state AC-H3 and AC-H6 as not yet observed and why), post pr.opened 100 with the sha, and stop.
+
+### Concurrent checkpoint written in the same minute on main
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
+Post one pr.opened 100 for the new head through events/bin/event.sh, naming the scope widening in its note, then stop.
 
 ## Checkpoint 2026-10-11 16:06 UTC
 
@@ -454,13 +523,65 @@ Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/wor
 
 WO-20261011-e618 is closed out on its branch with PR 17 open. Post pr.opened 100 with the head sha if it is not posted yet, and stop; there is nothing else for this seat to do.
 
+### Concurrent checkpoint written in the same minute on main
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, treehouse slot 2 leased to that ticket. Test pane wD3:p1V, run through herdr/bin/testpane.sh only (wrapper in the scratchpad: tp.sh, start every command with cd into the worktree because the pane sits in the main checkout).
+- Global prettier hook reformats Write and Edit targets; report/loop/assets/template.html and report/loop/design/ are in .prettierignore.
+
+#### Toolchain
+
+- report/loop/loop.sh: collect, validate, render, watch. watch [--out DIR] [--iterations N] [--sleep S] runs collect, compares with DIR/data.json ignoring at and number, and only on a difference renders DIR and records the build number in DIR/.watch.json. A failed pass keeps the last page and says why on stderr. Prints one line per build or failure, nothing otherwise.
+- The entry's sources line no longer carries the belt's age in seconds ("stale, over 30s old"), because a growing age made every pass a change (breadcrumb in lib/collect.jq).
+- Tests: make -C report/loop test = cases 01 to 07 green (07-watch proves same inode and mtime when nothing changed). make -C report/loop test-browser = 12 green. make lint all ok. Makefile gained a watch target.
+
+#### Active Tasks
+
+- Step 3 landed: watch with case 07-watch. A live two-pass run on the real repo wrote build 1 once with the three real lines.
+- Next: S4 bearings stable GET /board and /board/data.json in tools/bearings/scripts/server.mjs (keyed like /, cookie, no-store, 503 JSON when not built), board dir in config/bearings.json and bearings.schema.json, tests in tools/bearings/tests/inside.sh, run make -C tools/bearings test from the test pane; then S5 monitor pane (herdr/bin/monitors.sh take, monitors.json slot, make -C herdr test); S6 graph nodes CMP-factory-board and RUN-factory-board plus the lint rule (graph/ may be fenced; if the harness refuses, post blocked 423 and stop); S7 RUNBOOK.md, evidence, retro note, work-order.sh done, PR, pr.opened 100.
+- S6 decision: the lint rule is a ratchet with a closed grandfather list, because the existing Component nodes have no defined_in edge to a RUN node.
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- factory/bin/route.sh (once, run, status), factory/config/runner.json and runner.schema.json, factory/Makefile, factory/tests (run.sh, lib/world.sh, cases 01-07), factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner.
+- events/bin/event.sh accepts the factory record kinds and an optional --to ROLE; events/schema/event.schema.json carries both.
+- make -C factory test from the test pane: 7 passed, 0 failed.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: all seven criteria evidenced on the ticket, retro note written. Remaining: push, open the one PR with the acceptance criteria as the body, post pr.opened 100 with the sha, stop. The architect reviews and merges; this seat does not run submit or done.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. Step 4: tools/bearings/scripts/server.mjs serves the board. Add keyed GET /board (the page at report/loop/out/index.html, same cookie handling as /, no-store, a 503 JSON body when the page is not built) and GET /board/data.json; declare the board directory in config/bearings.json and its schema; cases in tools/bearings/tests/inside.sh; run make -C tools/bearings test from the test pane only.
+
 ## Checkpoint 2026-10-11 15:21 UTC
 Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
 Post one pr.opened 100 for the new head through events/bin/event.sh, naming the scope widening in its note, then stop.
 
+### Concurrent checkpoint written in the same minute on main
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
+If the PR is not open yet, open it with gh pr create (acceptance criteria as the body) and post pr.opened 100 with the sha through events/bin/event.sh; then stop.
+
 ## Checkpoint 2026-10-11 15:10 UTC
 Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
 If the PR is not open yet, open it with gh pr create (acceptance criteria as the body) and post pr.opened 100 with the sha through events/bin/event.sh; then stop.
+
+### Concurrent checkpoint written in the same minute on main
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do the close-out: evidence --observed for AC-H1 to AC-H7, note, make lint and make -C factory test from wD3:p1V, one PR carrying the code and the ticket, post pr.opened 100, stop.
 
 ## Checkpoint 2026-10-11 15:05 UTC
 
@@ -855,6 +976,31 @@ Resume WO-20261011-dc0d from step 2: edit herdr/bin/seat.sh (nudge after the bri
 Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
 If the PR is not open yet, open it with gh pr create (acceptance criteria as the body) and post pr.opened 100 with the sha through events/bin/event.sh; then stop.
 
+### Concurrent checkpoint written in the same minute on main
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, slot 2. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- Blocked 423 posted (events 20261011T155317Z-423-lvhaz) for graph/ writes; the graph half waits in report/loop/graph-handoff/.
+
+#### Toolchain
+
+- All steps landed: collect, watch, bearings /board routes, monitors slot 2.2.1, RUNBOOK. Evidence recorded for AC-H1, AC-H2, AC-H4, AC-H5; AC-H3 and AC-H6 left unchecked on purpose (live stable restart, graph writes). Retro note written.
+
+#### Active Tasks
+
+- Remaining: gh pr create with the acceptance criteria as the body and the findings, then post pr.opened 100 with the sha, then stop. The architect merges, applies the graph handoff and restarts stable.
+
+#### Blockers
+
+- None for the close-out; the graph writes need the architect.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c. The branch is pushed. Run gh pr create with the ticket's acceptance criteria as the body (state AC-H3 and AC-H6 as not yet observed and why), post pr.opened 100 with the sha, and stop.
+
 ## Checkpoint 2026-10-11 06:11 UTC
 
 ### Current state
@@ -885,12 +1031,69 @@ If the PR is not open yet, open it with gh pr create (acceptance criteria as the
 Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
 Read the top checkpoint, then do the close-out: evidence --observed for AC-H1 to AC-H7, note, make lint and make -C factory test from wD3:p1V, one PR carrying the code and the ticket, post pr.opened 100, stop.
 
+### Concurrent checkpoint written in the same minute on main
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, treehouse slot 2 leased to that ticket. Test pane wD3:p1V, run through herdr/bin/testpane.sh only (wrapper in the scratchpad: tp.sh).
+- Global prettier hook reformats Write and Edit targets; report/loop/assets/template.html and report/loop/design/ are in .prettierignore.
+
+#### Toolchain
+
+- report/loop/loop.sh: collect, validate, render. collect gathers events (last events_days), ticket frontmatters, roles, routes, playbooks, the herdr pane list (--panes FILE, --no-panes, else herdr by the session in herdr/config/herdr.json) and the belt state file age, runs lib/collect.jq, validates, prints. config/board.json now holds inputs, the nine stations, kickback routes, the board ticket list and legend notes; its schema is found beside loop.sh.
+- Derivation rules live in the header of lib/collect.jq: a record's kind is its own or the "kind:" prefix of a note; where the work is = the routes.json row the newest work record matches; by hand = PR in frontmatter and no pr.opened record (worker station hand, PR at the tester); a seat is up when its newest record is not seat.down and its pane is in the pane list.
+- Tests: make -C report/loop test = cases 01 to 06 green (schema, render, parity, derive, by-hand, board). make -C report/loop test-browser = 12 green. make lint all ok.
+
+#### Active Tasks
+
+- Step 2 landed: collect with cases 04-derive, 05-by-hand, 06-board. Live check: the board showed three real lines (eaa3, 616c, dc0d) with the right seats.
+- Next: S3 watch (loop.sh watch: collect every watch_seconds, write only when the data minus at and number changed, number from out_dir state) with a test case; S4 bearings stable GET /board and /board/data.json plus bearings tests; S5 monitor pane through monitors.sh take (monitors.json slot or bringup); S6 graph nodes CMP-factory-board and RUN-factory-board plus the lint rule (graph/ may be fenced; if the harness refuses, post blocked 423); S7 RUNBOOK.md, evidence, notes, PR.
+- S6 decision: the lint rule is a ratchet with a closed grandfather list, because 17 existing Component nodes have no defined_in edge to a RUN node.
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Steps 1 to 5 done (step 5: factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner with defined_in, graph check ok, graph index regenerated). Steps 1 to 4 done (step 4: factory/Makefile, factory/tests run.sh, world.sh and cases 01-07, make -C factory test = 7 passed, 0 failed from wD3:p1V; route.sh run now stops on TERM at once via read -t). Steps 1 to 3: event.sh kinds and --to; factory/config/runner.json and runner.schema.json (factory/state/ is gitignored). factory/bin/route.sh (once, run, status; claim-then-perform ledger under factory/state/routed; --from-start, --repo, --routes, --state) smoke-tested against a scratch repo with a stub herdr. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Remaining: evidence for AC-H1 to AC-H7, retro note, work-order submit, then one PR with the finished ticket.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. Step 3 is loop.sh watch: a loop that collects every watch_seconds and rewrites out_dir only when the entry changed apart from at and number, keeps number in a state file under out_dir, never leaves a half-written page, and has a case that proves the output files are untouched (same mtime) when nothing changed. Run it only in a labelled herdr pane; tests use a once or iterations seam, never a background process.
+
 ## Checkpoint 2026-10-11 06:06 UTC
 
 ### Current state
 
 #### Infrastructure
 
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, treehouse slot 2 leased to that ticket.
+- Test pane wD3:p1V, run through herdr/bin/testpane.sh only.
+- A global PostToolUse prettier hook reformats files the Write and Edit tools touch; report/loop/assets/template.html and report/loop/design/ are opted out in the repo's .prettierignore.
+
+#### Toolchain
+
+- report/loop/loop.sh: validate FILE, render [--in FILE] [--out DIR]; schema/loop.schema.json (urn id); config/board.json with its schema; assets/template.html is the owner-locked design markup and CSS byte for byte plus a script that reads one JSON element and polls data.json.
+- make -C report/loop test: cases 01-schema, 02-render, 03-parity green in the lint image. make -C report/loop test-browser: 12 checks green in the bearings test image, including byte-identical screenshots of the rendered fixture and the design at 1100 and 390 px and redraw in place without reload.
+- make lint all ok; lint.sh now shellchecks report/loop (only report/rail/ is excluded).
+
+#### Active Tasks
+
+- Step 1 landed: schema, config, template, render, validate, tests. Next steps: S2 collect from events, work-orders, routes.json, roles, herdr pane list and the belt state file; S3 watch (writes only on change) and the board bars; S4 bearings stable GET /board and /board/data.json with tests; S5 monitor pane through monitors.sh take; S6 graph nodes CMP-factory-board and RUN-factory-board plus the lint rule (graph/ may be fenced for a worker: if the harness refuses, post blocked 423); S7 RUNBOOK.md, evidence, notes, PR.
+- Decision for S6: a global "every Component needs defined_in to a RUN node" rule would fail 17 existing Component nodes, so the rule will be a ratchet with a closed grandfather list.
 - Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
 - Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
 - work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
@@ -912,6 +1115,7 @@ Read the top checkpoint, then do the close-out: evidence --observed for AC-H1 to
 
 ### Hydration prompt
 
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md and the ticket, then the top checkpoint. Step 2 is loop.sh collect: add config keys for inputs, a fixtures tree with events, work-orders, panes and belt state, cases for derivation including the by-hand rule (PR in frontmatter, no pr.opened record), and keep the entry schema-valid with no absolute path or project name.
 Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
 Read the top checkpoint, then do step 5: factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner with defined_in, graph.sh check, then land it, then evidence for AC-H1 to AC-H7 and the PR with make step from the test pane wD3:p1V through herdr/bin/testpane.sh.
 
