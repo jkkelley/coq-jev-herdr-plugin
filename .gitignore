@@ -102,3 +102,6 @@
 
 # runtime work queue state (queue/bin/queue.sh), never committed
 queue/items/
+
+# the factory board's drawn page and data (report/loop/loop.sh watch): derived from the records, rebuilt on every change
+report/loop/out/

@@ -1,0 +1,6 @@
+{
+  "schema_version": "1.0.0",
+  "poll_seconds": 10,
+  "watch_seconds": 10,
+  "out_dir": "report/loop/out"
+}

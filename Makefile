@@ -14,7 +14,7 @@ SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 HERE := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 LINT_IMAGE := localhost/coq-lint:1
-TOOLS := $(wildcard $(HERE)tools/*/Makefile)
+TOOLS := $(wildcard $(HERE)tools/*/Makefile) $(wildcard $(HERE)report/*/Makefile)
 
 .PHONY: lint-image-push step changelog help lint test graph-check contents images bearings-% event
 help:

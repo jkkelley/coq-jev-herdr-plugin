@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T144737Z-100-zhi2j",
+  "at": "2026-10-11T14:47:37Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-616c",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p1V",
+  "note": "work.started: worker seat begins factory board, report/loop renders the lines from records and bearings stable serves it live",
+  "evidence": [],
+  "observations": []
+}
