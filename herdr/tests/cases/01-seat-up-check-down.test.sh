@@ -36,6 +36,11 @@ miss=0; while IFS= read -r c; do
 done < <(jq -r '.deny.commands[]' "$REPO/roles/worker.json")
 check "the rendered deny list holds every deny command of the role" "$((1 - miss))"
 assert_eq "bare Edit and Write are not allowed" "$(jq -r '.permissions.allow | any(. == "Edit" or . == "Write")' "$S")" false
+# WO-20261011-4c5e: the a429 worker found Edit(//<slot>/${worktree}/**) in its allow list, a path token render_settings never
+# substituted. Allow and deny must both name the slot, and no role token may survive into the file.
+assert_eq "no role path token survives in the rendered settings" "$(jq -r '[.permissions | (.allow + .deny)[] | select(contains("${"))] | length' "$S")" 0
+assert_eq "allow carries Edit under the seat worktree" "$(jq -r --arg r "Edit(/$REPO/**)" '.permissions.allow | index($r) != null' "$S")" true
+assert_eq "deny carries the roles/ directory of the seat worktree" "$(jq -r --arg r "Edit(/$REPO/roles/**)" '.permissions.deny | index($r) != null' "$S")" true
 assert_eq "a seat.up 100 event was recorded" "$(event_count seat.up 100)" 1
 R="$STATE/seats/$N/seat.json"
 assert_eq "the seat record names the agent pane" "$(jq -r .pane "$R")" "$agent"

@@ -64,15 +64,26 @@ slot_count() { jq '.panes|length' "$layout_file"; }
 slot_field() { jq -r --argjson i "$1" --arg f "$2" '.panes[$i][$f]' "$layout_file" | sub; }
 want_labels() { local i n; n="$(slot_count)"; for ((i = 0; i < n; i++)); do slot_field "$i" label; done; }
 
+# BREADCRUMB 2026-10-11 - WO-20261011-4c5e. What broke: roles/worker.json allow.paths spells the seat's worktree
+#   "${worktree}/" but the gsub below only knew "${repo}", so the rendered allow rule came out as
+#   Edit(//<slot>/${worktree}/**) (found in worker-wo-20261011-4c5e's settings.json; the a429 worker saw it first). It stayed
+#   harmless only because a seat runs under bypassPermissions, where an allow rule restricts nothing. The deny side was never
+#   broken: roles/worker.json spells it "${repo}/specs/" and that token was substituted with the seat's worktree already.
+#   Why this fix: both tokens substitute to the seat's worktree. "${worktree}" is the canonical spelling because it says what
+#   the path is; "${repo}" reads as the main checkout, which is the misreading the a429 report made, and it stays as an alias
+#   because roles/{architect,interface-agent,monitor,orchestrator,worker}.json still use it. Rejected: rewriting those role
+#   files in this change (a worker's fence denies roles/, and the architect owns that migration) and accepting only
+#   "${worktree}" (it would leave the architect, monitor and deny paths with a literal token). Cost: two spellings render the
+#   same until the role files and roles/schema move to "${worktree}" alone. Case 01 asserts no "${" survives. Record: WO-20261011-4c5e.
 # render_settings: the role's allow and deny as Claude Code permission rules, deterministic so --check and --audit can
-# cmp it with the file on disk. ${repo} in a path is the seat's worktree, a relative path is under it, a trailing slash
-# means the whole directory. allow.paths and deny.paths become Edit rules (Edit covers Write), so bare Write and Edit
+# cmp it with the file on disk. ${worktree} (alias ${repo}) in a path is the seat's worktree, a relative path is under it, a
+# trailing slash means the whole directory. allow.paths and deny.paths become Edit rules (Edit covers Write), so bare Write and Edit
 # are dropped from allow.tools: a bare Edit would allow every path, which is what the role's paths exist to narrow.
 # A command holding a * renders as Bash(<cmd>) and Bash(<cmd> *) (bearings-v2 F-23: Claude Code never matches a :*
 # rule with a * mid-pattern); a plain command keeps the Bash(<cmd>:*) prefix form.
 render_settings() {
   jq --arg wt "$wt" '
-    def ab: gsub("\\$\\{repo\\}"; $wt) | if startswith("/") then . else $wt + "/" + . end;
+    def ab: gsub("\\$\\{(worktree|repo)\\}"; $wt) | if startswith("/") then . else $wt + "/" + . end;
     def cmd: if contains("*") then "Bash(\(.))", "Bash(\(.) *)" else "Bash(\(.):*)" end;
     def rule($t): ab as $a | "\($t)(/\($a)\(if ($a | endswith("/")) then "**" else "" end))";
     ((.allow.tools // []) | map(select(. != "Write" and . != "Edit"))) as $bare

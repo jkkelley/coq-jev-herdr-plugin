@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T053902Z-100-dfc2g",
+  "at": "2026-10-11T05:39:02Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4c5e",
+  "kind": "note",
+  "ticket": "WO-20261011-4c5e",
+  "pane": "wD3:p10",
+  "note": "work.started: worker seat begins worker fence paths resolve against the worktree, render_settings substitutes ${worktree} in allow.paths",
+  "evidence": [],
+  "observations": []
+}
