@@ -53,6 +53,10 @@
       "maxItems": 24,
       "items": { "$ref": "#/$defs/line" }
     },
+    "board_title": {
+      "$ref": "#/$defs/text",
+      "description": "the build board's heading when the design's own wording does not fit; optional"
+    },
     "board": {
       "type": "array",
       "maxItems": 24,

@@ -42,6 +42,5 @@ eq "render with no --in redraws from the out directory" "$before" "$(sum)"
 
 # The config rule a schema cannot say: poll_seconds + watch_seconds is 30 or less.
 jq '.poll_seconds = 25 | .watch_seconds = 10' "$REPO_ROOT/report/loop/config/board.json" > "$W/board.json"
-cp "$REPO_ROOT/report/loop/config/board.schema.json" "$W/board.schema.json"
 expect_exit 3 "a config whose poll and watch pass 30 is refused" env LOOP_CONFIG="$W/board.json" "$LOOP" render --in "$F" --out "$W/cfg-out"
 done_case

@@ -1,19 +1,188 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "coq/report/loop/config/board.schema.json",
+  "$id": "urn:coq:report:loop:config:board",
   "title": "factory board config",
-  "description": "Every value loop.sh needs that is not a record. Setting the board up on another repo is editing this file (RUNBOOK.md). poll_seconds is what the open page waits between asks for data.json; watch_seconds is what the watch pane waits between collects. A record is drawn within poll_seconds + watch_seconds, so the two must sum to 30 or less (AC-H3 of WO-20261011-616c).",
+  "description": "Every value loop.sh needs that is not a record. Setting the board up on another repo is editing this file (RUNBOOK.md). poll_seconds is what the open page waits between asks for data.json; watch_seconds is what the watch pane waits between collects. A record is drawn within poll_seconds + watch_seconds, so the two must sum to 30 or less (AC-H3 of WO-20261011-616c); loop.sh checks that, a schema cannot. Paths are relative to the repository root.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "poll_seconds", "watch_seconds", "out_dir"],
+  "required": [
+    "schema_version",
+    "poll_seconds",
+    "watch_seconds",
+    "out_dir",
+    "actor",
+    "inputs",
+    "line_statuses",
+    "stations",
+    "kickbacks",
+    "board",
+    "legend_notes"
+  ],
   "properties": {
     "schema_version": { "const": "1.0.0" },
     "poll_seconds": { "type": "integer", "minimum": 5, "maximum": 30 },
     "watch_seconds": { "type": "integer", "minimum": 1, "maximum": 25 },
     "out_dir": {
+      "$ref": "#/$defs/relpath",
+      "description": "where index.html and data.json are written; gitignored state"
+    },
+    "actor": {
       "type": "string",
-      "pattern": "^[a-z][A-Za-z0-9/_.-]*$",
-      "description": "where index.html and data.json are written, relative to the repository root; gitignored state"
+      "minLength": 1,
+      "maxLength": 80,
+      "description": "who the page says built it"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "events_dir",
+        "events_days",
+        "work_orders_dir",
+        "routes",
+        "roles_dir",
+        "playbooks_dir",
+        "herdr_config",
+        "belt_state",
+        "belt_max_age_seconds",
+        "owner_pane_label"
+      ],
+      "properties": {
+        "events_dir": {
+          "$ref": "#/$defs/relpath",
+          "description": "the event log: YYYY/MM/<utc>-<code>-<suffix>.json"
+        },
+        "events_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365,
+          "description": "records older than this many days are not read; a line's records are days old, never months"
+        },
+        "work_orders_dir": {
+          "$ref": "#/$defs/relpath",
+          "description": "ticket files WO-*.md with a JSON frontmatter, read in every subdirectory"
+        },
+        "routes": {
+          "$ref": "#/$defs/relpath",
+          "description": "the orchestrator's decision table"
+        },
+        "roles_dir": { "$ref": "#/$defs/relpath" },
+        "playbooks_dir": { "$ref": "#/$defs/relpath" },
+        "herdr_config": {
+          "$ref": "#/$defs/relpath",
+          "description": "carries .session and .workspace_label, the herdr workspace whose panes are listed"
+        },
+        "belt_state": {
+          "$ref": "#/$defs/relpath",
+          "description": "the route runner's state file; the belt runs while its age is within belt_max_age_seconds. Under factory/state, gitignored"
+        },
+        "belt_max_age_seconds": { "type": "integer", "minimum": 1 },
+        "owner_pane_label": {
+          "type": "string",
+          "minLength": 1,
+          "description": "a pane whose label contains this means the owner's page server is up"
+        }
+      }
+    },
+    "line_statuses": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "a ticket in one of these statuses is a line on the floor"
+    },
+    "stations": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "role", "does", "emits"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,15}$" },
+          "role": {
+            "type": ["string", "null"],
+            "description": "a roles/<role>.json name; null for a station with no seat (the owner)"
+          },
+          "title": {
+            "type": "string",
+            "description": "overrides the role file's title"
+          },
+          "model": {
+            "type": "string",
+            "description": "overrides the role file's model and effort"
+          },
+          "does": { "type": "string" },
+          "emits": {
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["kind", "code"],
+                "properties": {
+                  "kind": { "type": "string" },
+                  "code": { "type": "integer" }
+                }
+              }
+            ]
+          },
+          "takes": {
+            "type": "object",
+            "description": "route fields this station is the target of, when its role has several stations (the architect checks main after a merge: with verify)"
+          }
+        }
+      }
+    },
+    "kickbacks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["from", "to", "route"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "esc": { "type": "boolean" },
+          "route": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "code", "do"],
+            "properties": {
+              "kind": { "type": "string" },
+              "code": { "type": "integer" },
+              "do": { "type": "string" }
+            },
+            "description": "the row of the routes table this lane draws; its tag is derived from that row, and a lane naming no row is refused"
+          }
+        }
+      }
+    },
+    "board": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["k", "ticket"],
+        "properties": {
+          "k": { "type": "string" },
+          "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" }
+        }
+      },
+      "description": "the tickets the build board tracks, in order; the bar of each is derived from its status"
+    },
+    "board_title": { "type": "string" },
+    "legend_notes": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": { "type": "string" }
+      }
     }
+  },
+  "$defs": {
+    "relpath": { "type": "string", "pattern": "^[a-z][A-Za-z0-9/_.-]*$" }
   }
 }

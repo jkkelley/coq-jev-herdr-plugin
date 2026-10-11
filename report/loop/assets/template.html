@@ -331,6 +331,8 @@ function render(d) {
   document.getElementById("board").innerHTML = d.board.map(b =>
     `<span class="k">${esc(b.k)}</span><span class="t">${esc(b.t)}<small>${esc(b.sub)}</small></span>
      <span class="steps">${[0,1,2,3,4].map(i => `<i class="${i < b.step ? "on" : i === b.step && b.step > 0 ? "now" : ""}"></i>`).join("")}</span>`).join("");
+  // The locked markup says "what makes line 1 real", true of the design's one real line and no one else's; the entry may say better.
+  if (d.board_title) document.getElementById("board").parentElement.querySelector("h2").textContent = d.board_title;
   document.getElementById("legend").innerHTML = d.legend.map(([k, v]) => `<tr><td class="id">${esc(k)}</td><td>${esc(v)}</td></tr>`).join("");
   document.getElementById("sources").textContent = `${d.sources} · built ${at}`;
   wire();
