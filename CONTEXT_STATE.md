@@ -36,6 +36,40 @@
 
 
 
+
+## Checkpoint 2026-10-11 05:49 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4c5e, pane wD3:p10, slot 1 of ~/.treehouse/coq-jev-herdr-plugin-f314e6 leased to WO-20261011-4c5e (lease verified with treehouse status --json).
+- Branch feat/worker-fence-paths-resolve-against-the-worktree-, test pane wD3:p1V, reached only through herdr/bin/testpane.sh.
+- work.started 100 posted at 2026-10-11T05:39:02Z (events/2026/10/20261011T053902Z-100-dfc2g.json).
+
+#### Toolchain
+
+- herdr/bin/seat.sh render_settings now substitutes both ${worktree} and ${repo} with the seat's worktree, with a breadcrumb at the fix site.
+- herdr/tests/cases/01-seat-up-check-down.test.sh asserts no "${" survives in the rendered settings, allow carries Edit under the slot, deny carries roles/ of the slot.
+- Verified from the test pane: case 01 red before the fix (two allow-side assertions), then make -C herdr lint, make lint and make -C herdr test green (10 passed, 0 failed), roles/bin/render-playbook.sh roles playbooks --check exit 0.
+
+#### Active Tasks
+
+- WO-20261011-4c5e - Worker fence paths resolve against the worktree: render_settings substitutes ${worktree} in allow.paths and deny paths name the slot, not the main checkout: code and test landed on the branch, next is push and gh pr create with the acceptance criteria as the body, then post pr.opened 100 with the sha, then stop.
+- Not done by this seat: moving roles/*.json and roles/schema to the single spelling ${worktree}. The worker fence denies roles/, so the architect owns it; render_settings accepts both spellings until it lands.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: ${worktree} is the canonical spelling, ${repo} stays as an alias, because ${repo} reads as the main checkout, the misreading the a429 report made.
+
+### Hydration prompt
+
+Resume as worker for WO-20261011-4c5e - Worker fence paths resolve against the worktree: render_settings substitutes ${worktree} in allow.paths and deny paths name the slot, not the main checkout. Work only in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/1/coq-jev-herdr-plugin. Code and test are committed; push, open the PR with the acceptance criteria as the body, post pr.opened 100, stop.
+
 ## Checkpoint 2026-10-11 05:36 UTC
 
 ### Current state
