@@ -39,6 +39,36 @@
 
 
 
+
+## Checkpoint 2026-10-11 15:21 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, treehouse slot 2 leased to that ticket. Test pane wD3:p1V, run through herdr/bin/testpane.sh only (wrapper in the scratchpad: tp.sh).
+- Global prettier hook reformats Write and Edit targets; report/loop/assets/template.html and report/loop/design/ are in .prettierignore.
+
+#### Toolchain
+
+- report/loop/loop.sh: collect, validate, render. collect gathers events (last events_days), ticket frontmatters, roles, routes, playbooks, the herdr pane list (--panes FILE, --no-panes, else herdr by the session in herdr/config/herdr.json) and the belt state file age, runs lib/collect.jq, validates, prints. config/board.json now holds inputs, the nine stations, kickback routes, the board ticket list and legend notes; its schema is found beside loop.sh.
+- Derivation rules live in the header of lib/collect.jq: a record's kind is its own or the "kind:" prefix of a note; where the work is = the routes.json row the newest work record matches; by hand = PR in frontmatter and no pr.opened record (worker station hand, PR at the tester); a seat is up when its newest record is not seat.down and its pane is in the pane list.
+- Tests: make -C report/loop test = cases 01 to 06 green (schema, render, parity, derive, by-hand, board). make -C report/loop test-browser = 12 green. make lint all ok.
+
+#### Active Tasks
+
+- Step 2 landed: collect with cases 04-derive, 05-by-hand, 06-board. Live check: the board showed three real lines (eaa3, 616c, dc0d) with the right seats.
+- Next: S3 watch (loop.sh watch: collect every watch_seconds, write only when the data minus at and number changed, number from out_dir state) with a test case; S4 bearings stable GET /board and /board/data.json plus bearings tests; S5 monitor pane through monitors.sh take (monitors.json slot or bringup); S6 graph nodes CMP-factory-board and RUN-factory-board plus the lint rule (graph/ may be fenced; if the harness refuses, post blocked 423); S7 RUNBOOK.md, evidence, notes, PR.
+- S6 decision: the lint rule is a ratchet with a closed grandfather list, because 17 existing Component nodes have no defined_in edge to a RUN node.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. Step 3 is loop.sh watch: a loop that collects every watch_seconds and rewrites out_dir only when the entry changed apart from at and number, keeps number in a state file under out_dir, never leaves a half-written page, and has a case that proves the output files are untouched (same mtime) when nothing changed. Run it only in a labelled herdr pane; tests use a once or iterations seam, never a background process.
+
 ## Checkpoint 2026-10-11 15:10 UTC
 
 ### Current state
