@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T163027Z-100-8oitv",
+  "at": "2026-10-11T16:30:27Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-dc0d",
+  "kind": "note",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p1V",
+  "note": "pr.opened: PR 11 head f432c26; ACs evidenced (stub claude), ticket done on branch. Owner-only: a live bring-up with a real Claude seat resuming after the nudge",
+  "evidence": [],
+  "observations": []
+}
