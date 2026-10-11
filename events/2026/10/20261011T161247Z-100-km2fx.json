@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T161247Z-100-km2fx",
+  "at": "2026-10-11T16:12:47Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-38c7",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p1V",
+  "note": "pr.opened: PR 14 head e3fc362, origin/main merged, CHANGELOG.md and work-orders INDEX and README regenerated, make lint ok. Scope: event.sh, event.schema.json, .gitignore architect-widened",
+  "evidence": [],
+  "observations": []
+}
