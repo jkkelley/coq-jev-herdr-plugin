@@ -38,6 +38,221 @@
 
 
 
+
+
+
+
+
+
+
+## Checkpoint 2026-10-11 15:54 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- factory/bin/route.sh (once, run, status), factory/config/runner.json and runner.schema.json, factory/Makefile, factory/tests (run.sh, lib/world.sh, cases 01-07), factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner.
+- events/bin/event.sh accepts the factory record kinds and an optional --to ROLE; events/schema/event.schema.json carries both.
+- make -C factory test from the test pane: 7 passed, 0 failed.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: PR 14 open; review.changes 422 (20261011T154551Z-422-kuyed) asked for GOOD and NEVER lines in factory/RUNBOOK.md, added; the architect widened scope to event.sh, event.schema.json and .gitignore. Remaining: post one pr.opened for the new head (note records the scope widening) and stop.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
+Post one pr.opened 100 for the new head through events/bin/event.sh, naming the scope widening in its note, then stop.
+
+## Checkpoint 2026-10-11 15:05 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- factory/bin/route.sh (once, run, status), factory/config/runner.json and runner.schema.json, factory/Makefile, factory/tests (run.sh, lib/world.sh, cases 01-07), factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner.
+- events/bin/event.sh accepts the factory record kinds and an optional --to ROLE; events/schema/event.schema.json carries both.
+- make -C factory test from the test pane: 7 passed, 0 failed.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: all seven criteria evidenced on the ticket, retro note written. Remaining: push, open the one PR with the acceptance criteria as the body, post pr.opened 100 with the sha, stop. The architect reviews and merges; this seat does not run submit or done.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
+If the PR is not open yet, open it with gh pr create (acceptance criteria as the body) and post pr.opened 100 with the sha through events/bin/event.sh; then stop.
+
+## Checkpoint 2026-10-11 15:03 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Steps 1 to 5 done (step 5: factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner with defined_in, graph check ok, graph index regenerated). Steps 1 to 4 done (step 4: factory/Makefile, factory/tests run.sh, world.sh and cases 01-07, make -C factory test = 7 passed, 0 failed from wD3:p1V; route.sh run now stops on TERM at once via read -t). Steps 1 to 3: event.sh kinds and --to; factory/config/runner.json and runner.schema.json (factory/state/ is gitignored). factory/bin/route.sh (once, run, status; claim-then-perform ledger under factory/state/routed; --from-start, --repo, --routes, --state) smoke-tested against a scratch repo with a stub herdr. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Remaining: evidence for AC-H1 to AC-H7, retro note, work-order submit, then one PR with the finished ticket.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do the close-out: evidence --observed for AC-H1 to AC-H7, note, make lint and make -C factory test from wD3:p1V, one PR carrying the code and the ticket, post pr.opened 100, stop.
+
+## Checkpoint 2026-10-11 15:00 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Steps 1 to 4 done (step 4: factory/Makefile, factory/tests run.sh, world.sh and cases 01-07, make -C factory test = 7 passed, 0 failed from wD3:p1V; route.sh run now stops on TERM at once via read -t). Steps 1 to 3: event.sh kinds and --to; factory/config/runner.json and runner.schema.json (factory/state/ is gitignored). factory/bin/route.sh (once, run, status; claim-then-perform ledger under factory/state/routed; --from-start, --repo, --routes, --state) smoke-tested against a scratch repo with a stub herdr. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Step 5: factory/RUNBOOK.md and the graph nodes CMP-route-runner and RUN-route-runner. Then the PR with the acceptance criteria as the body.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do step 5: factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner with defined_in, graph.sh check, then land it, then evidence for AC-H1 to AC-H7 and the PR with make step from the test pane wD3:p1V through herdr/bin/testpane.sh.
+
+## Checkpoint 2026-10-11 14:54 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Steps 1, 2 and 3 done: event.sh kinds and --to; factory/config/runner.json and runner.schema.json (factory/state/ is gitignored). factory/bin/route.sh (once, run, status; claim-then-perform ledger under factory/state/routed; --from-start, --repo, --routes, --state) smoke-tested against a scratch repo with a stub herdr. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Step 5: RUNBOOK.md and the graph nodes CMP-route-runner and RUN-route-runner. Then the PR with the acceptance criteria as the body.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do step 4: factory/Makefile and factory/tests (run.sh in Podman, --network=none, stub herdr on PATH; cases wake, 500, escalate, restart idempotence, new routes row, belt state), then land it with make step from the test pane wD3:p1V through herdr/bin/testpane.sh.
+
+## Checkpoint 2026-10-11 14:52 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Steps 1 and 2 done: event.sh kinds and --to; factory/config/runner.json and runner.schema.json (factory/state/ is gitignored). Step 3: factory/bin/route.sh. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Step 5: RUNBOOK.md and the graph nodes CMP-route-runner and RUN-route-runner. Then the PR with the acceptance criteria as the body.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do step 3: factory/bin/route.sh (once, run, status; claim-then-perform ledger; --repo, --routes, --state, --from-start flags), then land it with make step from the test pane wD3:p1V through herdr/bin/testpane.sh.
+
+## Checkpoint 2026-10-11 14:50 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Step 1 done: event.sh kinds and --to. Step 2: factory/config/runner.json and its schema. Step 3: factory/bin/route.sh. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Step 5: RUNBOOK.md and the graph nodes CMP-route-runner and RUN-route-runner. Then the PR with the acceptance criteria as the body.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do step 2: factory/config/runner.json and runner.schema.json, then land it with make step from the test pane wD3:p1V through herdr/bin/testpane.sh.
+
 ## Checkpoint 2026-10-11 05:58 UTC
 
 ### Current state

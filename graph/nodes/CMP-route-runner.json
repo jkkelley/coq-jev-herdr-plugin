@@ -1,0 +1,38 @@
+{
+  "id": "CMP-route-runner",
+  "type": "Component",
+  "title": "factory/bin/route.sh: the orchestrator's decision table applied by a script, in a labelled herdr pane; claim-then-perform ledger so a restart never routes a record twice",
+  "status": "proposed",
+  "text": "Applies factory/config/routes.json and nothing else; new behaviour is a routes row. Never routes records written by its own seat.",
+  "sources": [
+    {
+      "kind": "ticket",
+      "id": "WO-20261011-38c7",
+      "at": null
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "SCH-routes"
+    },
+    {
+      "kind": "owned_by",
+      "to": "ROL-orchestrator"
+    },
+    {
+      "kind": "defined_in",
+      "to": "RUN-route-runner"
+    },
+    {
+      "kind": "depends_on",
+      "to": "CMP-queue"
+    }
+  ],
+  "created": "2026-10-11T15:00Z",
+  "updated": "2026-10-11T15:00Z",
+  "schema": "factory/config/runner.schema.json",
+  "data": [
+    "factory/config/runner.json"
+  ]
+}
