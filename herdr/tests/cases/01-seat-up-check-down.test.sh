@@ -8,12 +8,20 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 world_up seat || exit 1
 T=WO-20261010-8777; N=worker-wo-20261010-8777
 
+echo "-- a ticket seat needs the labelled test pane in the tab it was started from"
+env -u HERDR_TAB_ID "$SEAT" --ticket "$T" --role worker --worktree "$REPO" >/dev/null 2>"$WORLD/err"; rc=$?
+assert_eq "refused with exit 3 when the caller is in no tab" "$rc" 3
+assert_match "the refusal names the missing test pane" "$(cat "$WORLD/err")" "no pane labelled 'test - herdr'"
+assert_eq "nothing was built" "$(h workspace list | jq '[.result.workspaces[] | select(.label == "coq")] | length')" 0
+
 echo "-- door 1: --ticket $T --role worker"
 out="$("$SEAT" --ticket "$T" --role worker --worktree "$REPO")"; rc=$?
 assert_eq "door 1 exits 0" "$rc" 0
 assert_eq "the seat is named from the role label, lowercased" "$(jq -r .name <<<"$out")" "$N"
 ws="$(jq -r .workspace <<<"$out")"; tab="$(jq -r .tab <<<"$out")"; agent="$(jq -r .agent <<<"$out")"
 assert_eq "the workspace carries the configured label" "$(h workspace list | jq -r --arg w "$ws" '.result.workspaces[] | select(.workspace_id == $w) | .label')" coq
+assert_match "the brief names the test pane the worker may use" "$(h agent read "$N" --source recent-unwrapped --lines 200)" "Your test pane is $WORLD_TEST_PANE; run commands only there, through herdr/bin/testpane.sh"
+assert_eq "COQ_TEST_PANE rode the environment line into the agent pane" "$(h pane read "$agent" --source recent-unwrapped --lines 200 | grep -cF "COQ_TEST_PANE=$WORLD_TEST_PANE")" 1
 assert_eq "the tab carries the seat name" "$(h tab list --workspace "$ws" | jq -r --arg t "$tab" '.result.tabs[] | select(.tab_id == $t) | .label')" "$N"
 assert_eq "seat-1x2 builds 2 panes with SPEC-04 labels" "$(pane_labels "$ws" "$tab")" "MONITOR - $N|claude-sonnet-5-5 - high - $T worker"
 assert_eq "herdr answers for the agent, idle" "$(h agent get "$N" | jq -r .result.agent.agent_status)" idle

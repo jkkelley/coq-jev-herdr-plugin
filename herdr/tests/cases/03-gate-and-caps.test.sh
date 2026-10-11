@@ -12,7 +12,7 @@ echo "-- gate: a worker is refused while the monitor seat is down"
 "$SEAT" --ticket "$T" --role worker --worktree "$REPO" >/dev/null 2>"$WORLD/err"; rc=$?
 assert_eq "refused with exit 3" "$rc" 3
 assert_match "the refusal names the bring-up order" "$(cat "$WORLD/err")" "bring-up order: monitor seat monitor is down"
-assert_eq "nothing was built" "$(h workspace list | jq '.result.workspaces | length')" 0
+assert_eq "nothing was built" "$(h workspace list | jq '[.result.workspaces[] | select(.label == "coq")] | length')" 0
 
 echo "-- door 2: the monitor seat comes up by task"
 out="$("$SEAT" --role monitor --task "watch the factory" --worktree "$REPO")"; rc=$?

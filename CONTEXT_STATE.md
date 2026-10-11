@@ -21,6 +21,94 @@
 
 
 
+
+
+## Checkpoint 2026-10-11 00:25 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Seat worker-wo-20261010-8fa8 (claude-sonnet-5-5, worker playbook) works WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case.
+- Workspace and lease: /home/luna/worktrees/WO-20261010-8fa8 on branch feat/guard-lease-watcher-in-monitors-1-unfreeze-sh-wa; the architect ruled this worktree is the lease (no treehouse slot, no slot.sh). work.started 100 is events/2026/10/20261010T222442Z-100-kbqko.json.
+- origin/main was merged into the branch (9243818) after the architect changed roles/worker.json (59c01e9): the role allows herdr/bin/testpane.sh *, denies herdr pane run *. CONTEXT_STATE.md was taken from main (checkpoint.sh owns it; this branch's earlier two checkpoints stay in its history), work-orders/INDEX.md rebuilt with work-order.sh reindex.
+- Tests run only in the labelled test pane wD3:pF (this seat keeps its old rendered settings, so herdr pane run wD3:pF still works until retire). Wait on a unique marker: `herdr pane run wD3:pF 'clear; cd <wt> && make -C herdr test 2>&1 | grep ...; echo DONE8fa8-N'` then wait-output --regex '^DONE8fa8-N'.
+
+#### Toolchain
+
+- Steps A and B landed (878f65a, e562f71): monitors.json slots 1.1.1 lease and 1.1.2 guard, bringup breadcrumb, stub compaction-guard, cases 04 to 06, unfreeze.sh exemptions `$now_iso` fix.
+- Step C (this step), per the architect's list: (1) herdr/bin/testpane.sh <pane> <cmd...> runs herdr pane run only when the pane equals COQ_TEST_PANE, exit 3 refused, 2 usage, breadcrumb citing the ticket. (2) herdr/bin/seat.sh resolves the pane labelled 'test - herdr...' in the tab it was started from (HERDR_TAB_ID, HERDR_WORKSPACE_ID), refuses a ticket seat (exit 3) when none exists, exports COQ_TEST_PANE next to COQ_SEAT. (3) roles/bin/brief.sh takes --test-pane and prints "Your test pane is X; run commands only there, through herdr/bin/testpane.sh." (4) herdr/tests/lib/world.sh gives every world an architect-fixture workspace with a pane labelled "test - herdr fixture" and exports HERDR_TAB_ID, HERDR_WORKSPACE_ID, WORLD_TEST_PANE; case 01 proves the refusal, the brief and the exported variable; new case 07-testpane (stub herdr) proves the named pane runs and any other is refused; cases 03, 04, 06 count or pick workspaces by label coq.
+- Proof: full suite from wD3:pF, tests: 7 passed, 0 failed; make lint clean.
+- The permission layer denied one extra sed -i on roles/bin/brief.sh (cosmetic: the second usage string still lacks [--test-pane ID]); left as is, not worked around.
+
+#### Active Tasks
+
+- WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case: done on the branch, PR #5 open (https://github.com/jkkelley/coq-jev-herdr-plugin/pull/5) carrying code and the archived ticket. Note, evidence for AC-H1 to AC-H4 and the retro are on the ticket. The architect reviews and merges; the worker never merges its own PR.
+- Gaps for the architect: no slot.sh or treehouse lease exists; SPEC-04 s-seat does not list COQ_TEST_PANE (specs/ is denied to workers); testpane.sh fences pane run only; roles/bin/brief.sh's second usage string lacks [--test-pane ID].
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-11 00:3x UTC, architect: wrapper script, not a playbook-only rule; roles/ stays the architect's, only roles/bin/brief.sh was delegated to this ticket.
+- 2026-10-11 00:3x UTC, worker: the suite world carries an architect-fixture workspace so the production resolution path (label prefix in HERDR_TAB_ID's tab) is what every case runs, instead of an env override that skips it.
+
+#### Lessons Learned
+
+- Merging origin/main conflicts in CONTEXT_STATE.md and work-orders/INDEX.md every time a checkpoint lands on both sides; take main's file and let the next make step write a fresh checkpoint, and run work-order.sh reindex for the index.
+- A seat's own deny list can block a Bash call that merely mentions a denied path (sed -i on roles/); do not retry it, ask.
+
+### Hydration prompt
+
+Run from /home/luna/worktrees/WO-20261010-8fa8 as worker-wo-20261010-8fa8. Read playbooks/worker.md and this checkpoint. The ticket is done and PR #5 is open. Post pr.opened 100 with the sha (events/bin/event.sh add) and stop; the architect merges. If review_changes_requested wakes you, read the review on PR #5 and fix inside your paths.
+
+## Checkpoint 2026-10-11 00:23 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Seat worker-wo-20261010-8fa8 (claude-sonnet-5-5, worker playbook) works WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case.
+- Workspace and lease: /home/luna/worktrees/WO-20261010-8fa8 on branch feat/guard-lease-watcher-in-monitors-1-unfreeze-sh-wa; the architect ruled this worktree is the lease (no treehouse slot, no slot.sh). work.started 100 is events/2026/10/20261010T222442Z-100-kbqko.json.
+- origin/main was merged into the branch (9243818) after the architect changed roles/worker.json (59c01e9): the role allows herdr/bin/testpane.sh *, denies herdr pane run *. CONTEXT_STATE.md was taken from main (checkpoint.sh owns it; this branch's earlier two checkpoints stay in its history), work-orders/INDEX.md rebuilt with work-order.sh reindex.
+- Tests run only in the labelled test pane wD3:pF (this seat keeps its old rendered settings, so herdr pane run wD3:pF still works until retire). Wait on a unique marker: `herdr pane run wD3:pF 'clear; cd <wt> && make -C herdr test 2>&1 | grep ...; echo DONE8fa8-N'` then wait-output --regex '^DONE8fa8-N'.
+
+#### Toolchain
+
+- Steps A and B landed (878f65a, e562f71): monitors.json slots 1.1.1 lease and 1.1.2 guard, bringup breadcrumb, stub compaction-guard, cases 04 to 06, unfreeze.sh exemptions `$now_iso` fix.
+- Step C (this step), per the architect's list: (1) herdr/bin/testpane.sh <pane> <cmd...> runs herdr pane run only when the pane equals COQ_TEST_PANE, exit 3 refused, 2 usage, breadcrumb citing the ticket. (2) herdr/bin/seat.sh resolves the pane labelled 'test - herdr...' in the tab it was started from (HERDR_TAB_ID, HERDR_WORKSPACE_ID), refuses a ticket seat (exit 3) when none exists, exports COQ_TEST_PANE next to COQ_SEAT. (3) roles/bin/brief.sh takes --test-pane and prints "Your test pane is X; run commands only there, through herdr/bin/testpane.sh." (4) herdr/tests/lib/world.sh gives every world an architect-fixture workspace with a pane labelled "test - herdr fixture" and exports HERDR_TAB_ID, HERDR_WORKSPACE_ID, WORLD_TEST_PANE; case 01 proves the refusal, the brief and the exported variable; new case 07-testpane (stub herdr) proves the named pane runs and any other is refused; cases 03, 04, 06 count or pick workspaces by label coq.
+- Proof: full suite from wD3:pF, tests: 7 passed, 0 failed; make lint clean.
+- The permission layer denied one extra sed -i on roles/bin/brief.sh (cosmetic: the second usage string still lacks [--test-pane ID]); left as is, not worked around.
+
+#### Active Tasks
+
+- Remaining: (5) work-order.sh note on the ticket recording the decision (wrapper, COQ_TEST_PANE from the architect tab, brief carries the pane, fixture in the world); then evidence for AC-H1 to AC-H4 with --observed, work-order.sh done, one PR carrying code and the finished ticket with the acceptance criteria as its body, post pr.opened 100 with the sha, stop. Never merge the PR.
+- For the architect, in the report: testpane.sh fences pane run only (send-text and send-keys are not denied); SPEC-04 s-seat text does not list COQ_TEST_PANE (specs/ is denied to workers); no slot.sh and no treehouse lease exist.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-11 00:3x UTC, architect: wrapper script, not a playbook-only rule; roles/ stays the architect's, only roles/bin/brief.sh was delegated to this ticket.
+- 2026-10-11 00:3x UTC, worker: the suite world carries an architect-fixture workspace so the production resolution path (label prefix in HERDR_TAB_ID's tab) is what every case runs, instead of an env override that skips it.
+
+#### Lessons Learned
+
+- Merging origin/main conflicts in CONTEXT_STATE.md and work-orders/INDEX.md every time a checkpoint lands on both sides; take main's file and let the next make step write a fresh checkpoint, and run work-order.sh reindex for the index.
+- A seat's own deny list can block a Bash call that merely mentions a denied path (sed -i on roles/); do not retry it, ask.
+
+### Hydration prompt
+
+Run from /home/luna/worktrees/WO-20261010-8fa8 as worker-wo-20261010-8fa8. Read playbooks/worker.md and this checkpoint. Steps A, B and C have landed and the suite is green (7 cases). Next: work-order.sh note (the decision), evidence AC-H1..AC-H4 with --observed from the test-pane runs, work-order.sh done, push, one PR (gh pr create) with the acceptance criteria as the body, then post pr.opened 100 with the sha and stop.
+
 ## Checkpoint 2026-10-11 00:10 UTC
 
 ### Current state

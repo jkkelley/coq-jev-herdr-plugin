@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261010T222442Z-100-kbqko",
+  "at": "2026-10-10T22:24:42Z",
+  "code": 100,
+  "seat": "worker-wo-20261010-8fa8",
+  "kind": "note",
+  "ticket": "WO-20261010-8fa8",
+  "pane": null,
+  "note": "work.started: worker seat begins guard lease watcher in monitors 1, unfreeze.sh --watch plugged in by bringup, with its Podman case",
+  "evidence": [],
+  "observations": []
+}

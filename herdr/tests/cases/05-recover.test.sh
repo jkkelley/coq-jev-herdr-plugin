@@ -58,7 +58,8 @@ assert_match "the guard ran and was ok" "$out" "^ok compaction-guard$"
 assert_match "the ticket nobody holds is warned, with its title" "$out" "^WARN $T2 - fixture ticket nobody holds \(no live seat"
 assert_eq "the ticket with a seat is not warned" "$(grep -c "^WARN $T " <<<"$out")" 0
 assert_eq "--check called the guard once, without --apply" "$(grep -c '^recover$' "$GUARD_LOG")" 1
-assert_eq "--check wrote no note 100 beyond bringup's four" "$(( $(event_count note 100) - notes0 ))" 4
+# Six since WO-20261010-8fa8: monitors, the monitor seat and four reserved panes (lease and guard joined events and queue).
+assert_eq "--check wrote no note 100 beyond bringup's six" "$(( $(event_count note 100) - notes0 ))" 6
 
 echo "-- AC-H3: the halt flag stops both modes and changes nothing"
 touch "$STATE/HALT"; before="$(find "$EVENTS" -name '*.json' | wc -l)"; : > "$GUARD_LOG"

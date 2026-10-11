@@ -36,6 +36,19 @@ world_up() {
   (herdr --session "t-$name" server > "$WORLD/server.log" 2>&1 &)
   for _ in $(seq 1 15); do sleep 1; herdr --session "t-$name" workspace list >/dev/null 2>&1 && break; done
   herdr --session "t-$name" workspace list >/dev/null 2>&1 || { echo "world_up: herdr session t-$name did not start"; cat "$WORLD/server.log"; return 1; }
+  # BREADCRUMB 2026-10-10 - WO-20261010-8fa8. What broke (would break): seat.sh now refuses a ticket seat unless the tab it
+  #   was started from holds a pane labelled "test - herdr", so every case that seats a worker or reviewer was refused with
+  #   exit 3. Why this fix: the world gets what the live system has, an architect tab with a labelled test pane, in a
+  #   workspace of its own (architect-fixture, never the configured coq one), and the case shell is "inside" it through
+  #   HERDR_TAB_ID and HERDR_WORKSPACE_ID, exactly as a pane in herdr would be. WORLD_TEST_PANE is its id. Rejected: an env
+  #   override that skips the check, which would leave the production path untested. Cost: `workspace list` now holds this
+  #   fixture, so a case counts or picks workspaces by label (03, 04 and 06 did not).
+  local aw; aw="$(herdr --session "t-$name" workspace create --label architect-fixture --cwd "$REPO" --no-focus)"
+  HERDR_WORKSPACE_ID="$(jq -r '.result.workspace.workspace_id // empty' <<<"$aw")"; HERDR_TAB_ID="$(jq -r '.result.tab.tab_id // empty' <<<"$aw")"
+  WORLD_TEST_PANE="$(jq -r '.result.root_pane.pane_id // empty' <<<"$aw")"
+  [ -n "$WORLD_TEST_PANE" ] && herdr --session "t-$name" pane rename "$WORLD_TEST_PANE" "test - herdr fixture" >/dev/null \
+    || { echo "world_up: no architect fixture pane in t-$name"; return 1; }
+  export HERDR_WORKSPACE_ID HERDR_TAB_ID WORLD_TEST_PANE
   trap 'world_down' EXIT
 }
 h() { herdr --session "$COQ_HERDR_SESSION" "$@"; }

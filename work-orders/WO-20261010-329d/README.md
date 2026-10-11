@@ -11,7 +11,6 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261010-d354` | ready | p0 | - | [Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree](WO-20261010-d354-dated-entry-files-yyyy-mm-yyyymmdd-name-ext-fron.md) |
 | `WO-20261010-fbad` | ready | p0 | - | [Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles](WO-20261010-fbad-land-the-p0-foundation-branch-spec-00-01-03-04-0.md) |
 | `WO-20261010-539f` | ready | p0 | - | [NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue](WO-20261010-539f-nats-jetstream-is-the-producer-consumer-bus-and-.md) |
-| `WO-20261010-8fa8` | ready | p1 | - | [Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case](WO-20261010-8fa8-guard-lease-watcher-in-monitors-1-unfreeze-sh-wa.md) |
 | `WO-20261010-976e` | draft | p1 | - | [SPEC-02 roles and permissions written from roles/*.json](WO-20261010-976e-spec-02-roles-and-permissions-written-from-roles.md) |
 | `WO-20261010-1c23` | draft | p1 | - | [SPEC-13 testing and lint: local fast, CI full, container-sandbox as source of truth](WO-20261010-1c23-spec-13-testing-and-lint-local-fast-ci-full-cont.md) |
 | `WO-20261010-2dab` | draft | p1 | - | [SPEC-15 SDLC end to end with parallel PRs and cleanup](WO-20261010-2dab-spec-15-sdlc-end-to-end-with-parallel-prs-and-cl.md) |

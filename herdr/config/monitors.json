@@ -12,13 +12,15 @@
       "reserved": [
         {
           "pos": "1.1.1",
-          "name": "monitor",
-          "what": "monitor seat compaction watcher"
+          "name": "lease",
+          "what": "guard lease watcher",
+          "command": "${repo}/herdr/bin/unfreeze.sh --watch 30"
         },
         {
           "pos": "1.1.2",
-          "name": "architect",
-          "what": "architect compaction watcher"
+          "name": "guard",
+          "what": "compaction-guard watch",
+          "command": "compaction-guard watch --interval 15"
         },
         {
           "pos": "1.1.3",

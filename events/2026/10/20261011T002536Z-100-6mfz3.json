@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T002536Z-100-6mfz3",
+  "at": "2026-10-11T00:25:36Z",
+  "code": 100,
+  "seat": "worker-wo-20261010-8fa8",
+  "kind": "note",
+  "ticket": "WO-20261010-8fa8",
+  "pane": null,
+  "note": "pr.opened: PR 5 at d5af290, monitors 1 lease and guard watchers, unfreeze exemptions fix, testpane.sh and COQ_TEST_PANE, cases 04-07; suite 7 passed, 0 failed",
+  "evidence": [],
+  "observations": []
+}
