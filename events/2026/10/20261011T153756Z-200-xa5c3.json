@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T153756Z-200-xa5c3",
+  "at": "2026-10-11T15:37:56Z",
+  "code": 200,
+  "seat": "merger-3d78",
+  "kind": "merge",
+  "ticket": "WO-20261011-3d78",
+  "pane": "wD3:p1V",
+  "note": "merged: PR 12 squash-merged at 444e2af on head f266924; test 201 iniv5 and review 201 m5lg5. cleanup ran (branches deleted, main at origin/main). slot 4 release NOT done: still leased, holds live processes",
+  "evidence": [
+    "444e2af0de4f9db680fb30f12cf2cd54c7d62eaa"
+  ],
+  "observations": []
+}

@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T153351Z-201-m5lg5",
+  "at": "2026-10-11T15:33:51Z",
+  "code": 201,
+  "seat": "reviewer-3d78",
+  "kind": "review",
+  "ticket": "WO-20261011-3d78",
+  "pane": "wD3:p1V",
+  "note": "review.passed on PR 12 head f266924: AC-H1..H3 each have an observed line; changed files are the ticket tree plus script-regenerated index/changelog; no em dash; UTC; tester 201 iniv5 on same sha. Non-blocking: 2 stale test labels",
+  "evidence": [
+    "events/2026/10/20261011T153215Z-201-iniv5.json"
+  ],
+  "observations": [
+    {
+      "path": "report/sitrep/tests/run.sh",
+      "line": 24,
+      "saw": "label says seven id chips, asserts 15",
+      "expected": "label matches the asserted count"
+    },
+    {
+      "path": "report/sitrep/tests/run.sh",
+      "line": 25,
+      "saw": "label says three row blocks, asserts 4",
+      "expected": "label matches the asserted count"
+    }
+  ]
+}
