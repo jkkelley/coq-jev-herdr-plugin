@@ -14,7 +14,7 @@ downs() { grep -c -e '--down' "$W/seat.log" | tr -d ' '; }
 next() { sleep 1; : > "$W/order.log"; }
 
 echo "-- AC-H2: a test 201 brings the reviewer up, wakes it, then takes the tester down and records seat.down 100"
-id0=$(rec pr.opened 100 worker-wo-20261011-aaaa $T); run_once
+rec pr.opened 100 worker-wo-20261011-aaaa $T >/dev/null; run_once
 assert_eq "the tester is up: pr.opened seated it" "$(ids_of seat.up | grep -c .)" 1
 next; id=$(rec test.passed 201 tester-wo-20261011-aaaa $T); run_once
 assert_eq "seat.sh up, the prompt, then seat.sh down, in that order" "$(order)" "seat herdr seat "
@@ -38,12 +38,12 @@ assert_eq "the worker was woken first, then the tester went down" "$(order)" "he
 assert_match "worker prompt" "$(tail -1 "$HLOG")" "agent prompt worker-wo-20261011-bbbb record $idf playbook"
 assert_eq "the seat call was a --down" "$(tail -1 "$W/seat.log")" "--down tester-wo-20261011-bbbb"
 next; V=WO-20261011-cccc; rec pr.opened 100 worker-wo-20261011-cccc $V >/dev/null; run_once; next
-ide=$(rec test.failed 422 tester-wo-20261011-cccc $V 3); run_once
+rec test.failed 422 tester-wo-20261011-cccc $V 3 >/dev/null; run_once
 assert_eq "an escalated record was written" "$(ids_of escalated | grep -c .)" 1
 assert_eq "and the tester went down" "$(tail -1 "$W/seat.log")" "--down tester-wo-20261011-cccc"
 
 echo "-- review.passed seats the merger and takes the reviewer down; review.changes wakes the worker and takes the reviewer down"
-next; idr=$(rec review.passed 201 reviewer-wo-20261011-aaaa $T); run_once
+next; rec review.passed 201 reviewer-wo-20261011-aaaa $T >/dev/null; run_once
 assert_eq "merger up, prompt, reviewer down" "$(order)" "seat herdr seat "
 assert_eq "reviewer went down" "$(tail -1 "$W/seat.log")" "--down reviewer-wo-20261011-aaaa"
 next; rec review.changes 422 reviewer-wo-20261011-bbbb $U 1 >/dev/null; run_once
