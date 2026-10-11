@@ -12,4 +12,3 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261010-090c` | draft | p0 | WO-20261010-7c55 | [SITREP site: Go server, websocket owner channel, wireframe viewer, link to the factory dashboard](WO-20261010-090c-sitrep-site-go-server-websocket-owner-channel-wi.md) |
 | `WO-20261010-7c55` | draft | p0 | - | [Wireframes: herdr tab and pane layouts, SITREP site, factory dashboard, game pane](WO-20261010-7c55-wireframes-herdr-tab-and-pane-layouts-sitrep-sit.md) |
 | `WO-20261010-c180` | draft | p1 | WO-20261010-090c | [Factory dashboard: live view of the queue, seats, records and leases, Factorio feel](WO-20261010-c180-factory-dashboard-live-view-of-the-queue-seats-r.md) |
-| `WO-20261011-3d78` | in-progress | p1 | - | [SITREP page renders from a data file through one script, so every SITREP has the locked shape](WO-20261011-3d78-sitrep-page-renders-from-a-data-file-through-one.md) |
