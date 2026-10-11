@@ -80,6 +80,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` Observation 2026-10-11 03:4x UTC (architect): it happened twice. The second time the review ran as ( cd <slot> && make lint && make -C tools/bearings test ) in test pane wD3:p1R, yet treehouse return --force still reported 'Terminated lingering processes: zsh (2538982)' and the pane was gone. A bare ( cd <slot> && pwd ) in a fresh pane leaves the pane's zsh at the main checkout with no fd under the slot and treehouse status --json lists no process for the slot, so the subshell alone is not the leak; something in the lint or test run (podman bind mount of the slot, or a child the harness leaves) is. The fix must not depend on how the pane was used: seat.sh --down reads treehouse status --json processes for the slot first, logs each pid and name, and refuses --force when any listed process is not one of the seat's own panes (its tab), so the architect sees the list and decides; the review recipe stays a subshell.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
