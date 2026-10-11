@@ -42,6 +42,32 @@
 
 
 
+
+## Checkpoint 2026-10-11 16:10 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, slot 2. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- Blocked 423 posted (events 20261011T155317Z-423-lvhaz) for graph/ writes; the graph half waits in report/loop/graph-handoff/.
+
+#### Toolchain
+
+- All steps landed: collect, watch, bearings /board routes, monitors slot 2.2.1, RUNBOOK. Evidence recorded for AC-H1, AC-H2, AC-H4, AC-H5; AC-H3 and AC-H6 left unchecked on purpose (live stable restart, graph writes). Retro note written.
+
+#### Active Tasks
+
+- Remaining: gh pr create with the acceptance criteria as the body and the findings, then post pr.opened 100 with the sha, then stop. The architect merges, applies the graph handoff and restarts stable.
+
+#### Blockers
+
+- None for the close-out; the graph writes need the architect.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c. The branch is pushed. Run gh pr create with the ticket's acceptance criteria as the body (state AC-H3 and AC-H6 as not yet observed and why), post pr.opened 100 with the sha, and stop.
+
 ## Checkpoint 2026-10-11 16:06 UTC
 
 ### Current state
