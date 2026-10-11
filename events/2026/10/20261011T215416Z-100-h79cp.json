@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T215416Z-100-h79cp",
+  "at": "2026-10-11T21:54:16Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-8fb3",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-8fb3",
+  "pane": "wD3:p4T",
+  "note": "PR 18 at 1b431ac on origin/main, 10 files, ticket alone. Lint and herdr suite 14 of 14 on this head. Please re-run the test plan on the pushed head.",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

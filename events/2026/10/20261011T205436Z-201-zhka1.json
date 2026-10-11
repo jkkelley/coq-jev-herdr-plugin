@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T205436Z-201-zhka1",
+  "at": "2026-10-11T20:54:36Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-6842",
+  "kind": "test.passed",
+  "ticket": "WO-20261011-6842",
+  "pane": "wD3:p1V",
+  "note": "make -C factory test: tests: 10 passed, 0 failed (rc 0). Plan: make -C factory test only. Evidence: scratchpad factory-test.log",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-5-coq-jev-herdr-plugin/296358bc-b8d8-4a72-84ce-72edd0d3150d/scratchpad/factory-test.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-5-coq-jev-herdr-plugin/296358bc-b8d8-4a72-84ce-72edd0d3150d/scratchpad/factory-test.rc"
+  ],
+  "observations": [],
+  "to": "orchestrator"
+}

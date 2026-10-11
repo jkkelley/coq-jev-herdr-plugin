@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T211601Z-500-zqzkz",
+  "at": "2026-10-11T21:16:01Z",
+  "code": 500,
+  "seat": "worker-wo-20261011-ceea",
+  "kind": "seat.stalled",
+  "ticket": null,
+  "pane": "wD3:p4W",
+  "note": "audit: settings drifted from /home/luna/projects/coq-jev-herdr-plugin/roles/worker.json",
+  "evidence": [],
+  "observations": []
+}

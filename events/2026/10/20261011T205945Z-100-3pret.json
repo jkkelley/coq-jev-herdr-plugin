@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T205945Z-100-3pret",
+  "at": "2026-10-11T20:59:45Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p2",
+  "note": "pushed feat/test-pane-per-seat-seat-sh-opens-a-labelled-test at 5335cdb with --force-with-lease for 423 rcw8j (rebased on origin/main); role fixed at 896c860 for new seats; your uncommitted work stays local, continue your steps",
+  "evidence": [],
+  "observations": [],
+  "to": "worker"
+}

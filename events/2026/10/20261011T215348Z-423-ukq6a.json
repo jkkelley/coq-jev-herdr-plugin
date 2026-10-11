@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T215348Z-423-ukq6a",
+  "at": "2026-10-11T21:53:48Z",
+  "code": 423,
+  "seat": "route-runner",
+  "kind": "escalated",
+  "ticket": "WO-20261011-8fb3",
+  "pane": null,
+  "note": "escalated record 20261011T215254Z-423-mgk2v",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

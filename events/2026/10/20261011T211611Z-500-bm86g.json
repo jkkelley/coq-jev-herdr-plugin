@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T211611Z-500-bm86g",
+  "at": "2026-10-11T21:16:11Z",
+  "code": 500,
+  "seat": "worker-wo-20261010-8777",
+  "kind": "seat.stalled",
+  "ticket": null,
+  "pane": "w2:p1",
+  "note": "audit: hand-started: no live seat record (COQ_SEAT=worker-wo-20261010-8777)",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T215254Z-423-mgk2v",
+  "at": "2026-10-11T21:52:54Z",
+  "code": 423,
+  "seat": "worker-wo-20261011-8fb3",
+  "kind": "blocked",
+  "ticket": "WO-20261011-8fb3",
+  "pane": "wD3:p4T",
+  "note": "Rebuilt on origin/main, head 1b431ac, 10 files, lint and suite 14 of 14. Needs your force push (my role denies it): git push --force-with-lease origin feat/seat-sh-adopt-a-running-claude-session-becomes-a from this slot.",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

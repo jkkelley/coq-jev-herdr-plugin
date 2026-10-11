@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T213519Z-100-86efn",
+  "at": "2026-10-11T21:35:19Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-f896",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p52",
+  "note": "PR 20 open at 6deb5e6 on origin/main: test pane per seat; make lint and make -C herdr test green from the test pane",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

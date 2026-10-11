@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T205134Z-100-oqp67",
+  "at": "2026-10-11T20:51:34Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p2",
+  "note": "pushed feat/break-glass-one-owner-authorised-action-at-a-tim at e131b33 with --force-with-lease (rebuilt on origin/main, clean tree); your rendered settings still deny push --force*, role fixed at 896c860 for new seats; continue close-out",
+  "evidence": [],
+  "observations": [],
+  "to": "worker"
+}

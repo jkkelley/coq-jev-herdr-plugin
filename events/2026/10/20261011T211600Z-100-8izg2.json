@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T211600Z-100-8izg2",
+  "at": "2026-10-11T21:16:00Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-6842",
+  "pane": "wD3:p2",
+  "note": "21:18Z: hand-started belt (pane wD3:p0, pid 595773) stopped; bringup.sh plugged route runner into slot 2.2.2 and flow watch into 2.2.3 after PR 19 merged; bringup --check all ok",
+  "evidence": [],
+  "observations": []
+}

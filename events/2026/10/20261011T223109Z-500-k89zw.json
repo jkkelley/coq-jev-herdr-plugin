@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T223109Z-500-k89zw",
+  "at": "2026-10-11T22:31:09Z",
+  "code": 500,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "records incident: shared .git/info/exclude gained events/2026/10/* at 20:47Z (a worker after 422 pyv1n); 151 records invisible to git, five records commits 8596074 to 23fc526 carried none, seat.sh salvage blind too. Lines removed 22:20Z",
+  "evidence": [],
+  "observations": []
+}

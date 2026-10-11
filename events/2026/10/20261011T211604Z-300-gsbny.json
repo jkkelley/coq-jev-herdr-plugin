@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T211604Z-300-gsbny",
+  "at": "2026-10-11T21:16:04Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": null,
+  "pane": null,
+  "note": "routed seat.stalled 500 (20261011T211600Z-500-iddqj): wake monitor",
+  "evidence": [
+    "events/2026/10/20261011T211600Z-500-iddqj.json"
+  ],
+  "observations": [],
+  "to": "monitor"
+}

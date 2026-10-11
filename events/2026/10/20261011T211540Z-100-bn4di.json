@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T211540Z-100-bn4di",
+  "at": "2026-10-11T21:15:40Z",
+  "code": 100,
+  "seat": "bringup",
+  "kind": "note",
+  "ticket": null,
+  "pane": null,
+  "note": "bringup: pane-flow flow watch plugged in",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T214236Z-100-id802",
+  "at": "2026-10-11T21:42:36Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "note",
+  "ticket": "WO-20261011-f896",
+  "pane": null,
+  "note": "owner notified for 500 nv23g: PR 20 tester seated by hand 21:42Z; prompted once with 86efn",
+  "evidence": [],
+  "observations": []
+}

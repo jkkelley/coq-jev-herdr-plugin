@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T211611Z-500-pbhmv",
+  "at": "2026-10-11T21:16:11Z",
+  "code": 500,
+  "seat": "hand-codex-8118",
+  "kind": "seat.stalled",
+  "ticket": null,
+  "pane": null,
+  "note": "audit: hand-started: no live seat record (COQ_SEAT=unset)",
+  "evidence": [],
+  "observations": []
+}

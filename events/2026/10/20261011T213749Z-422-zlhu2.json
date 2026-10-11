@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T213749Z-422-zlhu2",
+  "at": "2026-10-11T21:37:49Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261011-23df",
+  "kind": "review.changes",
+  "ticket": "WO-20261011-23df",
+  "pane": null,
+  "note": "PR 15 head 9d46a6c: changes requested. AC-H3 is checked but its own evidence says the slot release failed and was never re-run; SOP-0001 Verification is an empty stub. make lint ok; no em dash, no markers.",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "work-orders/archive/2026/WO-20261011-23df-tester-reviewer-and-merger-seats-come-up-through.md",
+      "line": 74,
+      "saw": "AC-H3 is [x] yet its observed line says slot release failed (merged 200 xa5c3",
+      "expected": " 'slot 4 release NOT done') and PR 13 cleanup was skipped, so no merger run shows cleanup, slot release and merged 200 together"
+    },
+    {
+      "path": "docs/sops/SOP-0001-bring-up-a-tester-reviewer-or-merger-seat-on-a-ticket-and-wake-it-by-hand.md",
+      "line": 34,
+      "saw": "Verification holds only the template text and no run output, yet AC-H5 evidence says it has verification; step 6 line 31 says the merger downs the worker seat and returns the slot, which no chain observed",
+      "expected": "Verification records what a real bring-up printed, and step 6 matches what was observed"
+    },
+    {
+      "path": "roles/merger.json",
+      "line": 83,
+      "saw": "breadcrumb Cost says the deny list must keep the merger from downing anything but the merged ticket's worker; deny.commands is still only 'git push --force*'",
+      "expected": "the deny list or the playbook Forbidden list carries that fence, or the breadcrumb states it is not yet fenced"
+    }
+  ],
+  "attempt": 1,
+  "to": "architect"
+}

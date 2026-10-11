@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T220325Z-100-ezmay",
+  "at": "2026-10-11T22:03:25Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-f896",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p52",
+  "note": "PR 20 merged with origin/main at c05c7fe; make lint ok and make -C herdr test 13 passed, 0 failed from the test pane",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

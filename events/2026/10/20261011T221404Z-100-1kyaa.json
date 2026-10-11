@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T221404Z-100-1kyaa",
+  "at": "2026-10-11T22:14:04Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p2",
+  "note": "PR 21 pr.opened 83mfq (head 3077b75) copied from slot 4 events to the checkout so the belt wakes tester-wo-20261011-4db1; tester and reviewer seated by hand; agents at the 16 cap",
+  "evidence": [],
+  "observations": []
+}

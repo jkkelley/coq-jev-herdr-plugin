@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T220006Z-500-cylom",
+  "at": "2026-10-11T22:00:06Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261011-8fb3",
+  "pane": null,
+  "note": "stall: pr.opened 100 20261011T215416Z-100-h79cp has no tester record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T211416Z-100-jywm9",
+  "at": "2026-10-11T21:14:16Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261011-23df",
+  "kind": "work.started",
+  "ticket": "WO-20261011-23df",
+  "pane": null,
+  "note": "reviewer started on PR 15 head 798dad3: reading ticket acceptance criteria, then diff, then make lint from test pane wD3:p1V; GitHub reports mergeable CONFLICTING",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T211933Z-100-spvk6",
+  "at": "2026-10-11T21:19:33Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "note",
+  "ticket": "WO-20261011-23df",
+  "pane": null,
+  "note": "owner notified for 500 ayu4y: PR 15 pr.opened 49yug has no tester record after 90s; merger reports conflicts on CHANGELOG.md and INDEX.md",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T215348Z-300-cqbzl",
+  "at": "2026-10-11T21:53:48Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261011-8fb3",
+  "pane": null,
+  "note": "routed blocked 423 (20261011T215254Z-423-mgk2v): escalate architect",
+  "evidence": [
+    "events/2026/10/20261011T215254Z-423-mgk2v.json"
+  ],
+  "observations": [],
+  "to": "architect"
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T211736Z-100-pfbw3",
+  "at": "2026-10-11T21:17:36Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "note",
+  "ticket": "WO-20261011-23df",
+  "pane": null,
+  "note": "PR 15 head 798dad3 not mergeable: no test 201 or review 201 on this sha (last test 201 fbp6b, review 422 dymfl on 9ed0690). Dry-run vs main e024e79 conflicts: CHANGELOG.md, work-orders/INDEX.md. Not merged or resolved.",
+  "evidence": [],
+  "observations": []
+}

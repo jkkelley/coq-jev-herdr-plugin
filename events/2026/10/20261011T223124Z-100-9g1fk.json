@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T223124Z-100-9g1fk",
+  "at": "2026-10-11T22:31:24Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": null,
+  "note": "owner notified for 500 k89zw: 151 event records hidden by shared git exclude from 20:47Z; lines removed 22:20Z",
+  "evidence": [],
+  "observations": []
+}

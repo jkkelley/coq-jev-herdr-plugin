@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T210532Z-300-8g9k2",
+  "at": "2026-10-11T21:05:32Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261011-8fb3",
+  "pane": null,
+  "note": "routed review.changes 422 (20261011T210527Z-422-er3bq): wake worker",
+  "evidence": [
+    "events/2026/10/20261011T210527Z-422-er3bq.json"
+  ],
+  "observations": [],
+  "to": "worker"
+}

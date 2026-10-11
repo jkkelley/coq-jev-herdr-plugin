@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T220001Z-300-7kpsq",
+  "at": "2026-10-11T22:00:01Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261011-8fb3",
+  "pane": null,
+  "note": "routed pr.opened 100 (20261011T215416Z-100-h79cp): wake tester",
+  "evidence": [
+    "events/2026/10/20261011T215416Z-100-h79cp.json"
+  ],
+  "observations": [],
+  "to": "tester"
+}

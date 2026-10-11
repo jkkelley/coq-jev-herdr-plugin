@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T212922Z-100-tyqgo",
+  "at": "2026-10-11T21:29:22Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "21:30Z: bearings stable server had stopped itself after 240 idle minutes (wait pane message); restarted with serve --join, same key, pid 2610591, wait pane re-armed to wD3:p2; board serves 200 with the key",
+  "evidence": [],
+  "observations": []
+}
