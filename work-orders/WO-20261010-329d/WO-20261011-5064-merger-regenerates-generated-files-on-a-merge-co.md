@@ -81,6 +81,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` architect 21:25Z: start deferred. The ticket exists only on chore/architect-records-20261011; starting from main failed and a stray commit 7c58cde reached main. Starts from main resume once the records branch has merged to main through the line (after PR 15 and PR 17).
 - `2026-10-11` architect 21:20Z: generated-path set seen in every 409 today: CHANGELOG.md, changelog/, work-orders/INDEX.md, epic README.md, graph/INDEX.md, graph/GRAPH.mmd (graph.sh index); CONTEXT_STATE.md and .gitignore keep both sides by union. Nine hand merges by the architect on 2026-10-11 (PR 11, 15 x3, 16, records branch x3) were all this set.
 
 ## Outcome
