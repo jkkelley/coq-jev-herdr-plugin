@@ -4,15 +4,15 @@
   "slug": "worker-fence-paths-resolve-against-the-worktree-",
   "title": "Worker fence paths resolve against the worktree: render_settings substitutes ${worktree} in allow.paths and deny paths name the slot, not the main checkout",
   "type": "bug",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p3",
   "created": "2026-10-11",
   "updated": "2026-10-11",
   "created_at": "2026-10-11T03:28:10+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/worker-fence-paths-resolve-against-the-worktree-",
-  "pr": null,
-  "closed": null,
+  "pr": 10,
+  "closed": "2026-10-11",
   "approval": {
     "via": "override",
     "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
@@ -62,8 +62,10 @@ The a429 worker reported that roles/worker.json as rendered by seat.sh render_se
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the rendered settings.json for a ticket seat contains no literal ${worktree} or ${repo}, allows Edit under <slot>/ and denies <slot>/roles/
-- [ ] `AC-H2` *(human)* render-playbook.sh roles playbooks --check is clean and make -C herdr test passes from the labelled test pane
+- [x] `AC-H1` *(human)* the rendered settings.json for a ticket seat contains no literal ${worktree} or ${repo}, allows Edit under <slot>/ and denies <slot>/roles/
+  - observed `2026-10-11` case 01 in herdr/tests on f882ff6 from wD3:p1V asserts no role token survives, allow carries Edit under the seat worktree and deny carries <slot>/roles/ (both allow assertions failed before the fix); 10 passed 0 failed
+- [x] `AC-H2` *(human)* render-playbook.sh roles playbooks --check is clean and make -C herdr test passes from the labelled test pane
+  - observed `2026-10-11` from wD3:p1V on f882ff6: render-playbook.sh roles playbooks --check exit 0, make lint all ok, make -C herdr test 10 passed 0 failed; lint again on the merge head c97fff7
 
 ## Test plan
 
@@ -83,6 +85,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-11` Retro: the worker stalled after the guard ack and needed one nudge (WO-20261011-dc0d). The PR conflicted with main on CHANGELOG.md only; resolved in the slot by merging origin/main and regenerating with bin/changelog.sh render, nothing hand-edited. Follow-up left to the architect by the PR: move roles/*.json and roles/schema to the single ${worktree} spelling; ${repo} stays an alias until then.
 - `2026-10-11` Decision 2026-10-11 05:4x UTC (architect): amended before approval. Verified against seat worker-wo-20261011-36d7's rendered settings.json: deny rules already name the slot (${repo} maps to the seat worktree in render_settings), so the deny half of the original report is dropped; the defect is the unsubstituted ${worktree} in allow.paths. Freedom [fixed]: pick one spelling for the seat worktree in role paths and make render_settings accept both while the comment and the role schema name the one. Approved --no-lavish: Claude seat, Lavish prohibited by the owner hard rule.
 
 ## Outcome
