@@ -20,6 +20,7 @@ image:
 	bash $(HERE)tests/run.sh --image-only
 lint:
 	python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" $(HERE)config/board.json $(HERE)config/board.schema.json
+	python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" $(HERE)config/blueprint.json $(HERE)config/blueprint.schema.json
 	for f in $(HERE)tests/fixtures/*.json; do $(HERE)loop.sh validate "$$f"; done
 	jq -e --slurpfile b $(HERE)config/board.json '.board_dir == $$b[0].out_dir' $(HERE)../../tools/bearings/config/bearings.json >/dev/null || { echo 'bearings board_dir and the board config out_dir differ' >&2; exit 1; }
 	shellcheck -S warning $(HERE)loop.sh $(HERE)lib/blueprint/gather.sh $(HERE)tests/run.sh $(HERE)tests/browser.sh $(HERE)tests/lib/*.sh $(HERE)tests/cases/*.sh

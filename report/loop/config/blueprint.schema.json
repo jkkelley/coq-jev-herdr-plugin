@@ -1,0 +1,288 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:coq:report:loop:schema:blueprint-config",
+  "title": "blueprint view config",
+  "description": "The config of the blueprint view of report/loop (WO-20261011-ceea): which graph, which tickets, which gates and which words. loop.sh --view blueprint reads it the way it reads config/board.json, and a second repository changes this file and nothing else. The four gate ids are fixed because lib/blueprint/entry.jq derives each from the graph; everything a reader sees about them (role, model, text, the record on the belt after it) is config.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "view",
+    "poll_seconds",
+    "watch_seconds",
+    "out_dir",
+    "actor",
+    "title",
+    "label",
+    "inputs",
+    "stations",
+    "board_title",
+    "board_done_max",
+    "diagram_title",
+    "legend_title",
+    "legend_notes",
+    "key"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "view": {
+      "const": "blueprint"
+    },
+    "poll_seconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 30
+    },
+    "watch_seconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 30
+    },
+    "out_dir": {
+      "type": "string",
+      "minLength": 1,
+      "description": "relative to the repository root; the dev tier's out_dir, which make lint holds equal"
+    },
+    "actor": {
+      "type": "string",
+      "minLength": 1
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "description": "the page's document title, also its heading in the browser tab"
+    },
+    "label": {
+      "type": "string",
+      "minLength": 1,
+      "description": "the word before the build number in the eyebrow (the board says LOOP)"
+    },
+    "inputs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["graph_nodes_dir", "graph_mermaid", "work_orders_dir"],
+      "properties": {
+        "graph_nodes_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "graph_mermaid": {
+          "type": "string",
+          "minLength": 1
+        },
+        "work_orders_dir": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "stations": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "prefixItems": [
+        {
+          "$ref": "#/$defs/gate_node"
+        },
+        {
+          "$ref": "#/$defs/gate_decision"
+        },
+        {
+          "$ref": "#/$defs/gate_runbook"
+        },
+        {
+          "$ref": "#/$defs/gate_work"
+        }
+      ],
+      "items": false
+    },
+    "board_title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "board_done_max": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "how many of the newest done tickets the board lists after the open ones"
+    },
+    "diagram_title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "legend_title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "legend_notes": {
+      "type": "array",
+      "items": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    "links": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node"],
+      "properties": {
+        "node": {
+          "type": "string",
+          "pattern": "^https?://.*\\{id\\}",
+          "description": "where a node id on the page links to; {id} is the node id"
+        }
+      }
+    },
+    "key": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["eyebrow", "items"],
+        "properties": {
+          "eyebrow": {
+            "type": "string",
+            "minLength": 1
+          },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "prefixItems": [
+                {
+                  "type": "string",
+                  "pattern": "^(pill|dot|ks):[a-z-]+$"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "items": false
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "out": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "code"],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "minLength": 1
+            },
+            "code": {
+              "type": "integer",
+              "minimum": 100,
+              "maximum": 599
+            }
+          }
+        }
+      ]
+    },
+    "gate": {
+      "type": "object",
+      "required": ["id", "role", "model", "does", "out"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "does": {
+          "type": "string",
+          "minLength": 1
+        },
+        "out": {
+          "$ref": "#/$defs/out"
+        },
+        "id": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "gate_node": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/gate"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "node"
+            }
+          }
+        }
+      ]
+    },
+    "gate_decision": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/gate"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "decision"
+            }
+          }
+        }
+      ]
+    },
+    "gate_runbook": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/gate"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "runbook"
+            }
+          }
+        }
+      ]
+    },
+    "gate_work": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/gate"
+        },
+        {
+          "properties": {
+            "id": {
+              "const": "work"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
