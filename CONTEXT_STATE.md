@@ -43,6 +43,38 @@
 
 
 
+
+## Checkpoint 2026-10-11 17:59 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-e618 on WO-20261011-e618 - Interface agent seat owns the bearings page: owner requests become records and the done line comes from it. PR 17 is open against main from branch feat/interface-agent-seat-owns-the-bearings-page-owne. The ticket is submitted (in-review, pr 17) and done, archived under work-orders/archive/2026/ on the branch, and this step pushes the move.
+- PR 14 (route runner) and PR 16 (board) are open, not merged. The live stable bearings page was not touched.
+
+#### Toolchain
+
+- make -C interface test and make -C herdr test were green at the last run (12 herdr cases). CI runs the rest.
+
+#### Active Tasks
+
+- Post pr.opened 100 with the head sha and pr 17, then hold. The tester seat takes PR 17 next.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- None this checkpoint.
+
+### Hydration prompt
+
+WO-20261011-e618 is closed out on its branch with PR 17 open. Post pr.opened 100 with the head sha if it is not posted yet, and stop; there is nothing else for this seat to do.
+
 ## Checkpoint 2026-10-11 17:51 UTC
 
 ### Current state
