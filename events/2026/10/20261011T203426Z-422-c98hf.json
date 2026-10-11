@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T203426Z-422-c98hf",
+  "at": "2026-10-11T20:34:26Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261011-6842",
+  "kind": "review.changes",
+  "ticket": "WO-20261011-6842",
+  "pane": null,
+  "note": "PR 19 fails step 2 and is DIRTY: it carries other tickets' files (PR 17 interface seat, graph, seat.sh, SOP, ticket files). AC-H1 to AC-H4 each have evidence. Lint not confirmed.",
+  "evidence": [
+    "work-orders/archive/2026/WO-20261011-6842-flow-watch-a-shell-watcher-in-a-monitors-pane-tu.md"
+  ],
+  "observations": [
+    {
+      "path": "interface/bin/interface.sh",
+      "line": 1,
+      "saw": "file from PR 17 WO-20261011-e618 is in this PR and not on main",
+      "expected": "only files of this ticket"
+    },
+    {
+      "path": "herdr/bin/seat.sh",
+      "line": 1,
+      "saw": "seat.sh changed by WO-20261011-23df and e618 work, not by this ticket",
+      "expected": "untouched or only this ticket's change"
+    },
+    {
+      "path": "graph/nodes/DEC-never-hardcode.json",
+      "line": 1,
+      "saw": "11 graph nodes and 10 other ticket files in this PR (81 non-record files vs 33 of this ticket)",
+      "expected": "only this ticket's files plus records"
+    },
+    {
+      "path": "work-orders/archive/2026/WO-20261011-6842-flow-watch-a-shell-watcher-in-a-monitors-pane-tu.md",
+      "line": 1,
+      "saw": "PR 19 head c1c2edd is CONFLICTING with main, the two merge commits are local and unpushed",
+      "expected": "pushed head mergeable"
+    }
+  ],
+  "attempt": 1,
+  "to": "worker"
+}

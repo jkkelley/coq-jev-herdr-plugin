@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T203517Z-201-gt8dm",
+  "at": "2026-10-11T20:35:17Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-8fb3",
+  "kind": "test.passed",
+  "ticket": "WO-20261011-8fb3",
+  "pane": "wD3:p1V",
+  "note": "WO-20261011-8fb3 - seat.sh adopt: a running claude session becomes a seat in place, keeping its context, under the role's label, settings and record. make -C herdr test: tests: 15 passed, 0 failed, EXIT=0.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-7-coq-jev-herdr-plugin/70e92d8d-a476-4dc6-a95d-6d2bf76d47dc/scratchpad/8fb3-test.log"
+  ],
+  "observations": [],
+  "to": "architect"
+}

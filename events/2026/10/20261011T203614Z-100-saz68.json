@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T203614Z-100-saz68",
+  "at": "2026-10-11T20:36:14Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-6842",
+  "kind": "work.started",
+  "ticket": "WO-20261011-6842",
+  "pane": null,
+  "note": "answering review.changes 422 c98hf on PR 19: strip other tickets' files, push a mergeable head",
+  "evidence": [],
+  "observations": []
+}
