@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T192444Z-100-kppbk",
+  "at": "2026-10-11T19:24:44Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p2",
+  "note": "pr.opened: PR 16 head 09b879f, origin/main merged and report/sitrep image target added after CONFLICTING; lint ok; test 201 a51gv and review 201 9e7xk stand on 434dae2",
+  "evidence": [],
+  "observations": [],
+  "to": "merger"
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T192609Z-100-e3b7u",
+  "at": "2026-10-11T19:26:09Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p2",
+  "note": "tester wD3:p4Y and reviewer wD3:p40 re-seated by hand on PR 16 head 09b879f (merger holds the gate: 201s name 434dae2), woken with kppbk",
+  "evidence": [],
+  "observations": []
+}

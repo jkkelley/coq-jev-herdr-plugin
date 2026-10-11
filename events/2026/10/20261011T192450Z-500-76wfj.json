@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T192450Z-500-76wfj",
+  "at": "2026-10-11T19:24:50Z",
+  "code": 500,
+  "seat": "route-runner",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": null,
+  "note": "route failed for pr.opened 100, record 20261011T192444Z-100-kppbk: herdr agent prompt tester-wo-20261011-616c failed",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}
