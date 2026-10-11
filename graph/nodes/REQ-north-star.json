@@ -9,8 +9,12 @@
     {
       "kind": "decided_by",
       "to": "DEC-game-host-linux-native"
+    },
+    {
+      "kind": "decided_by",
+      "to": "DEC-system-runs-the-loop"
     }
   ],
   "created": "2026-10-10T18:55Z",
-  "updated": "2026-10-10T18:55Z"
+  "updated": "2026-10-11T15:36Z"
 }

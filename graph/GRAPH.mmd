@@ -41,6 +41,7 @@ flowchart LR
   DEC-sitrep-local-first["DEC-sitrep-local-first<br/>SITREP client/server runs locally in WSL"]
   DEC-spike5-passed["DEC-spike5-passed<br/>Spike 5 passed 2026-10-10: a PNG pushed "]
   DEC-system-before-agents["DEC-system-before-agents<br/>Monitoring and the system come up before"]
+  DEC-system-runs-the-loop["DEC-system-runs-the-loop<br/>The system runs the loop, never an agent"]
   DEC-templates-over-handwriting["DEC-templates-over-handwriting<br/>Test plans, harnesses and records are ge"]
   DEC-tiers-everywhere["DEC-tiers-everywhere<br/>stable, uat and dev tiers for every runn"]
   DEC-variants-parallel["DEC-variants-parallel<br/>Several coq-term variants are designed a"]
@@ -119,8 +120,9 @@ flowchart LR
   CMP-jenkins-lint -- implements --> DEC-system-before-agents
   CMP-jenkins-lint -- depends_on --> CMP-knowledge-graph
   CMP-knowledge-graph -- decided_by --> DEC-xml-specs-bounded
-  CMP-monitor-seat -- implements --> REQ-event-log
   CMP-monitor-seat -- decided_by --> DEC-system-before-agents
+  CMP-monitor-seat -- decided_by --> DEC-system-runs-the-loop
+  CMP-monitor-seat -- implements --> REQ-event-log
   CMP-pane-renderer -- risks --> RSK-pixels-in-pane
   CMP-pane-renderer -- verified_by --> SPK-05-pane-graphics
   CMP-player-seat -- decided_by --> DEC-mvp-player-haiku
@@ -130,8 +132,9 @@ flowchart LR
   CMP-qud-adapter -- verified_by --> SPK-02-harmony-mod
   CMP-queue -- implements --> REQ-locks-and-queues
   CMP-queue -- owned_by --> ROL-orchestrator
-  CMP-role-seats -- defined_in --> RUN-role-seats-on-a-pr
   CMP-role-seats -- decided_by --> DEC-system-before-agents
+  CMP-role-seats -- decided_by --> DEC-system-runs-the-loop
+  CMP-role-seats -- defined_in --> RUN-role-seats-on-a-pr
   CMP-role-seats -- implements --> REQ-event-log
   CMP-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
   CMP-sitrep-site -- decided_by --> DEC-sitrep-local-first
@@ -145,6 +148,8 @@ flowchart LR
   DEC-per-package-cicd-semver -- decided_by --> DEC-monorepo-apache2
   DEC-spike5-passed -- supersedes --> RSK-pixels-in-pane
   DEC-spike5-passed -- implements --> SPK-05-pane-graphics
+  DEC-system-runs-the-loop -- implements --> REQ-north-star
+  DEC-system-runs-the-loop -- depends_on --> DEC-system-before-agents
   DEC-tiers-everywhere -- supersedes --> DEC-bearings-vendored-tiers
   DEC-variants-parallel -- decided_by --> DEC-own-game-terminal
   IFC-owner-channel -- decided_by --> DEC-page-only-owner-channel
@@ -157,6 +162,7 @@ flowchart LR
   REQ-compaction-rule -- implements --> DEC-system-before-agents
   REQ-locks-and-queues -- implements --> REQ-factory-node-contract
   REQ-north-star -- decided_by --> DEC-game-host-linux-native
+  REQ-north-star -- decided_by --> DEC-system-runs-the-loop
   ROL-architect -- decided_by --> DEC-permissions-by-role
   ROL-interface-agent -- decided_by --> DEC-permissions-by-role
   ROL-merger -- decided_by --> DEC-permissions-by-role

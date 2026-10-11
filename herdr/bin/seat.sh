@@ -535,10 +535,12 @@ else
   # runtime (dotfiles Rule 19; owner 2026-09-22).
   surface=lavish; [ "$runtime" = claude ] && surface=artifact
   unset_markers='for v in $(env | sed -n '\''s/^\(CLAUDECODE\|CLAUDE_CODE_[A-Z0-9_]*\|CLAUDE_PID\|CLAUDE_EFFORT\|AI_AGENT\)=.*/\1/p'\''); do unset "$v"; done; '
-  # A role that cannot run git writes its records to this checkout's events/ (COQ_EVENTS_ROOT, read by events/bin/event.sh),
-  # because a record left untracked in the slot dies with `treehouse return --force` on --down (PR 13's test 201, 2026-10-11,
-  # WO-20261011-23df; the full reason is the breadcrumb at ROOT in event.sh). A role with git commits its own records in the slot.
-  ev_root=""; jq -e '[.deny.commands[]?] | index("git *") != null' "$role_file" >/dev/null 2>&1 && ev_root="$SL_REPO/events"
+  # Every seat writes its records to this checkout's events/ (COQ_EVENTS_ROOT, read by events/bin/event.sh), never to the slot:
+  # a record left untracked in a slot dies with `treehouse return --force` on --down (PR 13's test 201, 2026-10-11,
+  # WO-20261011-23df; the full reason is the breadcrumb at ROOT in event.sh). One root also means the route runner and the
+  # board read one log; a per-role rule (only roles without git) was tried first and left the reviewer's and merger's records
+  # in PR 12's slot, since those roles may run git but never push from a shared slot.
+  ev_root="$SL_REPO/events"
   line="$unset_markers$(printf 'cd %q && export COQ_SEAT=%q COQ_TEST_PANE=%q COQ_ROLE=%q COQ_TICKET=%q COQ_ROLE_FILE=%q COQ_WORKTREE=%q COQ_REPO=%q COQ_EVENTS_ROOT=%q RAIL_SURFACE=%q PATH=%q:"$PATH"' \
     "$wt" "$name" "$tpane" "$role" "$id" "$role_file" "$wt" "$SL_REPO" "$ev_root" "$surface" "$SL_REPO/bin")"
   sl_mut pane wait-output "$a" --regex "$SL_PROMPT_RE" --timeout "$(sl_cfg .prompt_timeout_ms)" >/dev/null 2>&1 \

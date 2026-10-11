@@ -16,8 +16,8 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); SCHEMA=$HERE/../schema/event
 #   leased treehouse slot wrote its record as an untracked file there, and `treehouse return --force` (seat.sh --down) wiped
 #   it: tester-wo-20261011-9639's test 201 20261011T151907Z-201-ftoqv on PR 13 is gone. A tester or reviewer cannot commit
 #   (its role denies git), so nothing in the slot could have kept it. Why this fix: seat.sh exports COQ_EVENTS_ROOT, the
-#   events/ of the checkout that brought the seat up, for every role that cannot run git, so the record lands where the
-#   architect's own commits pick it up and no slot return can reach it; the schema still comes from this tree. Rejected:
+#   events/ of the checkout that brought the seat up, for every seat, so the record lands where the architect's own commits
+#   (later: the route runner) pick it up and no slot return can reach it; the schema still comes from this tree. Rejected:
 #   letting those roles run `git add events && git commit` (the deny on git is the fence that keeps a reviewer from touching
 #   history) and copying on --down alone (a seat killed before --down still loses the file; seat.sh salvages as a second net).
 #   Cost: a record from such a seat is an untracked file on the architect's checkout until the next make step.
