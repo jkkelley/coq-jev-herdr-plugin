@@ -37,6 +37,85 @@
 
 
 
+
+## Checkpoint 2026-10-11 05:58 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at 04361fa (PR #10 merged) plus this step. No open PRs. Main checkout /home/luna/projects/coq-jev-herdr-plugin on main. Treehouse pool ~/.treehouse/coq-jev-herdr-plugin-f314e6: slot 1 available, nothing leased. seat.sh now leases a slot per ticket seat, checks it out on the ticket branch (WO-20261011-c077, PR #8), and --down lists the slot's processes and refuses --force past a foreign one (WO-20261011-36d7, PR #9) before returning it.
+- Live herdr session stable, workspace coq (wD3). Architect tab: this seat wD3:p2 is the full left column; tool grid right: wD3:p1V test pane "test - herdr" (third pane: pF and p1R were both killed by treehouse return --force, see WO-20261011-36d7), wD3:p1N bearings-stable (server), wD3:pG bearings-stable-wait, wD3:pH open, wD3:p1M open (bare label after the first stop), wD3:pJ open. Monitor seat monitor (haiku) wD3:p1E in tab monitor. Three monitors tabs up (bringup.sh --check: all ok). Monitors 1: 1.1.1 wD3:pK guard lease watcher (unfreeze.sh --watch 30, ticking), 1.1.2 wD3:pM compaction-guard watch, 1.1.3 open for the orchestrator watcher. Monitors 2: events tail and queue list. Worker seats 8fa8, a429, 2d04, c077, 36d7 and 4c5e are down.
+- Owner page: stable bearings tier, URL from `tools/bearings/scripts/bearings.sh stable url` (never write the keyed URL into a record: public repo, hard rule no PII). Key rotated 2026-10-11 00:07 UTC with `bearings.sh stable rotate-key --to wD3:p2`; the old key in git history is dead. Server in wD3:p1N bound to this session, wait loop in wD3:pG forwarding wakes into wD3:p2 (restarted 03:44 UTC as the live check for WO-20261010-2d04; the panes came from OPEN grid slots, the architect column untouched). Replies go with reply.mjs --tier stable --to <m-id>; the owner's thread is m-20261010192521524-wfo6h.
+- compaction-guard 1.2.8 binds this seat. recover.sh --check warns 112 host-wide stale guard sessions (other projects' dead seats; their resume_cmd would relaunch them) and was deliberately not applied.
+- Caves of Qud: Windows GOG build copied to /home/luna/games/caves-of-qud; Spike 1 still needs the native Linux build from the owner.
+
+#### Toolchain
+
+- herdr/bin: seat-lib.sh, seat.sh (resolves the pane labelled "test - herdr" in the tab it was started from, exports COQ_TEST_PANE, refuses a ticket seat without one), retire.sh, monitors.sh, bringup.sh, recover.sh, unfreeze.sh (exemptions jq fixed), testpane.sh (a worker runs commands only in COQ_TEST_PANE, wrapped in a subshell; the role denies herdr pane run *). Podman suite herdr/tests/run.sh cases 01-10 green from the labelled test pane (tests: 10 passed, 0 failed); case 08 covers the lease, branch checkout and null-branch refusal, 09 the testpane.sh subshell, 10 the --down process listing and foreign refusal. roles/bin/brief.sh --test-pane names the pane in the brief.
+- tools/bearings/scripts/bearings.sh: serve forwards --join; rotate-key stops, drops the key from server.json, restarts with --join and the session.json binding, keeps the panes, restarts the wait loop (container cases T4c). serve and wait claim OPEN grid slots by label prefix (config open_label_prefix) and stop hands them back relabelled; nothing is split inside a seat (WO-20261010-2d04).
+- bin/step.sh: lint, changelog, commit, push, checkpoint; /compact only with --compact; compaction-guard owns compaction.
+- `make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [CP=body.md]` is the only way a step lands. Checkpoint bodies live in the scratchpad as cpN.md.
+- Tests run only from the labelled test pane wD3:p1V: `herdr pane run wD3:p1V "( cd <checkout> && git --no-pager log --oneline -1 && make lint 2>&1 | tail -3 && make -C herdr test 2>&1 | tail -30 ); echo MARKER"` then `herdr pane wait-output wD3:p1V --regex '^MARKER$' --timeout 580000` (the timeout is milliseconds). Never leave the pane's shell cwd inside a slot (WO-20261011-36d7).
+- Work orders: $HOME/.claude/skills/work-order/scripts/work-order.sh; close-out after the merge is submit --pr N, evidence --index N --observed, note, done, cleanup, then one make step (c077 shape).
+
+#### Active Tasks
+
+- WO-20261010-a429 - seat.sh leases a treehouse slot for the worker and the worker playbook names the real lease tool: done, PR #6 merged at 10b69af, branches deleted, seat down, slot 1 returned. Follow-ups the worker reported, not yet ticketed: render_settings leaves ${worktree} unsubstituted in allow.paths (malformed Edit allow rule); deny path ${repo}/roles/ names the main checkout so a worker edits roles/ in its worktree freely.
+- WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat: done, PR #7 merged at 4d8efdd (after merging main into the branch; INDEX.md and the epic README regenerated with reindex), live AC-H1 held at 03:44 UTC, seat down, slot returned, branches deleted.
+- WO-20261011-c077 - seat.sh checks out the ticket branch in the slot it leases, so a worker starts on its branch without the architect touching the slot: done, PR #8 merged at 3bbe50a, both ACs held live.
+- WO-20261011-4c5e - Worker fence paths resolve against the worktree: render_settings substitutes ${worktree} in allow.paths and deny paths name the slot, not the main checkout: done, PR #10 merged at 04361fa (amended first: the deny side already rendered against the slot; only the literal ${worktree} in allow.paths was broken). Follow-up for the architect, not yet ticketed: move roles/*.json and roles/schema to the single ${worktree} spelling, ${repo} is an alias until then.
+- WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else': draft p2; three of four ticket seats on 2026-10-11 stalled after the ack and needed herdr agent prompt by hand.
+- WO-20261011-36d7 - The labelled test pane never keeps its cwd inside a treehouse slot, so treehouse return --force cannot kill it: done, PR #9 merged at a3d06c2, all three ACs held (live: test pane survived the whole cycle, --down returned the seat.sh-owned lease). Known limit: treehouse lists slot processes by cwd only. Keep running review commands as ( cd <slot> && ... ).
+- WO-20261011-3435 - Worker test-pane fence closes its gaps: SPEC-04 s-seat lists COQ_TEST_PANE, testpane.sh denies pane send-text and send-keys, brief.sh usage names --test-pane: draft p3, bundles the 8fa8 gaps.
+- WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case: done, PR #5 merged. Its reported gaps are WO-20261011-3435.
+- Next: WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else' (draft, it removes a hand step from every seat). Then WO-20261011-3435.
+- Then, each through a worker seat with this seat reviewing: WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles; WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue; WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree; WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume.
+
+#### Blockers
+
+- Spike 1: the native Linux Caves of Qud build. The owner answered Q12b "Path on this machine" at 01:43 UTC and said "I bought it thru GOG", but ~/games/downloads is empty and nothing matching exists on D: or the Windows Downloads; replied on the page (m-20261011014414471-8wdfh) with the gog.com offline-installer steps and the drop path. Waiting for "done".
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-11 05:5x UTC, this seat: PR #10 merged after merging origin/main into the branch in the slot; the CHANGELOG.md conflict was resolved by bin/changelog.sh render, never by hand. 4c5e was amended before approval because its deny-side premise was wrong (verified against a rendered settings.json).
+- 2026-10-11 05:4x UTC, this seat: the guard-ack stall is real (3 of 4 seats); ticketed as WO-20261011-dc0d in seat.sh, not in compaction-guard.
+- 2026-10-11 05:3x UTC, this seat: PR #9 merged (lint ok, suite 10 passed 0 failed, playbooks in sync). seat.sh --down logs every process in the slot with pid and name and refuses --force (exit 3, seat un-ended) past one that is not the seat's own; no override flag, by design. The 36d7 seat was the first brought up with no hand lease or checkout, so AC-H1 of c077 held live.
+- 2026-10-11 05:0x UTC, this seat: PR #8 merged (lint ok, suite 8 passed 0 failed from wD3:p1V); seat.sh door 1 reads the ticket branch from frontmatter and refuses a null branch before any lease. The worker opened the PR without work-order submit, so submit ran at close-out. The worker did not stall after the guard ack this time.
+- 2026-10-11 03:4x UTC, this seat: PR #7 merged after a reindex merge of main; the live restart proved the grid placement. The test pane died a second time on treehouse return --force even with a subshell; WO-20261011-36d7 now asks seat.sh --down to list the slot's processes and refuse --force for a foreign one.
+- 2026-10-11 03:4x UTC, this seat: PR #7 passes review; bearings panes are claimed from OPEN grid slots by label prefix (config open_label_prefix) and handed back on stop, nothing is split inside a seat.
+- 2026-10-11 03:2x UTC, this seat: the test pane is recreated as wD3:p1R in the middle column and review commands run in a subshell; the hazard is ticketed as WO-20261011-36d7 rather than patched by hand.
+- 2026-10-11 03:2x UTC, this seat: PR #6 passes review; seat.sh now leases the slot with the ticket as holder and returns it on --down, the worker reads treehouse status at step 1.
+- 2026-10-11 02:5x UTC, this seat: a429 approved with --no-lavish; work-order approve stamps via lavish whenever lavish-axi is on PATH without opening it, and a Claude seat never records a Lavish approval. Lease verbs fixed from treehouse --help v2.3.0: get --lease --lease-holder, return --if-lease-holder, status --json.
+
+- 2026-10-11 00:07 UTC, owner: rotate the key, do not rewrite history. Done with bearings.sh rotate-key; history keeps a dead key.
+- 2026-10-10 22:2x UTC, this seat: the worktree named in a worker's brief is its lease until WO-20261010-a429 lands; the worker on 8fa8 was told so and proceeded.
+- 2026-10-10 22:3x UTC, this seat: compaction-guard recover --apply is not run from this seat; its 112 sessions are other projects' dead seats and the resume commands would relaunch them.
+
+#### Lessons Learned
+
+- A worker whose turn has already ended when the guard memo lands acks and stops; one that is mid-turn acks and keeps going. Watch the agent pane for the ack line, then herdr agent prompt once (WO-20261011-dc0d).
+- A worker branch conflicts with main on CHANGELOG.md whenever the architect lands a step meanwhile; merge origin/main in the slot and run bin/changelog.sh render.
+- treehouse return --force after a subshell review that left no process in the slot did not touch the test pane; the two earlier kills happened while something still held the slot (unknown what, WO-20261011-36d7).
+- work-order cleanup refuses when the ticket has no PR recorded; a worker that opens the PR by gh alone leaves submit to the architect.
+- A worker branch that lands checkpoints while the architect lands steps conflicts in work-orders/INDEX.md and the epic README; resolve with work-order reindex, never by hand.
+- treehouse return --force killed the test pane even when the review ran in a subshell; what holds the slot after a lint or test run is unknown (WO-20261011-36d7).
+- treehouse return --force terminates every process whose cwd is inside the slot; a test pane that cd'd into the slot dies with it and herdr closes the pane.
+- herdr pane wait-output --timeout is in milliseconds; 580 returns at once as a timeout.
+- A merged worker branch stacks its checkpoints on top of CONTEXT_STATE.md, so the architect resume line is buried until the architect lands its next step; WO-20261010-d354 (dated entry files) is the real fix.
+- herdr pane wait-output matches the echoed command line too; anchor the marker with ^MARKER$.
+
+- bearings.sh serve refuses a page owned by another session unless server.mjs gets --join; the launcher did not forward it, so a seat successor could not bring the page back.
+- bearings.sh pane_for splits the calling pane, so a restart from a seat breaks that seat's layout; herdr pane move within the same tab is a no-op, go through --new-tab and back.
+- herdr pane resize --amount is a fraction of the tab; up on the top pane shrinks it, up on a lower pane grows it.
+- The worker playbook names slot.sh, which does not exist, and seat.sh takes a hand-made worktree; a worker following the playbook stops at step 1.
+
+### Hydration prompt
+
+Run from /home/luna/projects/coq-jev-herdr-plugin on main. Next: report the 4c5e close-out to the owner, then WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else': read the ticket, approve --no-lavish, start, make step, ff main and push, herdr/bin/seat.sh --ticket WO-20261011-dc0d --role worker, watch the agent pane for '^● ACK compaction-guard' and if it goes idle send herdr agent prompt <seat> once, wait for the PR (pane wait-output --regex 'pull/[0-9]+' --timeout 580000 in a loop), review from wD3:p1V as ( cd <slot> && git log -1 && make lint && make -C herdr test && roles/bin/render-playbook.sh roles playbooks --check ), if the PR conflicts merge origin/main in the slot and bin/changelog.sh render, gh pr merge --merge, pull, seat.sh --down, submit --pr, evidence --index N --observed, note, done, cleanup, close step with CP. Then WO-20261011-3435 - Worker test-pane fence closes its gaps: SPEC-04 s-seat lists COQ_TEST_PANE, testpane.sh denies pane send-text and send-keys, brief.sh usage names --test-pane, then the queue (fbad, 539f, d354, 7083). Spike 1: when the owner says the GOG Linux .sh installer is in /home/luna/games/downloads/, unpack it to /home/luna/games/caves-of-qud/ and run the headless check. Answer owner page wakes first (reply.mjs --tier stable --to <m-id>); the page URL comes from bearings.sh stable url and never enters a record. Every step lands with `make step ... CP=<body>`; never lint, commit, checkpoint or compact by hand.
+
 ## Checkpoint 2026-10-11 05:49 UTC
 
 ### Current state
