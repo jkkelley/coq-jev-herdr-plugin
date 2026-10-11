@@ -1,12 +1,13 @@
 // Browser probe for the factory board page. Prints one JSON object and exits 0; tests/browser.sh asserts on its fields.
 //   node probe.mjs <design.html> <rendered-dir> <live-dir> <shots-dir>
 // 1. parity: the design page and the rendered page, byte-identical full-page screenshots at a desktop and a phone width.
-// 2. redraw: the page served at /board from <live-dir> asks /board/data.json; a new data.json is drawn in place, with the
+// 2. redraw: the page served by bearings at /board from <live-dir> asks /board/data.json; a new data.json is drawn in place, with the
 //    fold state and the sideways and page scroll kept and no reload; stopping the server turns the strip to "page offline".
+//    The server is the real bearings server.mjs with board_dir set; the page is opened by key link and polls on its cookie.
 // playwright is installed globally in the test image; ESM import ignores NODE_PATH, so resolve it through createRequire.
 import { createRequire } from "node:module";
 import fs from "node:fs";
-import http from "node:http";
+import { spawn } from "node:child_process";
 import path from "node:path";
 const require = createRequire(
   `${process.env.PLAYWRIGHT_GLOBAL_MODULES || "/usr/lib/node_modules"}/`,
@@ -127,19 +128,35 @@ for (const vp of [
 
 // --- redraw in place ---
 const read = (f) => fs.readFileSync(path.join(liveDir, f));
-const server = http.createServer((req, res) => {
-  if (req.url === "/board")
-    res
-      .writeHead(200, { "content-type": "text/html; charset=utf-8" })
-      .end(read("index.html"));
-  else if (req.url === "/board/data.json")
-    res
-      .writeHead(200, { "content-type": "application/json" })
-      .end(read("data.json"));
-  else res.writeHead(404).end("no");
-});
-await new Promise((r) => server.listen(0, "127.0.0.1", r));
-const url = `http://127.0.0.1:${server.address().port}/board`;
+// The real thing: tools/bearings/scripts/server.mjs, the server bearings stable runs, with board_dir pointed at <live-dir>.
+// A stand-in server here would test the stand-in; this tests the keyed /board route, the cookie the page's own poll depends
+// on, and no-store, end to end. The tier, port and state root are the test's own, in /work.
+const repo = process.env.REPO_ROOT || "/repo";
+const work = path.dirname(path.resolve(liveDir));
+const cfgPath = path.join(work, "bearings-config.json");
+fs.writeFileSync(
+  cfgPath,
+  JSON.stringify({
+    schema_version: "1.0.0", project: "t", state_root: path.join(work, "state"), listen_host: "127.0.0.1",
+    allowed_hosts: ["127.0.0.1", "localhost"], cookie_name: "bearings_key", idle_minutes: 5, settle_ms: 300, stop_tries: 3,
+    stop_try_ms: 1000, max_body_bytes: 65536, max_message_chars: 8000, max_words_chars: 4000, messages_window: 50,
+    open_label_prefix: "OPEN - any tool", pane_split: { direction: "down", ratio: 0.2 }, board_dir: path.resolve(liveDir),
+    tiers: { dev: { page: "${project}-dev-${ticket}", port_range: [45940, 45949], pane_label: "b-${ticket}", wait_pane_label: "b-${ticket}-wait", checkout: "slot" } },
+  }),
+);
+const server = spawn(
+  "node",
+  [path.join(repo, "tools/bearings/scripts/server.mjs"), "--tier", "dev", "--ticket", "board", "--config", cfgPath],
+  { stdio: ["ignore", "ignore", "inherit"] },
+);
+const serverJson = path.join(work, "state", "t-dev-board", "server.json");
+let info = null;
+for (let i = 0; i < 100 && !info; i++) {
+  await new Promise((r) => setTimeout(r, 100));
+  try { info = JSON.parse(fs.readFileSync(serverJson, "utf8")); } catch {}
+}
+if (!info) throw new Error("the bearings server did not start");
+const url = `${info.url.split("/?key=")[0]}/board?key=${info.key}`;
 const ctx = await browser.newContext({
   viewport: { width: 1100, height: 700 },
   reducedMotion: "reduce",
@@ -195,8 +212,8 @@ out.redraw.line2_scroll = await pg.evaluate(
 out.redraw.page_scroll = await pg.evaluate(() => Math.round(window.scrollY));
 // The server goes away: the strip says so within a poll.
 serverStopped = true;
-server.closeAllConnections?.();
-await new Promise((r) => server.close(r));
+server.kill();
+await new Promise((r) => server.once("exit", r));
 await pg
   .waitForFunction(
     () =>
