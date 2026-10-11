@@ -46,27 +46,56 @@
 
 
 
-## Checkpoint 2026-10-11 21:35 UTC
+
+## Checkpoint 2026-10-11 23:09 UTC
 
 ### Current state
 
 #### Infrastructure
-- Worker seat worker-wo-20261011-f896 on WO-20261011-f896 - Test pane per seat: seat.sh opens a labelled test pane in the seat's own tab and exports it as COQ_TEST_PANE, so sixteen seats test in parallel instead of queueing on the architect tab's one pane. Branch feat/test-pane-per-seat-seat-sh-opens-a-labelled-test, slot 9, PR 20 open against main. The ticket is submitted and done (archived on the branch). pr.opened record 20261011T213519Z-100-86efn.
-- The branch was rebuilt on origin/main after the 422 (it was cut from the records branch) and then merged with origin/main again because PR 20 showed CONFLICTING (CHANGELOG.md, CONTEXT_STATE.md, case 04 pane count 29 to 30).
+- Worker seat worker-wo-20261011-f896 on WO-20261011-f896 - Test pane per seat: seat.sh opens a labelled test pane in the seat's own tab and exports it as COQ_TEST_PANE, so sixteen seats test in parallel instead of queueing on the architect tab's one pane. Branch feat/test-pane-per-seat-seat-sh-opens-a-labelled-test, slot 9, PR 20 open against main. Ticket submitted and done, archived on the branch.
+- Reviewer record 20261011T222140Z-422-r8xoi (attempt 1 of 3): SOP-0002 lacked Contents, GOOD and NEVER, and observed Verification, and PR 20 was CONFLICTING. Fixed: SOP-0002 now has all three (Contents from bin/md-contents.sh --fix).
+- main moved to 55f4e22 (PR 18, seat.sh adopt and resume, merged). origin/main merged into the branch: seat.sh conflict kept both the adopt block and the test pane block; my case was renamed 14-test-pane-per-seat to 16-test-pane-per-seat because main took 14 (adopt) and 15 (resume); CONTEXT_STATE.md keeps both sides.
 
 #### Toolchain
-- Before the second merge: make lint all ok and make -C herdr test 12 passed 0 failed from the test pane. After the merge the same two runs are queued in the test pane and the push waits for them.
-- Case 14 is the new case (two seats, AC-H1 to AC-H4); case 03 pins its reviewer max_seats to 2 in its own world copy.
+- make lint and make -C herdr test after this merge are queued in the shared pane wD3:p1V (log post2.log in the scratchpad); the push waits for them.
 
 #### Active Tasks
-- After the post-merge lint and suite are green: push the merge commit, post a pr.opened 100 naming the new sha, stop. The tester takes PR 20.
-- For the architect, not done by a worker: specs/ is denied, so SPEC-04 s-seat and specs/exports/factory-spec.xml S1-059 still describe two panes; the layout keeps the name seat-1x2 with three panes until roles/ is renamed.
+- When both are green: commit the merge, push (no force), post pr.opened 100 with the new sha and the pr, stop.
+- For the architect: specs/ is denied to a worker, so SPEC-04 s-seat and specs/exports/factory-spec.xml S1-059 still describe two panes; the layout keeps the name seat-1x2 with three panes until roles/ is renamed.
 
 #### Blockers
 - None.
 
 ### Hydration prompt
-Resume WO-20261011-f896 as worker-wo-20261011-f896 in slot 9. Read playbooks/worker.md, the ticket and this checkpoint. The merge of origin/main is committed locally; read the post-merge lint and suite log in the scratchpad, push if green, post pr.opened 100 with the new sha and stop.
+Resume WO-20261011-f896 as worker-wo-20261011-f896 in slot 9. Read playbooks/worker.md and this checkpoint. The merge of origin/main is staged; read the post-merge lint and suite log, commit, push, post pr.opened 100 and stop.
+
+## Checkpoint 2026-10-11 21:26 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-8fb3 on WO-20261011-8fb3 - seat.sh adopt: a running claude session becomes a seat in place, keeping its context, under the role's label, settings and record. PR 18 is open on the old head a930f3c, which is CONFLICTING and carries the records branch.
+- The branch in this slot was rebuilt locally on origin/main 4860361 as the architect ordered (record 20261011T203651Z-422-3navb) and the reviewer asked (20261011T210527Z-422-er3bq). It holds this ticket alone: herdr/bin/seat.sh, cases 13 and 14, docs/sops/SOP-0001 (the runbook, with Verification and GOOD and NEVER), the archived ticket, its changelog entry and this checkpoint.
+- make lint and make -C herdr test on the rebuilt tree: 13 passed, 0 failed. The old tip is the local branch backup/8fb3-a930f3c.
+- The rebuilt branch is NOT pushed. origin's branch diverged from it, so the push is a force push, and this seat's role denies git push --force*.
+
+#### Toolchain
+
+- Run the suite only through herdr/bin/testpane.sh in the pane named by COQ_TEST_PANE, with output to a scratchpad file.
+
+#### Active Tasks
+
+- The architect pushes: git push --force-with-lease origin feat/seat-sh-adopt-a-running-claude-session-becomes-a, from this slot.
+- After that push the tester re-runs the plan on the pushed head and posts a new test.passed; the reviewer re-reviews.
+
+#### Blockers
+
+- Force push denied to this seat. docs/sops/SOP-0001 here and SOP-0001 on PR 15 share an id; whichever merges second needs renumbering.
+
+### Hydration prompt
+
+Resume WO-20261011-8fb3 in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/7/coq-jev-herdr-plugin. The rebuilt branch is committed locally and waits for the architect's force push. Do nothing else until a record wakes you; a review.changes means fixing inside this ticket's paths.
 
 ## Checkpoint 2026-10-11 20:06 UTC
 
