@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T225740Z-100-epo1g",
+  "at": "2026-10-11T22:57:40Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-8fb3",
+  "pane": "wD3:p2",
+  "note": "PR 18: review 201 dn7qf on 1b431ac joins test 201 wwrp0; belt woke merger; reviewer-wo-20261011-8fb3 down after its record; agents 13 of 16; reviewer-wo-20261011-4562 seated into the freed reviewer cap",
+  "evidence": [],
+  "observations": []
+}

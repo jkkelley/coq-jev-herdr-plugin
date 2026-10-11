@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T230310Z-300-5gu70",
+  "at": "2026-10-11T23:03:10Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "routed merge.conflict 409 (20261011T230307Z-409-hamq3): wake worker",
+  "evidence": [
+    "events/2026/10/20261011T230307Z-409-hamq3.json"
+  ],
+  "observations": [],
+  "to": "worker"
+}

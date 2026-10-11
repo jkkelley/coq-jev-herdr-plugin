@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T225424Z-429-ebbmz",
+  "at": "2026-10-11T22:54:24Z",
+  "code": 429,
+  "seat": "reviewer-wo-20261011-4562",
+  "kind": "note",
+  "ticket": "WO-20261011-4562",
+  "pane": null,
+  "note": "seat refused: 4 reviewer seats live, role max_seats 4",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T230445Z-500-wn6y4",
+  "at": "2026-10-11T23:04:45Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "stall: merge.conflict 409 20261011T230307Z-409-hamq3 has no worker record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

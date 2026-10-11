@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T230620Z-100-e0o4f",
+  "at": "2026-10-11T23:06:20Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "PR 18 merged at 55f4e22; worker-wo-20261011-8fb3 down, slot 7 returned (12 of 16). PR 20, 21, 22 CONFLICTING in generated files: 4db1 woken by belt on 409 hamq3, f896 woken ahead by architect; 4562 worker agent gone, re-seating",
+  "evidence": [],
+  "observations": []
+}

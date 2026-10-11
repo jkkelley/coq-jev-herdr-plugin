@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T225309Z-100-2o9ph",
+  "at": "2026-10-11T22:53:09Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "note",
+  "ticket": "WO-20261011-4562",
+  "pane": null,
+  "note": "owner notified for 500 5b167: pr.opened daoc8 tester woken 22:52:51Z, stall 22:52:55Z; tester idle, not prompted",
+  "evidence": [],
+  "observations": []
+}

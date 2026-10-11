@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T224037Z-201-m4qqb",
+  "at": "2026-10-11T22:40:37Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-23df",
+  "kind": "test",
+  "ticket": "WO-20261011-23df",
+  "pane": "wD3:p1V",
+  "note": "PR 15 head ed800ef: test plan case 1 passed. seat.sh --check tester, reviewer and merger all exit 0; event.sh check 549 files ok; event list --ticket shows the chain",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/c0d71cf0-fd97-4178-9826-4eb09d356071/scratchpad/run2.log"
+  ],
+  "observations": []
+}

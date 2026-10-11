@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T223941Z-100-ovgjs",
+  "at": "2026-10-11T22:39:41Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p2",
+  "note": "423 h7rwr: 4562 worker told to restore its ticket file from origin/chore/architect-records-20261011 (same path 4db1 used), close out, and note that the interface card and verdict wait on PR 17; architect does nothing by hand here",
+  "evidence": [],
+  "observations": []
+}

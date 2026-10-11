@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T230806Z-500-9yisz",
+  "at": "2026-10-11T23:08:06Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261011-8fb3",
+  "pane": null,
+  "note": "stall: merged 200 20261011T230624Z-200-1ukuj has no architect record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

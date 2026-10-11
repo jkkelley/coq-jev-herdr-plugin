@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T230458Z-100-tiyls",
+  "at": "2026-10-11T23:04:58Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "note",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "owner notified for 500 wn6y4: PR 21 merge.conflict hamq3 on CONTEXT_STATE.md has no worker record after 90s",
+  "evidence": [],
+  "observations": []
+}

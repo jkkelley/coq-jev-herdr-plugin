@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T223831Z-423-h7rwr",
+  "at": "2026-10-11T22:38:31Z",
+  "code": 423,
+  "seat": "worker-wo-20261011-4562",
+  "kind": "blocked",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p4R",
+  "note": "code done, pushed at e365f48, lint/factory/herdr/board suites green. Close-out needs you: ticket file only on records branch (work-order.sh cannot run); interface card+verdict waits on PR 17 (origin/backup/4562-before-rebuild)",
+  "evidence": [],
+  "observations": [],
+  "attempt": 1
+}

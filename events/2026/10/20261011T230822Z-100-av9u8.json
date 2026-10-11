@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T230822Z-100-av9u8",
+  "at": "2026-10-11T23:08:22Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "note",
+  "ticket": "WO-20261011-8fb3",
+  "pane": null,
+  "note": "owner notified for 500 9yisz: merged 1ukuj has no architect record; route failed, no architect-wo-20261011-8fb3 seat up",
+  "evidence": [],
+  "observations": []
+}

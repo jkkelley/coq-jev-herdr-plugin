@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T230307Z-409-hamq3",
+  "at": "2026-10-11T23:03:07Z",
+  "code": 409,
+  "seat": "merger",
+  "kind": "merge.conflict",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "PR 21 head 3077b75 conflicts with main 55f4e22 (PR 18 merged) in CONTEXT_STATE.md. Not resolved by hand; gates 6t47u test 201 and 4jzyp review 201 stand on this sha.",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T230624Z-200-1ukuj",
+  "at": "2026-10-11T23:06:24Z",
+  "code": 200,
+  "seat": "merger",
+  "kind": "merged",
+  "ticket": "WO-20261011-8fb3",
+  "pane": null,
+  "note": "PR 18 squash-merged at 55f4e22 22:57:21Z. Gates: test.passed 201 wwrp0 and review.passed 201 dn7qf, both on head 1b431ac.",
+  "evidence": [],
+  "observations": []
+}

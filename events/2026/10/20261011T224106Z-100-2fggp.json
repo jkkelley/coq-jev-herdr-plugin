@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T224106Z-100-2fggp",
+  "at": "2026-10-11T22:41:06Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p2",
+  "note": "423 i3s1d: the records-branch ticket copy predates start (ready, branch null); the stamped in-progress copy sits on origin/backup/4562-before-rebuild and the worker takes it from there; lesson for fhy5y: start from main leaves no such split",
+  "evidence": [],
+  "observations": []
+}
