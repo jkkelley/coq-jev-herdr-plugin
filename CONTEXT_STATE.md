@@ -45,6 +45,30 @@
 
 
 
+
+## Checkpoint 2026-10-11 21:34 UTC
+
+### Current state
+
+#### Infrastructure
+- Worker seat worker-wo-20261011-f896 on WO-20261011-f896 - Test pane per seat: seat.sh opens a labelled test pane in the seat's own tab and exports it as COQ_TEST_PANE, so sixteen seats test in parallel instead of queueing on the architect tab's one pane. Branch feat/test-pane-per-seat-seat-sh-opens-a-labelled-test, slot 9. work.started record 20261011T193452Z-100-8dmi4.
+- Landed in this step: layout.schema.json gains kind test and an optional split; seat-1x2.json gains slot c (test - herdr - ${name}, cd ${repo} && clear, split down from the monitor at 0.4); seat.sh resolves COQ_TEST_PANE from that slot and keeps the architect-tab pane as the fallback for a layout with no test slot; seat.json and the printed JSON line carry test_pane; cases 01, 04 and 08 follow the new shape; case 14 is new (two seats, AC-H1 to AC-H4); SOP-0002 and SOP-0001 step 1 describe it.
+- Case 03 was failing on main since WO-20261010-329d raised reviewer max_seats to 4; it now pins max_seats 2 in its own world copy.
+
+#### Toolchain
+- make lint rc 0 and make -C herdr test 12 of 13 green at the last run (only 03, now fixed). The shared architect-tab pane queued my first lint for about 20 minutes behind other seats, which is the problem this ticket removes.
+- shellcheck rejects a scalar named g in seat.sh (slot_to_branch declares g as an array); the grid count is ngrid.
+
+#### Active Tasks
+- Rerun CASES=03 then the full suite in the test pane, then evidence for AC-H1 to AC-H5, retro note, PR, submit, done.
+- Not mine, for the architect: specs/exports/factory-spec.xml S1-059 still says every role but the player uses the 1x2 seat layout and SPEC-04 s-seat does not list the test pane in the layout; specs/ is denied to a worker. The layout is still named seat-1x2 with three panes until roles/ is renamed by the architect.
+
+#### Blockers
+- None.
+
+### Hydration prompt
+Resume WO-20261011-f896 as worker-wo-20261011-f896 in slot 9. Read playbooks/worker.md, the ticket and this checkpoint. Step 1 is committed; run CASES=03 and the full herdr suite in the test pane through herdr/bin/testpane.sh, then evidence per criterion, retro note, push, gh pr create, work-order.sh submit and done, post pr.opened 100, stop.
+
 ## Checkpoint 2026-10-11 17:49 UTC
 ## Checkpoint 2026-10-11 15:54 UTC
 ## Checkpoint 2026-10-11 16:30 UTC
