@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T154157Z-100-yysxn",
+  "at": "2026-10-11T15:41:57Z",
+  "code": 100,
+  "seat": "merger-wo-20261011-38c7",
+  "kind": "seat.up",
+  "ticket": "WO-20261011-38c7",
+  "pane": "wD3:p1V",
+  "note": "merger seat up: claude-haiku-5-5 medium bypassPermissions; merging PR 14 for Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else",
+  "evidence": [],
+  "observations": []
+}

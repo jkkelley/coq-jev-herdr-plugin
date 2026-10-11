@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T154615Z-100-xps4m",
+  "at": "2026-10-11T15:46:15Z",
+  "code": 100,
+  "seat": "tester-wo-20261011-dc0d",
+  "kind": "test",
+  "ticket": "WO-20261011-dc0d",
+  "pane": "wD3:p1V",
+  "note": "tester started: running the dc0d test plan in the labelled test pane",
+  "evidence": [],
+  "observations": []
+}

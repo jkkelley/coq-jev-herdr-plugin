@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T155147Z-100-dg972",
+  "at": "2026-10-11T15:51:47Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-23df",
+  "pane": "wD3:p2",
+  "note": "15:50Z: a seat on a branch older than PR 15 runs that branch's event.sh, which ignores COQ_EVENTS_ROOT, so its records stay in the slot until --down salvages them (PR 14 seats)",
+  "evidence": [],
+  "observations": []
+}

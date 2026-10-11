@@ -18,6 +18,7 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261011-7b8f` | draft | p0 | WO-20261011-fa78 | [PR 12 and the foundation branch go through the line: a reviewer seat passes SPEC-00 and SPEC-01 for the P0 gate](WO-20261011-7b8f-pr-12-and-the-foundation-branch-go-through-the-l.md) |
 | `WO-20261011-38c7` | in-progress | p0 | - | [Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else](WO-20261011-38c7-route-runner-factory-bin-route-sh-applies-routes.md) |
 | `WO-20261011-23df` | in-progress | p0 | - | [Tester, reviewer and merger seats come up through seat.sh and each writes one record on a real PR](WO-20261011-23df-tester-reviewer-and-merger-seats-come-up-through.md) |
+| `WO-20261011-5064` | draft | p1 | - | [Merger regenerates generated files on a merge conflict: a 409 whose only conflicts are CHANGELOG.md, INDEX.md or epic READMEs is resolved by their scripts, not kicked back](WO-20261011-5064-merger-regenerates-generated-files-on-a-merge-co.md) |
 | `WO-20261010-976e` | draft | p1 | - | [SPEC-02 roles and permissions written from roles/*.json](WO-20261010-976e-spec-02-roles-and-permissions-written-from-roles.md) |
 | `WO-20261010-1c23` | draft | p1 | - | [SPEC-13 testing and lint: local fast, CI full, container-sandbox as source of truth](WO-20261010-1c23-spec-13-testing-and-lint-local-fast-ci-full-cont.md) |
 | `WO-20261010-2dab` | draft | p1 | - | [SPEC-15 SDLC end to end with parallel PRs and cleanup](WO-20261010-2dab-spec-15-sdlc-end-to-end-with-parallel-prs-and-cl.md) |

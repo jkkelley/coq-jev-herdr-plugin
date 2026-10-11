@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T155147Z-100-ozoe4",
+  "at": "2026-10-11T15:51:47Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-23df",
+  "pane": "wD3:p2",
+  "note": "15:50Z: a ticket branch checked out in the project checkout cannot be leased to a slot (slots are worktrees of one repo); the architect switched to main before seating PR 15's tester",
+  "evidence": [],
+  "observations": []
+}
