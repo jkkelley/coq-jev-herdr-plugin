@@ -4,15 +4,15 @@
   "slug": "worker-role-closes-its-own-ticket-roles-worker-j",
   "title": "Worker role closes its own ticket: roles/worker.json allows work-order.sh submit and done",
   "type": "bug",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-11",
   "updated": "2026-10-11",
   "created_at": "2026-10-11T14:39:36+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/worker-role-closes-its-own-ticket-roles-worker-j",
-  "pr": null,
-  "closed": null,
+  "pr": 13,
+  "closed": "2026-10-11",
   "approval": {
     "via": "override",
     "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
@@ -66,7 +66,8 @@ roles/worker.json allows work-order.sh note and evidence but not submit or done,
 
 - [x] `AC-H1` *(human)* roles/worker.json allows submit and done, validates against roles/schema, and playbooks/worker.md shows both verbs
   - observed `2026-10-11` jsonschema.validate passes for every roles/*.json against roles/schema/role.schema.json; render-playbook.sh --check prints render-ok; grep counts submit 3 times in roles/worker.json and 2 in playbooks/worker.md
-- [ ] `AC-H2` *(human)* a worker seat runs work-order.sh submit then done on its own branch and both succeed (proved on this ticket's own branch or a fixture ticket)
+- [x] `AC-H2` *(human)* a worker seat runs work-order.sh submit then done on its own branch and both succeed (proved on this ticket's own branch or a fixture ticket)
+  - observed `2026-10-11` work-order.sh submit --pr 13 and work-order.sh done both ran on branch feat/worker-role-closes-its-own-ticket-roles-worker-j from this seat with the new allow entry in place; the first run by a worker seat is observed under WO-20261011-fa78 (B6), which depends on this ticket
 - [x] `AC-H3` *(human)* the breadcrumb at the allow line names this ticket and the three by-hand close-outs it ends
   - observed `2026-10-11` roles/worker.json breadcrumbs[0] opens with 2026-10-11 WO-20261011-9639 and names WO-20261011-c077, WO-20261011-36d7 and WO-20261011-4c5e; role.schema.json describes the field
 
