@@ -40,6 +40,36 @@
 
 
 
+
+## Checkpoint 2026-10-11 15:27 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, treehouse slot 2 leased to that ticket. Test pane wD3:p1V, run through herdr/bin/testpane.sh only (wrapper in the scratchpad: tp.sh, start every command with cd into the worktree because the pane sits in the main checkout).
+- Global prettier hook reformats Write and Edit targets; report/loop/assets/template.html and report/loop/design/ are in .prettierignore.
+
+#### Toolchain
+
+- report/loop/loop.sh: collect, validate, render, watch. watch [--out DIR] [--iterations N] [--sleep S] runs collect, compares with DIR/data.json ignoring at and number, and only on a difference renders DIR and records the build number in DIR/.watch.json. A failed pass keeps the last page and says why on stderr. Prints one line per build or failure, nothing otherwise.
+- The entry's sources line no longer carries the belt's age in seconds ("stale, over 30s old"), because a growing age made every pass a change (breadcrumb in lib/collect.jq).
+- Tests: make -C report/loop test = cases 01 to 07 green (07-watch proves same inode and mtime when nothing changed). make -C report/loop test-browser = 12 green. make lint all ok. Makefile gained a watch target.
+
+#### Active Tasks
+
+- Step 3 landed: watch with case 07-watch. A live two-pass run on the real repo wrote build 1 once with the three real lines.
+- Next: S4 bearings stable GET /board and /board/data.json in tools/bearings/scripts/server.mjs (keyed like /, cookie, no-store, 503 JSON when not built), board dir in config/bearings.json and bearings.schema.json, tests in tools/bearings/tests/inside.sh, run make -C tools/bearings test from the test pane; then S5 monitor pane (herdr/bin/monitors.sh take, monitors.json slot, make -C herdr test); S6 graph nodes CMP-factory-board and RUN-factory-board plus the lint rule (graph/ may be fenced; if the harness refuses, post blocked 423 and stop); S7 RUNBOOK.md, evidence, retro note, work-order.sh done, PR, pr.opened 100.
+- S6 decision: the lint rule is a ratchet with a closed grandfather list, because the existing Component nodes have no defined_in edge to a RUN node.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. Step 4: tools/bearings/scripts/server.mjs serves the board. Add keyed GET /board (the page at report/loop/out/index.html, same cookie handling as /, no-store, a 503 JSON body when the page is not built) and GET /board/data.json; declare the board directory in config/bearings.json and its schema; cases in tools/bearings/tests/inside.sh; run make -C tools/bearings test from the test pane only.
+
 ## Checkpoint 2026-10-11 15:21 UTC
 
 ### Current state
