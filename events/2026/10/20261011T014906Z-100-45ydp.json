@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T014906Z-100-45ydp",
+  "at": "2026-10-11T01:49:06Z",
+  "code": 100,
+  "seat": "bringup",
+  "kind": "note",
+  "ticket": null,
+  "pane": null,
+  "note": "bringup: pane-lease guard lease watcher plugged in",
+  "evidence": [],
+  "observations": []
+}
