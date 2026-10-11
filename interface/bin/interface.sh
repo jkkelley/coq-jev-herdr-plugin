@@ -3,7 +3,7 @@
 # (WO-20261011-e618, DEC-interface-agent-owns-bearings, DEC-system-runs-the-loop).
 #   interface.sh forward  "<wake line>" [--tier stable]      MESSAGE m-.. - text | ANSWER id - decide -> choice: post request.forwarded 300 to the orchestrator
 #   interface.sh line     --record ID [--tier stable] [--to m-..]   a verified 201 or an owner-needed 423 becomes one line on the page
-#   interface.sh snapshot sitrep ENTRY.json | board [--tier stable]  render a SITREP (report/sitrep/sitrep.sh) or copy the board (report/loop/out), print the file
+#   interface.sh snapshot sitrep ENTRY.json | board [--tier stable] [--to m-..]   render a SITREP (report/sitrep/sitrep.sh) or copy the board (report/loop/out), print the file; --to also replies under that owner message with the path
 # Env: COQ_SEAT (record seat, default interface), COQ_EVENTS_ROOT (event.sh), BEARINGS (bearings.sh path, default tools/bearings/scripts),
 #      COQ_STATE (default ~/.local/state/coq; snapshots land in <state>/interface/snapshots, never in git).
 # Exit: 0 ok (or already done), 2 usage, 3 refused, 4 io, 6 not found.
@@ -44,6 +44,21 @@ title_of() {
 # page_dir: the tier's state directory, from bearings status.
 page_dir() { "$BEARINGS" "$tier" status --json 2>/dev/null | jq -r '.dir // empty'; }
 
+# link FILE: print the snapshot's path; with --to, also reply under that owner message so the page carries it.
+# BREADCRUMB 2026-10-11 - WO-20261011-e618, AC-H4 "links it on the page". What broke: nothing, a design limit found reading
+#   tools/bearings/scripts/reply.mjs and server.mjs: a reply is text only and the only file route is the owner's own upload
+#   (POST /file), and bearings code changes are out of scope for this ticket. Why this fix: the reply names the snapshot's
+#   path, and under WSL the Windows form of it (\\wsl.localhost\<distro>\...), which the owner's browser or Explorer opens
+#   directly. Rejected: serving the file from the page (a bearings route, backlog until the north star) and a file:// URL
+#   (a browser refuses it from an http page). Cost: a path, not a clickable http link, until bearings can carry a file.
+link() {
+  echo "$1"
+  [ -n "$to" ] || return 0
+  local text="snapshot: $1"
+  [ -z "${WSL_DISTRO_NAME:-}" ] || text="$text  (Windows: \\\\wsl.localhost\\$WSL_DISTRO_NAME${1//\//\\})"
+  "$BEARINGS" "$tier" reply --to "$to" "$text" >/dev/null
+}
+
 case $verb in
   forward)
     [ ${#pos[@]} -eq 1 ] || usage
@@ -82,10 +97,10 @@ case $verb in
     case $what in
       sitrep) [ ${#pos[@]} -eq 2 ] || usage
         [ -f "${pos[1]}" ] || die 6 "no SITREP entry ${pos[1]}"
-        "$REPO/report/sitrep/sitrep.sh" render "${pos[1]}" --out "$out/$stamp-sitrep.html" >/dev/null; echo "$out/$stamp-sitrep.html" ;;
+        "$REPO/report/sitrep/sitrep.sh" render "${pos[1]}" --out "$out/$stamp-sitrep.html" >/dev/null; link "$out/$stamp-sitrep.html" ;;
       board) src=$REPO/report/loop/out
         [ -d "$src" ] && f=$(find "$src" -name '*.html' | sort | tail -1) && [ -n "$f" ] || die 6 "no board under $src; report/loop has not landed or has not rendered"
-        cp "$f" "$out/$stamp-board.html"; echo "$out/$stamp-board.html" ;;
+        cp "$f" "$out/$stamp-board.html"; link "$out/$stamp-board.html" ;;
       *) usage ;;
     esac ;;
   *) usage ;;

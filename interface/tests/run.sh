@@ -5,7 +5,8 @@
 #   case 2: an ANSWER wake is forwarded; a STOPPED line and prose forward nothing
 #   case 3: a verified 201 becomes one reply line with the ticket id and full title, threaded under the owner's message, once (AC-H3)
 #   case 4: a 423 becomes a "needs you" line; a 300 and a record with no ticket are refused; an unknown record is not found
-#   case 5: snapshot sitrep renders the 003 entry into the state dir (AC-H4); snapshot board with no board is not found
+#   case 5: snapshot sitrep renders the 003 entry into the state dir (AC-H4); snapshot board with no board is not found;
+#           snapshot --to hangs a reply with the path (and its Windows form under WSL) under the owner's message, and without --to posts none
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; REPO="$HERE/../.."
 IF="$REPO/interface/bin/interface.sh"; EV="$REPO/events/bin/event.sh"
@@ -67,5 +68,13 @@ f=$("$IF" snapshot sitrep "$REPO/report/sitrep/entries/2026/10/20261011-sitrep-0
 check "the page is under the state dir" "$(dirname "$f")" "$COQ_STATE/interface/snapshots"
 check "and holds the SITREP title" "$(grep -c '<title>Qud Factory SITREP 003</title>' "$f")" 1
 "$IF" snapshot board 2>/dev/null; check "no board yet exits 6" "$?" 6
+f2=$(WSL_DISTRO_NAME=TestDistro "$IF" snapshot sitrep "$REPO/report/sitrep/entries/2026/10/20261011-sitrep-003.json" --to m-100); check "snapshot --to exits 0" "$?" 0
+snap=$(jq -sc 'map(select(.from == "claude")) | last' "$STUB_DIR/messages.jsonl")
+check "the snapshot reply hangs under the owner's message" "$(jq -r .reply_to <<<"$snap")" m-100
+check "and names the snapshot path" "$(jq -r .text <<<"$snap" | grep -cF "snapshot: $f2")" 1
+check "and its Windows form under WSL" "$(jq -r .text <<<"$snap" | grep -cF '(Windows: \\wsl.localhost\TestDistro\tmp\')" 1
+n=$(jq -s '[.[] | select(.from == "claude")] | length' "$STUB_DIR/messages.jsonl")
+"$IF" snapshot sitrep "$REPO/report/sitrep/entries/2026/10/20261011-sitrep-003.json" >/dev/null
+check "without --to no reply is posted" "$(jq -s '[.[] | select(.from == "claude")] | length' "$STUB_DIR/messages.jsonl")" "$n"
 
 [ "$fail" = 0 ] && echo "interface: all ok" || { echo "interface: failures" >&2; exit 1; }
