@@ -24,7 +24,8 @@ world_up() {
   #   closing notes), so the cases that assert "no event was written" or count records would see events they did not make.
   #   Why this fix: both slots keep their name, label and place but run a sleep loop here; case 13 puts the real commands back
   #   with world_real_belt. Rejected: leaving them live and loosening every count, which hides the next real change.
-  #   Cost: cases 01-12 do not exercise route.sh or flow.sh through a pane; the factory suite and case 13 do.
+  #   Cost: cases 01-12 do not exercise route.sh or flow.sh through a pane; the factory suite and case 13 do. The same goes
+#   for recover.sh's belt node: .belt.status is `true` in the world's config, so the node reads ok; case 13 sets the real one.
   jq '(.tabs[].reserved[] | select(.name == "runner" or .name == "flow") | .command) = "while :; do sleep 30; done"' \
     "$REPO/herdr/config/monitors.json" > "$REPO/herdr/config/monitors.json.new" && mv "$REPO/herdr/config/monitors.json.new" "$REPO/herdr/config/monitors.json"
   find "$REPO/work-orders/archive" -name 'WO-*.md' -exec cp -n {} "$REPO/work-orders/" \; 2>/dev/null
@@ -38,7 +39,7 @@ world_up() {
   local stubs; stubs="$(cd "$(dirname "${BASH_SOURCE[0]}")/../stubs" && pwd)"; export PATH="$stubs:$PATH"
   export COQ_HERDR_SESSION="t-$name" COQ_STATE="$STATE" DRY_RUN=0
   export COQ_HERDR_CONFIG="$WORLD/herdr.json"
-  jq --arg s "t-$name" --arg st "$STATE" '.session=$s | .state_dir=$st | .require_guard=false | .bringup_gate=false | .down_wait_seconds=0 | .retire_poll_seconds=3' \
+  jq --arg s "t-$name" --arg st "$STATE" '.session=$s | .state_dir=$st | .require_guard=false | .bringup_gate=false | .down_wait_seconds=0 | .retire_poll_seconds=3 | .belt.status="true"' \
     "$REPO/herdr/config/herdr.json" | jq "$filt" > "$COQ_HERDR_CONFIG"
   unset HERDR_PANE_ID HERDR_TAB_ID HERDR_WORKSPACE_ID HERDR_SOCKET_PATH HERDR_SESSION
   (herdr --session "t-$name" server > "$WORLD/server.log" 2>&1 &)
