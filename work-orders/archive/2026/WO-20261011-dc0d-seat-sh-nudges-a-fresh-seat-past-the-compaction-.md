@@ -87,11 +87,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
-<<<<<<< HEAD:work-orders/WO-20261010-329d/WO-20261011-dc0d-seat-sh-nudges-a-fresh-seat-past-the-compaction-.md
-- `2026-10-11` Second idle pattern seen 2026-10-11 15:27-15:47Z on worker-wo-20261011-616c: the worker ended its turn 'so the guard can compact' at 9% context, under the 30% threshold, so nothing fired and it idled 20 minutes until the architect prompted it. The brief or playbook must say: the guard compacts only above threshold at a step boundary; never end a turn to wait for it. Same family as the ack stall this ticket fixes.
-=======
 - `2026-10-11` Retro 2026-10-11 (worker): seat.sh nudge_seat landed with case 11 (suite 11 passed, 0 failed). Cost found: a claude seat with no guard memo blocks seat.sh for nudge_wait_seconds, which made the first full run sit 8 min in case 03 until herdr/tests/lib/world.sh set both nudge keys to 1 s. Added nudge_settle_seconds beyond the ticket's one key. Gap for the architect: the nudge wording belongs in roles/bin/nudge.sh, which the worker fence denied (blocked 423 20261011T060054Z-423-qkuw4); seat.sh uses that file when present and an inline line otherwise. The three criteria are human-typed: the behaviour is observed against a stub claude only, so a live bring-up check by the architect or owner is still the one thing nobody has seen.
->>>>>>> origin/main:work-orders/archive/2026/WO-20261011-dc0d-seat-sh-nudges-a-fresh-seat-past-the-compaction-.md
 - `2026-10-11` Decision 2026-10-11 05:5x UTC (architect): approved --no-lavish (Claude seat, Lavish prohibited by the owner hard rule). Fixed points: the nudge watches the agent pane for the line '● ACK compaction-guard' with herdr pane wait-output (milliseconds), then polls agent_status via herdr pane list; idle after the ack means nudge, working means do not. Config key nudge_wait_seconds in herdr config, default 180. The nudge text names the ticket and says 'continue your brief from the step you reached'. seat.json nudged_at is null when no nudge was needed.
 
 ## Outcome

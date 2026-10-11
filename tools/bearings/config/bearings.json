@@ -50,5 +50,6 @@
       "wait_pane_label": "bearings-dev-${ticket}-wait",
       "checkout": "treehouse slot on the feature branch"
     }
-  }
+  },
+  "board_dir": "report/loop/out"
 }

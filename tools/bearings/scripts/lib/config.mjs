@@ -43,6 +43,7 @@ export function validate(cfg) {
     die(`project must match ^[a-z][a-z0-9-]{0,23}$: got ${cfg.project}`);
   for (const k of INT_KEYS)
     if (!Number.isInteger(cfg[k]) || cfg[k] < 0) die(`missing or non-integer key ${k}`);
+  if (cfg.board_dir !== undefined && (typeof cfg.board_dir !== "string" || !cfg.board_dir)) die("board_dir must be a non-empty string");
   if (cfg.idle_minutes < 1) die("idle_minutes must be >= 1");
   if (cfg.stop_tries < 1) die("stop_tries must be >= 1");
   if (!Array.isArray(cfg.allowed_hosts) || !cfg.allowed_hosts.length)

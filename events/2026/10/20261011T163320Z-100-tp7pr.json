@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T163320Z-100-tp7pr",
+  "at": "2026-10-11T16:33:20Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261011-616c",
+  "kind": "seat.up",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p1V",
+  "note": "seat.up: reviewer on PR 16, waking on record.test_passed (tester record 201 at 16:23:39Z)",
+  "evidence": [],
+  "observations": []
+}

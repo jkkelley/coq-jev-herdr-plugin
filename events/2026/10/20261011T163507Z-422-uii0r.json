@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T163507Z-422-uii0r",
+  "at": "2026-10-11T16:35:07Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261011-616c",
+  "kind": "review",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p1V",
+  "note": "review.changes: PR 16 AC-H3 and AC-H6 have no evidence line (stable restart and graph apply are the architect); RUNBOOK.md has no contents list. Steps 2 and 3 otherwise clean",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/cedc75a5-6bbe-45ed-9b92-81a1669c1062/scratchpad/scan.txt",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/cedc75a5-6bbe-45ed-9b92-81a1669c1062/scratchpad/md.txt"
+  ],
+  "observations": [
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261011-616c-factory-board-report-loop-renders-the-lines-from.md",
+      "line": 75,
+      "saw": "AC-H3 unchecked with no observed line",
+      "expected": "observed line from a live stable restart showing /board redraws within 30 seconds"
+    },
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261011-616c-factory-board-report-loop-renders-the-lines-from.md",
+      "line": 80,
+      "saw": "AC-H6 unchecked with no observed line",
+      "expected": "observed line showing the defined_in edge exists and make lint fails when it is removed"
+    },
+    {
+      "path": "report/loop/RUNBOOK.md",
+      "line": 1,
+      "saw": "121 lines with no contents list and no GOOD or NEVER lines",
+      "expected": "contents list first then GOOD and NEVER examples inside the first 100 lines"
+    }
+  ],
+  "attempt": 1
+}

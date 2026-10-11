@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T170309Z-100-ogccp",
+  "at": "2026-10-11T17:03:09Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-616c",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p1V",
+  "note": "pr.opened: PR 16 updated at 5353594, review fix landed (RUNBOOK contents list and GOOD/NEVER); AC-H3 and AC-H6 stay unchecked for the architect",
+  "evidence": [],
+  "observations": []
+}
