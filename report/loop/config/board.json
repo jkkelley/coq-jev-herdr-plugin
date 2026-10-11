@@ -1,0 +1,132 @@
+{
+  "schema_version": "1.0.0",
+  "poll_seconds": 10,
+  "watch_seconds": 10,
+  "out_dir": "report/loop/out",
+  "actor": "loop.sh",
+  "inputs": {
+    "events_dir": "events",
+    "events_days": 14,
+    "work_orders_dir": "work-orders",
+    "routes": "factory/config/routes.json",
+    "roles_dir": "roles",
+    "playbooks_dir": "playbooks",
+    "herdr_config": "herdr/config/herdr.json",
+    "belt_state": "factory/state/runner.json",
+    "belt_max_age_seconds": 30,
+    "owner_pane_label": "bearings-stable"
+  },
+  "line_statuses": ["in-progress", "in-review"],
+  "stations": [
+    {
+      "id": "owner",
+      "role": null,
+      "title": "Owner",
+      "model": "bearings page",
+      "does": "decides on the page",
+      "emits": { "kind": "request", "code": 300 }
+    },
+    {
+      "id": "ia",
+      "role": "interface-agent",
+      "does": "the owner's only contact",
+      "emits": { "kind": "request.forwarded", "code": 300 }
+    },
+    {
+      "id": "arch",
+      "role": "architect",
+      "does": "cuts tickets, picks models",
+      "emits": { "kind": "ticket.cut", "code": 100 }
+    },
+    {
+      "id": "worker",
+      "role": "worker",
+      "does": "one ticket, one slot",
+      "emits": { "kind": "pr.opened", "code": 100 }
+    },
+    {
+      "id": "tester",
+      "role": "tester",
+      "does": "runs the ticket's test plan",
+      "emits": { "kind": "test.passed", "code": 201 }
+    },
+    {
+      "id": "reviewer",
+      "role": "reviewer",
+      "does": "evidence vs acceptance",
+      "emits": { "kind": "review.passed", "code": 201 }
+    },
+    {
+      "id": "merger",
+      "role": "merger",
+      "does": "squash, cleanup, slot release",
+      "emits": { "kind": "merged", "code": 200 }
+    },
+    {
+      "id": "verify",
+      "role": "architect",
+      "model": "verify",
+      "does": "checks main after merge",
+      "emits": { "kind": "verified", "code": 201 },
+      "takes": { "with": "verify" }
+    },
+    {
+      "id": "line",
+      "role": "interface-agent",
+      "model": "owner line",
+      "does": "one line on the page",
+      "emits": null,
+      "takes": { "do": "notify_owner" }
+    }
+  ],
+  "kickbacks": [
+    {
+      "from": "tester",
+      "to": "worker",
+      "route": { "kind": "test.failed", "code": 422, "do": "wake" }
+    },
+    {
+      "from": "reviewer",
+      "to": "worker",
+      "route": { "kind": "review.changes", "code": 422, "do": "wake" }
+    },
+    {
+      "from": "merger",
+      "to": "worker",
+      "route": { "kind": "merge.conflict", "code": 409, "do": "wake" }
+    },
+    {
+      "from": "reviewer",
+      "to": "arch",
+      "esc": true,
+      "route": { "kind": "review.changes", "code": 422, "do": "escalate" }
+    },
+    {
+      "from": "arch",
+      "to": "ia",
+      "esc": true,
+      "route": { "kind": "blocked", "code": 423, "do": "notify_owner" }
+    }
+  ],
+  "board": [
+    { "k": "B0", "ticket": "WO-20261011-616c" },
+    { "k": "B1", "ticket": "WO-20261011-9639" },
+    { "k": "B2", "ticket": "WO-20261011-38c7" },
+    { "k": "B3", "ticket": "WO-20261011-23df" },
+    { "k": "B4", "ticket": "WO-20261011-5355" },
+    { "k": "B5", "ticket": "WO-20261011-e618" },
+    { "k": "B6", "ticket": "WO-20261011-fa78" },
+    { "k": "B7", "ticket": "WO-20261011-7b8f" }
+  ],
+  "board_title": "Build board · the small loop",
+  "legend_notes": [
+    [
+      "records",
+      "kind and code from factory/config/routes.json; 100 accepted, 200 done, 201 passed, 300 routed, 409 conflict, 422 failed, 423 blocked"
+    ],
+    [
+      "B0-B7",
+      "the small loop's tickets under WO-20261010-329d - P0 foundation: specs, knowledge graph, factory scripts"
+    ]
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T165015Z-100-kdyzx",
+  "at": "2026-10-11T16:50:15Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-616c",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p1V",
+  "note": "work.started: worker resumes on review.changes 422 for PR 16 (AC-H3 and AC-H6 evidence, RUNBOOK contents list)",
+  "evidence": [],
+  "observations": []
+}

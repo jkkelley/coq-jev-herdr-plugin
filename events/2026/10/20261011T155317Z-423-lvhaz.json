@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T155317Z-423-lvhaz",
+  "at": "2026-10-11T15:53:17Z",
+  "code": 423,
+  "seat": "worker-wo-20261011-616c",
+  "kind": "note",
+  "ticket": "WO-20261011-616c",
+  "pane": "wD3:p1V",
+  "note": "blocked: Write to graph/ refused (denied path for workers). Needed: nodes CMP-factory-board and RUN-factory-board, a graph.sh check rule. Ready-to-apply files will be in report/loop/graph-handoff/ in my PR.",
+  "evidence": [],
+  "observations": []
+}

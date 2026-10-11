@@ -1,0 +1,20 @@
+{
+  "id": "RUN-factory-board",
+  "type": "Runbook",
+  "title": "report/loop/RUNBOOK.md: set up the factory board on a repository by editing report/loop/config/board.json, run loop.sh watch in a labelled pane, serve out_dir at /board",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "CMP-bearings-tool"
+    }
+  ],
+  "created": "2026-10-11T17:21Z",
+  "updated": "2026-10-11T17:21Z",
+  "schema": "report/loop/config/board.schema.json",
+  "data": [
+    "report/loop/config/board.json"
+  ]
+}
