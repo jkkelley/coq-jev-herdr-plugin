@@ -43,11 +43,16 @@ Always through the Makefile, always inside herdr.
 make serve TIER=dev TICKET=WO-20261010-ba08     # server in pane "bearings-dev-WO-20261010-ba08"
 make wait  TIER=dev TICKET=WO-20261010-ba08     # wait loop in pane "...-wait"; prints the pane id
 make url   TIER=dev TICKET=WO-20261010-ba08
-make stop  TIER=dev TICKET=WO-20261010-ba08     # stops the server and closes both panes
+make stop  TIER=dev TICKET=WO-20261010-ba08     # stops the server; both panes become OPEN slots again, none is closed
 make serve TIER=stable                          # stable has no ticket
 ```
 
 `TICKET` defaults to the current branch name with `feat/` stripped.
+
+Where the panes go: the server and the wait take a pane of the caller's own tab whose label starts with `open_label_prefix` (the tool grid's `OPEN - any tool` cells) and relabel it.
+Nothing is split inside a seat layout, so the architect column never moves.
+A caller with no seat (`COQ_SEAT` unset) and no OPEN cell in its tab gets its own pane split once; a seat in that position is refused with exit 3 naming the tab.
+`stop` relabels each pane with the label it had before (kept as `open_slots` in `server.json`) and closes nothing.
 Outside herdr (`HERDR_ENV` unset) every verb that starts a process refuses; only the test harness passes `--no-herdr`.
 
 ## Ask, wait, reply
@@ -100,6 +105,7 @@ State never moves with code: `make migrate TIER=stable FROM=<old page dir>` copi
 `config/bearings.json`, validated by `config/bearings.schema.json` at `make lint` and by `scripts/lib/config.mjs` at every start.
 Strings may use `${HOME}`, `${project}`, `${tier}`, `${ticket}`, `${ENV:NAME}`; an unknown variable fails with exit 3 naming it.
 No absolute path, hostname or port lives in a script: the file is meant to be lifted into S3 unchanged.
+`open_label_prefix` is the label prefix that marks a free tool-grid cell; `pane_split` is used only for the no-seat fallback above.
 `BEARINGS_CONFIG=<path>` points every script at another file (the suite does this).
 
 ## GOOD examples

@@ -3,7 +3,7 @@
 #
 #   make serve TIER=dev TICKET=WO-...    start a tier's page in a labelled herdr pane
 #   make wait  TIER=dev TICKET=WO-...    start the wait loop pane for that tier
-#   make stop  TIER=dev TICKET=WO-...    stop the server and close its panes
+#   make stop  TIER=dev TICKET=WO-...    stop the server and hand its panes back as OPEN slots
 #   make status / url / ask Q=file.json / migrate FROM=dir
 #   make test                            the Podman Playwright suite (tests/run-tests.sh)
 #   make lint                            schema-validate config + shell and node syntax

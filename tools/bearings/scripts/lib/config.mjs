@@ -33,7 +33,7 @@ const INT_KEYS = [
   "max_words_chars",
   "messages_window",
 ];
-const STR_KEYS = ["schema_version", "project", "state_root", "listen_host", "cookie_name"];
+const STR_KEYS = ["schema_version", "project", "state_root", "listen_host", "cookie_name", "open_label_prefix"];
 
 export function validate(cfg) {
   if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) die("root is not an object");

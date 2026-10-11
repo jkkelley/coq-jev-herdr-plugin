@@ -22,6 +22,7 @@
     "max_words_chars",
     "messages_window",
     "pane_split",
+    "open_label_prefix",
     "tiers"
   ],
   "properties": {
@@ -83,6 +84,11 @@
     "messages_window": {
       "type": "integer",
       "minimum": 1
+    },
+    "open_label_prefix": {
+      "type": "string",
+      "minLength": 1,
+      "description": "A pane in the caller's tab whose label starts with this is an OPEN tool-grid slot. serve and wait take the first one and relabel it; stop gives it its old label back. Only when the tab has none, and the caller is not a seat, is the calling pane split."
     },
     "pane_split": {
       "type": "object",
