@@ -34,7 +34,7 @@ The owner orders a live claude session into a role's seat without losing its con
 A step that cannot be verified is a wish.
 Record what the successful run actually printed.
 
-Observed in `herdr/tests/cases/13-adopt.test.sh` and `14-resume.test.sh` against a headless herdr with a stub claude:
+Observed in `herdr/tests/cases/14-adopt.test.sh` and `15-resume.test.sh` against a headless herdr with a stub claude:
 
 - `herdr/bin/seat.sh --check <seat name>` prints nothing and exits 0 with the agent running; it exits 1 and names the difference when the settings drifted or the pane label changed.
 - `herdr/bin/seat.sh --audit` prints `COMPLIANT <pane> <seat name> pid <n> (adopted: mode and settings apply at the next restart)` for the adopted agent.
