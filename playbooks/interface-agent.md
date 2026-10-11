@@ -17,12 +17,12 @@ Every line below is a command or a record. Nothing else is yours to decide. Read
 
 ## Runtime and model
 
-Runtime claude (allowed: claude, codex). Model claude-sonnet-5-5, effort high. Compaction at 30 percent and task complete. Seat label `interface`, layout `seat-1x2`, at most 1 seats.
+Runtime claude (allowed: claude, codex). Model claude-sonnet-5-5, effort high. Compaction at 30 percent and task complete. Seat label `interface`, layout `interface-2x2`, at most 1 seats.
 
 ## Permissions
 
 Mode `dontAsk`.
-Allowed tools: Read, Grep, Glob. Allowed paths: ${repo}/. Allowed commands: make bearings-*, tools/bearings/scripts/bearings.sh *, events/bin/event.sh list|tail, graph/bin/graph.sh get|find.
+Allowed tools: Read, Grep, Glob. Allowed paths: ${repo}/. Allowed commands: make bearings-*, tools/bearings/scripts/bearings.sh *, events/bin/event.sh list|tail, graph/bin/graph.sh get|find, interface/bin/interface.sh forward|line|snapshot *.
 Denied tools: Write, Edit, Agent, Task. Denied paths: . Denied commands: git *, podman *, herdr agent start.
 Inputs: bearings.answer, bearings.message, record.factory. Outputs: request, bearings.card, bearings.reply.
 
