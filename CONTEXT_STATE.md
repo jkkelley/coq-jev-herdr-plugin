@@ -38,6 +38,33 @@
 
 
 
+
+## Checkpoint 2026-10-11 06:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-dc0d in treehouse slot 1 on branch feat/seat-sh-nudges-a-fresh-seat-past-the-compaction-, test pane wD3:p1V. No PR yet.
+- Blocked record 423 (20261011T060054Z-423-qkuw4) is open: the ticket wants the nudge text under roles/, which the worker fence denies. The architect answered with a continue nudge, not a decision, so the roles/ file stays unwritten.
+
+#### Toolchain
+
+- Step 1 landed: herdr/config/herdr.json and herdr.schema.json carry nudge_wait_seconds (180) and nudge_settle_seconds (10).
+- Plan: step 2 seat.sh waits for the line "● ACK compaction-guard" with herdr pane wait-output, polls agent_status through herdr pane list, sends one herdr agent prompt when idle is stable, writes nudged_at into seat.json. Text comes from roles/bin/nudge.sh when that file exists, else an inline fallback naming the ticket and its title. Step 3 the stub claude modes and Podman case 11. Step 4 lint, render-playbook --check, full suite from wD3:p1V, PR.
+
+#### Active Tasks
+
+- WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else': in progress, step 1 of 4 done.
+
+#### Blockers
+
+- The roles/bin/nudge.sh file is outside the worker fence; the architect adds it. seat.sh works without it through the fallback text.
+
+### Hydration prompt
+
+Resume WO-20261011-dc0d from step 2: edit herdr/bin/seat.sh (nudge after the brief, both doors, runtime claude only), then the stub claude modes and herdr/tests/cases/11-nudge.test.sh.
+
 ## Checkpoint 2026-10-11 05:58 UTC
 
 ### Current state
