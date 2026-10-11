@@ -46,6 +46,34 @@
 
 
 
+
+## Checkpoint 2026-10-11 19:24 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-6842 in slot 5 on WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (gate record with no consumer, belt heartbeat stale, runner pane gone) and recover.sh restarts the belt. Branch feat/flow-watch-a-shell-watcher-in-a-monitors-pane-tu, pushed. work.started 100 record 20261011T185747Z-100-3rtr5. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped is still draft; this ticket added the runner (2.2.2) and flow (2.2.3) reserved slots to herdr/config/monitors.json, so bringup plugs both in with no code change (breadcrumb in bringup.sh).
+
+#### Toolchain
+
+- Landed: lint conflict-marker check (AC-H3, factory case 08); factory/bin/flow.sh with flow.json and schema (factory cases 09 and 10); monitors.json slots runner and flow; herdr test world runs both as sleep loops (world_real_belt puts the real commands back); herdr cases 04 and 05 updated to nine bringup notes, both green from the test pane.
+- make -C factory test is 10 passed; make -C herdr test CASES='04 05' is 2 passed.
+
+#### Active Tasks
+
+- Step 4: recover.sh belt node. herdr.json gains belt.slot (runner), belt.status (${repo}/factory/bin/route.sh status), belt.settle_seconds, with schema; node runs after the monitor seat: ok belt when the runner pane is in use (monitors.sh status line) and the status exits 0, else --check prints FAILED belt (reason), --apply restarts through monitors.sh take runner runner -- <command from monitors.json>, waits settle_seconds for a fresh belt, prints fixed belt. New herdr case 13 with world_real_belt; existing cases that count ok lines in recover output (05 says four) need the extra ok belt line.
+- Step 5: factory/RUNBOOK.md flow watch section (graph node if the RUNBOOK is a graph node), ticket evidence per criterion with --observed, retro note, PR, submit, done.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-6842 as worker-wo-20261011-6842 in slot 5. Read playbooks/worker.md, the ticket and this checkpoint. Steps 1 to 3 are committed (conflict lint, flow.sh, bringup slots). Start step 4, the recover.sh belt node: read herdr/bin/recover.sh, herdr/tests/cases/05-recover.test.sh and herdr/config/herdr.schema.json first. Run make only through herdr/bin/testpane.sh wD3:p1V, make step included, because lint takes longer than the harness timeout.
+
 ## Checkpoint 2026-10-11 19:15 UTC
 
 ### Current state
