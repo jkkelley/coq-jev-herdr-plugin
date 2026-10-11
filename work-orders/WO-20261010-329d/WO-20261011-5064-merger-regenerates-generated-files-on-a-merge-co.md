@@ -4,7 +4,7 @@
   "slug": "merger-regenerates-generated-files-on-a-merge-co",
   "title": "Merger regenerates generated files on a merge conflict: a 409 whose only conflicts are CHANGELOG.md, INDEX.md or epic READMEs is resolved by their scripts, not kicked back",
   "type": "bug",
-  "status": "draft",
+  "status": "ready",
   "priority": "p1",
   "created": "2026-10-11",
   "updated": "2026-10-11",
@@ -13,7 +13,11 @@
   "branch": null,
   "pr": null,
   "closed": null,
-  "approval": null,
+  "approval": {
+    "via": "override",
+    "reason": "Claude seat: Lavish prohibited for Claude runtimes; architect approves, every main move today cost a hand merge of generated files",
+    "at": "2026-10-11"
+  },
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
@@ -76,6 +80,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-11` architect 21:20Z: generated-path set seen in every 409 today: CHANGELOG.md, changelog/, work-orders/INDEX.md, epic README.md, graph/INDEX.md, graph/GRAPH.mmd (graph.sh index); CONTEXT_STATE.md and .gitignore keep both sides by union. Nine hand merges by the architect on 2026-10-11 (PR 11, 15 x3, 16, records branch x3) were all this set.
 
 ## Outcome
 
