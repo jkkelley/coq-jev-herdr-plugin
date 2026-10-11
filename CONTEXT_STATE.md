@@ -45,6 +45,40 @@
 
 
 
+
+## Checkpoint 2026-10-11 21:26 UTC
+
+### Current state
+
+#### Infrastructure
+
+Worker seat worker-wo-20261011-ceea holds treehouse slot 8 (branch feat/blueprint-page-report-loop-renders-the-system-de), test pane wD3:p1V shared with other seats: a run queues behind theirs and takes 5 to 15 minutes to start, so batch lint and test in one call.
+No server, no pane and no process of mine runs beyond the test pane.
+Context was 23 percent of the 30 percent threshold when step 2 landed; the guard compacts only after the threshold is crossed, so keep working until a landed step finds the seat armed.
+
+#### Toolchain
+
+report/loop/loop.sh gained --view NAME (config/NAME.json), a view_of/config_check that picks blueprint.schema.json for a config with view blueprint, and collect_blueprint, which runs the pure jq files in report/loop/lib/blueprint (components, decisions, tickets, state, entry) over the impure gather.sh.
+report/loop/config/blueprint.json is the view config (out_dir report/blueprint/out/dev, four gates node, decision, runbook, work, key, legend notes, links.node to GitHub).
+The entry schema gained optional title, label, key, legend_title, legend_open, links, diagram and larger caps; the template script block (never the locked markup) draws them only when present, so the board entry draws as before.
+Cases 08 to 13 added; the full suite is 13 passed and make -C report/loop lint is clean.
+
+#### Active Tasks
+
+WO-20261011-ceea - Blueprint page: report/loop renders the system design from graph/ and work-orders/ as done, in flight and coming up, in the board's format, served by bearings at /blueprint.
+Steps 1 and 2 of 6 done (branch rebuilt on origin/main at 20:42Z after the architect record 20261011T203651Z-422-pyv1n; the architect force-pushed it; ticket stamp, step 1 and step 2 are three commits on main): collectors, then the blueprint view (collect, validate, render, watch) over the real graph: 21 components, 38 legend rows, 56 board rows.
+Next, step 3: report/blueprint/serve.sh (python3 stdlib server, routes /blueprint, /blueprint/data.json, /healthz, dev refreshes by running loop.sh --view blueprint watch --iterations 1 every watch_seconds in-process) plus tier configs report/blueprint/config/dev.json, uat.json, stable.json (port, out_dir, pane_label, mode live or released, promotes_from) and bin/promote.sh (renders a tagged build into out_dir/releases/N with state set to the tier, switches the current symlink).
+Then step 4 Makefile targets render, serve-tier, promote-tier, test, lint plus a lint check that dev out_dir equals blueprint.json out_dir; step 5 monitors.json slots for the three panes so bringup --check lists them and recover restarts one; step 6 RUNBOOK section, Jenkinsfile trigger, board parity proof (make test-browser), evidence, PR.
+
+#### Blockers
+
+graph/nodes/DEC-blueprint-server-tiers.json does not exist although GRAPH.mmd and INDEX.md name it; graph/ is denied to this role, so the architect must add it, with a CMP node for the blueprint tool defined_in a RUN node.
+Real tickets rarely name a CMP id in their title, Problem or Scope, so the page shows 0 components in flight today; the RUNBOOK must say how to link a ticket.
+
+### Hydration prompt
+
+You are worker-wo-20261011-ceea on WO-20261011-ceea. Read AGENTS.md, playbooks/worker.md, the ticket, then this checkpoint, and continue with step 3.
+
 ## Checkpoint 2026-10-11 17:49 UTC
 ## Checkpoint 2026-10-11 15:54 UTC
 ## Checkpoint 2026-10-11 16:30 UTC
