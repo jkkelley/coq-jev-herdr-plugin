@@ -30,6 +30,71 @@
 
 
 
+
+## Checkpoint 2026-10-11 03:42 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Public repo https://github.com/jkkelley/coq-jev-herdr-plugin, main at 8ce392c; PR #7 (feat/bearings-sh-serve-and-wait-place-their-panes-in-, head afe1c4f plus this close-out step) reviewed and about to merge. Main checkout /home/luna/projects/coq-jev-herdr-plugin on main. No open PRs. Treehouse pool ~/.treehouse/coq-jev-herdr-plugin-f314e6: slot 1 leased by hand to WO-20261010-2d04 (seat reused it, owned false); return it after the seat is down with treehouse return <path> --if-lease-holder WO-20261010-2d04 --force. seat.sh now leases a slot per ticket seat and returns it on --down.
+- Live herdr session stable, workspace coq (wD3). Architect tab: this seat wD3:p2 is the full left column; tool grid right: wD3:p1R test pane "test - herdr" (replaced wD3:pF, killed 03:2x UTC by treehouse return --force while its shell sat in the slot), wD3:p1N bearings-stable-wait, wD3:pG open, wD3:pH open, wD3:p1M bearings-stable, wD3:pJ open. Monitor seat monitor (haiku) wD3:p1E in tab monitor. Three monitors tabs up (bringup.sh --check: all ok). Monitors 1: 1.1.1 wD3:pK guard lease watcher (unfreeze.sh --watch 30, ticking), 1.1.2 wD3:pM compaction-guard watch, 1.1.3 open for the orchestrator watcher. Monitors 2: events tail and queue list. Worker seats worker-wo-20261010-8fa8 and worker-wo-20261010-a429 are down.
+- Owner page: stable bearings tier, URL from `tools/bearings/scripts/bearings.sh stable url` (never write the keyed URL into a record: public repo, hard rule no PII). Key rotated 2026-10-11 00:07 UTC with `bearings.sh stable rotate-key --to wD3:p2`; the old key in git history is dead. Server in wD3:p1M bound to this session, wait loop in wD3:p1N forwarding wakes into wD3:p2. Replies go with reply.mjs --tier stable --to <m-id>; the owner's thread is m-20261010192521524-wfo6h.
+- compaction-guard 1.2.8 binds this seat. recover.sh --check warns 112 host-wide stale guard sessions (other projects' dead seats; their resume_cmd would relaunch them) and was deliberately not applied.
+- Caves of Qud: Windows GOG build copied to /home/luna/games/caves-of-qud; Spike 1 still needs the native Linux build from the owner.
+
+#### Toolchain
+
+- herdr/bin: seat-lib.sh, seat.sh (resolves the pane labelled "test - herdr" in the tab it was started from, exports COQ_TEST_PANE, refuses a ticket seat without one), retire.sh, monitors.sh, bringup.sh, recover.sh, unfreeze.sh (exemptions jq fixed), testpane.sh (a worker runs commands only in COQ_TEST_PANE; the role denies herdr pane run *). Podman suite herdr/tests/run.sh cases 01-07 green from the labelled test pane (tests: 7 passed, 0 failed). roles/bin/brief.sh --test-pane names the pane in the brief.
+- tools/bearings/scripts/bearings.sh: serve forwards --join; rotate-key stops, drops the key from server.json, restarts with --join and the session.json binding, keeps the panes, restarts the wait loop (container cases T4c). Its pane_for still splits the calling seat (WO-20261010-2d04); after a plain stop/serve move the two panes into the grid with herdr pane move via a temporary tab.
+- bin/step.sh: lint, changelog, commit, push, checkpoint; /compact only with --compact; compaction-guard owns compaction.
+- `make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [CP=body.md]` is the only way a step lands. Checkpoint bodies live in the scratchpad as cpN.md.
+- Tests run only from the labelled test pane wD3:p1R: `herdr pane run wD3:p1R "( cd <checkout> && git --no-pager log --oneline -1 && make lint 2>&1 | tail -3 && make -C herdr test 2>&1 | tail -30 ); echo MARKER"` then `herdr pane wait-output wD3:p1R --regex '^MARKER$' --timeout 580000` (the timeout is milliseconds). Never leave the pane's shell cwd inside a slot (WO-20261011-36d7).
+- Work orders: $HOME/.claude/skills/work-order/scripts/work-order.sh; close-out on the branch is submit --pr N, note, done, make step, gh pr merge --merge, pull, cleanup.
+
+#### Active Tasks
+
+- WO-20261010-a429 - seat.sh leases a treehouse slot for the worker and the worker playbook names the real lease tool: done, PR #6 merged at 10b69af, branches deleted, seat down, slot 1 returned. Follow-ups the worker reported, not yet ticketed: render_settings leaves ${worktree} unsubstituted in allow.paths (malformed Edit allow rule); deny path ${repo}/roles/ names the main checkout so a worker edits roles/ in its worktree freely.
+- WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat: done on its branch, PR #7 reviewed from wD3:p1R on afe1c4f (lint all ok, bearings suite 38 passed 0 failed). Next: gh pr merge 7 --merge, pull main, run the live AC-H1 (bearings.sh stable stop, serve, wait from wD3:p2; the panes must land in OPEN grid slots), seat.sh --down worker-wo-20261010-2d04, treehouse return slot 1, cleanup, land the seat.down event.
+- WO-20261011-c077 - seat.sh checks out the ticket branch in the slot it leases, so a worker starts on its branch without the architect touching the slot: draft. WO-20261011-4c5e - Worker fence paths resolve against the worktree: render_settings substitutes ${worktree} in allow.paths and deny paths name the slot, not the main checkout: draft.
+- WO-20261011-36d7 - The labelled test pane never keeps its cwd inside a treehouse slot, so treehouse return --force cannot kill it: draft, cut from the PR 6 review. Until it lands, run review commands in the test pane as ( cd <slot> && ... ) so the pane shell stays in the main checkout.
+- WO-20261010-8fa8 - Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, with its Podman case: done, PR #5 merged. Gaps the worker reported, not yet ticketed: SPEC-04 s-seat does not list COQ_TEST_PANE; testpane.sh fences pane run only (send-text and send-keys are not denied); the second usage string in roles/bin/brief.sh lacks [--test-pane ID].
+- Next: WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat (draft).
+- Then, each through a worker seat with this seat reviewing: WO-20261010-fbad - Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles; WO-20261010-539f - NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue; WO-20261010-d354 - Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree; WO-20261010-7083 - Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause and queue, inbox drains after resume.
+
+#### Blockers
+
+- Spike 1: the native Linux Caves of Qud build. The owner answered Q12b "Path on this machine" at 01:43 UTC and said "I bought it thru GOG", but ~/games/downloads is empty and nothing matching exists on D: or the Windows Downloads; replied on the page (m-20261011014414471-8wdfh) with the gog.com offline-installer steps and the drop path. Waiting for "done".
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-11 03:4x UTC, this seat: PR #7 passes review; bearings panes are claimed from OPEN grid slots by label prefix (config open_label_prefix) and handed back on stop, nothing is split inside a seat.
+- 2026-10-11 03:2x UTC, this seat: the test pane is recreated as wD3:p1R in the middle column and review commands run in a subshell; the hazard is ticketed as WO-20261011-36d7 rather than patched by hand.
+- 2026-10-11 03:2x UTC, this seat: PR #6 passes review; seat.sh now leases the slot with the ticket as holder and returns it on --down, the worker reads treehouse status at step 1.
+- 2026-10-11 02:5x UTC, this seat: a429 approved with --no-lavish; work-order approve stamps via lavish whenever lavish-axi is on PATH without opening it, and a Claude seat never records a Lavish approval. Lease verbs fixed from treehouse --help v2.3.0: get --lease --lease-holder, return --if-lease-holder, status --json.
+
+- 2026-10-11 00:07 UTC, owner: rotate the key, do not rewrite history. Done with bearings.sh rotate-key; history keeps a dead key.
+- 2026-10-10 22:2x UTC, this seat: the worktree named in a worker's brief is its lease until WO-20261010-a429 lands; the worker on 8fa8 was told so and proceeded.
+- 2026-10-10 22:3x UTC, this seat: compaction-guard recover --apply is not run from this seat; its 112 sessions are other projects' dead seats and the resume commands would relaunch them.
+
+#### Lessons Learned
+
+- treehouse return --force terminates every process whose cwd is inside the slot; a test pane that cd'd into the slot dies with it and herdr closes the pane.
+- herdr pane wait-output --timeout is in milliseconds; 580 returns at once as a timeout.
+- A merged worker branch stacks its checkpoints on top of CONTEXT_STATE.md, so the architect resume line is buried until the architect lands its next step; WO-20261010-d354 (dated entry files) is the real fix.
+- herdr pane wait-output matches the echoed command line too; anchor the marker with ^MARKER$.
+
+- bearings.sh serve refuses a page owned by another session unless server.mjs gets --join; the launcher did not forward it, so a seat successor could not bring the page back.
+- bearings.sh pane_for splits the calling pane, so a restart from a seat breaks that seat's layout; herdr pane move within the same tab is a no-op, go through --new-tab and back.
+- herdr pane resize --amount is a fraction of the tab; up on the top pane shrinks it, up on a lower pane grows it.
+- The worker playbook names slot.sh, which does not exist, and seat.sh takes a hand-made worktree; a worker following the playbook stops at step 1.
+
+### Hydration prompt
+
+Run from /home/luna/projects/coq-jev-herdr-plugin on main. Next: merge PR #7 for WO-20261010-2d04 - bearings.sh serve and wait place their panes in the tool grid, never under the calling seat (gh pr merge 7 --merge), pull main, run the live check (tools/bearings/scripts/bearings.sh stable stop, then serve --join and wait --to wD3:p2; the two panes must be OPEN grid cells, the architect column untouched), seat.sh --down worker-wo-20261010-2d04, treehouse return slot 1 for WO-20261010-2d04, work-order cleanup, land the seat.down event with make step, report to the owner. Then WO-20261011-c077 - seat.sh checks out the ticket branch in the slot it leases, so a worker starts on its branch without the architect touching the slot, through a worker seat. Answer owner page wakes first (reply.mjs --tier stable --to <m-id>); the page URL comes from bearings.sh stable url and never enters a record. Every step lands with `make step ... CP=<body>`; never lint, commit, checkpoint or compact by hand.
+
 ## Checkpoint 2026-10-11 03:37 UTC
 
 ### Current state
