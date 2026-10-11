@@ -147,5 +147,7 @@ case $VERB in
     if [ "$age" -le "$STALE" ]; then echo "belt: running (touched ${age}s ago)"; else echo "belt: stopped (last touched ${age}s ago, stale after ${STALE}s)"; exit 1; fi ;;
   once) start; tick ;;
   run) start; trap 'log "stopping"; exit 0' TERM INT; log "running: events $EVENTS, routes $ROUTES, every ${POLL}s"
-    while true; do tick; sleep "$POLL"; done ;;
+    # `read -t` rather than `sleep`: bash defers a trap until the foreground command ends, so a TERM sent during a sleep waited
+    #   out the whole poll interval before the runner stopped. read is interrupted by the signal and the trap runs at once.
+    while true; do tick; read -r -t "$POLL" <> <(:) || true; done ;;
 esac
