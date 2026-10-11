@@ -17,6 +17,12 @@
     { "match": { "kind": "verified", "code": 201 }, "do": "notify_owner", "to": "interface-agent", "line": "done" },
     { "match": { "kind": "blocked", "code": 423, "escalations_lt": 1 }, "do": "escalate", "to": "architect", "code": 423 },
     { "match": { "kind": "blocked", "code": 423, "escalations": 1 }, "do": "notify_owner", "to": "interface-agent", "line": "decision" },
+    { "match": { "kind": "break.glass", "code": 300 }, "do": "notify_owner", "to": "interface-agent", "line": "decision" },
+    { "match": { "kind": "break.glass", "code": 200 }, "do": "break-glass", "to": "orchestrator" },
+    { "match": { "kind": "break.glass", "code": 423 }, "do": "wake", "to": "monitor", "with": "record" },
+    { "match": { "kind": "break.glass", "code": 100 }, "do": "none", "to": "monitor" },
+    { "match": { "kind": "break.glass", "code": 201 }, "do": "none", "to": "monitor" },
+    { "match": { "kind": "break.glass", "code": 204 }, "do": "none", "to": "monitor" },
     { "match": { "kind": "seat.down", "code": 500 }, "do": "wake", "to": "monitor", "with": "record" },
     { "match": { "code_gte": 500 }, "do": "wake", "to": "monitor", "with": "record" }
   ]
