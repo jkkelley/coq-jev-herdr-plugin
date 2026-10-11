@@ -31,7 +31,7 @@ echo "-- a world: two seats and a hand-started agent that only an exemption name
 "$SEAT" --ticket WO-20261010-8777 --role worker --worktree "$REPO" >/dev/null; assert_eq "the worker comes up" "$?" 0
 "$SEAT" --ticket WO-20261010-539f --role reviewer --worktree "$REPO" >/dev/null; assert_eq "the reviewer comes up" "$?" 0
 WP="$(jq -r .pane "$STATE/seats/$W/seat.json")"; RP="$(jq -r .pane "$STATE/seats/$R/seat.json")"
-ws="$(h workspace list | jq -r '.result.workspaces[0].workspace_id')"
+ws="$(h workspace list | jq -r '.result.workspaces[] | select(.label == "coq") | .workspace_id')"
 AP="$(h tab create --workspace "$ws" --label arch --cwd "$REPO" | jq -r '.result.root_pane.pane_id // empty')"
 assert_match "the hand-started tab has a pane" "$AP" '^w'
 sleep 2; h agent start arch --kind claude --pane "$AP" -- --model x >/dev/null; assert_eq "the hand-started agent comes up" "$?" 0

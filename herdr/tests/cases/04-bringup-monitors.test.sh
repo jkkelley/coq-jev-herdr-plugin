@@ -13,7 +13,7 @@ echo "-- --check on an empty session reports and builds nothing"
 "$BU" --check --worktree "$REPO" > "$WORLD/out" 2>&1; rc=$?; out="$(tr '\n' ' ' < "$WORLD/out")"
 assert_eq "--check exits 1" "$rc" 1
 assert_match "herdr is ok, the guard is skipped, monitors are the first failure" "$out" "^ok herdr.*skipped compaction-guard.*FAILED monitors"
-assert_eq "nothing was built" "$(h workspace list | jq '.result.workspaces | length')" 0
+assert_eq "nothing was built" "$(h workspace list | jq '[.result.workspaces[] | select(.label == "coq")] | length')" 0
 
 echo "-- bringup builds the system in order"
 "$BU" --worktree "$REPO" > "$WORLD/out" 2>&1; rc=$?; out="$(tr '\n' ' ' < "$WORLD/out")"

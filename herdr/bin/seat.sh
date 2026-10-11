@@ -11,7 +11,7 @@
 # waited for, `herdr agent start` with the role's model, effort and permission mode, then the brief (roles/bin/brief.sh)
 # as the first prompt. A rerun repairs: a pane with the right label is kept, strays are relabelled, missing ones split.
 # Prints one JSON line. DRY_RUN=1 prints every mutating herdr call and writes nothing.
-# Exit: 0 ok, 1 check differences, 2 usage, 3 refused (gate, cap, guard, name), 4 herdr failure.
+# Exit: 0 ok, 1 check differences, 2 usage, 3 refused (gate, cap, guard, name, no test pane for a ticket seat), 4 herdr failure.
 #
 # BREADCRUMB 2026-10-10 - ported from ~/tools/bearings-v2/bin/seat.sh (644 lines, proven on the rime fleet) and
 #   reduced to what SPEC-04 asks: the role file is the whole contract (no ticket-side model or layout override, the
@@ -50,6 +50,14 @@ EMPTY='{}'
 
 sub() { sed -e "s|\${MODEL}|$MODEL|g" -e "s|\${effort}|$effort|g" -e "s|\${ticket}|$id|g" -e "s|\${seat}|$role|g" \
             -e "s|\${name}|$name|g" -e "s|\${state_dir}|$sd|g" -e "s|\${worktree}|$wt|g" -e "s|\${repo}|$SL_REPO|g"; }
+# test_pane: the pane whose label starts with "test - herdr" in the tab this script was started from (HERDR_TAB_ID, which
+# every herdr pane carries; the architect tab). Prints its id, or nothing. WO-20261010-8fa8: a worker runs commands only in
+# this pane, through herdr/bin/testpane.sh, and reads its id in the brief.
+test_pane() {
+  [ -n "${HERDR_TAB_ID:-}" ] || return 0
+  sl_h pane list ${HERDR_WORKSPACE_ID:+--workspace "$HERDR_WORKSPACE_ID"} 2>/dev/null \
+    | jq -r --arg t "$HERDR_TAB_ID" 'first((.result.panes // [])[] | select(.tab_id == $t and ((.label // "") | startswith("test - herdr"))) | .pane_id) // empty'
+}
 slot_count() { jq '.panes|length' "$layout_file"; }
 slot_field() { jq -r --argjson i "$1" --arg f "$2" '.panes[$i][$f]' "$layout_file" | sub; }
 want_labels() { local i n; n="$(slot_count)"; for ((i = 0; i < n; i++)); do slot_field "$i" label; done; }
@@ -217,6 +225,13 @@ if [ "$DRY" != 1 ] && ! sl_agent_live "$name"; then
   fi
 fi
 
+# A ticket seat needs the labelled test pane in the architect tab: it is how the worker proves its acceptance criteria, and
+# the brief names it. Door 2 seats (monitor, merger, orchestrator) run no suite, so an absent pane is not a refusal there.
+tpane="$(test_pane)"
+if [ -n "$ticket" ] && [ -z "$tpane" ]; then
+  [ "$DRY" = 1 ] && tpane=dry-test-pane || refuse "no pane labelled 'test - herdr' in the tab this was started from (HERDR_TAB_ID=${HERDR_TAB_ID:-unset}); start seats from the architect tab"
+fi
+
 # Workspace by label else create; tab by label else create. A fresh workspace's root tab is renamed and used.
 sl_h workspace list >/dev/null 2>&1 || { [ "$DRY" = 1 ] || { SL_EXIT=4 sl_die "herdr session $HS is not running; bringup.sh starts it"; }; }
 ws="$(sl_ws_id || true)"; tab=""
@@ -305,8 +320,8 @@ else
   # runtime (dotfiles Rule 19; owner 2026-09-22).
   surface=lavish; [ "$runtime" = claude ] && surface=artifact
   unset_markers='for v in $(env | sed -n '\''s/^\(CLAUDECODE\|CLAUDE_CODE_[A-Z0-9_]*\|CLAUDE_PID\|CLAUDE_EFFORT\|AI_AGENT\)=.*/\1/p'\''); do unset "$v"; done; '
-  line="$unset_markers$(printf 'cd %q && export COQ_SEAT=%q COQ_ROLE=%q COQ_TICKET=%q COQ_ROLE_FILE=%q COQ_WORKTREE=%q COQ_REPO=%q RAIL_SURFACE=%q PATH=%q:"$PATH"' \
-    "$wt" "$name" "$role" "$id" "$role_file" "$wt" "$SL_REPO" "$surface" "$SL_REPO/bin")"
+  line="$unset_markers$(printf 'cd %q && export COQ_SEAT=%q COQ_TEST_PANE=%q COQ_ROLE=%q COQ_TICKET=%q COQ_ROLE_FILE=%q COQ_WORKTREE=%q COQ_REPO=%q RAIL_SURFACE=%q PATH=%q:"$PATH"' \
+    "$wt" "$name" "$tpane" "$role" "$id" "$role_file" "$wt" "$SL_REPO" "$surface" "$SL_REPO/bin")"
   sl_mut pane wait-output "$a" --regex "$SL_PROMPT_RE" --timeout "$(sl_cfg .prompt_timeout_ms)" >/dev/null 2>&1 \
     || { [ "$DRY" = 1 ] || { SL_EXIT=4 sl_die "pane $a showed no shell prompt within $(sl_cfg .prompt_timeout_ms) ms; rerun to repair"; }; }
   sl_mut pane run "$a" "$line" >/dev/null
@@ -321,7 +336,7 @@ else
   sl_record seat.up 100 "$name" ${id:+--ticket "$id"} --pane "$a" --note "$role seat up: $MODEL $effort $pmode"
 fi
 if [ "$started" = 1 ]; then
-  if [ -n "$ticket" ]; then prompt="$("$SL_REPO/roles/bin/brief.sh" --role "$role" --ticket "$id" --project "$SL_REPO")" \
+  if [ -n "$ticket" ]; then prompt="$("$SL_REPO/roles/bin/brief.sh" --role "$role" --ticket "$id" --project "$SL_REPO" --test-pane "$tpane")" \
       || prompt="$id. Playbook playbooks/$role.md. The ticket file could not be read; post blocked 423 before anything else."
   else prompt="You are the $role seat named $name. Read playbooks/$role.md first. Your task: $task. Post your first record before anything else."; fi
   prompt+=" Work only in $wt."
