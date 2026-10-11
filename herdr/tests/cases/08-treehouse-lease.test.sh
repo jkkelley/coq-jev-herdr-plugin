@@ -141,6 +141,20 @@ assert_eq "no get was made" "$(calls get)" "$gets"
 assert_eq "the pool is empty" "$(pool | jq length)" 0
 assert_eq "no workspace was built" "$(ws_count)" "$before"
 
+echo "-- WO-20261011-23df: branch null here but origin has feat/<slug> (the start was pushed, not merged): leased on that branch"
+SLUG_E="$(awk '/^---$/{c++; next} c==1' "$(tfile "$E")" | jq -r .slug)"
+git -C "$REPO" init -q 2>/dev/null; git -C "$REPO" remote add origin "$ORIGIN" 2>/dev/null || git -C "$REPO" remote set-url origin "$ORIGIN"
+origin_branch "feat/$SLUG_E"
+NE=worker-wo-20261010-d354
+out="$("$SEAT" --ticket "$E" --role worker 2>"$WORLD/err")"; rc=$?
+assert_eq "exit 0 with the derived branch" "$rc" 0
+[ "$rc" = 0 ] || { echo "  diag stderr: $(tail -c 600 "$WORLD/err")"; echo "  diag out: $out"; }
+assert_eq "the slot sits on feat/<slug>" "$(slot_branch "$(jq -r .worktree <<<"$out")")" "feat/$SLUG_E"
+assert_eq "the fixture ticket frontmatter still says null (nothing was written to it)" "$(branch_of "$E")" null
+"$SEAT" --down "$NE" >/dev/null 2>&1
+assert_eq "the lease is given back after --down" "$(held "$E")" 0
+git -C "$SEED" push -q origin --delete "feat/$SLUG_E"; rm -rf "$REPO/.git"
+
 echo "-- a branch no repository has: refused, and the lease it took is given back"
 stamp_branch "$E" feat/never-pushed
 gets=$(calls get); returns=$(calls return)

@@ -351,7 +351,22 @@ if [ -n "$ticket" ]; then
   #   seating anyway.
   if [ "$wt_given" = 0 ]; then
     branch="$(awk '/^---$/{c++; next} c==1' "$ticket_file" | jq -r '.branch // empty' 2>/dev/null)" || branch=""
-    [ -n "$branch" ] || refuse "ticket $ticket has no branch yet (frontmatter branch is null); run work-order start first, nothing leased"
+    # BREADCRUMB 2026-10-11 - WO-20261011-23df. What broke: `work-order start` stamps the branch into the ticket's frontmatter
+    #   and commits that on the new branch, so the copy of the ticket on main (which this script reads) kept branch null and
+    #   the line above refused WO-20261011-616c, 38c7 and 3d78 as "not started" minutes after they were; the architect
+    #   cherry-picked the start commits onto main to get past it, twice. Why this fix: the branch name is deterministic,
+    #   feat/<slug> from the same frontmatter, so when branch is null it is derived and accepted only when origin already has
+    #   that branch (the start was pushed); a ticket nobody started still has no such branch and is refused before any lease,
+    #   as before. Rejected: reading the ticket from origin/<branch> (circular: the branch is what we are looking for) and
+    #   committing every start on main (a record commit per start on main, which is what this script exists to avoid).
+    #   Cost: one `git ls-remote` against origin per seat bring-up, and the slug must stay the branch's basis in work-order.sh.
+    if [ -z "$branch" ]; then
+      slug="$(awk '/^---$/{c++; next} c==1' "$ticket_file" | jq -r '.slug // empty' 2>/dev/null)" || slug=""
+      if [ -n "$slug" ] && git -C "$SL_REPO" ls-remote --exit-code --heads origin "feat/$slug" >/dev/null 2>&1; then
+        branch="feat/$slug"; sl_log "ticket $ticket has no branch in this checkout's frontmatter; origin has $branch, using it"
+      fi
+    fi
+    [ -n "$branch" ] || refuse "ticket $ticket has no branch yet (frontmatter branch is null and origin has no feat/<slug>); run work-order start and push it first, nothing leased"
     git check-ref-format "refs/heads/$branch" || refuse "ticket $ticket names branch '$branch', which is not a valid branch name; nothing leased"
   fi
 fi
