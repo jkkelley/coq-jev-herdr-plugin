@@ -41,6 +41,35 @@
 
 
 
+
+## Checkpoint 2026-10-11 16:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, treehouse slot 2 leased to that ticket. Test pane wD3:p1V, run through herdr/bin/testpane.sh only (wrapper in the scratchpad: tp.sh; start every command with cd into the worktree). The pane is shared: another seat's long herdr suite can occupy it and my commands then queue behind it; read it with herdr pane read, never touch it.
+- A blocked 423 record was posted (events 20261011T155317Z-423-lvhaz): graph/ is a denied path for workers, so the graph half is handed over in report/loop/graph-handoff/ (apply.sh, graph.sh.patch, the grandfather list, case 08-graph.test.sh), verified on a scratch copy of the repo: apply.sh gives "graph ok: 100 nodes" and the 08 cases pass.
+
+#### Toolchain
+
+- tools/bearings serves GET /board and /board/data.json (board_dir in config/bearings.json, relative to the repo root or absolute; 503 board not built, 404 no board_dir; same key and cookie as the page, no-store). make -C tools/bearings test = 52 passed (T9 cases). make -C report/loop test-browser = 12 passed against the real server.mjs. make -C report/loop test = 7 passed.
+- herdr/config/monitors.json has a reserved slot 2.2.1 board that runs report/loop/loop.sh watch; herdr cases 04 and 05 updated (seven note 100 records) and pass.
+- report/loop/RUNBOOK.md written. Makefile lint checks that bearings board_dir equals the board config's out_dir.
+
+#### Active Tasks
+
+- Step 4 and 5 landed together (bearings routes, monitor slot, RUNBOOK, graph handoff).
+- Next: close-out. make lint at the top level (must stay green; the handoff scripts are shellchecked), work-order.sh evidence --index N --observed for AC-H1..AC-H6 (AC-H6 graph half is the handoff, say so; AC-H3 live stable needs the architect to restart stable on main), work-order.sh note (retro), work-order.sh done if the playbook allows, one push, gh pr create with the acceptance criteria as body and the findings (graph blocked, prettierignore, belt age in sources, shared test pane, one waiter script run with an ampersand), post pr.opened 100 with the sha, stop.
+
+#### Blockers
+
+- graph/ writes: the architect applies report/loop/graph-handoff/apply.sh (nodes CMP-factory-board and RUN-factory-board, the ratchet rule, the grandfather list of 19) and moves 08-graph.test.sh into report/loop/tests/cases/.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. All build steps are landed except the graph writes, which are handed over. Do the close-out: top-level make lint, evidence for AC-H1..AC-H6 with work-order.sh evidence --observed, the retro note, one push, gh pr create with the acceptance criteria as the body, pr.opened 100 with the sha, then stop.
+
 ## Checkpoint 2026-10-11 15:27 UTC
 
 ### Current state
