@@ -22,6 +22,7 @@
     "runtime_bin",
     "keys",
     "control_plane",
+    "break_glass",
     "halt_flag",
     "monitor_task"
   ],
@@ -131,6 +132,28 @@
             "null"
           ],
           "description": "null until WO-20261010-539f stands the bus up; bringup.sh then requires a 200"
+        }
+      }
+    },
+    "break_glass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ttl_seconds",
+        "bearings_tier"
+      ],
+      "description": "DEC-break-glass-one-time: the owner-authorised, one-command bypass of seat.sh --break-glass",
+      "properties": {
+        "ttl_seconds": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 3599,
+          "description": "how long a break glass may last before seat.sh restores the role settings; under one hour, never a session or a day"
+        },
+        "bearings_tier": {
+          "type": "string",
+          "minLength": 1,
+          "description": "the bearings tier whose answers.jsonl holds the owner answer"
         }
       }
     },

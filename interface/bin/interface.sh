@@ -2,7 +2,9 @@
 # interface.sh - what the interface-agent seat runs, so a wake becomes a record and a record becomes a page line without prose
 # (WO-20261011-e618, DEC-interface-agent-owns-bearings, DEC-system-runs-the-loop).
 #   interface.sh forward  "<wake line>" [--tier stable]      MESSAGE m-.. - text | ANSWER id - decide -> choice: post request.forwarded 300 to the orchestrator
+#                                                             (an ANSWER to a break glass card posts break.glass 200 on Grant, 423 on anything else)
 #   interface.sh line     --record ID [--tier stable] [--to m-..]   a verified 201 or an owner-needed 423 becomes one line on the page
+#                                                             (a break.glass 300 request becomes a Grant or Refuse decision card on the page)
 #   interface.sh snapshot sitrep ENTRY.json | board [--tier stable] [--to m-..]   render a SITREP (report/sitrep/sitrep.sh) or copy the board (report/loop/out), print the file; --to also replies under that owner message with the path
 # Env: COQ_SEAT (record seat, default interface), COQ_EVENTS_ROOT (event.sh), BEARINGS (bearings.sh path, default tools/bearings/scripts),
 #      COQ_STATE (default ~/.local/state/coq; snapshots land in <state>/interface/snapshots, never in git).
@@ -23,7 +25,7 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); REPO=$(cd "$HERE/../.." && p
 EVENT=$REPO/events/bin/event.sh; BEARINGS=${BEARINGS:-$REPO/tools/bearings/scripts/bearings.sh}
 SEAT=${COQ_SEAT:-interface}; STATE=${COQ_STATE:-$HOME/.local/state/coq}
 die() { local c=$1; shift; printf 'interface: %s\n' "$*" >&2; exit "$c"; }
-usage() { sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 command -v jq >/dev/null || die 4 "jq is required"
 verb=${1:-}; shift || true
 tier=stable; pos=(); rec=""; to=""
@@ -43,6 +45,36 @@ title_of() {
 }
 # page_dir: the tier's state directory, from bearings status.
 page_dir() { "$BEARINGS" "$tier" status --json 2>/dev/null | jq -r '.dir // empty'; }
+
+# BREADCRUMB 2026-10-11 - WO-20261011-4562, break glass (DEC-break-glass-one-time). What broke: nothing yet; the owner's order is that
+#   only the owner authorises a break glass, and the only owner channel is this page. Why it is here: the route table sends a
+#   break.glass 300 to this seat as a decision (notify_owner, line decision), and an owner ANSWER wakes it as every answer does, so
+#   the card and its verdict are two verbs this script already has, not new ones: `line` writes the card, `forward` turns the
+#   answer into break.glass 200 (Grant) or 423. The roles/interface-agent.json allow list therefore needs no change.
+#   The card's id is the request record's id, and its text names the seat and the exact command, because herdr/bin/seat.sh checks
+#   the answer line the page wrote (id, choice Grant, card text) before it touches anything: the 200 written here is a notice,
+#   not the authority. The page preselects `rec`, so rec is Refuse: Grant is never the default. The command is not scrubbed on the
+#   card, since seat.sh must find it verbatim in the answer; it is already in the committed 300 record. Cost: `ask` replaces the
+#   whole cards file, so this reads the cards already there and writes them back with the new one added.
+# glass_card RECORD_JSON: add the Grant or Refuse card for a break.glass 300 request, once.
+glass_card() {
+  local j=$1 seat action why dir q base tmp
+  seat=$(jq -r .seat <<<"$j"); action=$(jq -r '.action // empty' <<<"$j"); why=$(scrub "$(jq -r '.note // ""' <<<"$j")")
+  [ -n "$action" ] || die 3 "record $rec carries no action; nothing to ask the owner"
+  dir=$(page_dir); [ -n "$dir" ] || die 4 "bearings status gave no state directory for tier $tier"
+  q=$dir/questions.json
+  if [ -f "$q" ] && jq -e --arg id "$rec" '(.items // []) | any(.id == $id)' "$q" >/dev/null 2>&1; then echo "already on the page: $rec"; return 0; fi
+  base='{"title":"Break glass","items":[]}'; [ ! -f "$q" ] || base=$(cat "$q")
+  tmp=$(mktemp "${TMPDIR:-/tmp}/glass-card.XXXXXX")
+  jq --arg id "$rec" --arg seat "$seat" --arg action "$action" --arg why "$why" '
+    .items = ((.items // []) + [{id: $id, about: ("Break glass for \($seat). \($why)"),
+      decide: ("Break glass for \($seat): run exactly \($action) - once"),
+      options: [{label: "Grant", then: "The seat runs exactly that one command, once, with bypass permissions; its role settings come back when it finishes or in a few minutes."},
+                {label: "Refuse", then: "Nothing changes; the seat stays on its role."}], rec: 1}])' <<<"$base" > "$tmp" || { rm -f "$tmp"; die 4 "could not build the card"; }
+  "$BEARINGS" "$tier" ask "$tmp" >/dev/null 2>&1; local rc=$?; rm -f "$tmp"
+  [ "$rc" = 0 ] || die 4 "bearings ask failed for the card $rec"
+  echo "card on the page: $rec"
+}
 
 # link FILE: print the snapshot's path; with --to, also reply under that owner message so the page carries it.
 # BREADCRUMB 2026-10-11 - WO-20261011-e618, AC-H4 "links it on the page". What broke: nothing, a design limit found reading
@@ -66,6 +98,20 @@ case $verb in
     if [[ $wake =~ ^(MESSAGE|ANSWER)\ ([A-Za-z0-9._:-]+)\ -\ (.*)$ ]]; then kind=${BASH_REMATCH[1]}; mid=${BASH_REMATCH[2]}; body=${BASH_REMATCH[3]}
     else echo "interface: not a request, nothing forwarded: ${wake:0:60}"; exit 0; fi
     body=${body%% | files:*}; body=${body%% | words:*}
+    # An answer to a break glass card is a verdict on that request, not a new request: Grant is break.glass 200, anything else 423.
+    # Once per card: a seat woken twice finds the verdict it already wrote.
+    if [ "$kind" = ANSWER ]; then
+      greq=$(events_json | jq -c --arg id "$mid" 'map(select(.id == $id and .kind == "break.glass" and .code == 300)) | first // empty')
+      if [ -n "$greq" ]; then
+        have=$(events_json | jq -r --arg id "$mid" 'map(select(.kind == "break.glass" and .answer == $id and (.code == 200 or .code == 423))) | first | .id // empty')
+        if [ -n "$have" ]; then echo "$have"; exit 0; fi
+        choice=${body##* -> }; gargs=(--seat "$(jq -r .seat <<<"$greq")" --kind break.glass --action "$(jq -r .action <<<"$greq")" --answer "$mid")
+        gt=$(jq -r '.ticket // empty' <<<"$greq"); [ -z "$gt" ] || gargs+=(--ticket "$gt")
+        if [ "$choice" = Grant ]; then "$EVENT" add --code 200 "${gargs[@]}" --note "the owner granted it on the page"
+        else "$EVENT" add --code 423 "${gargs[@]}" --note "the owner did not grant it: ${choice:0:60}"; fi
+        exit 0
+      fi
+    fi
     # The same message id is forwarded once: a seat woken twice for one message finds its record.
     have=$(events_json | jq -r --arg m "$mid:" 'map(select(.kind == "request.forwarded" and (.note | startswith($m)))) | first | .id // empty')
     if [ -n "$have" ]; then echo "$have"; exit 0; fi
@@ -76,6 +122,7 @@ case $verb in
     json=$(events_json | jq -c --arg id "$rec" 'map(select(.id == $id)) | first // empty')
     [ -n "$json" ] || die 6 "no record $rec under the events root"
     code=$(jq -r .code <<<"$json"); kind=$(jq -r .kind <<<"$json"); ticket=$(jq -r '.ticket // empty' <<<"$json"); note=$(jq -r '.note // ""' <<<"$json")
+    if [ "$kind" = break.glass ] && [ "$code" = 300 ]; then glass_card "$json"; exit $?; fi
     case "$code:$kind" in
       201:verified|201:test.passed|201:review.passed) lead="verified $code" ;;
       423:*) lead="needs you ($code)" ;;

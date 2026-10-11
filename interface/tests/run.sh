@@ -7,6 +7,8 @@
 #   case 4: a 423 becomes a "needs you" line; a 300 and a record with no ticket are refused; an unknown record is not found
 #   case 5: snapshot sitrep renders the 003 entry into the state dir (AC-H4); snapshot board with no board is not found;
 #           snapshot --to hangs a reply with the path (and its Windows form under WSL) under the owner's message, and without --to posts none
+#   case 6: a break.glass 300 becomes one Grant or Refuse card whose text names the seat and the exact command, with Refuse preselected and the
+#           other cards kept; an ANSWER on that card becomes break.glass 200 on Grant and 423 on anything else, once (WO-20261011-4562)
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; REPO="$HERE/../.."
 IF="$REPO/interface/bin/interface.sh"; EV="$REPO/events/bin/event.sh"
@@ -76,5 +78,42 @@ check "and its Windows form under WSL" "$(jq -r .text <<<"$snap" | grep -cF '(Wi
 n=$(jq -s '[.[] | select(.from == "claude")] | length' "$STUB_DIR/messages.jsonl")
 "$IF" snapshot sitrep "$REPO/report/sitrep/entries/2026/10/20261011-sitrep-003.json" >/dev/null
 check "without --to no reply is posted" "$(jq -s '[.[] | select(.from == "claude")] | length' "$STUB_DIR/messages.jsonl")" "$n"
+
+echo "-- case 6: break glass, the card and the verdict"
+SEATG=worker-wo-20261011-e618; ACT='gh pr merge 17 --squash'
+printf '%s\n' '{"title":"other","items":[{"id":"q-other","about":"a","decide":"d","options":[{"label":"A","then":"a"}],"rec":0}]}' > "$STUB_DIR/questions.json"
+g1=$("$EV" add --code 300 --seat $SEATG --kind break.glass --ticket $TICKET --action "$ACT" --note "the merger cannot merge PR 17")
+out=$("$IF" line --record "$g1"); check "line on a break.glass 300 exits 0" "$?" 0
+check "it says a card is on the page" "$out" "card on the page: $g1"
+Q="$STUB_DIR/questions.json"
+check "the card is added and the other card is kept" "$(jq -r '[.items[].id] | join(" ")' "$Q")" "q-other $g1"
+check "the card text names the seat and the exact command" "$(jq -r --arg id "$g1" '.items[] | select(.id == $id) | .decide' "$Q")" "Break glass for $SEATG: run exactly $ACT - once"
+check "the options are Grant then Refuse" "$(jq -r --arg id "$g1" '.items[] | select(.id == $id) | [.options[].label] | join(" ")' "$Q")" "Grant Refuse"
+check "Refuse is the preselected answer" "$(jq -r --arg id "$g1" '.items[] | select(.id == $id) | .rec' "$Q")" 1
+check "the card says why" "$(jq -r --arg id "$g1" '.items[] | select(.id == $id) | .about' "$Q" | grep -cF 'the merger cannot merge PR 17')" 1
+out=$("$IF" line --record "$g1"); check "a second run says it is already there" "$out" "already on the page: $g1"
+check "and adds no second card" "$(jq '.items | length' "$Q")" 2
+w=$("$EV" add --code 200 --seat $SEATG --kind break.glass --action "$ACT" --answer 20260101T000000Z-300-zzzzz); "$IF" line --record "$w" 2>/dev/null; check "a break.glass 200 is not a page line (exit 3)" "$?" 3
+nofile=$("$EV" add --code 300 --seat $SEATG --kind break.glass --action "$ACT"); rm -f "$Q"; "$IF" line --record "$nofile" >/dev/null
+check "with no cards file yet the card still lands" "$(jq -r '.items[0].id' "$Q")" "$nofile"
+
+echo "-- case 6b: the owner's answer becomes the verdict record"
+v=$("$IF" forward "ANSWER $g1 - Break glass for $SEATG: run exactly $ACT - once -> Grant"); check "forward exits 0" "$?" 0
+vr=$("$EV" list --json | jq -s -c --arg id "$v" '.[] | select(.id == $id)')
+check "Grant is break.glass 200" "$(jq -r '"\(.kind) \(.code)"' <<<"$vr")" "break.glass 200"
+check "for the seat on the request" "$(jq -r .seat <<<"$vr")" "$SEATG"
+check "with the exact command" "$(jq -r .action <<<"$vr")" "$ACT"
+check "naming the card as its answer" "$(jq -r .answer <<<"$vr")" "$g1"
+check "and the ticket" "$(jq -r .ticket <<<"$vr")" "$TICKET"
+check "a second wake returns the same record" "$("$IF" forward "ANSWER $g1 - Break glass for $SEATG: run exactly $ACT - once -> Grant")" "$v"
+check "and writes no second verdict" "$("$EV" list --json | jq -s --arg id "$g1" '[.[] | select(.kind == "break.glass" and .answer == $id and .code == 200)] | length')" 1
+g2=$("$EV" add --code 300 --seat $SEATG --kind break.glass --action "$ACT")
+v2=$("$IF" forward "ANSWER $g2 - Break glass for $SEATG: run exactly $ACT - once -> Refuse | words: not now")
+check "Refuse is break.glass 423" "$("$EV" list --json | jq -s -r --arg id "$v2" '.[] | select(.id == $id) | "\(.kind) \(.code)"')" "break.glass 423"
+g3=$("$EV" add --code 300 --seat $SEATG --kind break.glass --action "$ACT")
+v3=$("$IF" forward "ANSWER $g3 - Break glass for $SEATG: run exactly $ACT - once -> grant it")
+check "anything but exactly Grant is a 423" "$("$EV" list --json | jq -s -r --arg id "$v3" '.[] | select(.id == $id) | .code')" 423
+before=$(count request.forwarded); "$IF" forward "ANSWER q-other - d -> A" >/dev/null
+check "an answer to any other card is still a forwarded request" "$(count request.forwarded)" "$((before + 1))"
 
 [ "$fail" = 0 ] && echo "interface: all ok" || { echo "interface: failures" >&2; exit 1; }
