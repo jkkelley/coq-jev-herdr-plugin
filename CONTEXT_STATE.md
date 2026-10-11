@@ -78,6 +78,34 @@
 
 Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 4. Read playbooks/worker.md, the ticket and this checkpoint. Code and RUNBOOK are committed. Do the close-out in Active Tasks, run work-order.sh evidence per criterion, then open one PR. Run commands only through the scratchpad tp.sh as a background job.
 
+## Checkpoint 2026-10-11 21:26 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-8fb3 on WO-20261011-8fb3 - seat.sh adopt: a running claude session becomes a seat in place, keeping its context, under the role's label, settings and record. PR 18 is open on the old head a930f3c, which is CONFLICTING and carries the records branch.
+- The branch in this slot was rebuilt locally on origin/main 4860361 as the architect ordered (record 20261011T203651Z-422-3navb) and the reviewer asked (20261011T210527Z-422-er3bq). It holds this ticket alone: herdr/bin/seat.sh, cases 13 and 14, docs/sops/SOP-0001 (the runbook, with Verification and GOOD and NEVER), the archived ticket, its changelog entry and this checkpoint.
+- make lint and make -C herdr test on the rebuilt tree: 13 passed, 0 failed. The old tip is the local branch backup/8fb3-a930f3c.
+- The rebuilt branch is NOT pushed. origin's branch diverged from it, so the push is a force push, and this seat's role denies git push --force*.
+
+#### Toolchain
+
+- Run the suite only through herdr/bin/testpane.sh in the pane named by COQ_TEST_PANE, with output to a scratchpad file.
+
+#### Active Tasks
+
+- The architect pushes: git push --force-with-lease origin feat/seat-sh-adopt-a-running-claude-session-becomes-a, from this slot.
+- After that push the tester re-runs the plan on the pushed head and posts a new test.passed; the reviewer re-reviews.
+
+#### Blockers
+
+- Force push denied to this seat. docs/sops/SOP-0001 here and SOP-0001 on PR 15 share an id; whichever merges second needs renumbering.
+
+### Hydration prompt
+
+Resume WO-20261011-8fb3 in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/7/coq-jev-herdr-plugin. The rebuilt branch is committed locally and waits for the architect's force push. Do nothing else until a record wakes you; a review.changes means fixing inside this ticket's paths.
+
 ## Checkpoint 2026-10-11 20:06 UTC
 
 ### Current state
