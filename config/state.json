@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "state": {
+    "env": "COQ_STATE",
+    "xdg_env": "XDG_STATE_HOME",
+    "home_fallback": ".local/state",
+    "namespace": "coq"
+  },
+  "cache": {
+    "env": "COQ_CACHE",
+    "xdg_env": "XDG_CACHE_HOME",
+    "home_fallback": ".cache",
+    "namespace": "coq"
+  },
+  "trees": {
+    "records": "records",
+    "logs": "logs",
+    "tests": "tests",
+    "checkpoints": "checkpoints",
+    "plans": "plans",
+    "ledger": "ledger/routed",
+    "seats": "seats",
+    "run": "run"
+  },
+  "name_max": 55
+}
