@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # scheduler/host/tests/run.sh - the host files' suite (SPEC-16.H h-t7). One command, one verdict: "tests: N passed, M failed".
-#   bash scheduler/host/tests/run.sh             re-execs itself in Podman (the repository lint image), --network=none
+#   bash scheduler/host/tests/run.sh             re-execs itself in Podman (the repository lint image), --network=none;
+#                                                the host needs bash and podman only
 #   CASES="01 03" bash scheduler/host/tests/run.sh   a subset, by prefix
 # The first case is shellcheck over every script under scheduler/host, at the severity make lint uses. Each
 # cases/*.test.sh then builds its own world (lib/world.sh: a copy of scheduler/host, a stub scheduler binary and a stub
@@ -9,12 +10,18 @@
 # The lint image is the one make lint builds (Makefile LINT_IMAGE): debian with bash, jq and shellcheck, which is all the
 # wrappers and the suite need; the ticket's test plan pins it by digest.
 set -uo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+src=${BASH_SOURCE[0]}; [[ $src == */* ]] || src=./$src   # no dirname: the host side runs on bash and podman alone
+HERE="$(cd "${src%/*}" && pwd)"
 IMAGE="localhost/coq-lint:1"
 
 if [ "${COQ_TEST_IN_CONTAINER:-0}" != 1 ]; then
   REPO_ROOT="$(cd "$HERE/../../.." && pwd)"
-  podman image exists "$IMAGE" 2>/dev/null || make -s -C "$REPO_ROOT" images >&2 || exit 4
+  # Host needs: bash and podman, nothing else (rule from the coq architect, record 20261012T201732Z-100-239yt: the tester
+  # runs the test-plan command literally on the host). So a missing image is built here the way the root Makefile's images
+  # target builds it, not through make, which would also build every tool image and need make on the host.
+  if ! podman image exists "$IMAGE" 2>/dev/null; then
+    podman build -q -t "$IMAGE" -f "$REPO_ROOT/lint/Containerfile" "$REPO_ROOT/lint" >&2 || exit 4
+  fi
   exec podman run --rm --userns=keep-id --network=none \
     -v "$REPO_ROOT:/repo:ro,Z" \
     -e COQ_TEST_IN_CONTAINER=1 -e HOME=/tmp/home -e REPO_ROOT=/repo -e CASES="${CASES:-}" \
