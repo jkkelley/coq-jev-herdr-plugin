@@ -54,6 +54,33 @@
 
 
 
+
+## Checkpoint 2026-10-12 18:30 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code. Treehouse slot 7, branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, PR 28. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+- Review az7ec passed the code, but its merge wake was lost and PR 28 became CONFLICTING with main 372f9aa (f329478 first, then PR 30 landed). The architect ordered a merge of origin/main.
+
+#### Toolchain
+
+- origin/main (f329478, then 372f9aa after PR 30 landed) merged into the branch. The only conflicts were CONTEXT_STATE.md, rebuilt as the union of both sides' checkpoint blocks in their original order with none edited (checkpoint.sh verify ok, 73 blocks), and work-orders/INDEX.md, rebuilt by work-order.sh reindex. CHANGELOG.md re-rendered by bin/changelog.sh, check ok.
+- The delta since the reviewed head is the main merge only; no code of this ticket changed.
+
+#### Active Tasks
+
+- Post pr.opened 100 with --pr 28 and the new head sha, then hold.
+
+#### Blockers
+
+- roles/tester.json and roles/worker.json need the supersedes and merge main steps; a worker cannot edit roles/.
+
+### Hydration prompt
+
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
+
 ## Checkpoint 2026-10-12 18:28 UTC
 
 ### Current state
