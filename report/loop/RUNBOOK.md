@@ -117,7 +117,7 @@ Any other server works if it serves `index.html` at a path `P` and `data.json` a
 ## 6. Prove it
 
 ```sh
-make -C report/loop test           # 7 cases, Podman, no network: schema, render, parity, derive, by-hand, board, watch
+make -C report/loop test           # every case in tests/cases, Podman, no network; it ends "tests: N passed, M failed" (16 cases when this was written)
 make -C report/loop test-browser   # a real browser against the real bearings server: pixel parity with the design, redraw in place
 make -C report/loop lint
 ```
@@ -153,6 +153,14 @@ The same tool draws a second page, the system blueprint (WO-20261011-ceea), from
 It reuses the board's template, station and legend components; `config/blueprint.json` is its view config and `config/blueprint.schema.json` its schema.
 Nothing on it is typed in.
 
+GOOD: `make -C report/loop promote-uat`, then `promote-stable`, so the build number on stable is a build uat held.
+GOOD: name `CMP-<slug>` in a ticket's title, Problem or Scope, so the page can say the ticket builds it.
+GOOD: each tier's server in its labelled monitors pane (slots 3.3.1 to 3.3.3), and `make -C report/loop test` before a promotion.
+NEVER: copy or `rsync` a page between tier directories by hand; the build number on stable stops being a promise.
+NEVER: type a state, a count or a build number into a tier's `data.json` or `index.html`; fix the graph node or the ticket it comes from.
+NEVER: `serve-dev`, `serve-uat` or `serve-stable` with `&`, `nohup` or `setsid`; a hidden server reads as a dead page.
+NEVER: hard-code a number the config already holds (`watch_seconds`, `refresh_timeout_seconds`, a tier's port).
+
 ### How a state is derived
 
 Each Component node (a superseded one is left out) lands in exactly one state, by this rule and no other:
@@ -184,7 +192,7 @@ make -C report/loop promote-stable       # stable takes uat's build
 ```
 
 Three tiers, each a file in `report/blueprint/config/` (`dev.json`, `uat.json`, `stable.json`, checked by `tier.schema.json`) with its own `port`, `out_dir` and `pane_label`.
-Dev rebuilds its own page.
+Dev rebuilds its own page every `watch_seconds`, and gives one pass `refresh_timeout_seconds` (both in `config/blueprint.json`) before it keeps the last page and says so.
 Uat and stable serve only what a promotion put in `out_dir/releases/<build>`, behind a `current` link, so the build number on stable is the build uat held.
 `promote.sh` is the only way a page moves forward; a hand copy breaks that promise.
 `GET /blueprint` is the page, `GET /blueprint/data.json` its data and `GET /healthz` the tier's build, for the pane check.

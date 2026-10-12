@@ -52,13 +52,20 @@ def build_of(directory):
         return None
 
 
-def refresh_once(root, out_dir, loop_sh=None):
-    """One watch pass of the blueprint view into out_dir. Returns the exit code; a failing pass keeps the last good page."""
+def view_config(root=None):
+    """The blueprint view's config: where watch_seconds and refresh_timeout_seconds live, so no number is a literal in this file."""
+    return json.loads((Path(root or REPO) / "report" / "loop" / "config" / "blueprint.json").read_text())
+
+
+def refresh_once(root, out_dir, loop_sh=None, timeout=None):
+    """One watch pass of the blueprint view into out_dir. Returns the exit code; a failing pass keeps the last good page.
+    timeout is refresh_timeout_seconds of the view config unless the caller names one."""
     loop_sh = loop_sh or REPO / "report" / "loop" / "loop.sh"
+    timeout = timeout or view_config()["refresh_timeout_seconds"]
     env = dict(os.environ, LOOP_ROOT=str(root))
     try:
         p = subprocess.run([str(loop_sh), "--view", "blueprint", "watch", "--iterations", "1", "--out", str(out_dir)],
-                           env=env, capture_output=True, text=True, timeout=60)
+                           env=env, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:
         print("server: refresh pass timed out, keeping the last page", file=sys.stderr, flush=True)
         return 124
@@ -120,7 +127,7 @@ def main(argv=None):
     root = Path(a.root)
     if cfg["mode"] == "live":
         out = root / cfg["out_dir"]
-        interval = json.loads((REPO / "report" / "loop" / "config" / "blueprint.json").read_text())["watch_seconds"]
+        interval = view_config()["watch_seconds"]
         refresh_once(root, out)
 
         def loop():

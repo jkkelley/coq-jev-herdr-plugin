@@ -147,5 +147,19 @@ class Refresh(unittest.TestCase):
         self.assertEqual((out / "data.json").read_text(), before)
 
 
+class RefreshTimeout(unittest.TestCase):
+    def test_the_timeout_is_config_not_a_literal(self):
+        self.assertIsInstance(server.view_config()["refresh_timeout_seconds"], int)
+        self.assertNotRegex(Path(server.__file__).read_text(), r"timeout=\d")
+
+    def test_a_pass_that_outlives_the_timeout_keeps_the_last_page(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        slow = tmp / "slow.sh"
+        slow.write_text("#!/bin/sh\nsleep 5\n")
+        slow.chmod(0o755)
+        self.assertEqual(server.refresh_once(tmp, tmp / "out", loop_sh=slow, timeout=1), 124)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=1)

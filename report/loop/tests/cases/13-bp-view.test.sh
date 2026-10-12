@@ -25,5 +25,11 @@ LOOP_ROOT="$W/live" "$LOOP" --view blueprint watch --iterations 1 --out "$W/watc
 jq '.title = "Alpha, renamed"' "$FIX/blueprint/graph/nodes/CMP-alpha.json" > "$W/live/graph/nodes/CMP-alpha.json"
 LOOP_ROOT="$W/live" "$LOOP" --view blueprint watch --iterations 1 --out "$W/watchlive" 2>/dev/null
 eq "a changed node shows on the next pass, with a higher build number" "Alpha, renamed 2" "$(jq -r '"\(.lines[0].sub) \(.number)"' "$W/watchlive/data.json")"
+# AC-H1: a node file ADDED between two passes shows in the next data.json, with its own line, and the build number goes up.
+printf '{"id":"CMP-zeta","type":"Component","title":"Zeta: added after the first pass","status":"proposed","text":"","sources":[],"edges":[],"created":"2026-10-11T00:00Z","updated":"2026-10-11T00:00Z"}\n' > "$W/live/graph/nodes/CMP-zeta.json"
+eq "before the pass the new node is not on the page" "0" "$(jq '[.lines[] | select(.name == "CMP-zeta")] | length' "$W/watchlive/data.json")"
+LOOP_ROOT="$W/live" "$LOOP" --view blueprint watch --iterations 1 --out "$W/watchlive" 2>/dev/null
+eq "an added node shows on the very next pass, as a coming-up line" "CMP-zeta queued" "$(jq -r '.lines[] | select(.name == "CMP-zeta") | "\(.name) \(.status)"' "$W/watchlive/data.json")"
+eq "and the build number went up again" "3" "$(jq -r .number "$W/watchlive/data.json")"
 eq "the board's default config is untouched by views" "board" "$(jq -r '.view // "board"' "$REPO_ROOT/report/loop/config/board.json")"
 done_case

@@ -10,6 +10,7 @@
     "view",
     "poll_seconds",
     "watch_seconds",
+    "refresh_timeout_seconds",
     "out_dir",
     "actor",
     "title",
@@ -39,6 +40,12 @@
       "type": "integer",
       "minimum": 5,
       "maximum": 30
+    },
+    "refresh_timeout_seconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 600,
+      "description": "how long the dev server lets one collect and render pass run before it keeps the last page (report/blueprint/server.py)"
     },
     "out_dir": {
       "type": "string",

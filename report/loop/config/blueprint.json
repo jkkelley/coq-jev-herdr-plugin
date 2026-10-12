@@ -3,6 +3,7 @@
   "view": "blueprint",
   "poll_seconds": 10,
   "watch_seconds": 10,
+  "refresh_timeout_seconds": 60,
   "out_dir": "report/blueprint/out/dev",
   "actor": "loop.sh",
   "title": "System blueprint",
