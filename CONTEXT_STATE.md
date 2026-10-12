@@ -51,6 +51,38 @@
 
 
 
+
+## Checkpoint 2026-10-12 16:13 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
+  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, PR 26, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
+
+#### Toolchain
+
+- Review 422 (record 20261012T160316Z-422-19hjw, attempt 1) blocked on 14 timeout literals in herdr/bin/supervisor.sh.
+  Fixed: nine supervisor.timeouts.* keys in herdr/config/herdr.json and herdr.schema.json, read with sl_cfg at the top of supervisor.sh, breadcrumb comment at the read site, SOP-0003 line updated.
+- Verified in wD3:p89: CASES='19 20' 2 passed, 0 failed; make -C herdr lint clean.
+
+#### Active Tasks
+
+- Post pr.opened 100 with --pr 26 --sha of this commit, then hold.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Architect ruling on the two non-blocking notes: AC-H1 to AC-H3 stay ticked on suite evidence, the live kill-and-watch runs at verification on main; the epic 187e files ride every child branch on purpose (record 20261012T160310Z-100-iiao9).
+
+### Hydration prompt
+
+You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint and playbooks/worker.md. Next: post pr.opened for PR 26 with the pushed sha, then hold for review.
+
 ## Checkpoint 2026-10-12 15:29 UTC
 
 ### Current state
