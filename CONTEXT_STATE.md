@@ -12,6 +12,22 @@
 > are history and are immutable. Written by `checkpoint.sh`, never by hand.
 
 
+
+## Checkpoint 2026-10-12 20:29 UTC
+
+### Current state
+#### Infrastructure
+WO-20261012-da52 - Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand.
+PR 25 merged with origin/main: aggregates only. CHANGELOG.md and work-orders/INDEX.md conflicted; main's side was taken and both re-rendered by bin/changelog.sh render and work-order.sh reindex. No file of this ticket changed since 34ef520, which passed test jmeu9 and review ledxo.
+#### Toolchain
+make lint runs inside make step; suites not rerun (nothing of this ticket changed). Note for the architect: main itself carries WO-20261012-ee9c twice (epic 265d dir and archive), untouched here.
+#### Active Tasks
+Post pr.opened (aggregates only) with --pr 25 --sha, then hold for the belt.
+#### Blockers
+None.
+### Hydration prompt
+Hold; wake on record.review_changes_requested or test.failed for WO-20261012-da52.
+
 ## Checkpoint 2026-10-12 19:24 UTC
 
 ### Current state
