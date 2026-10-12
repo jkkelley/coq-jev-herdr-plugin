@@ -56,7 +56,7 @@ run_once
 assert_match "the first wake is the plain pr/sha line" "$(tail -1 "$HLOG")" "^--session stable agent prompt tester-wo-20261012-4444 record $p1 pr 9 sha $A playbook $R/playbooks/tester.md$"
 p2=$(evo --code 100 --seat worker-wo-20261012-4444 --kind pr.opened --ticket $T4 --sha "$C" --pr 9)
 run_once
-assert_match "the second names the first as superseded" "$(tail -1 "$HLOG")" "^--session stable agent prompt tester-wo-20261012-4444 record $p2 pr 9 sha $C supersedes $p1 playbook $R/playbooks/tester.md$"
+assert_match "the second names the first as superseded" "$(tail -1 "$HLOG")" "^--session stable agent prompt tester-wo-20261012-4444 record $p2 pr 9 sha $C supersedes $p1 \(drop that run and post nothing for it\) playbook $R/playbooks/tester.md$"
 calls=$(hcalls); downs=$(seat_calls "--down tester-wo-20261012-4444")
 ts=$(evo --code 201 --seat tester-wo-20261012-4444 --kind test.passed --ticket $T4 --sha "$A" --pr 9)
 tf=$(evo --code 422 --seat tester-wo-20261012-4444 --kind test.failed --ticket $T4 --sha "$A" --pr 9 --attempt 1)
@@ -82,7 +82,7 @@ echo "-- merge.conflict 409 wakes the worker with the PR and the words merge mai
 T6=WO-20261012-6666
 mc=$(evo --code 409 --seat merger --kind merge.conflict --ticket $T6 --pr 12 --sha "$C")
 run_once
-assert_match "worker line" "$(grep "record $mc " "$HLOG")" "^--session stable agent prompt worker-wo-20261012-6666 record $mc pr 12 sha $C merge main playbook $R/playbooks/worker.md$"
+assert_match "worker line" "$(grep "record $mc " "$HLOG")" "^--session stable agent prompt worker-wo-20261012-6666 record $mc pr 12 sha $C merge main \(git fetch origin, git merge origin/main, fix the conflicts, push, post pr.opened with the new sha\) playbook $R/playbooks/worker.md$"
 assert_eq "merger down" "$(tail -1 "$W/seat.log")" "--down merger"
 assert_eq "still no 500" "$(fives)" 0
 

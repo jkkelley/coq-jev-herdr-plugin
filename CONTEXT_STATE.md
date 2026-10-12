@@ -81,6 +81,39 @@
 
 Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
 
+## Checkpoint 2026-10-12 16:44 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
+  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, PR 26, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
+
+#### Toolchain
+
+- Merge conflict 409 (record 20261012T163437Z-409-wccwn): origin/main 1f6e819 (PR 27) merged into the branch as 5312774.
+  CHANGELOG.md re-rendered with bin/changelog.sh render, work-orders/INDEX.md and epic READMEs by work-order.sh reindex, CONTEXT_STATE.md took main's file with this checkpoint on top, epic 187e README and 3bb0 ticket took main's.
+  Cases 04 and 05 re-counted by hand: main added the policy watch pane (slot 2.3.2), so twelve reserved panes, fourteen note 100 records, 39 panes.
+  SOP-0003 step 8 updated: slot 2.3.2 now belongs to the policy watch, so the interim record-watch pane must be released.
+- Full make -C herdr test after the merge: 21 passed, 0 failed.
+
+#### Active Tasks
+
+- Post pr.opened with --pr 26 --sha of the pushed head, then idle for the belt.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: generated files are never merged by hand; they are re-rendered with their scripts.
+
+### Hydration prompt
+
+You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint and playbooks/worker.md. Next: post pr.opened for PR 26 with the pushed sha, then idle.
+
 ## Checkpoint 2026-10-12 15:46 UTC
 
 ### Current state
@@ -130,6 +163,31 @@ Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/wor
 ### Hydration prompt
 
 Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Steps 3 and 4 above remain; run every command through herdr/bin/testpane.sh in pane wD3:p8J.
+
+## Checkpoint 2026-10-12 15:41 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-9b2c on WO-20261012-9b2c - Standing policies: an escalation carries a deadline and a default drawn from the owner's locked decisions, so the line takes the default when nobody answers instead of waiting. Treehouse slot 8 (lease holder is this ticket), branch feat/standing-policies-an-escalation-carries-a-deadli, no PR yet. Test pane wD3:p8N, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Built: events/bin/event.sh and event.schema.json gain kind policy.applied with --policy and --answer; factory/config/policies.json and policies.schema.json (one row, POL-blocked-land-it, blocked 423, 1800 s, cites DEC-local-fast-ci-full); factory/bin/policy.sh (once, run, status); routes.json row for policy.applied 200 (do none, to monitor); monitors.json slot 2.3.2 policy; factory Makefile policy-once and policy-status; factory case 12 and policy helpers in tests/lib/world.sh; herdr cases 04 and 05 counts raised to eleven nodes and herdr tests/lib/world.sh stubs the policy slot; factory/RUNBOOK.md section Standing policies.
+- Verified in the test pane: make lint all ok, factory suite 16 passed 0 failed, herdr cases 04, 05 and 13 passed.
+
+#### Active Tasks
+
+- Close out: evidence per criterion with --observed, retro note, push, one PR carrying the code and the finished ticket, work-order.sh submit and done, post pr.opened 100 with sha and pr, then hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-9b2c as worker-wo-20261012-9b2c in slot 8. Read playbooks/worker.md and this checkpoint. The code is committed; do the close-out in Active Tasks, then hold.
 
 ## Checkpoint 2026-10-12 15:39 UTC
 

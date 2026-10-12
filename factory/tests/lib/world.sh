@@ -99,3 +99,12 @@ agent_state() { if [ "$1" = gone ]; then rm -f "$W/agent.json"; else printf '{"r
 backdate() { local f; f=$(find "$R/events" -name "$1.json"); jq --arg at "$(date -u -d "-$2 seconds" +%Y-%m-%dT%H:%M:%SZ)" '.at = $at' "$f" > "$f.tmp" && mv "$f.tmp" "$f"; }
 flow_once() { "$FLOW" once --from-start --repo "$R" --state "$FSTATE" "$@"; }
 flow_notes() { "$R/events/bin/event.sh" list --json | jq -c 'select(.seat == "flow-watch")'; }
+
+# --- the policy watch (WO-20261012-9b2c) ---
+#   policy_world             after world_up: POLICY (the watcher) and PSTATE; the herdr stub world_up made stays (it logs argv, exits 1 when $W/herdr.fail exists)
+#   policy_once [flags]      policy.sh once --from-start --repo $R --state $PSTATE
+#   policy_records           the policy.applied records the watcher wrote, as JSON lines
+#   backdate ID SECONDS      (defined with the flow watch above) rewrite a record's "at"; the watcher judges a deadline by "at"
+policy_world() { POLICY="$R/factory/bin/policy.sh"; PSTATE="$W/pstate"; }
+policy_once() { "$POLICY" once --from-start --repo "$R" --state "$PSTATE" "$@"; }
+policy_records() { "$R/events/bin/event.sh" list --json | jq -c 'select(.kind == "policy.applied")'; }

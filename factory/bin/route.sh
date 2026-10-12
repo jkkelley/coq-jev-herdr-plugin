@@ -30,6 +30,11 @@
 #   the merger with a "hold" word in the line (an LLM seat would have to compute what this refuses to), and gate code in this script
 #   (the 38c7 cap). Cost: gate.sh is spawned for each record whose row names it, a jq pass over the event log each time, and a held
 #   review.passed has no consumer record, so flow.sh notes it as a stall after stall_seconds, which is the right alarm.
+#   The words in brackets on the wake line (reviewer finding on 2026-10-12, record bahk9): the tester and worker playbooks are rendered
+#   from roles/tester.json and roles/worker.json, which a worker may not edit, so they say nothing about "supersedes" or "merge main"
+#   and a bare token left the seat to guess. The line is the one place this runner can speak to a seat, so it carries the instruction
+#   itself. Rejected: hand-editing playbooks/*.md (the next render-playbook.sh --check calls it drift). Cost: the instruction lives in
+#   this script until roles/ carries it, and the wake line is longer; the roles edit is raised to the architect.
 #
 # BREADCRUMB 2026-10-11 - WO-20261011-38c7. Three choices that look arbitrary:
 #   1. Records whose seat is runner_seat are never routed. What would break: record.routed 300 matches no row, so it would
@@ -148,7 +153,7 @@ trouble() {
   [ "$2" = - ] || args+=(--ticket "$2"); emit "${args[@]}" || log "could not write the 500 for $1"
 }
 # wake_extras ROW ID REC: for a row that says `with pr` or `with merge-main`, " pr N" and " sha S" from the record, whichever it carries,
-# then " merge main" for merge-main, then " supersedes ID" for a row with `supersede` when gate.sh names an older head; prints a reason
+# then " merge main (steps)" for merge-main, then " supersedes ID (drop that run ...)" for a row with `supersede` when gate.sh names an older head; prints a reason
 # and returns 1 when one is malformed or gate.sh fails. All of it reaches a seat's prompt as typed text, so none is passed on unless it
 # is a PR number, hex, or a record id.
 wake_extras() {
@@ -156,11 +161,11 @@ wake_extras() {
   pr=$(jq -r '.pr // empty' <<<"$3"); sha=$(jq -r '.sha // empty' <<<"$3")
   [ -z "$pr" ] || [[ $pr =~ ^[1-9][0-9]*$ ]] || { echo "record $2 has a malformed pr"; return 1; }
   [ -z "$sha" ] || [[ $sha =~ ^[0-9a-f]{7,40}$ ]] || { echo "record $2 has a malformed sha"; return 1; }
-  [ -z "$pr" ] || out+=" pr $pr"; [ -z "$sha" ] || out+=" sha $sha"; [ "$with" != merge-main ] || out+=" merge main"
+  [ -z "$pr" ] || out+=" pr $pr"; [ -z "$sha" ] || out+=" sha $sha"; [ "$with" != merge-main ] || out+=" merge main (git fetch origin, git merge origin/main, fix the conflicts, push, post pr.opened with the new sha)"
   if [ "$(jq -r '.supersede // empty' <<<"$1")" = true ]; then
     sup=$("$GATE_BIN" supersedes --id "$2" --repo "$REPO" --events "$EVENTS" 2>&1) || { echo "gate.sh supersedes failed: $(tail -n 1 <<<"$sup" | cut -c1-120)"; return 1; }
     [ -z "$sup" ] || [[ $sup =~ ^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]+$ ]] || { echo "gate.sh supersedes gave a malformed id"; return 1; }
-    [ -z "$sup" ] || out+=" supersedes $sup"
+    [ -z "$sup" ] || out+=" supersedes $sup (drop that run and post nothing for it)"
   fi
   printf '%s' "$out"
 }

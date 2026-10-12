@@ -1,0 +1,41 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T172204Z-422-bahk9",
+  "at": "2026-10-12T17:22:04Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261012-3bb0",
+  "kind": "review.changes",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:pCR",
+  "note": "Code is sound (lint ok, test 201 on f9b7d1d). AC-H2 and merge-main are open: no playbook tells tester to drop a superseded head or worker to merge main.",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "playbooks/tester.md",
+      "line": 40,
+      "saw": "wake line carries 'supersedes <id>' but the tester playbook never says to drop that run and post nothing",
+      "expected": "tester told to drop the older head (AC-H2 as written)"
+    },
+    {
+      "path": "playbooks/worker.md",
+      "line": 44,
+      "saw": "wake line carries 'merge main' on merge.conflict but the worker playbook has no step for it",
+      "expected": "worker told to merge main into its branch (scope item 3)"
+    },
+    {
+      "path": "factory/tests/cases/13-gate-route.test.sh",
+      "line": 59,
+      "saw": "proves the runner holds old-head results, not that the tester posts nothing",
+      "expected": "AC-H2 evidence for the tester dropping the run"
+    },
+    {
+      "path": "https",
+      "line": 0,
+      "saw": "1",
+      "expected": "PR 28 is CONFLICTING with main (CHANGELOG.md CONTEXT_STATE.md factory/RUNBOOK.md work-orders/INDEX.md epic 187e README.md)"
+    }
+  ],
+  "attempt": 1,
+  "sha": "f9b7d1d",
+  "pr": 28
+}

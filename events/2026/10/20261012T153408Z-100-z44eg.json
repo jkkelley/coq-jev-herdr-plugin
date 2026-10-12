@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T153408Z-100-z44eg",
+  "at": "2026-10-12T15:34:08Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-b800",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:p87",
+  "note": "PR 26 head c019756: supervisor, watches, re-seat, units, SOP-0003; suite 21 of 21",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}
