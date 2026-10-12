@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T172007Z-201-pvkka",
+  "at": "2026-10-12T17:20:07Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-3bb0",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:pCM",
+  "note": "make -C factory test from the slot on f9b7d1d: tests 18 passed, 0 failed. Earlier run was in the main checkout, discarded.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-7-coq-jev-herdr-plugin/acc2a5b6-0156-4478-a306-ac5983ad65cf/scratchpad/factory-test-3bb0-slot.log"
+  ],
+  "observations": [],
+  "sha": "f9b7d1d",
+  "pr": 28
+}

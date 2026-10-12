@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T183132Z-422-5xfoz",
+  "at": "2026-10-12T18:31:32Z",
+  "code": 422,
+  "seat": "reviewer-ee9c",
+  "kind": "review.changes",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pFQ",
+  "note": "AC-H1..H5 have evidence, code and SOP-0005 clean. 422 on step 2 and mergeability: PR carries sibling ticket files and aggregates, and conflicts with origin/main.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-8-coq-jev-herdr-plugin/d7436825-746b-479b-8605-266be2a85938/scratchpad/lint.log"
+  ],
+  "observations": [
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261012-265d/README.md",
+      "line": 1,
+      "saw": "add/add merge conflict with origin/main (epic and 3 sibling tickets 898a 8fb2 c41f ride this PR)",
+      "expected": "only the ticket ee9c files in the PR"
+    },
+    {
+      "path": "work-orders/INDEX.md",
+      "line": 1,
+      "saw": "merge conflict with origin/main, generated aggregate in a feature PR",
+      "expected": "aggregate re-rendered after merge, not in the PR"
+    },
+    {
+      "path": "CONTEXT_STATE.md",
+      "line": 1,
+      "saw": "merge conflict with origin/main, 156 added lines",
+      "expected": "rebase onto origin/main and re-resolve; aggregates out of the PR"
+    },
+    {
+      "path": "herdr/config/herdr.schema.json",
+      "line": 85,
+      "saw": "also edited by open PR 34 (with seat-lib.sh and herdr.json)",
+      "expected": "no file shared with an in-flight PR"
+    }
+  ],
+  "attempt": 1,
+  "to": "architect",
+  "sha": "d2eed3b",
+  "pr": 31
+}

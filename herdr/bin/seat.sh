@@ -108,6 +108,18 @@ want_labels() { local i n; n="$(slot_count)"; for ((i = 0; i < n; i++)); do slot
 #   files in this change (a worker's fence denies roles/, and the architect owns that migration) and accepting only
 #   "${worktree}" (it would leave the architect, monitor and deny paths with a literal token). Cost: two spellings render the
 #   same until the role files and roles/schema move to "${worktree}" alone. Case 01 asserts no "${" survives. Record: WO-20261011-4c5e.
+# BREADCRUMB 2026-10-12 - WO-20261012-8fb2, the hooks key. What broke: after a compaction a seat saw only compaction-guard's
+#   generic checkpoint, never its own newest CONTEXT_STATE.md one (AGENTS.md:37 puts the resume line there). Why this fix: the
+#   rendered settings carry the SessionStart entry with matcher "compact" that runs herdr/bin/resume-checkpoint.sh, so a seat
+#   gets it from the same --settings file as its fence, and .claude/settings.json carries the identical command string so a
+#   seat started without --settings still has it; Claude Code merges identical hook commands into one run (not proved here: if it
+#   did not, the checkpoint would print twice, which costs tokens, not correctness). Rejected: a path under
+#   $wt (it would differ from the project file's string and run twice) and putting it in the owner's global hooks (not this
+#   repo's). Cost: every live seat's settings.json now differs from this render, so --check names the drift and recover.sh
+#   repairs it at the next restart. Record: WO-20261012-8fb2.
+#   Review 20261012T170103Z-422-8inhl found the hook timeout a literal 10 here; it is resume_checkpoint.hook_timeout_seconds in
+#   herdr/config/herdr.json now, like the break glass hook timeouts. Cost: .claude/settings.json is plain JSON and cannot read
+#   the config, so its entry still carries 10 by hand; case 17 asserts the two agree.
 # render_settings: the role's allow and deny as Claude Code permission rules, deterministic so --check and --audit can
 # cmp it with the file on disk. ${worktree} (alias ${repo}) in a path is the seat's worktree, a relative path is under it, a
 # trailing slash means the whole directory. allow.paths and deny.paths become Edit rules (Edit covers Write), so bare Write and Edit
@@ -115,7 +127,7 @@ want_labels() { local i n; n="$(slot_count)"; for ((i = 0; i < n; i++)); do slot
 # A command holding a * renders as Bash(<cmd>) and Bash(<cmd> *) (bearings-v2 F-23: Claude Code never matches a :*
 # rule with a * mid-pattern); a plain command keeps the Bash(<cmd>:*) prefix form.
 render_settings() {
-  jq --arg wt "$wt" '
+  jq --arg wt "$wt" --arg resume '"$CLAUDE_PROJECT_DIR"/herdr/bin/resume-checkpoint.sh' --argjson rtimeout "$(sl_cfg .resume_checkpoint.hook_timeout_seconds)" '
     def ab: gsub("\\$\\{(worktree|repo)\\}"; $wt) | if startswith("/") then . else $wt + "/" + . end;
     def cmd: if contains("*") then "Bash(\(.))", "Bash(\(.) *)" else "Bash(\(.):*)" end;
     def rule($t): ab as $a | "\($t)(/\($a)\(if ($a | endswith("/")) then "**" else "" end))";
@@ -123,7 +135,8 @@ render_settings() {
     | (((.allow.tools // []) | any(. == "Write" or . == "Edit"))) as $edits
     | {permissions: {defaultMode: .permission_mode,
         allow: ($bare + (if $edits then [(.allow.paths // [])[] | rule("Edit")] else [] end) + [(.allow.commands // [])[] | cmd]),
-        deny: ((.deny.tools // []) + [(.deny.commands // [])[] | cmd] + [(.deny.paths // [])[] | rule("Edit")])}}' "$role_file"
+        deny: ((.deny.tools // []) + [(.deny.commands // [])[] | cmd] + [(.deny.paths // [])[] | rule("Edit")])},
+      hooks: {SessionStart: [{matcher: "compact", hooks: [{type: "command", command: $resume, timeout: $rtimeout}]}]}}' "$role_file"
 }
 
 load_seat() {
@@ -808,6 +821,25 @@ else
   sl_mut agent start "$name" --kind "$bin" --pane "$a" -- "${flags[@]}" >/dev/null || SL_EXIT=4 sl_die "herdr agent start $name failed in pane $a"
   started=1
   sl_record seat.up 100 "$name" ${id:+--ticket "$id"} --pane "$a" --note "$role seat up: $MODEL $effort $pmode"
+fi
+# BREADCRUMB 2026-10-12 - WO-20261012-ee9c, seat.json claude_session. What broke: seat.json named the herdr pane but never the
+#   Claude session running in it, so recover.sh could not scope `compaction-guard recover` to a seat (its breadcrumb rejected
+#   "--session per seat, the seat record carries no guard session id") and walked every session on the host (115 on 2026-10-10,
+#   100+ of them dead panes from other projects), and nothing but a binding walk could say which session a pane held. Why this
+#   fix: the pane's claude process names it (seat-lib.sh sl_pane_session), so the seat writes it once the agent is up, on a
+#   fresh start and on a repair rerun of a live seat; guardwatch.sh rewrites it on a tick when it differs (a seat resumed in
+#   place). Rejected: parsing the session out of the pane's screen (it is not printed) and the guard's binding (the stale
+#   value this ticket exists to stop trusting). Cost: up to .session_wait_seconds of polling for the file after a start, then
+#   claude_session stays null and the next guardwatch tick fills it; the field is absent from adopted seats only until their
+#   first tick, because --adopt writes the session it was given.
+claude_session_set() { jq --arg s "$1" '.claude_session = $s' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }
+if [ "$DRY" != 1 ] && [ "$runtime" = claude ]; then
+  wait_s="$(sl_cfg .session_wait_seconds)"; csid=""
+  for ((s = 0; s <= wait_s; s++)); do
+    csid="$(sl_pane_session "$a")"; [ -z "$csid" ] || break
+    [ "$s" -ge "$wait_s" ] || sleep 1
+  done
+  if [ -n "$csid" ]; then claude_session_set "$csid"; else sl_log "seat $name: no claude session file for pane $a within ${wait_s}s; claude_session stays null and guardwatch.sh fills it"; fi
 fi
 if [ "$started" = 1 ]; then
   # A resumed session already holds its brief, so a second one would only make it post a second work.started.

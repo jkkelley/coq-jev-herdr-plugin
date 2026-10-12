@@ -8,6 +8,7 @@
 #   flow.sh status [flags]   print every stall now present, write nothing; exit 1 when there is one
 # Flags: --config FILE (default factory/config/flow.json)   --repo DIR (what ${repo} means)   --state DIR   --from-start
 #        --from-start   on the first start only, judge the gate records already in the log (default: only records written after it)
+# A gate record whose consumer seat is mid-turn (herdr agent_status working) is not a stall, until busy_grace_seconds (flow.json) has passed.
 # Three stalls, each one 500 note (seat flow-watch, kind note, to monitor):
 #   gate record   a gates row of the config (kind and code) older than stall_seconds with no record of one of its consumer kinds on the same ticket after it
 #   belt          route.sh status says the belt file is stale or missing; one note per stall, the latch clears when the belt is fresh again
@@ -26,6 +27,16 @@
 #      log of hundreds of old tickets would 500 for every gate record that ever lacked a consumer.
 #   3. The belt age is not computed here: route.sh status owns it and its stale_seconds, so there is one definition of stale.
 #      Rejected: a second threshold in flow.json that could drift from runner.json. Cost: flow.sh needs route.sh and its config.
+#   BREADCRUMB 2026-10-12 - WO-20261012-3bb0. What broke: the gate rule fired three false alarms on 2026-10-12 (records ch471, 0ui6q and
+#   06gu1) 90 s after a gate record while the consumer seat was in the middle of its turn - a tester running a 4 minute suite has
+#   posted nothing for longer than stall_seconds and is working exactly as designed, and each false 500 woke the monitor. Why this
+#   fix: the stall is judged by the seat's own state, `herdr agent get <seat>` agent_status, which is what "working" means; a
+#   working seat is skipped this tick WITHOUT claiming the latch, so the same record is judged again on the next tick and noted the
+#   moment the seat goes idle with still no record. Rejected: a longer stall_seconds (it breaks visible_within_seconds, and hides
+#   the idle stall it exists for), and reading the pane for a spinner (herdr already did that and calls it agent_status). Cost:
+#   busy_grace_seconds is a timer after all, the backstop for a turn that hangs in "working"; a seat whose status herdr cannot
+#   report (no such agent, herdr down) is judged as idle, so the old behaviour is the fallback. The seat name comes from
+#   roles/<role>.json the way route.sh's seat_of builds it, so a role label change moves both.
 #   poll_seconds plus stall_seconds must not pass visible_within_seconds (120): the board must show a stall within two minutes
 #   of it starting, so a config that breaks that is refused at start with exit 3.
 set -uo pipefail
@@ -44,12 +55,13 @@ case $VERB in once|run|status) ;; *) sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' 
 
 [ -f "$CONFIG" ] || die 4 "config $CONFIG missing"
 cfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$CONFIG") || die 3 "config $CONFIG is not JSON"; [ -n "$v" ] || die 3 "config key $1 missing"; printf '%s' "${v//\$\{repo\}/$REPO}"; }
-POLL=$(cfg poll_seconds); STALL=$(cfg stall_seconds); VISIBLE=$(cfg visible_within_seconds); SEAT=$(cfg watcher_seat)
+POLL=$(cfg poll_seconds); STALL=$(cfg stall_seconds); GRACE=$(cfg busy_grace_seconds); VISIBLE=$(cfg visible_within_seconds); SEAT=$(cfg watcher_seat)
 EVENTS=$(cfg events_dir); EVENT_BIN=$(cfg event_bin); RUNNER_BIN=$(cfg runner_script); RUNNER_CFG=$(cfg runner_config)
 PANE_RE=$(cfg runner_pane_label_regex); [ -n "$STATE" ] || STATE=$(cfg state_dir)
 GATES=$(jq -c '.gates' "$CONFIG") || die 3 "config $CONFIG is not JSON"
 [ "$((POLL + STALL))" -le "$VISIBLE" ] || die 3 "poll_seconds $POLL + stall_seconds $STALL is more than visible_within_seconds $VISIBLE"
 SESSION=${COQ_HERDR_SESSION:-$(jq -r '.herdr_session // empty' "$RUNNER_CFG" 2>/dev/null)}
+ROLES_DIR=$(jq -r '.roles_dir // empty' "$RUNNER_CFG" 2>/dev/null); ROLES_DIR=${ROLES_DIR//\$\{repo\}/$REPO}
 SINCE=$STATE/since
 
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
@@ -61,10 +73,22 @@ note() {
   [ "$1" = - ] || args+=(--ticket "$1")
   "$EVENT_BIN" add --seat "$SEAT" "${args[@]}" >/dev/null 2>&1
 }
+# seat_of ROLE TICKET: the seat name that role has for the ticket (roles/<role>.json label, ${ticket} lowercased), empty when unresolvable.
+seat_of() {
+  local label; label=$(jq -r '.label // empty' "$ROLES_DIR/$1.json" 2>/dev/null) || return 1
+  label=${label//\$\{ticket\}/${2,,}}; case $label in ''|*'${'*) return 1;; esac; printf '%s' "${label,,}"
+}
+# seat_working ROLE TICKET AT: 0 when that role's seat for the ticket is mid-turn and the record is younger than busy_grace_seconds.
+seat_working() {
+  local seat st; [ "$(( $(date +%s) - $3 ))" -lt "$GRACE" ] || return 1
+  seat=$(seat_of "$1" "$2") || return 1
+  st=$(herdr_q agent get "$seat" | jq -r '.result.agent.agent_status // empty' 2>/dev/null) || return 1
+  [ "$st" = working ]
+}
 # claim PATH: create the latch, false when it already exists.
 claim() { ( set -C; printf 'noted %s\n' "$(now)" > "$1" ) 2>/dev/null; }
 
-# stalled_gates: id, ticket, kind, code and consumer role of each gate record past stall_seconds with no consumer record after it.
+# stalled_gates: id, ticket, kind, code, consumer role and epoch seconds of each gate record past stall_seconds with no consumer record after it.
 stalled_gates() {
   local boundary; boundary=$(cat "$SINCE")
   find "$EVENTS" -path '*/20*/*.json' -name '*.json' -print0 2>/dev/null | xargs -0 -r cat 2>/dev/null | jq -rs \
@@ -73,13 +97,15 @@ stalled_gates() {
     | ($gates[] | select(.kind == $r.kind and .code == $r.code)) as $g
     | select(($r.at | fromdateiso8601) <= $now - $stall)
     | select([$all[] | select(.ticket == $r.ticket and .id > $r.id and ([.kind] | inside($g.consumers)))] | length == 0)
-    | [$r.id, $r.ticket, $r.kind, ($r.code | tostring), $g.role] | @tsv' 2>/dev/null
+    | [$r.id, $r.ticket, $r.kind, ($r.code | tostring), $g.role, ($r.at | fromdateiso8601 | tostring)] | @tsv' 2>/dev/null
 }
 # check_gates: one note per stalled gate record not already latched.
 check_gates() {
-  local id ticket kind code role
-  while IFS=$'\t' read -r id ticket kind code role; do
+  local id ticket kind code role at
+  while IFS=$'\t' read -r id ticket kind code role at; do
     [ -n "$id" ] || continue
+    # a consumer seat that is mid-turn is working, not stalled: skip without claiming, so the next tick judges it again.
+    ! seat_working "$role" "$ticket" "$at" || continue
     if [ "$VERB" = status ]; then printf 'stall gate %s %s %s %s: no %s record after %ss\n' "$id" "$ticket" "$kind" "$code" "$role" "$STALL"; FOUND=1; continue; fi
     claim "$STATE/$id" || continue
     note "$ticket" "stall: $kind $code $id has no $role record after ${STALL}s" || { rm -f "$STATE/$id"; log "could not write the 500 for $id"; }

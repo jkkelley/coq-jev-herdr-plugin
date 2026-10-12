@@ -1,0 +1,20 @@
+{
+  "aggregates": [
+    "CHANGELOG.md",
+    "CONTEXT_STATE.md",
+    "work-orders/INDEX.md",
+    "work-orders/*/README.md",
+    "work-orders/README.md"
+  ],
+  "implicit": [
+    "changelog/*",
+    "events/*"
+  ],
+  "exempt_branches": [
+    "chore/architect-records-*"
+  ],
+  "doc_ids": [
+    { "dir": "docs/sops", "prefix": "SOP" },
+    { "dir": "docs/adr", "prefix": "ADR" }
+  ]
+}

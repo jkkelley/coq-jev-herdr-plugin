@@ -64,6 +64,8 @@ assert_eq "the action is allowed, exactly" "$(jq -r --arg a "Bash($ACTION)" '.pe
 assert_eq "an unrelated deny rule stays" "$(jq -r '.permissions.deny | index("Bash(treehouse destroy *)") != null' "$S")" true
 assert_eq "the Edit denies stay" "$(jq -r --arg r "Edit(/$REPO/roles/**)" '.permissions.deny | index($r) != null' "$S")" true
 assert_eq "the guard hook is on Bash, before and after" "$(jq -r '[.hooks.PreToolUse[0].matcher, .hooks.PostToolUse[0].matcher] | join(" ")' "$S")" "Bash Bash"
+# WO-20261012-8fb2: `.hooks =` once replaced the whole key; the compact-only SessionStart entry must ride through a break glass.
+assert_eq "the compact SessionStart entry survives the flip" "$(jq -r '.hooks.SessionStart[0].matcher' "$S")" compact
 assert_eq "a pre-break-glass copy of the settings was kept" "$(cmp -s "$STATE/seats/$N/settings.pre-break-glass.json" "$WORLD/settings.role.json" && echo 1 || echo 0)" 1
 assert_eq "the hook timeouts are the configured ones, not literals" "$(jq -r '[.hooks.PreToolUse[0].hooks[0].timeout, .hooks.PostToolUse[0].hooks[0].timeout] | join(" ")' "$S")" \
   "$(jq -r '[.break_glass.hook_pre_timeout_seconds, .break_glass.hook_post_timeout_seconds] | join(" ")' "$REPO/herdr/config/herdr.json")"

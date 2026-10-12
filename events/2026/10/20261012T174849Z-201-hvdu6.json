@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T174849Z-201-hvdu6",
+  "at": "2026-10-12T17:48:49Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261012-ee9c",
+  "kind": "review.passed",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pDP",
+  "note": "PR 31 passes: AC-H1..H5 each have evidence, make lint ok, tester suite 22/22 at 77225ac, no em dash, config keys not literals. Sibling epic 265d tickets carried in by commit 8129df7 are also in PR 32 (identical adds).",
+  "evidence": [],
+  "observations": [],
+  "sha": "77225ac",
+  "pr": 31
+}

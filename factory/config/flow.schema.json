@@ -4,11 +4,12 @@
   "title": "flow watch configuration",
   "description": "Tunables of factory/bin/flow.sh. ${repo} is the directory above factory/ (or the --repo flag). No tunable lives in the script. flow.sh refuses a config where poll_seconds + stall_seconds is more than visible_within_seconds.",
   "type": "object", "additionalProperties": false,
-  "required": ["schema_version", "poll_seconds", "stall_seconds", "visible_within_seconds", "watcher_seat", "events_dir", "event_bin", "state_dir", "runner_script", "runner_config", "runner_pane_label_regex", "gates"],
+  "required": ["schema_version", "poll_seconds", "stall_seconds", "busy_grace_seconds", "visible_within_seconds", "watcher_seat", "events_dir", "event_bin", "state_dir", "runner_script", "runner_config", "runner_pane_label_regex", "gates"],
   "properties": {
     "schema_version": { "const": "1.0.0" },
     "poll_seconds": { "type": "integer", "minimum": 5, "maximum": 30, "description": "seconds between ticks" },
     "stall_seconds": { "type": "integer", "minimum": 30, "maximum": 115, "description": "age of a gate record with no consumer record past which it is a stall" },
+    "busy_grace_seconds": { "type": "integer", "minimum": 120, "maximum": 7200, "description": "a gate record older than stall_seconds is NOT a stall while the consumer role's seat for the ticket reports agent_status working, until the record is this old; past it the seat is judged stuck and the stall is noted. A backstop for a hung turn, not a timer that decides a stall" },
     "visible_within_seconds": { "type": "integer", "minimum": 60, "maximum": 120, "description": "the most a stall may take to reach the board: poll_seconds + stall_seconds must not pass it" },
     "watcher_seat": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$", "description": "the seat name on every note the watcher writes" },
     "events_dir": { "type": "string" },
