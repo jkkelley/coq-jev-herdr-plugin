@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T200359Z-201-ja95o",
+  "at": "2026-10-12T20:03:59Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-0677",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-0677",
+  "pane": "wD3:pHG",
+  "note": "make test passed in the PR 36 worktree at 6493523: bearings 120/0, report/loop 17/0, report/sitrep pass; no make error",
+  "evidence": [],
+  "observations": [],
+  "sha": "6493523",
+  "pr": 36
+}

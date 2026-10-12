@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T182841Z-100-l0x5p",
+  "at": "2026-10-12T18:28:41Z",
+  "code": 100,
+  "seat": "reviewer-ee9c",
+  "kind": "work.started",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pFQ",
+  "note": "reviewer started; checking PR 31 against the acceptance criteria and conventions",
+  "evidence": [],
+  "observations": [],
+  "pr": 31
+}

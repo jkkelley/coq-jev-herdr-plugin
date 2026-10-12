@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T200439Z-100-inqil",
+  "at": "2026-10-12T20:04:39Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261012-0677",
+  "kind": "seat.up",
+  "ticket": "WO-20261012-0677",
+  "pane": "wD3:pH0",
+  "note": "reviewer seat up for PR 36, woken by test.passed ja95o at 6493523; read-only review starting",
+  "evidence": [],
+  "observations": [],
+  "pr": 36
+}

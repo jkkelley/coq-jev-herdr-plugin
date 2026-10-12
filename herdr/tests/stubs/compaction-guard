@@ -3,14 +3,15 @@
 # host's guard state and `watch` never governs a real seat (WO-20261010-8fa8). On PATH from world_up, so the panes a
 # case plugs in (monitors 1: guard lease watcher, compaction-guard watch) find it exactly as the scripts do.
 #   doctor            {"ok":true}
-#   watch [..]        prints one line and stays up like the real long-running watcher, so the pane reads as in use
+#   watch [..]        prints one line and stays up like the real long-running watcher, so the pane reads as in use;
+#                     with --once it returns at once, as the real one does (guardwatch.sh calls it that way, WO-20261012-ee9c)
 #   release <sid>     what the real verb does to the state file: phase idle, released true (guard cmd_release -> phase_reset)
 #   anything else     exit 0, nothing printed
 # Every call's argv is appended to $COMPACTION_GUARD_STUB_LOG when it is set, so a case can count and read them.
 [ -z "${COMPACTION_GUARD_STUB_LOG:-}" ] || printf '%s\n' "$*" >> "$COMPACTION_GUARD_STUB_LOG"
 case "${1:-}" in
   doctor) echo '{"ok":true}' ;;
-  watch) echo "stub compaction-guard $*"; exec sleep 3600 ;;
+  watch) echo "stub compaction-guard $*"; case " $* " in *" --once "*) ;; *) exec sleep 3600 ;; esac ;;
   release)
     d="${COMPACTION_GUARD_STATE:-$HOME/.local/state/compaction-guard}/sessions/${2:?release needs a session}"
     [ -d "$d" ] || { echo "stub compaction-guard: no session $2" >&2; exit 2; }

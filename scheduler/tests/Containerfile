@@ -1,0 +1,21 @@
+# scheduler/tests/Containerfile - the scheduler's test image (SPEC-16.K k-img-test). Built by `make -C scheduler test`.
+#
+# The pinned Go image plus bash, jq and shellcheck, so the Go tests, the contract test and the host wrappers' tests run
+# in one container with the repository mounted read-only and the network off.
+# Repin together with the Makefile's GO_IMAGE and the builder stage of scheduler/Containerfile:
+#   podman pull docker.io/library/golang:1.26-bookworm
+#   podman image inspect docker.io/library/golang:1.26-bookworm --format '{{index .RepoDigests 0}}'
+FROM docker.io/library/golang@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36
+# golang:1.26-bookworm, pulled 2026-08
+#
+# BREADCRUMB 2026-10-12 - WO-20261012-48ab, python3-jsonschema beside bash, jq and shellcheck. What broke: SPEC-16.K
+#   k-img-test lists bash, jq and shellcheck only, but the writer's own check (events/bin/event.sh check, line 92)
+#   refuses to run without python3 and its jsonschema module, so the testkit case k-t1 ("the builder writes a record
+#   the writer's check accepts") and the contract test (k-con-writer) could not run in this image at all. Why this fix:
+#   the same Debian package the lint image already installs for the same validator (lint/Containerfile), so both
+#   images judge a record by one schema implementation. Rejected: validating records against the schema in Go (a
+#   second validator that can disagree with the writer's, and a dependency go.mod may not take) and skipping the case
+#   when python3 is absent (a test that passes by not running). Cost: about 20 MB of image.
+RUN apt-get update -qq \
+  && apt-get install -y -qq --no-install-recommends bash jq shellcheck python3-jsonschema >/dev/null \
+  && rm -rf /var/lib/apt/lists/*
