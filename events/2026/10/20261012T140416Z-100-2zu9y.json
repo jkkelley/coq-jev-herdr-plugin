@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T140416Z-100-2zu9y",
+  "at": "2026-10-12T14:04:16Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "owner notified for 500 2qgvo: review.passed tebq1 has no merger record; merger woken",
+  "evidence": [],
+  "observations": []
+}

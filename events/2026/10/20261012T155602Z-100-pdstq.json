@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T155602Z-100-pdstq",
+  "at": "2026-10-12T15:56:02Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-3bb0",
+  "pane": null,
+  "note": "owner notified for 500 uff1i: pr.opened pt4rz has no tester record after 90s; tester-wo-20261012-3bb0 woken",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

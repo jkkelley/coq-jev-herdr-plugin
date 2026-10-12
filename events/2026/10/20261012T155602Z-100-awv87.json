@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T155602Z-100-awv87",
+  "at": "2026-10-12T15:56:02Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-9b2c",
+  "pane": null,
+  "note": "owner notified for 500 w8u6t: test.passed haim3 has no reviewer record after 90s; reviewer-wo-20261012-9b2c woken",
+  "evidence": [],
+  "observations": [],
+  "to": "reviewer"
+}

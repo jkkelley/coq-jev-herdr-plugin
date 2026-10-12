@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154302Z-100-6oc04",
+  "at": "2026-10-12T15:43:02Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-da52",
+  "pane": null,
+  "note": "owner notified for 500 0sw3f: test.passed r75h7 has no reviewer record; reviewer prompted",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T153438Z-500-ttatk",
+  "at": "2026-10-12T15:34:38Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261012-da52",
+  "pane": null,
+  "note": "stall: pr.opened 100 20261012T153306Z-100-ibm6d has no tester record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

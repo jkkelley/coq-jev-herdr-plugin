@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T130831Z-201-ay4mw",
+  "at": "2026-10-12T13:08:31Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-4562",
+  "kind": "test.passed",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p7E",
+  "note": "WO-20261011-4562 test plan make -C herdr test: tests 16 passed, 0 failed (PR 22 head efc1cd2 via 20261012T125745Z-100-k0pgf)",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/a97bd2a7-054c-45de-8cce-7f103072e5b3/scratchpad/herdr-test-4562.log"
+  ],
+  "observations": [],
+  "to": "reviewer"
+}

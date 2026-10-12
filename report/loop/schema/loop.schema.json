@@ -53,6 +53,12 @@
       "maxItems": 24,
       "items": { "$ref": "#/$defs/line" }
     },
+    "glass": {
+      "type": "array",
+      "maxItems": 24,
+      "items": { "$ref": "#/$defs/glassline" },
+      "description": "one row per break glass request (WO-20261011-4562), newest last: the records of one request id folded to the state the latest record says; optional so an entry drawn before break glass existed still validates"
+    },
     "board_title": {
       "$ref": "#/$defs/text",
       "description": "the build board's heading when the design's own wording does not fit; optional"
@@ -186,6 +192,19 @@
           "propertyNames": { "$ref": "#/$defs/sid" },
           "additionalProperties": { "$ref": "#/$defs/stationstate" }
         }
+      }
+    },
+    "glassline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "request", "seat", "action", "state", "at"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9]{5}$", "description": "the short form of the request id" },
+        "request": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$", "description": "the break.glass 300 record id, which is also the owner card id" },
+        "seat": { "$ref": "#/$defs/text" },
+        "action": { "$ref": "#/$defs/text" },
+        "state": { "enum": ["asked", "granted", "refused", "in effect", "done", "restored"] },
+        "at": { "$ref": "#/$defs/utc", "description": "the latest record of the request" }
       }
     },
     "boardrow": {

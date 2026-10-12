@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T140416Z-100-gprgz",
+  "at": "2026-10-12T14:04:16Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "owner notified for 500 fpfng: test.failed hyds1 has no worker record; worker is working, not prompted",
+  "evidence": [],
+  "observations": []
+}

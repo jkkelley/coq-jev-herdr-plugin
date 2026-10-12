@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T160339Z-100-nynn4",
+  "at": "2026-10-12T16:03:39Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261012-da52",
+  "kind": "work.started",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:pA1",
+  "note": "reviewer seat up; third review of PR 25 after 422 96sf6 and worker 423 aawbm, checking head 3e00b1a",
+  "evidence": [],
+  "observations": [],
+  "attempt": 3,
+  "sha": "3e00b1a",
+  "pr": 25
+}

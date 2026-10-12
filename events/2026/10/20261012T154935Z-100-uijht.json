@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154935Z-100-uijht",
+  "at": "2026-10-12T15:49:35Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": null,
+  "pane": null,
+  "note": "owner notified for 500 l77p8: belt stopped 64s ago, running again",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

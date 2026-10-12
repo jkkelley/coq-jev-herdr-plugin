@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T121446Z-100-ey35l",
+  "at": "2026-10-12T12:14:46Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4db1",
+  "kind": "work.started",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p60",
+  "note": "worker resumed on review 422: restore RUNBOOK Graph and Ticket lines, then hand the head to the tester",
+  "evidence": [],
+  "observations": []
+}

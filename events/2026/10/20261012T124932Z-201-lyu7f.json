@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T124932Z-201-lyu7f",
+  "at": "2026-10-12T12:49:32Z",
+  "code": 201,
+  "seat": "architect-read-only-search-f283",
+  "kind": "note",
+  "ticket": null,
+  "pane": "wD3:p76",
+  "note": "Best: ~/.bearings/.handoff/sitrep-panel-v1/reference-page.html, the colored #SITREP/v1# panel of the bearings chat, 2026-09-16, README and SPEC beside it. 3 others ranked in evidence; the bearings-test page is identical. No a2a HTML found.",
+  "evidence": [
+    "~/.bearings/.handoff/sitrep-panel-v1/reference-page.html",
+    "~/.bearings/.live/stable-442cf4/assets/page.html",
+    "~/Documents/2026-27-espn-fantasy-claude/tools/bearings/assets/page.html",
+    "~/.bearings/.live/bearings-test/assets/page.html"
+  ],
+  "observations": []
+}

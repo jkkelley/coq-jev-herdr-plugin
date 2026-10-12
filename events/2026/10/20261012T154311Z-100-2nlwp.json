@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154311Z-100-2nlwp",
+  "at": "2026-10-12T15:43:11Z",
+  "code": 100,
+  "seat": "tester-wo-20261012-9b2c",
+  "kind": "work.started",
+  "ticket": "WO-20261012-9b2c",
+  "pane": null,
+  "note": "WO-20261012-9b2c - Standing policies: an escalation carries a deadline and a default drawn from the owner's locked decisions, so the line takes the default when nobody answers instead of waiting. Tester started.",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T160310Z-100-iiao9",
+  "at": "2026-10-12T16:03:10Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261012-da52",
+  "pane": null,
+  "note": "Architect ruling PR 25: epic 187e files ride every child branch on purpose (first merge lands them). AC-H2 first half is the post-merge cut-over the architect runs (stop slot 2.3.3, delete interim bus); accept as ticked",
+  "evidence": [],
+  "observations": []
+}

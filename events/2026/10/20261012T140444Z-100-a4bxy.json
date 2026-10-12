@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T140444Z-100-a4bxy",
+  "at": "2026-10-12T14:04:44Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "owner notified for 500 1qoys: merge held PR 21 head 49ab55b, no test.passed on that sha; latest test.failed hyds1 422",
+  "evidence": [],
+  "observations": [],
+  "to": "merger"
+}

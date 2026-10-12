@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T150353Z-100-ifr2z",
+  "at": "2026-10-12T15:03:53Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261011-ceea",
+  "pane": null,
+  "note": "owner notified for 500 v1kw1: test.failed kccii has no worker record after 90s; worker-wo-20261011-ceea woken",
+  "evidence": [],
+  "observations": [],
+  "to": "worker"
+}

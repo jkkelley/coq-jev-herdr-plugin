@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T141707Z-201-bk0mu",
+  "at": "2026-10-12T14:17:07Z",
+  "code": 201,
+  "seat": "architect",
+  "kind": "verified",
+  "ticket": "WO-20261012-668a",
+  "pane": null,
+  "note": "PR 23 verified on main 04b8ac7: bearings suite 113 passed 0 failed, sitrep verb, builder, checker, renderer, standards and RUNBOOK present; merged 4c1gd",
+  "evidence": [],
+  "observations": []
+}

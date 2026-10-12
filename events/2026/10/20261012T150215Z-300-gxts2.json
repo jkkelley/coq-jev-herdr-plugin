@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T150215Z-300-gxts2",
+  "at": "2026-10-12T15:02:15Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261011-ceea",
+  "pane": null,
+  "note": "routed test.failed 422 (20261012T150203Z-422-kccii): wake worker",
+  "evidence": [
+    "events/2026/10/20261012T150203Z-422-kccii.json"
+  ],
+  "observations": [],
+  "to": "worker"
+}

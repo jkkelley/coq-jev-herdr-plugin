@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T135421Z-500-4ig6o",
+  "at": "2026-10-12T13:54:21Z",
+  "code": 500,
+  "seat": "merger",
+  "kind": "note",
+  "ticket": "WO-20261011-4562",
+  "pane": null,
+  "note": "merger started for PR 22: checking review.passed runfc and test.passed ay4mw on efc1cd2 before merge",
+  "evidence": [],
+  "observations": []
+}

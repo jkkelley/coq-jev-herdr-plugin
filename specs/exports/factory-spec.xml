@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Contents: purpose, glossary (11 terms), S1 small-loop, S2 big-loop, S3 herdr, S4 a2a, S5 determinism, S6 port-notes. One rule per element; status="draft" marks a rule not verified in the source repo. UTC. -->
-<factory-spec version="1.0.0" generated="2026-10-11T17:55:20Z" source-repo="coq-jev-herdr-plugin" request="REQ-AB16-001">
+<!-- Contents: purpose, amendments (2), glossary (11 terms), S1 small-loop, S2 big-loop, S3 herdr, S4 a2a, S5 determinism, S6 port-notes. One rule per element; status="draft" marks a rule not verified in the source repo. UTC. -->
+<factory-spec version="1.1.0" generated="2026-10-11T17:55:20Z" amended="2026-10-12T12:37Z" source-repo="coq-jev-herdr-plugin" request="REQ-AB16-001">
   <purpose>Generic, portable description of the coq software factory: role seats in labelled terminal panes hand each other schema-checked records with status codes, a script routes every record, and the owner sees one line or one decision card.</purpose>
+  <amendments>
+    <amendment id="AM-001" request="REQ-AB16-002" at="2026-10-12T12:37Z" rule="S5-021" decision="refused" instead="S5-042" source="graph/nodes/DEC-clear-schemas-codes-token-efficiency.json">Refused as worded: a receipt for a row that does nothing repeats what the log and the table already say (S5-035, S1-040, the locked token-efficiency decision). Intent kept: routine records stop being 500s through action ignore, S5-042.</amendment>
+    <amendment id="AM-002" request="REQ-AB16-002" at="2026-10-12T12:37Z" rule="S2-013" decision="refused" instead="S2-054" source="factory/config/routes.json">Refused as worded: S2-013 holds the forward rows, which match the source routes table today, and do log is refused by AM-001. The four routine rows are S2-054, do ignore.</amendment>
+  </amendments>
   <glossary>
     <term name="seat">One agent process of one role, started by the seat script in its own labelled multiplexer tab with the role's model, effort and permission mode; named &lt;role&gt;-&lt;ticket&gt;, or a fixed name such as monitor or merger.</term>
     <term name="slot">A worktree leased from the worktree pool with the ticket id as lease holder. The seat script leases it at seat up and returns it at seat down; a worker edits only inside its slot.</term>
@@ -154,6 +158,7 @@
     <rule id="S2-051" title="Bus decided" level="MUST" source="graph/nodes/DEC-nats-jetstream-grpc.json" status="draft">Decided, not built: NATS JetStream carries records between components, gRPC only the synchronous control plane, and routing stays by status code. The file queue is the offline fallback until then.</rule>
     <rule id="S2-052" title="Seats as consumers" level="SHOULD" source="AGENTS.md" status="draft">Decided, not built: a seat waits as a durable pull consumer and is woken by the publish, with no polling loop.</rule>
     <rule id="S2-053" title="Lease TTLs" level="MUST" source="herdr/config/leases.json" status="draft">Every exclusive thing is a lease with a TTL (slot 14400 s, tier 86400 s, ticket 7200 s, seat 900 s) that the monitor releases on expiry with seat.stalled 500. Configured, but no script reads this file yet.</rule>
+    <rule id="S2-054" title="Routine rows" level="MUST" source="factory/config/routes.json" status="draft">Rows: seat.up 100, seat.down 100, work.started 100 and note 100 do ignore: no seat is woken for them, and a runner 500 under S2-017 must mean a real gap or a failed action, never routine traffic. Not built in the source yet.</rule>
   </section>
 
   <section id="S3" name="herdr">
@@ -291,6 +296,7 @@
     <rule id="S5-039" title="Automation leads" level="MUST" source="AGENTS.md">Monitoring, compaction and failover are scripts in panes; a human is notified, never required. A step that depends on someone remembering it is a script that does not exist yet.</rule>
     <rule id="S5-040" title="Hand steps recorded" level="MUST" source="docs/sops/SOP-0001-bring-up-a-tester-reviewer-or-merger-seat-on-a-ticket-and-wake-it-by-hand.md">Anything done by hand is recorded as an event record and a ticket note; a repeated hand step becomes a ticket or a routes row.</rule>
     <rule id="S5-041" title="Component runbook edge" level="SHOULD" source="report/loop/RUNBOOK.md" status="draft">Proposed: lint fails when a new component node has no defined_in edge to a runbook node. The check is not in the source's lint yet.</rule>
+    <rule id="S5-042" title="Ignore action" level="MUST" source="factory/config/routes.schema.json" status="draft">Route actions gain ignore beside the four of S5-021: the runner marks the ledger entry ignored and writes nothing else, no receipt and no 500. An ignore row has no to, so nothing reads a station from it. In flight on a feature branch.</rule>
   </section>
 
   <section id="S6" name="port-notes">

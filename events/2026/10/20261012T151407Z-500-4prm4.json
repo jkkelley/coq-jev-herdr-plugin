@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T151407Z-500-4prm4",
+  "at": "2026-10-12T15:14:07Z",
+  "code": 500,
+  "seat": "route-runner",
+  "kind": "note",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "route failed for verified 201, record 20261012T151354Z-201-71hnz: herdr agent prompt interface failed",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

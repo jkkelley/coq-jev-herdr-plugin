@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T121518Z-100-2pkx4",
+  "at": "2026-10-12T12:15:18Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261010-329d",
+  "pane": null,
+  "note": "owner notified for 500 svcue: machine suspended 02:31Z to 12:11Z; PR 21 tester and ceea worker hung and were re-prompted; PR 21 worker seat started from the architect tab.",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

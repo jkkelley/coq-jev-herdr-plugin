@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T121512Z-500-svcue",
+  "at": "2026-10-12T12:15:12Z",
+  "code": 500,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "Machine suspended about 02:31Z to 12:11Z: bearings stopped idle and was restarted; PR 21 tester and ceea worker commands hung across the suspend, interrupted and re-prompted; PR 21 worker seat started from the architect tab.",
+  "evidence": [],
+  "observations": []
+}

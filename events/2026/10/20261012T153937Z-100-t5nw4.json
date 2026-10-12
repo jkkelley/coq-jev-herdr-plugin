@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T153937Z-100-t5nw4",
+  "at": "2026-10-12T15:39:37Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-da52",
+  "pane": null,
+  "note": "owner notified for 500 ttatk: pr.opened ibm6d has no tester record after 90s; tester-wo-20261012-da52 woken",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

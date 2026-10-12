@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T160616Z-100-955fg",
+  "at": "2026-10-12T16:06:16Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "note",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:pAC",
+  "note": "Merger seat up on WO-20261012-da52 - Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand. Waiting on record.review_passed.",
+  "evidence": [],
+  "observations": []
+}

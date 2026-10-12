@@ -13,6 +13,7 @@
 #   bearings.sh <tier> rotate-key [--ticket ID] [--config P] [--to PANE] [--no-herdr]   new key, same page, same panes; prints the new url
 #   bearings.sh <tier> wait     [--ticket ID] [--config P] [--to PANE] [--no-herdr]   each wake is prompted into PANE (default COQ_SEAT_PANE, else the calling pane)
 #   bearings.sh <tier> reply    [--ticket ID] [--config P] --to <message-id> "text"
+#   bearings.sh <tier> sitrep   [--ticket ID] [--config P] --payload FILE [--to <message-id>]   check, then send as a reply; refuses on a violation
 #   bearings.sh <tier> status   [--ticket ID] [--config P] [--json]
 #   bearings.sh <tier> url      [--ticket ID] [--config P]
 #   bearings.sh <tier> ask      [--ticket ID] [--config P] <questions.json>
@@ -29,10 +30,10 @@ die() { local code=$1; shift; printf 'bearings: %s\n' "$*" >&2; exit "$code"; }
 note() { printf 'bearings: %s\n' "$*" >&2; }
 need() { command -v "$1" >/dev/null 2>&1 || die "$EX_IO" "$1 is required and not on PATH"; }
 
-[ $# -ge 2 ] || { sed -n '2,22p' "$0" >&2; exit "$EX_USAGE"; }
+[ $# -ge 2 ] || { sed -n '2,23p' "$0" >&2; exit "$EX_USAGE"; }
 TIER=$1; VERB=$2; shift 2
 TICKET=""; CONFIG="${BEARINGS_CONFIG:-$TOOL/config/bearings.json}"; NO_HERDR=0; JSON=0; FORCE=0
-SESSION=""; MODEL=""; CWD=""; WORKING_ON=""; TO=""; JOIN=0
+SESSION=""; MODEL=""; CWD=""; WORKING_ON=""; TO=""; JOIN=0; PAYLOAD=""
 POS=()
 while [ $# -gt 0 ]; do
   case $1 in
@@ -43,11 +44,12 @@ while [ $# -gt 0 ]; do
     --cwd) CWD=${2:-}; shift 2 ;;
     --working-on) WORKING_ON=${2:-}; shift 2 ;;
     --to) TO=${2:-}; shift 2 ;;
+    --payload) PAYLOAD=${2:-}; shift 2 ;;
     --no-herdr) NO_HERDR=1; shift ;;
     --json) JSON=1; shift ;;
     --force) FORCE=1; shift ;;
     --join) JOIN=1; shift ;;
-    --help|-h) sed -n '2,22p' "$0" >&2; exit "$EX_OK" ;;
+    --help|-h) sed -n '2,23p' "$0" >&2; exit "$EX_OK" ;;
     --*) die "$EX_USAGE" "unknown flag $1" ;;
     *) POS+=("$1"); shift ;;
   esac
@@ -261,6 +263,24 @@ case $VERB in
   reply)
     [ -n "$TO" ] || die "$EX_USAGE" "reply needs --to <message-id>"
     if [ ${#POS[@]} -gt 0 ]; then node "$HERE/reply.mjs" "${COMMON[@]}" --to "$TO" "${POS[0]}"; else node "$HERE/reply.mjs" "${COMMON[@]}" --to "$TO"; fi
+    ;;
+  sitrep)
+    # WO-20261012-668a. The owner's status briefing: a #SITREP/v1# payload (scripts/sitrep-build.mjs makes one from the records)
+    # is measured against STD-owner-sitrep-001 by sitrep-check.mjs and sent as a reply only when it passes. What this prevents:
+    # a dense briefing reaching the owner because the writer judged that it "reads fine"; the standard says it is counted, so
+    # a violation exits 3 here and nothing is written to messages.jsonl. The checker prints the normalised message text on
+    # stdout (--emit), so the file may be bare JSON or already tagged, and what is sent is always tag plus minified JSON.
+    # --to defaults to the newest message the owner typed on this page, because a briefing is almost always the answer to one;
+    # a page with none needs --to spelled out (exit 6 from reply.mjs says so).
+    [ -n "$PAYLOAD" ] || die "$EX_USAGE" "sitrep needs --payload FILE (a #SITREP/v1# message or its bare JSON)"
+    [ -f "$PAYLOAD" ] || die "$EX_NOTFOUND" "no such payload file $PAYLOAD"
+    if ! MSG=$(node "$HERE/sitrep-check.mjs" "$PAYLOAD" --config "$CONFIG" --emit); then
+      die "$EX_VALIDATION" "SITREP refused: $PAYLOAD breaks the standard (violations above); nothing was sent"
+    fi
+    TO_ID=$TO
+    [ -n "$TO_ID" ] || TO_ID=$(jq -rs '[.[] | select(.from == "you")] | last | .id // empty' "$DIR/messages.jsonl" 2>/dev/null || true)
+    [ -n "$TO_ID" ] || die "$EX_NOTFOUND" "no owner message on $PAGE to reply to; pass --to <message-id>"
+    printf '%s' "$MSG" | node "$HERE/reply.mjs" "${COMMON[@]}" --to "$TO_ID"
     ;;
   status)
     ALIVE=false; server_alive && ALIVE=true

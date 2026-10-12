@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T123842Z-201-j9gg5",
+  "at": "2026-10-12T12:38:42Z",
+  "code": 201,
+  "seat": "architect-req-ab16-002-from-7c1a",
+  "kind": "note",
+  "ticket": null,
+  "pane": "wD3:p73",
+  "note": "factory-spec.xml v1.1.0, REQ-AB16-002: S5-021 refused as worded (a receipt per routine record repeats the table), kept as draft S5-042 action ignore; S2-013 refused (matches routes.json today), rows moved to draft S2-054 do ignore",
+  "evidence": [
+    "specs/exports/factory-spec.xml"
+  ],
+  "observations": [
+    {
+      "path": "factory/config/routes.json",
+      "line": 6,
+      "saw": "today the six forward rows read as S2-013 states and no row matches seat.up, seat.down, work.started or note at 100, so each becomes a runner 500, as in 20261012T121440Z-500-ib2bj",
+      "expected": "S2-013 unchanged; the four routine rows land as S2-054 do ignore once the ignore action of S5-042 is on main"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T162320Z-100-xzxpz",
+  "at": "2026-10-12T16:23:20Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-da52",
+  "pane": null,
+  "note": "owner notified for 500 161gy: pr.opened 48jpc has no tester record after 90s; tester-wo-20261012-da52 prompted",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

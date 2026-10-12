@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T151014Z-300-zjwyo",
+  "at": "2026-10-12T15:10:14Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "routed review.passed 201 (20261012T150957Z-201-uhe9e): wake merger",
+  "evidence": [
+    "events/2026/10/20261012T150957Z-201-uhe9e.json"
+  ],
+  "observations": [],
+  "to": "merger"
+}

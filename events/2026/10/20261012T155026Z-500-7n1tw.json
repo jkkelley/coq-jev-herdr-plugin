@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T155026Z-500-7n1tw",
+  "at": "2026-10-12T15:50:26Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261012-3bb0",
+  "pane": null,
+  "note": "stall: pr.opened 100 20261012T154848Z-100-v2muy has no tester record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

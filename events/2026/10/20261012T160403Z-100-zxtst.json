@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T160403Z-100-zxtst",
+  "at": "2026-10-12T16:04:03Z",
+  "code": 100,
+  "seat": "verifier-wo-20261012-72a0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:pA6",
+  "note": "Verifier seat started on WO-20261012-72a0 - Verifier seat: a merged record wakes a verifier that checks the merge on main against the ticket's criteria; checking main against its acceptance criteria.",
+  "evidence": [],
+  "observations": []
+}

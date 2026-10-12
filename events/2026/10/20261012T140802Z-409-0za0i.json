@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T140802Z-409-0za0i",
+  "at": "2026-10-12T14:08:02Z",
+  "code": 409,
+  "seat": "merger",
+  "kind": "merge.conflict",
+  "ticket": "WO-20261012-668a",
+  "pane": null,
+  "note": "PR 23 head 0fdc03b conflicts with main in CHANGELOG.md and CONTEXT_STATE.md; not resolved by hand. Also no test.passed on 0fdc03b (test 1hkrkr is on c6212f3); no merge run",
+  "evidence": [],
+  "observations": []
+}

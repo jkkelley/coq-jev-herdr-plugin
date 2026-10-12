@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T140351Z-500-fpfng",
+  "at": "2026-10-12T14:03:51Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "stall: test.failed 422 20261012T132330Z-422-hyds1 has no worker record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

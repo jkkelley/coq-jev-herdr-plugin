@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154302Z-100-69ncf",
+  "at": "2026-10-12T15:43:02Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-da52",
+  "pane": null,
+  "note": "owner notified for 500 9e6nb: belt stopped 66s; belt running again",
+  "evidence": [],
+  "observations": []
+}

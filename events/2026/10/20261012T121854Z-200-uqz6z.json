@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T121854Z-200-uqz6z",
+  "at": "2026-10-12T12:18:54Z",
+  "code": 200,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p2",
+  "note": "Owner decision 2026-10-12: break glass flips the seat to bypassPermissions (owner order: bypass permissions when break glass happens), overruling review obs 1. AC-H1 and AC-H3 live halves move to WO-20261012-2a12; PR 22 lands.",
+  "evidence": [
+    "events/2026/10/20261012T013042Z-422-2g2pn.json"
+  ],
+  "observations": []
+}

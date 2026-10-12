@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T151354Z-201-71hnz",
+  "at": "2026-10-12T15:13:54Z",
+  "code": 201,
+  "seat": "architect",
+  "kind": "verified",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "PR 21 verified on main 3b5717f: factory suite 15 passed 0 failed on rerun; first run on the same tree exited 1 (flake, case not captured, backlog); merged 2mlk2",
+  "evidence": [],
+  "observations": []
+}

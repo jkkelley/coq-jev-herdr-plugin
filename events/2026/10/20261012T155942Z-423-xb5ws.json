@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T155942Z-423-xb5ws",
+  "at": "2026-10-12T15:59:42Z",
+  "code": 423,
+  "seat": "tester-wo-20261012-72a0",
+  "kind": "blocked",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:p9M",
+  "note": "answers 20261012T155003Z-100-ylpl6: cannot check out 3de7d8c, git denied to tester role; ed07c19 passed 15/15 (201 20261012T155840Z-201-fthac); owner decision needed",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor",
+  "sha": "3de7d8c52beae359c7e6f06290b740cce84f26cb",
+  "pr": 29
+}

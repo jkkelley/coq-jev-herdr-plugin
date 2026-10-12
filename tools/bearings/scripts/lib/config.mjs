@@ -30,6 +30,7 @@ const INT_KEYS = [
   "stop_try_ms",
   "max_body_bytes",
   "max_message_chars",
+  "max_reply_chars",
   "max_words_chars",
   "messages_window",
 ];

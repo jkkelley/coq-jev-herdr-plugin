@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T160139Z-500-abmk0",
+  "at": "2026-10-12T16:01:39Z",
+  "code": 500,
+  "seat": "route-runner",
+  "kind": "note",
+  "ticket": "WO-20261011-e618",
+  "pane": null,
+  "note": "route failed for pr.opened 100, record 20261012T160035Z-100-kxx1v: seat.sh --ticket WO-20261011-e618 --role tester failed (exit 3): seat.sh: slot /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/9/coq-jev-herdr-plugin could not be put on f",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

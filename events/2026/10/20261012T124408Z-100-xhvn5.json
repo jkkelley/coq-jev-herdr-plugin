@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T124408Z-100-xhvn5",
+  "at": "2026-10-12T12:44:08Z",
+  "code": 100,
+  "seat": "architect-read-only-search-f283",
+  "kind": "note",
+  "ticket": null,
+  "pane": "wD3:p76",
+  "note": "search started, read-only: colored HTML SITREP for the Claude message system (a2a, bearings messages); order local-k8s-docs, bearings-v2, ~/projects, ~/.lavish, ~/Documents; will post one 201 note with paths, then stop",
+  "evidence": [],
+  "observations": []
+}

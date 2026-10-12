@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T141420Z-201-d8tzj",
+  "at": "2026-10-12T14:14:20Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-668a",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-668a",
+  "pane": "wD3:p7Q",
+  "note": "sha 9ed41d3 (PR 23 head): make -C tools/bearings test 113 passed, 0 failed; make lint all ok. Both exit 0.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/6ad0442e-630b-4707-88ec-f6adc75c7597/scratchpad/h9-bearings-test.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/6ad0442e-630b-4707-88ec-f6adc75c7597/scratchpad/h9-lint.log"
+  ],
+  "observations": []
+}

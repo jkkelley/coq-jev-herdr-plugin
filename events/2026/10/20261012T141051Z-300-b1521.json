@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T141051Z-300-b1521",
+  "at": "2026-10-12T14:10:51Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261012-668a",
+  "pane": null,
+  "note": "routed pr.opened 100 (20261012T141040Z-100-kifra): wake tester",
+  "evidence": [
+    "events/2026/10/20261012T141040Z-100-kifra.json"
+  ],
+  "observations": [],
+  "to": "tester"
+}

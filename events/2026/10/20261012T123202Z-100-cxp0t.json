@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T123202Z-100-cxp0t",
+  "at": "2026-10-12T12:32:02Z",
+  "code": 100,
+  "seat": "architect-req-ab16-002-from-7c1a",
+  "kind": "note",
+  "ticket": null,
+  "pane": "wD3:p73",
+  "note": "REQ-AB16-002 started: reading REQUEST-route-log.xml, its evidence and routes.json; will amend specs/exports/factory-spec.xml only (S5-021, S2-013 by rule id), then post one 201 note and stop",
+  "evidence": [],
+  "observations": []
+}

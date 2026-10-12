@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T123928Z-100-1kz1a",
+  "at": "2026-10-12T12:39:28Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4db1",
+  "kind": "work.started",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p60",
+  "note": "worker woken by review.passed 201: merge origin/main (PR 20) into the branch, keep both CONTEXT_STATE sides, rerun lint and suite",
+  "evidence": [],
+  "observations": []
+}

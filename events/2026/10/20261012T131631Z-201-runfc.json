@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T131631Z-201-runfc",
+  "at": "2026-10-12T13:16:31Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261011-4562",
+  "kind": "review.passed",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p7M",
+  "note": "PR 22 passed: AC-H1 to AC-H4 evidenced, live halves re-homed by owner to WO-20261012-2a12, lint green on rerun (shellcheck GHC crash once, flake), no em dash, ttl in config",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/0cef7ad6-2e3b-4673-aee1-d6f44ce3bb03/scratchpad/chk.out",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/0cef7ad6-2e3b-4673-aee1-d6f44ce3bb03/scratchpad/lint2.out",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/0cef7ad6-2e3b-4673-aee1-d6f44ce3bb03/scratchpad/c3.out"
+  ],
+  "observations": [],
+  "to": "merger"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T140945Z-500-0ui6q",
+  "at": "2026-10-12T14:09:45Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261012-668a",
+  "pane": null,
+  "note": "stall: merge.conflict 409 20261012T140802Z-409-0za0i has no worker record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

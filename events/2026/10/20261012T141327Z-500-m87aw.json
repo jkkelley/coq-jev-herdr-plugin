@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T141327Z-500-m87aw",
+  "at": "2026-10-12T14:13:27Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261011-ceea",
+  "pane": null,
+  "note": "stall: review.changes 422 20261012T141150Z-422-da1is has no worker record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

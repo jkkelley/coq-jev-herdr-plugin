@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T155940Z-100-5y8qv",
+  "at": "2026-10-12T15:59:40Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-b800",
+  "pane": null,
+  "note": "owner notified for 500 58qlf: test.passed 6fi39 has no reviewer record; reviewer not idle",
+  "evidence": [],
+  "observations": []
+}

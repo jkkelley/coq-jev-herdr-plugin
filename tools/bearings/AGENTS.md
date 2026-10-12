@@ -7,6 +7,7 @@
 - Run it
 - Ask, wait, reply
 - The factory board
+- The SITREP panel
 - Test it
 - Promote a change: dev to uat to stable
 - Config and variables
@@ -87,6 +88,21 @@ Both are read from `board_dir` in the config (relative to the repository root), 
 A board that was never built answers 503 `board not built`; a config with no `board_dir` answers 404.
 Run `report/loop/loop.sh watch` in a labelled herdr pane to keep it built (`report/loop/RUNBOOK.md`).
 
+## The SITREP panel
+
+A reply whose text is `#SITREP/v1#` and one JSON object draws as a colored status card on the page (WO-20261012-668a); the same text typed by the owner is a bubble, and so is a payload that does not parse.
+It is how an agent gives the owner a briefing: five fixed blocks, at most two items each, one sentence of 15 words or fewer per item, the ticket on its own line with its full title.
+Build it from records, check it, send it; never type the figures:
+
+```sh
+make sitrep-build TIER=stable OUT=/tmp/briefing.txt     # tickets, events and open PRs -> payload; exit 3 if it breaks the standard
+make sitrep-check PAYLOAD=/tmp/briefing.txt             # exit 1 and one VIOLATION line per broken rule
+make sitrep TIER=stable PAYLOAD=/tmp/briefing.txt       # check, then reply to the owner's newest message; refuses on a violation
+```
+
+The rules are `standards/STD-owner-sitrep-001.json` and `standards/STD-owner-comms-001.json`, the format is `standards/SITREP-PAYLOAD.md`, the limits are `config/sitrep.json`, the sentences are `config/sitrep.template.json`.
+Everything else, including moving this to another repository, is in `RUNBOOK.md`.
+
 ## Test it
 
 ```sh
@@ -128,6 +144,7 @@ No absolute path, hostname or port lives in a script: the file is meant to be li
 
 - `node scripts/server.mjs ... &` in an agent's shell. A process under an agent is invisible and blocks compaction; it goes in a labelled pane.
 - Editing `page.html` to add a feature without an owner-approved sample; the look is the owner's theme.
+- Sending a briefing by hand-typing its figures, or around `make sitrep`; the check is what keeps it short.
 - Hardcoding `44900` or `~/.bearings` in a script or test; both belong to the config.
 - Starting stable from a feature branch or a slot; stable runs the `main` checkout only.
 - Copying `answers.jsonl` by hand between tiers; `make migrate` copies and verifies with `cmp`.
@@ -141,7 +158,14 @@ No absolute path, hostname or port lives in a script: the file is meant to be li
 | `scripts/bearings.sh`        | tier resolution, herdr panes, every verb                                |
 | `scripts/server.mjs`         | the page server; reads the page files on every request                  |
 | `scripts/wait.mjs`           | blocks for one delivery, prints it, exits; looped by `bearings.sh wait` |
-| `scripts/reply.mjs`          | appends the agent's reply to `messages.jsonl`                           |
+| `scripts/reply.mjs`          | appends the agent's reply to `messages.jsonl` (capped at `max_reply_chars`) |
+| `scripts/sitrep-build.mjs`   | fills `config/sitrep.template.json` from tickets, events and open PRs   |
+| `scripts/sitrep-check.mjs`   | measures a SITREP payload against the standard; exit 1 on a violation   |
+| `scripts/lib/sitrep.mjs`     | the SITREP rules, shared by the checker, builder and sender             |
+| `config/sitrep.json`         | SITREP limits, ticket id patterns and build sources                     |
+| `config/sitrep.template.json`| the shape and sentences of a briefing                                   |
+| `standards/`                 | STD-owner-sitrep-001, STD-owner-comms-001 and the payload format        |
+| `RUNBOOK.md`                 | build, check, send and port the SITREP panel                            |
 | `scripts/lib/config.mjs`     | loads, validates and interpolates the config; resolves a tier           |
 | `assets/page.html`           | the owner's page (vendored, one null-guard breadcrumb at the list handler) |
 | `assets/theme.css`           | the owner's theme                                                       |

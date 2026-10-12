@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T141338Z-100-0k563",
+  "at": "2026-10-12T14:13:38Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261011-ceea",
+  "pane": null,
+  "note": "owner notified for 500 m87aw: review.changes 422 da1is has no worker record after 90s; worker-wo-20261011-ceea woken",
+  "evidence": [],
+  "observations": [],
+  "to": "worker"
+}

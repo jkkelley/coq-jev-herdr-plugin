@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154819Z-201-haim3",
+  "at": "2026-10-12T15:48:19Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-9b2c",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-9b2c",
+  "pane": null,
+  "note": "WO-20261012-9b2c - Standing policies: escalation deadline and default. make -C factory test: 16 passed, 0 failed.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-8-coq-jev-herdr-plugin/e7e94de4-cd5f-4e13-bb07-0a5316df9abc/scratchpad/wt-test.log"
+  ],
+  "observations": [],
+  "to": "merger",
+  "sha": "3b53a2fffa21",
+  "pr": 27
+}

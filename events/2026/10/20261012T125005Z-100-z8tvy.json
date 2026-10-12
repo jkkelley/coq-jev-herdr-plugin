@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T125005Z-100-z8tvy",
+  "at": "2026-10-12T12:50:05Z",
+  "code": 100,
+  "seat": "architect-read-only-search-f283",
+  "kind": "seat.down",
+  "ticket": null,
+  "pane": "wD3:p76",
+  "note": "seat retired",
+  "evidence": [],
+  "observations": []
+}

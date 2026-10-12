@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T152657Z-100-3h4ic",
+  "at": "2026-10-12T15:26:57Z",
+  "code": 100,
+  "seat": "architect-research-only-wri-dd19",
+  "kind": "seat.up",
+  "ticket": null,
+  "pane": "wD3:p8Q",
+  "note": "architect seat up: claude-opus-5-5 max bypassPermissions",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T140429Z-500-1qoys",
+  "at": "2026-10-12T14:04:29Z",
+  "code": 500,
+  "seat": "merger",
+  "kind": "note",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "merge held for PR 21 head 49ab55b: review.passed tebq1 present, but no test.passed on 49ab55b (latest test is test.failed hyds1 422, belt case 06); no merge run",
+  "evidence": [],
+  "observations": []
+}

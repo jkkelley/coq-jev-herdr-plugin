@@ -7,7 +7,7 @@
   "status": "done",
   "priority": "p0",
   "created": "2026-10-11",
-  "updated": "2026-10-11",
+  "updated": "2026-10-12",
   "created_at": "2026-10-11T14:39:41+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/interface-agent-seat-owns-the-bearings-page-owne",
@@ -21,7 +21,9 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [
+    "WO-20261012-2a12"
+  ]
 }
 ---
 

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154935Z-100-3mxbg",
+  "at": "2026-10-12T15:49:35Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-da52",
+  "pane": null,
+  "note": "owner notified for 500 01qqe: pr.opened fbbq2 has no tester record after 90s; tester-wo-20261012-da52 prompted once, status unknown",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

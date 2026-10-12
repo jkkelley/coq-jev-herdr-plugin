@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T152730Z-100-udfhy",
+  "at": "2026-10-12T15:27:30Z",
+  "code": 100,
+  "seat": "architect-research-only-wri-dd19",
+  "kind": "note",
+  "ticket": null,
+  "pane": null,
+  "note": "Research started: how local-k8s-docs and bearings-v2 auto-compact their seats vs our compaction-guard, slot 1.1.2 guard watch (off) and backlog lh51y. Report goes to my scratchpad; writing nothing else.",
+  "evidence": [],
+  "observations": []
+}

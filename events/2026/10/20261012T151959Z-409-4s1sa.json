@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T151959Z-409-4s1sa",
+  "at": "2026-10-12T15:19:59Z",
+  "code": 409,
+  "seat": "merger",
+  "kind": "merge.conflict",
+  "ticket": "WO-20261011-ceea",
+  "pane": null,
+  "note": "PR 24 head 932863e conflicts with main: CHANGELOG.md, work-orders/INDEX.md, herdr/tests/cases/04-bringup-monitors.test.sh, 05-recover.test.sh. Gates met on 932863e (f5rfs, hikl8); not resolved by hand; no merge run",
+  "evidence": [],
+  "observations": []
+}

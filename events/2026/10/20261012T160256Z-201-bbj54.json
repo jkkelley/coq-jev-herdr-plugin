@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T160256Z-201-bbj54",
+  "at": "2026-10-12T16:02:56Z",
+  "code": 201,
+  "seat": "architect",
+  "kind": "verified",
+  "ticket": "WO-20261012-9b2c",
+  "pane": null,
+  "note": "PR 27 verified on main 1f6e819: factory case 12-policy passes (AC-H1 default applied, AC-H2 no-policy waits). policy.sh run not live yet: slot 2.3.2 holds recwatch until PR 26 moves it; merged vi0gu",
+  "evidence": [],
+  "observations": []
+}

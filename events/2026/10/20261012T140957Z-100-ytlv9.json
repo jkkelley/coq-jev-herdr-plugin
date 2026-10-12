@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T140957Z-100-ytlv9",
+  "at": "2026-10-12T14:09:57Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-668a",
+  "pane": null,
+  "note": "owner notified for 500 0ui6q: merge.conflict 409 0za0i has no worker record after 90s; worker-wo-20261012-668a woken",
+  "evidence": [],
+  "observations": [],
+  "to": "worker"
+}

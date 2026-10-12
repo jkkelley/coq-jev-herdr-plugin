@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T160023Z-100-xgu08",
+  "at": "2026-10-12T16:00:23Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-9b2c",
+  "pane": null,
+  "note": "owner notified for 500 cbebf: review.passed w8dsh has no merger record after 90s; merger prompted once, status unknown",
+  "evidence": [],
+  "observations": [],
+  "to": "merger"
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T151407Z-100-9kow3",
+  "at": "2026-10-12T15:14:07Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261011-4db1",
+  "kind": "seat.down",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p6W",
+  "note": "seat retired",
+  "evidence": [],
+  "observations": []
+}

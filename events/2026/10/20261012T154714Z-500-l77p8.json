@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154714Z-500-l77p8",
+  "at": "2026-10-12T15:47:14Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": null,
+  "pane": null,
+  "note": "stall: belt stopped (last touched 64s ago, stale after 60s)",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

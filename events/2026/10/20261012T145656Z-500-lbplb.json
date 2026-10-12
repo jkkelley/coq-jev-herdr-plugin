@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T145656Z-500-lbplb",
+  "at": "2026-10-12T14:56:56Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261011-ceea",
+  "pane": null,
+  "note": "stall: test.passed 201 20261012T141130Z-201-hngro has no reviewer record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T130253Z-100-6tnr9",
+  "at": "2026-10-12T13:02:53Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261011-4562",
+  "kind": "work.started",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p7F",
+  "note": "Reviewer took WO-20261011-4562 on the open pr (PR 22), checking criteria, ticket paths and conventions",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

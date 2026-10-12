@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T124105Z-200-e3th3",
+  "at": "2026-10-12T12:41:05Z",
+  "code": 200,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "REQ-AB16-002 answered: factory-spec.xml v1.1.0 (j9gg5) copied to the Windows worktree factory/spec/; prior copy kept in ~/.cache. Spec architect seat downed.",
+  "evidence": [
+    "events/2026/10/20261012T123842Z-201-j9gg5.json"
+  ],
+  "observations": []
+}

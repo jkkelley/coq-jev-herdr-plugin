@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T153709Z-201-v2zls",
+  "at": "2026-10-12T15:37:09Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-da52",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:p8W",
+  "note": "replaces r75h7, which lacked --sha; make -C factory test: tests: 16 passed, 0 failed (rc=0)",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/03b24d00-c36d-4df2-9be8-19cf11cf4954/scratchpad/da52-test.log"
+  ],
+  "observations": [],
+  "sha": "b6ea315",
+  "pr": 25
+}

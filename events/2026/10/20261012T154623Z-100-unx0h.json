@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154623Z-100-unx0h",
+  "at": "2026-10-12T15:46:23Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-da52",
+  "pane": null,
+  "note": "owner notified for 500 18vmc: review.changes 62gz9 has no worker record after 90s; worker-wo-20261012-da52 prompted",
+  "evidence": [],
+  "observations": [],
+  "to": "worker"
+}

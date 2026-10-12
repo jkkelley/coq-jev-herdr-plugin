@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T020336Z-100-ws7nc",
+  "at": "2026-10-12T02:03:36Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261011-4db1",
+  "kind": "note",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p1V",
+  "note": "reviewer seat up for WO-20261011-4db1; reading PR 21 against the acceptance criteria; commands only in test pane wD3:p1V",
+  "evidence": [],
+  "observations": []
+}

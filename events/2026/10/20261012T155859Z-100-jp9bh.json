@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T155859Z-100-jp9bh",
+  "at": "2026-10-12T15:58:59Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-3bb0",
+  "pane": null,
+  "note": "owner notified for 500 7n1tw: pr.opened v2muy has no tester record after 90s; tester-wo-20261012-3bb0 prompted",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

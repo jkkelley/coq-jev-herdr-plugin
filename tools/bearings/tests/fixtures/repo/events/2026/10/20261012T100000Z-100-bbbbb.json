@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T100000Z-100-bbbbb",
+  "at": "2026-10-12T10:00:00Z",
+  "code": 100,
+  "seat": "worker-y",
+  "kind": "work.started",
+  "ticket": "WO-20261001-bb02",
+  "pane": null,
+  "note": "synthetic start",
+  "evidence": [],
+  "observations": []
+}

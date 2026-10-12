@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T161606Z-100-upuek",
+  "at": "2026-10-12T16:16:06Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261011-ceea",
+  "pane": null,
+  "note": "owner notified for 500 3s1r4: test.passed 6ot23 has no reviewer record after 90s; reviewer-wo-20261011-ceea prompted",
+  "evidence": [],
+  "observations": [],
+  "to": "reviewer"
+}

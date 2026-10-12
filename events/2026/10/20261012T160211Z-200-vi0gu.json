@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T160211Z-200-vi0gu",
+  "at": "2026-10-12T16:02:11Z",
+  "code": 200,
+  "seat": "merger-wo-20261012-9b2c",
+  "kind": "merged",
+  "ticket": "WO-20261012-9b2c",
+  "pane": null,
+  "note": "PR 27 squash-merged to main as 1f6e819 at head 3b53a2f; review.passed 201 and test.passed 201 on that sha",
+  "evidence": [],
+  "observations": [],
+  "sha": "3b53a2fffa21",
+  "pr": 27
+}

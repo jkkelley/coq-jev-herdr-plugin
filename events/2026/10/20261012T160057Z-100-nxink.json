@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T160057Z-100-nxink",
+  "at": "2026-10-12T16:00:57Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-da52",
+  "pane": null,
+  "note": "owner notified for 500 mhcyq: test.passed 0zfzl has no reviewer record after 90s; reviewer-wo-20261012-da52 prompted once, status not reported",
+  "evidence": [],
+  "observations": [],
+  "to": "reviewer"
+}
