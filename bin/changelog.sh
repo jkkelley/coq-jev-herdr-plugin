@@ -37,7 +37,12 @@ case $VERB in
     [ -z "$ticket" ] || [[ $ticket =~ ^WO-[0-9]{8}-[0-9a-f]{4}$ ]] || die 3 "bad ticket $ticket"
     at=$(date -u +%Y-%m-%dT%H:%M:%SZ); d=$(date -u +%Y%m%d); dir=$TREE/${d:0:4}/${d:4:2}; mkdir -p "$dir"
     name=$(slug "$title"); [ -n "$name" ] || die 3 "title slugs to nothing"
-    path=$dir/$d-$name.md; [ -e "$path" ] && path=$dir/$d-$name-$(head -c 16 /dev/urandom | tr -dc a-z0-9 | head -c 5).md
+    # BREADCRUMB 2026-10-12 - WO-20261012-3bb0. What broke: the collision suffix below read 16 random bytes and kept only a-z0-9, which is
+    #   about 2-3 of the 16, so `head -c 5` often gave a 2 char suffix; the second `make step` with the same title wrote
+    #   20261012-wake-line-...-st-ga.md, `check` (regex above, suffix of exactly 5) printed "bad entry name", and make lint failed on PR 28
+    #   (review.changes lqevs). Why this fix: 256 bytes keep 5 chars with a miss chance below 1e-30. Rejected: `|| true` or padding the
+    #   suffix, which hides a short read; a counter suffix, which two worktrees would race on. Cost: one longer urandom read, only on a collision.
+    path=$dir/$d-$name.md; [ -e "$path" ] && path=$dir/$d-$name-$(head -c 256 /dev/urandom | tr -dc a-z0-9 | head -c 5).md
     # BREADCRUMB 2026-10-10 - WO-20261010-c274. What broke: the group ended in `[ -n "$text" ] && printf ...`, so with no --text
     #   the group exited 1, the `&& mv` below it never ran, and the entry stayed `<name>.md.tmp`; render and check only read
     #   *.md, so the entry vanished from CHANGELOG.md and `add` printed the path of a file that did not exist (four such

@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T174046Z-201-f559c",
+  "at": "2026-10-12T17:40:46Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-3bb0",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:pD3",
+  "note": "make -C factory test on fd36e21: tests 16 passed, 0 failed. Case count is 16, not the 18-19 earlier runs reported; 12-gate, 13-gate-route and 14-flow-busy did not print in this pane capture, not checked further.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-7-coq-jev-herdr-plugin/3ced1ba6-5be2-44fa-8e2d-366f7071cfe0/scratchpad/factory-test-fd36e21.log"
+  ],
+  "observations": [],
+  "sha": "fd36e21",
+  "pr": 28
+}

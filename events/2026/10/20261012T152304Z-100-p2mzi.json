@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T152304Z-100-p2mzi",
+  "at": "2026-10-12T15:23:04Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-3bb0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:p8G",
+  "note": "Worker seat up on WO-20261012-3bb0 - Gate rules as code. Checking the lease, then reading the ticket.",
+  "evidence": [],
+  "observations": []
+}
