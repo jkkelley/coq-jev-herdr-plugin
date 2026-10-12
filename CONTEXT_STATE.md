@@ -56,6 +56,50 @@
 
 
 
+
+## Checkpoint 2026-10-12 19:43 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Seat sched-architect (Fable, architect of the Go scheduler team) in herdr workspace wD7 pane wD7:p1, worktree ~/.cache/wt-sched on branch feat/go-scheduler-design-one-xml-spec-per-domain-unde, cut from origin/main bc86eb3. Workers sched-worker-1..4 (Opus) idle in wD7:p2..p5, worktrees ~/.cache/wt-sched-w1..w4.
+- Records go through $COQ_REPO/events/bin/event.sh (COQ_EVENTS_ROOT is the main checkout's events/); the worktree copy never. First record work.started 100 posted (id 20261012T184318Z-100-15pnv); the belt ledgered it unrouted because work.started 100 has no routes row (known noise).
+- Open PRs that fence file choices: 32 (records branch: CHANGELOG, CONTEXT_STATE, backlog, changelog, events, docs; Jenkinsfile staged there), 34 (herdr/bin/monitors.sh, seat-lib.sh, supervisor.sh, herdr.json + schema, work-orders/INDEX.md), 35 (lint/lint.sh, specs/bin, specs/config, specs/exports). Nothing open touches graph/, specs/scheduler/, scheduler/, factory/, queue/, roles/, playbooks/.
+
+#### Toolchain
+
+- Spec check: podman run --rm --network=none --userns=keep-id -v "$PWD:/repo:ro,Z" localhost/coq-lint:1 bash /repo/specs/scheduler/bin/check.sh check --repo /repo (xmllint against specs/scheduler/schema/scheduler-spec.xsd, under 1000 lines, under 240 chars per element, every source resolves, copy rule, every routes row and status code owned once). make lint does not scan specs/scheduler yet (lint/lint.sh is in PR 35); a lint-extension ticket follows.
+- Graph: scratchpad helper sync-nodes.py mirrors every spec node into graph/nodes with the same title; graph.sh check and index pass with 118 nodes.
+- Ticket cutting happens in the main checkout ($COQ_REPO, records branch) with work-order.sh new --project $COQ_REPO --parent WO-20261012-ea33, then approve --no-lavish --reason, then EPIC_DIR=work-orders/WO-20261010-329d/WO-20261012-ea33 bash ~/.cache/coq-watch/start-tickets.sh <id>, then herdr agent prompt sched-worker-N '<id> - <title>. Branch <branch>. Playbook playbooks/worker.md.'
+
+#### Active Tasks
+
+- WO-20261012-5826 - Go scheduler design: one XML spec per domain under specs/scheduler, each at most 1000 lines, plus the build tickets cut for four Opus workers. Step 3 landed with this checkpoint: PR 37 open (https://github.com/jkkelley/coq-jev-herdr-plugin/pull/37), ticket submitted and done, archived under work-orders/archive/2026. After this step: git switch --detach, then pr.opened 100 with --sha and --pr 37 through $COQ_REPO/events/bin/event.sh; the belt tests, reviews and merges. Step 2 landed earlier: AC-H1, AC-H2, AC-H3 evidenced and the retro note recorded. 18 build tickets cut, approved and recorded (ticket.cut 100) in $COQ_REPO under WO-20261012-ea33: wave 0 48ab skeleton, e27e config files, 8d87 replay fixtures, df2b host files; wave 1 5a3d intake, 32fe routes, 9790 config loader, d7f4 executor; wave 2 8e69 seats, 7a9a jobs, 6e43 policies, 3c7a health; wave 3 1ccf engine, b12c observe, 379f contract, 0113 lint and CI; wave 4 fa36 cut-over, 1635 e2e. Wave 0 is being started by start-tickets.sh (background) and routed to sched-worker-1..4. Step 1 landed earlier: 12 specs (SPEC-16 overview with the mermaid blueprint, SPEC-16.A intake, B routing, C seats, D jobs/retries/confirmation, E policies/break glass, F health, G config, H Podman runtime/executor, I observe, J cut-over, K testing), the scheduler spec XSD, specs/scheduler/bin/check.sh with config, 16 graph nodes (CMP-scheduler, CMP-scheduler-executor, DEC-scheduler-go-podman, DEC-scheduler-two-processes, IFC-scheduler-executor, RUN-scheduler-operate, REQ-*, SCH-scheduler-config, RSK-executor-host-tools, WFL-scheduler-cutover).
+- Next: detach and post pr.opened 100 for PR 37; route wave 0: herdr agent prompt sched-worker-N '<id> - <title>. Branch <branch>. Playbook playbooks/worker.md.' as start-tickets.sh prints STARTED lines. Later waves start when their depends_on tickets are done on main (work-order.sh next in $COQ_REPO is the oracle).
+
+#### Blockers
+
+- None. The lint-extension ticket (lint/lint.sh calling specs/scheduler/bin/check.sh) and the Jenkins stage must wait for PR 35 and PR 32 to land because those files are in flight.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-12 UTC, sched-architect (proposed, DEC-scheduler-two-processes): the scheduler decides inside a Podman container that holds no host tool and acts only through an executor, a dumb host process behind gRPC on a unix socket with an allowlisted verb table; the bus later replaces the socket, not the split.
+- 2026-10-12 UTC, sched-architect: the scheduler's ledger, receipt note and belt words match the bash runner byte for byte so cut-over adopts the bash state directory (SPEC-16.A, SPEC-16.B, SPEC-16.J).
+- 2026-10-12 UTC, sched-architect: wakes are durable jobs confirmed by the seat's next record or busy status; stalls need an overdue gate and an absent or idle seat (REQ-wake-confirmed, REQ-stall-two-signal).
+
+#### Lessons Learned
+
+- graph.sh add splits --source on ':' so a UTC in the source is truncated; the helper patches `at` after adding.
+- The scheduler spec XSD must allow an uppercase first letter in a source path (AGENTS.md, Makefile, Jenkinsfile) and commas in a locator.
+- A run of make lint in Podman takes over 120 s from this seat; run it in the background and read the output file.
+
+### Hydration prompt
+
+Run from ~/.cache/wt-sched on branch feat/go-scheduler-design-one-xml-spec-per-domain-unde as seat sched-architect (herdr wD7:p1). WO-20261012-5826 - Go scheduler design: one XML spec per domain under specs/scheduler, each at most 1000 lines, plus the build tickets cut for four Opus workers: steps 1 and 2 are landed (specs, graph, check; evidence, retro, 18 tickets cut under WO-20261012-ea33 - Go scheduler: a lightweight Go service in Podman on WSL schedules the small loop and the software factory DAG, designed by a Fable architect and built by four Opus workers). PR 37 is open and the ticket is done and archived; this seat's remaining work is routing and verifying: route wave 0 (48ab, e27e, 8d87, df2b) to sched-worker-1..4 as their branches appear; then watch for their PRs and start wave 1 when wave 0 is done on main. Every step lands with make step ... CP=<body>.
+
 ## Checkpoint 2026-10-12 19:41 UTC
 
 ### Current state
