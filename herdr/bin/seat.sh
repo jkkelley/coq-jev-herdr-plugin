@@ -61,14 +61,32 @@ sub() { sed -e "s|\${MODEL}|$MODEL|g" -e "s|\${effort}|$effort|g" -e "s|\${ticke
             -e "s|\${name}|$name|g" -e "s|\${state_dir}|$sd|g" -e "s|\${worktree}|$wt|g" -e "s|\${repo}|$SL_REPO|g"; }
 # test_pane: the pane whose label starts with "test - herdr" in the tab this script was started from (HERDR_TAB_ID, which
 # every herdr pane carries; the architect tab). Prints its id, or nothing. WO-20261010-8fa8: a worker runs commands only in
-# this pane, through herdr/bin/testpane.sh, and reads its id in the brief.
+# its test pane, through herdr/bin/testpane.sh, and reads its id in the brief. Since WO-20261011-f896 this is the FALLBACK,
+# used only for a layout with no slot of kind test; the seat's own pane is the normal case (breadcrumb below).
 test_pane() {
   [ -n "${HERDR_TAB_ID:-}" ] || return 0
   sl_h pane list ${HERDR_WORKSPACE_ID:+--workspace "$HERDR_WORKSPACE_ID"} 2>/dev/null \
     | jq -r --arg t "$HERDR_TAB_ID" 'first((.result.panes // [])[] | select(.tab_id == $t and ((.label // "") | startswith("test - herdr"))) | .pane_id) // empty'
 }
+# BREADCRUMB 2026-10-11 - WO-20261011-f896, the test pane per seat. What broke: test_pane() above resolved ONE pane, the
+#   "test - herdr" pane of the architect tab, and seat.sh exported it to every seat, so every seat's `make` ran through the
+#   same shell: at 19:25 UTC five workers were live, three reported their step queued behind another seat's run, and at the
+#   owner's 16-agent budget (18:52 UTC "speed and efficiency always") the whole line serialises on it. Why this fix: the
+#   layout carries a slot of kind test (herdr/layouts/seat-1x2.json), seat.sh builds it in the seat's own tab like the
+#   monitor pane and exports ITS id as COQ_TEST_PANE, so N seats hold N panes and testpane.sh's one comparison (unchanged)
+#   refuses every pane but your own. The slot's command is `cd ${repo}`, so the pane shell parks in the main checkout and
+#   `treehouse return --force` on --down can never end it (WO-20261011-36d7); the tab close takes the pane with the tab.
+#   The architect-tab pane is the fallback only for a layout with no test slot (player-1x3, interface-2x2). The slot is
+#   split down from the monitor pane (layout `split`), not placed by the rows x columns grid: a 1x3 grid gives the agent a
+#   third of the tab, and the ticket wants it to keep at least half. Rejected: a seat-1x3 layout (the role files that name
+#   seat-1x2 are the architect's, so nothing would use it) and one shared pane with a queue (it is the bottleneck itself).
+#   Cost: one more idle shell per seat; the layout is still called seat-1x2 though its tab holds three panes, until the
+#   architect renames it in roles/; `grid` counts grid slots only. Record: WO-20261011-f896.
 slot_count() { jq '.panes|length' "$layout_file"; }
+grid_count() { jq '[.panes[] | select(has("split") | not)] | length' "$layout_file"; }
 slot_field() { jq -r --argjson i "$1" --arg f "$2" '.panes[$i][$f]' "$layout_file" | sub; }
+slot_split() { jq -r --argjson i "$1" --arg f "$2" '.panes[$i].split[$f]' "$layout_file"; }
+slot_index() { jq -r --arg s "$1" '[.panes[].slot] | index($s) // empty' "$layout_file"; }
 want_labels() { local i n; n="$(slot_count)"; for ((i = 0; i < n; i++)); do slot_field "$i" label; done; }
 
 # BREADCRUMB 2026-10-11 - WO-20261011-4c5e. What broke: roles/worker.json allow.paths spells the seat's worktree
@@ -510,11 +528,16 @@ if [ "$mode" = adopt ]; then
   exit 0
 fi
 
-# A ticket seat needs the labelled test pane in the architect tab: it is how the worker proves its acceptance criteria, and
-# the brief names it. Door 2 seats (monitor, merger, orchestrator) run no suite, so an absent pane is not a refusal there.
-tpane="$(test_pane)"
-if [ -n "$ticket" ] && [ -z "$tpane" ]; then
-  [ "$DRY" = 1 ] && tpane=dry-test-pane || refuse "no pane labelled 'test - herdr' in the tab this was started from (HERDR_TAB_ID=${HERDR_TAB_ID:-unset}); start seats from the architect tab"
+# A ticket seat needs a labelled test pane: it is how the worker proves its acceptance criteria, and the brief names it.
+# A layout with a slot of kind test builds the seat's own (resolved after the panes exist, below); only a layout without one
+# falls back to the 'test - herdr' pane of the architect tab, and a ticket seat is refused before any lease when that is
+# missing too. Door 2 seats (monitor, merger, orchestrator) run no suite, so an absent pane is not a refusal there.
+tpane=""
+if [ "$(jq -r 'any(.panes[]; .kind == "test")' "$layout_file")" != true ]; then
+  tpane="$(test_pane)"
+  if [ -n "$ticket" ] && [ -z "$tpane" ]; then
+    [ "$DRY" = 1 ] && tpane=dry-test-pane || refuse "no pane labelled 'test - herdr' in the tab this was started from (HERDR_TAB_ID=${HERDR_TAB_ID:-unset}); start seats from the architect tab"
+  fi
 fi
 
 # Door 1 without --worktree: lease the ticket's slot now, after every refusal above so a refused seat leases nothing, and
@@ -542,8 +565,12 @@ fi
 
 # Slots to panes: a pane carrying a template label keeps its slot, any other pane fills a free slot and is relabelled
 # (the repair), slots still empty are split per sl_grid_step. Fresh non-agent panes get their layout command.
-n="$(slot_count)"; rows="$(jq -r '.grid | split("x")[0]' "$layout_file")"; cols="$(jq -r '.grid | split("x")[1]' "$layout_file")"
-[ $((rows * cols)) = "$n" ] || refuse "layout $layout_id: grid ${rows}x${cols} does not match its $n panes"
+n="$(slot_count)"; ngrid="$(grid_count)"; rows="$(jq -r '.grid | split("x")[0]' "$layout_file")"; cols="$(jq -r '.grid | split("x")[1]' "$layout_file")"
+[ $((rows * cols)) = "$ngrid" ] || refuse "layout $layout_id: grid ${rows}x${cols} does not match its $ngrid grid panes"
+# A slot with a split comes after every grid slot and splits from an earlier slot (WO-20261011-f896).
+jq -e --argjson g "$ngrid" '.panes as $p | all(range(0; $g); ($p[.] | has("split") | not))
+  and all(range($g; ($p | length)); . as $i | ($p[$i].split.from as $f | [$p[0:$i][].slot] | index($f) != null))' "$layout_file" >/dev/null \
+  || refuse "layout $layout_id: a split slot must follow every grid slot and split from an earlier slot"
 live="$([ "$DRY" = 1 ] && echo '[]' || sl_panes_of_tab "$ws" "$tab")"; [ -n "$live" ] || live='[]'
 declare -a want pane fresh
 for ((i = 0; i < n; i++)); do want[i]="$(slot_field "$i" label)"; pane[i]=""; fresh[i]=0; done
@@ -561,7 +588,9 @@ done
 for ((i = 0; i < n; i++)); do
   [ -z "${pane[i]}" ] || continue
   [ "$i" -gt 0 ] || SL_EXIT=4 sl_die "tab $tab holds no pane to build the layout from"
-  read -r dir from_i ratio < <(sl_grid_step "$i" "$rows" "$cols"); from="${pane[from_i]}"
+  if [ "$i" -lt "$ngrid" ]; then read -r dir from_i ratio < <(sl_grid_step "$i" "$rows" "$cols")
+  else dir="$(slot_split "$i" direction)"; ratio="$(slot_split "$i" ratio)"; from_i="$(slot_index "$(slot_split "$i" from)")"; fi
+  from="${pane[from_i]}"
   [ -n "$from" ] || { [ "$DRY" = 1 ] && from="dry-pane-$((i - 1))"; }
   out="$(sl_mut pane split "$from" --direction "$dir" --ratio "$ratio" --no-focus)" || SL_EXIT=4 sl_die "pane split from $from failed"
   pane[i]="$(jq -r '.result.pane.pane_id // empty' <<<"${out:-$EMPTY}")"
@@ -578,6 +607,8 @@ done
 a=""; for ((i = 0; i < n; i++)); do [ "$(slot_field "$i" kind)" = agent ] && { a="${pane[i]}"; break; }; done
 [ -n "$a" ] || refuse "layout $layout_id has no agent slot"
 agent_pane="$a"
+# The seat's own test pane, when the layout has the slot: its id is what the environment line exports and the brief names.
+for ((i = 0; i < n; i++)); do [ "$(slot_field "$i" kind)" = test ] && { tpane="${pane[i]}"; break; }; done
 
 if [ "$DRY" != 1 ]; then
   render_settings > "$settings.tmp" && mv "$settings.tmp" "$settings"
@@ -585,9 +616,9 @@ if [ "$DRY" != 1 ]; then
   prev_nudged=""; [ ! -f "$seat_file" ] || prev_nudged="$(jq -r 'if .ended_at then empty else .nudged_at // empty end' "$seat_file" 2>/dev/null || true)"
   jq -n --arg nudged "$prev_nudged" --arg name "$name" --arg ticket "$id" --arg role "$role" --arg role_file "$role_file" --arg runtime "$runtime" --arg model "$MODEL" \
     --arg effort "$effort" --arg wt "$wt" --arg layout_file "$layout_file" --arg ws "$ws" --arg tab "$tab" --arg hs "$HS" \
-    --arg settings "$settings" --arg pane "$a" --arg at "$(sl_now)" --arg task "$task" --argjson lease "$lease" \
+    --arg settings "$settings" --arg pane "$a" --arg tpane "$tpane" --arg at "$(sl_now)" --arg task "$task" --argjson lease "$lease" \
     '{name:$name,ticket:$ticket,task:$task,role:$role,role_file:$role_file,runtime:$runtime,model:$model,effort:$effort,worktree:$wt,
-      lease:$lease,layout_file:$layout_file,workspace:$ws,tab:$tab,session:$hs,settings:$settings,pane:$pane,started_at:$at,ended_at:null,nudged_at:(if $nudged == "" then null else $nudged end)}' > "$seat_file.tmp" \
+      lease:$lease,layout_file:$layout_file,workspace:$ws,tab:$tab,session:$hs,settings:$settings,pane:$pane,test_pane:$tpane,started_at:$at,ended_at:null,nudged_at:(if $nudged == "" then null else $nudged end)}' > "$seat_file.tmp" \
     && mv "$seat_file.tmp" "$seat_file"
   recorded=1
 fi
@@ -654,7 +685,7 @@ nudge_seat() {
   else sl_log "seat $name: idle after the guard ack but the nudge could not be sent; the monitor will re-prompt"; fi
 }
 started=0
-if [ "$DRY" != 1 ] && sl_agent_live "$name"; then sl_log "seat $name: agent already running, left as is"
+if [ "$DRY" != 1 ] && sl_agent_live "$name"; then sl_log "seat $name: agent already running, left as is (its test pane is ${tpane:-none}; a running agent keeps the COQ_TEST_PANE it started with, so after a repair that rebuilt the pane it needs --down and a fresh up)"
 else
   # The environment rides one physical line into the agent pane only. The Claude Code markers a pane may have
   # inherited from a server started inside a Claude shell are unset first (bearings-v2 F-45), or the seat's transcript
@@ -688,5 +719,5 @@ if [ "$started" = 1 ]; then
   else sl_log "seat $name: brief could not be sent; the monitor will re-prompt"; fi
 fi
 jq -nc --arg name "$name" --arg ticket "$id" --arg role "$role" --arg ws "$ws" --arg tab "$tab" --arg agent "$a" --arg settings "$settings" \
-  --arg model "$MODEL" --arg effort "$effort" --arg panes "${pane[*]}" --argjson started "$started" --arg wt "$wt" --argjson lease "$lease" \
-  '{name:$name,ticket:$ticket,role:$role,workspace:$ws,tab:$tab,agent:$agent,panes:($panes|split(" ")),settings:$settings,model:$model,effort:$effort,worktree:$wt,lease:$lease,started:($started==1)}'
+  --arg model "$MODEL" --arg effort "$effort" --arg panes "${pane[*]}" --argjson started "$started" --arg wt "$wt" --argjson lease "$lease" --arg tpane "$tpane" \
+  '{name:$name,ticket:$ticket,role:$role,workspace:$ws,tab:$tab,agent:$agent,test_pane:$tpane,panes:($panes|split(" ")),settings:$settings,model:$model,effort:$effort,worktree:$wt,lease:$lease,started:($started==1)}'

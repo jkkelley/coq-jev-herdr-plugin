@@ -8,22 +8,26 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 world_up seat || exit 1
 T=WO-20261010-8777; N=worker-wo-20261010-8777
 
-echo "-- a ticket seat needs the labelled test pane in the tab it was started from"
+echo "-- a layout with no test slot still needs the labelled test pane in the tab it was started from (WO-20261011-f896 AC-H4)"
+notest_layout; role_layout worker seat-nt
 env -u HERDR_TAB_ID "$SEAT" --ticket "$T" --role worker --worktree "$REPO" >/dev/null 2>"$WORLD/err"; rc=$?
 assert_eq "refused with exit 3 when the caller is in no tab" "$rc" 3
 assert_match "the refusal names the missing test pane" "$(cat "$WORLD/err")" "no pane labelled 'test - herdr'"
 assert_eq "nothing was built" "$(h workspace list | jq '[.result.workspaces[] | select(.label == "coq")] | length')" 0
+role_layout worker seat-1x2
 
 echo "-- door 1: --ticket $T --role worker"
 out="$("$SEAT" --ticket "$T" --role worker --worktree "$REPO")"; rc=$?
 assert_eq "door 1 exits 0" "$rc" 0
 assert_eq "the seat is named from the role label, lowercased" "$(jq -r .name <<<"$out")" "$N"
-ws="$(jq -r .workspace <<<"$out")"; tab="$(jq -r .tab <<<"$out")"; agent="$(jq -r .agent <<<"$out")"
+ws="$(jq -r .workspace <<<"$out")"; tab="$(jq -r .tab <<<"$out")"; agent="$(jq -r .agent <<<"$out")"; tp="$(jq -r .test_pane <<<"$out")"
 assert_eq "the workspace carries the configured label" "$(h workspace list | jq -r --arg w "$ws" '.result.workspaces[] | select(.workspace_id == $w) | .label')" coq
-assert_match "the brief names the test pane the worker may use" "$(h agent read "$N" --source recent-unwrapped --lines 200)" "Your test pane is $WORLD_TEST_PANE; run commands only there, through herdr/bin/testpane.sh"
-assert_eq "COQ_TEST_PANE rode the environment line into the agent pane" "$(h pane read "$agent" --source recent-unwrapped --lines 200 | grep -cF "COQ_TEST_PANE=$WORLD_TEST_PANE")" 1
+assert_match "the brief names the test pane the worker may use" "$(h agent read "$N" --source recent-unwrapped --lines 200)" "Your test pane is $tp; run commands only there, through herdr/bin/testpane.sh"
+assert_eq "the test pane is the seat's own, labelled with the seat, in the seat's tab" "$(h pane list --workspace "$ws" | jq -r --arg t "$tab" --arg p "$tp" '.result.panes[] | select(.pane_id == $p) | "\(.tab_id) \(.label)"')" "$tab test - herdr - $N"
+check "it is not the architect tab's fixture pane" "$([ "$tp" != "$WORLD_TEST_PANE" ] && echo 1 || echo 0)"
+assert_eq "COQ_TEST_PANE rode the environment line into the agent pane" "$(h pane read "$agent" --source recent-unwrapped --lines 200 | grep -cF "COQ_TEST_PANE=$tp")" 1
 assert_eq "the tab carries the seat name" "$(h tab list --workspace "$ws" | jq -r --arg t "$tab" '.result.tabs[] | select(.tab_id == $t) | .label')" "$N"
-assert_eq "seat-1x2 builds 2 panes with SPEC-04 labels" "$(pane_labels "$ws" "$tab")" "MONITOR - $N|claude-sonnet-5-5 - high - $T worker"
+assert_eq "seat-1x2 builds 3 panes with SPEC-04 labels" "$(pane_labels "$ws" "$tab")" "MONITOR - $N|claude-sonnet-5-5 - high - $T worker|test - herdr - $N"
 assert_eq "herdr answers for the agent, idle" "$(h agent get "$N" | jq -r .result.agent.agent_status)" idle
 argv="$(h pane process-info --pane "$agent" | jq -r '[.result.process_info.foreground_processes[].argv | join(" ")] | join("; ")')"
 assert_match "the agent was started with the role's model, effort, permission mode and the rendered settings" "$argv" \
@@ -56,14 +60,15 @@ out2="$("$SEAT" --ticket "$T" --role worker --worktree "$REPO")"; rc=$?
 assert_eq "rerun exits 0" "$rc" 0
 assert_eq "rerun did not start a second agent" "$(jq -r .started <<<"$out2")" false
 assert_eq "still one tab for the seat" "$(h tab list --workspace "$ws" | jq -r --arg l "$N" '[.result.tabs[] | select(.label == $l)] | length')" 1
-assert_eq "still 2 panes" "$(h pane list --workspace "$ws" | jq -r --arg t "$tab" '[.result.panes[] | select(.tab_id == $t)] | length')" 2
+assert_eq "still 3 panes" "$(h pane list --workspace "$ws" | jq -r --arg t "$tab" '[.result.panes[] | select(.tab_id == $t)] | length')" 3
 mon="$(h pane list --workspace "$ws" | jq -r --arg t "$tab" --arg l "MONITOR - $N" '.result.panes[] | select(.tab_id == $t and .label == $l) | .pane_id')"
 h pane close "$mon" >/dev/null 2>&1
 diff="$("$SEAT" --check "$N")"; rc=$?
 assert_eq "--check exits 1 with the monitor pane gone" "$rc" 1
 assert_match "--check names the missing pane" "$diff" "pane missing: MONITOR - $N"
 "$SEAT" --ticket "$T" --role worker --worktree "$REPO" >/dev/null
-assert_eq "the rerun split the missing pane back" "$(pane_labels "$ws" "$tab")" "MONITOR - $N|claude-sonnet-5-5 - high - $T worker"
+assert_eq "the rerun split the missing pane back" "$(pane_labels "$ws" "$tab")" "MONITOR - $N|claude-sonnet-5-5 - high - $T worker|test - herdr - $N"
+assert_eq "the test pane kept its id through the repair" "$(h pane list --workspace "$ws" | jq -r --arg t "$tab" --arg l "test - herdr - $N" '.result.panes[] | select(.tab_id == $t and .label == $l) | .pane_id')" "$tp"
 "$SEAT" --check "$N" >/dev/null; assert_eq "--check exits 0 after the repair" "$?" 0
 
 echo "-- --down"
