@@ -54,6 +54,34 @@
 
 
 
+
+## Checkpoint 2026-10-12 17:28 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code. Treehouse slot 7, branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, PR 28 open. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+- The reviewer sent review.changes 422 (record 20261012T172204Z-422-bahk9, attempt 1) on f9b7d1d: PR 28 conflicted with main, and no playbook tells the tester to drop a superseded head or the worker to merge main.
+
+#### Toolchain
+
+- origin/main merged into the branch. CHANGELOG.md re-rendered by bin/changelog.sh, work-orders/INDEX.md and the child READMEs rebuilt by work-order.sh reindex, CONTEXT_STATE.md rebuilt as the union of both sides' checkpoint blocks newest first with no block edited (checkpoint.sh verify ok, 67 blocks), factory/RUNBOOK.md routes table keeps this branch's rows plus main's policy.applied row.
+- Playbooks cannot be edited by a worker (rendered from roles/, denied), so the instruction now rides on the wake line: supersedes <id> (drop that run and post nothing for it), and merge main (git fetch origin, git merge origin/main, fix the conflicts, push, post pr.opened with the new sha). Case 13-gate-route pins both lines; RUNBOOK and the route.sh breadcrumb say why. The roles/tester.json and roles/worker.json steps remain the architect's edit.
+- Verified in the test pane on the merged tree: make -C factory lint ok, factory suite 19 passed 0 failed.
+
+#### Active Tasks
+
+- Post pr.opened 100 with --pr 28 and the new head sha, then hold.
+
+#### Blockers
+
+- roles/tester.json and roles/worker.json need the supersedes and merge main steps; a worker cannot edit roles/.
+
+### Hydration prompt
+
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
+
 ## Checkpoint 2026-10-12 17:15 UTC
 
 ### Current state
