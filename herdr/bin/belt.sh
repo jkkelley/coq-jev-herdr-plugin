@@ -34,10 +34,18 @@ bwhat="$(jq -r --arg n "$bslot" '[.tabs[].reserved[] | select(.name == $n)] | fi
 bcmd="$(jq -r --arg n "$bslot" '[.tabs[].reserved[] | select(.name == $n)] | first | .command // empty' "$MC")"; bcmd="${bcmd//\$\{repo\}/$SL_REPO}"
 # belt_state: 0 when the runner pane is in use and the belt is fresh; else 1 with BELT_WHY.
 belt_state() {
-  local st out bs
+  local st out bs hl why
   st="$("$MON" health 2>/dev/null)"
-  if ! grep -qE "^ok $bslot\$" <<<"$st"; then BELT_WHY="runner pane missing (slot $bslot is not running $bwhat: $(grep -m1 "^FAILED $bslot " <<<"$st" | sed -E "s/^FAILED [^ ]+ \((.*)\)\$/\1/"))"; return 1; fi
   read -ra bs <<<"$bstat"
+  if ! grep -qE "^ok $bslot\$" <<<"$st"; then
+    hl="$(grep -m1 "^FAILED $bslot " <<<"$st")"; why="$(sed -E 's/^FAILED [^ ]+ \((.*)\)$/\1/' <<<"$hl")"
+    # A pane that is there but runs nothing while the belt file has gone stale is a stopped belt first (the 2026-10-11 outage), and
+    # says which pane; a pane that is not there at all, or a belt that still moves, is a missing runner.
+    if [[ "$why" != *"no pane"* && "$why" != *"not built"* ]] && ! out="$("${bs[@]}" 2>&1)"; then
+      BELT_WHY="belt $(head -n 1 <<<"$out" | sed -E 's/^belt: //') (runner pane: $why)"; return 1
+    fi
+    BELT_WHY="runner pane missing (slot $bslot is not running $bwhat: $why)"; return 1
+  fi
   if out="$("${bs[@]}" 2>&1)"; then BELT_WHY=""; return 0; fi
   BELT_WHY="belt $(head -n 1 <<<"$out" | sed -E 's/^belt: //')"; return 1
 }

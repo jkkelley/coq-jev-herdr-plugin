@@ -318,7 +318,8 @@
             "grace_seconds",
             "max_per_window",
             "window_seconds",
-            "down_lock_seconds"
+            "down_lock_seconds",
+            "up_seconds"
           ],
           "properties": {
             "enabled": {
@@ -342,6 +343,11 @@
               "type": "integer",
               "minimum": 1,
               "description": "a seat.sh --down younger than this is still in progress and its seat is left alone"
+            },
+            "up_seconds": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "a seat record younger than this is still being brought up by seat.sh and is not judged"
             }
           }
         }

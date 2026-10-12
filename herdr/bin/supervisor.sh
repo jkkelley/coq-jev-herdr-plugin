@@ -164,4 +164,88 @@ bearings_node() {
 }
 bearings_node
 
+# 7. seats: a seat whose pane has no claude is started again with its ticket.
+# BREADCRUMB 2026-10-12 - WO-20261012-b800. What broke: on 2026-10-12 two seats' claude crashed with a Bun segfault and sat as bare
+#   shells under a correct label until the architect noticed; `herdr agent get` said the same thing late and recover.sh
+#   only closes such a seat's record (it never starts it again, by design: "resume is a decision"). Why this fix: the decision
+#   is made here, by rule. A seat is dead when its pane is gone, or herdr's `pane process-info` shows no claude or codex in
+#   the pane's foreground (the same test as monitors.sh agent_in; a process that cannot be read is not judged). It must be
+#   seen dead on two ticks at least reseat.grace_seconds apart, so a claude that is restarting, a compaction or a herdr
+#   hiccup is not shot, and a record younger than reseat.up_seconds is still being brought up by seat.sh. A seat that
+#   `seat.sh --down` is retiring holds down.lock and is left alone. The re-seat is the rerun seat.sh already documents ("a
+#   rerun repairs: a pane with the right label is kept"): door 1 `--ticket T --role R` with no --worktree keeps the treehouse
+#   lease and its owned flag (lease_up), so the slot and its uncommitted work are not returned; a seat started with
+#   --worktree keeps that directory; door 2 passes its task. The fresh claude gets the ticket brief and seat.sh records seat.up.
+#   Not restarted: an idle seat (its claude runs), an adopted seat (the owner's own session), the monitor seat (bringup.sh's
+#   node), a seat whose ticket is archived, done or cancelled (that one is `seat.sh --down`ed instead, so the slot returns).
+#   At most reseat.max_per_window re-seats of one seat per reseat.window_seconds: a claude that dies every time is a fault
+#   for a person, so past the cap it is a 500 and no more starts. Rejected: `seat.sh --down` then up (returns the slot and
+#   discards uncommitted work) and `claude --resume` (the record has no session id, and the brief is what the playbook
+#   expects first). Cost: a re-seated worker starts from its branch and the brief, not from its conversation; the
+#   worker playbook is written for that (post work.started, read the ticket, continue from git).
+reseat_node() {
+  local f n ticket role task wt lease_null runtime pane rec now first age last started dl key win max w at
+  [ "$(sl_cfg .supervisor.reseat.enabled)" = true ] || { skipln seats "supervisor.reseat.enabled is false"; return 0; }
+  now="$(date +%s)"; mkdir -p "$SUP/dead" "$SUP/reseats"
+  local grace up_s dl_s monitor checked=0
+  grace="$(sl_cfg .supervisor.reseat.grace_seconds)"; up_s="$(sl_cfg .supervisor.reseat.up_seconds)"; dl_s="$(sl_cfg .supervisor.reseat.down_lock_seconds)"
+  max="$(sl_cfg .supervisor.reseat.max_per_window)"; win="$(sl_cfg .supervisor.reseat.window_seconds)"; monitor="$(sl_cfg .monitor_seat)"
+  local panes; panes="$(th 15 pane list 2>/dev/null | jq -c '[.result.panes[]? | .pane_id]')" || panes=""
+  [ -n "$panes" ] || { failln seats "herdr pane list answered nothing"; return 0; }
+  for f in "$STATE"/seats/*/seat.json; do
+    [ -f "$f" ] || continue
+    [ -z "$(jq -r '.ended_at // empty' "$f")" ] || continue
+    [ "$(jq -r '.adopted // false' "$f")" != true ] || continue
+    n="$(jq -r .name "$f")"; [ "$n" != "$monitor" ] || continue
+    key="${n//[^A-Za-z0-9_-]/_}"; checked=$((checked + 1))
+    pane="$(jq -r '.pane // empty' "$f")"; ticket="$(jq -r '.ticket // empty' "$f")"; role="$(jq -r .role "$f")"; task="$(jq -r '.task // empty' "$f")"
+    wt="$(jq -r .worktree "$f")"; lease_null="$(jq -r '.lease == null' "$f")"; runtime="$(jq -r .runtime "$f")"
+    started="$(date -u -d "$(jq -r .started_at "$f")" +%s 2>/dev/null)" || started="$now"
+    [ $((now - started)) -ge "$up_s" ] || continue
+    dl="$(sd=$(dirname "$f"); cat "$sd/down.lock" 2>/dev/null)" || dl=""
+    [ -z "$dl" ] || [ $((now - dl)) -ge "$dl_s" ] || continue
+    # alive: the pane is there and a claude or codex is in its foreground. Unreadable is alive: nothing is shot on a guess.
+    local alive=1
+    if [ -z "$pane" ] || ! jq -e --arg p "$pane" 'index($p) != null' <<<"$panes" >/dev/null; then alive=0
+    else
+      local pi; pi="$(th 10 pane process-info --pane "$pane" 2>/dev/null)" || pi=""
+      if jq -e '.result.process_info.shell_pid != null' <<<"$pi" >/dev/null 2>&1; then
+        jq -e '[.result.process_info.foreground_processes[]? | (.argv // [.name]) | map(split("/") | last) | .[0:2][] | select(. == "claude" or . == "codex")] | length > 0' <<<"$pi" >/dev/null 2>&1 || alive=0
+      fi
+    fi
+    rec="$SUP/dead/$key"
+    if [ "$alive" = 1 ]; then rm -f "$rec"; continue; fi
+    if [ ! -f "$rec" ] && [ "$mode" = check ]; then failln "seat-$n" "no claude in pane ${pane:-?}; apply would judge it again after ${grace}s and then re-seat it"; continue; fi
+    if [ ! -f "$rec" ]; then echo "$now" > "$rec"; skipln "seat-$n" "no claude in pane ${pane:-?}; seen once, judged again after ${grace}s"; continue; fi
+    first="$(cat "$rec")"; age=$((now - first))
+    if [ "$age" -lt "$grace" ]; then skipln "seat-$n" "no claude for ${age}s, waiting out ${grace}s"; continue; fi
+    # wanted: door 2 always; door 1 while its ticket is a live file outside archive/ and not done or cancelled.
+    if [ -n "$ticket" ]; then
+      local tf st; tf="$(find "$SL_REPO/work-orders" -name "$ticket-*.md" -not -path '*/archive/*' 2>/dev/null | head -1)"; st=""
+      [ -z "$tf" ] || st="$(awk '/^---$/{c++; next} c==1' "$tf" | jq -r '.status // empty' 2>/dev/null)"
+      if [ -z "$tf" ] || [ "$st" = "done" ] || [ "$st" = cancelled ]; then
+        if [ "$mode" = check ]; then failln "seat-$n" "no claude and ticket $ticket is closed; apply would seat.sh --down it"; continue; fi
+        run "$SL_HERE/seat.sh" --down "$n"
+        if [ "$RUN_RC" = 0 ]; then rm -f "$rec"; fixedln "seat-$n" "no claude and ticket $ticket is closed, seat downed"
+        else failln "seat-$n" "no claude, ticket closed, seat.sh --down failed: $(tail -n 1 <<<"$RUN_OUT")"; fi
+        continue
+      fi
+    fi
+    if [ "$mode" = check ]; then failln "seat-$n" "claude has been gone ${age}s; apply would re-seat it"; continue; fi
+    # the cap
+    last=0; w=0
+    if [ -f "$SUP/reseats/$key" ]; then while read -r at; do [ $((now - at)) -lt "$win" ] && w=$((w + 1)); last="$at"; done < "$SUP/reseats/$key"; fi
+    if [ "$w" -ge "$max" ]; then failln "seat-$n" "claude died again after $w re-seats in ${win}s (last at $(date -u -d "@$last" +%H:%M:%SZ)); not starting it again, a person looks"; continue; fi
+    echo "$now" >> "$SUP/reseats/$key"
+    local args
+    if [ -n "$ticket" ]; then args=(--ticket "$ticket" --role "$role" --runtime "$runtime"); [ "$lease_null" != true ] || args+=(--worktree "$wt")
+    else args=(--role "$role" --task "$task" --runtime "$runtime" --worktree "$wt"); fi
+    run "$SL_HERE/seat.sh" "${args[@]}"
+    if [ "$RUN_RC" != 0 ]; then failln "seat-$n" "seat.sh ${args[*]} exited $RUN_RC: $(tail -n 1 <<<"$RUN_OUT")"; continue; fi
+    rm -f "$rec"; fixedln "seat-$n" "claude had been gone ${age}s, seat.sh started it again ($(jq -r '.started // empty' <<<"$(tail -n 1 <<<"$RUN_OUT")" 2>/dev/null))"
+  done
+  okln "seats ($checked judged)"
+}
+reseat_node
+
 finish
