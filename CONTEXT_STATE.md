@@ -27,6 +27,75 @@ None for this ticket.
 ### Hydration prompt
 Hold; wake on record.review_changes_requested or test.failed for WO-20261012-da52.
 
+
+
+## Checkpoint 2026-10-12 19:50 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, PR 31 open. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Branch merged with origin/main f7a891c (PR 34, WO-20261012-277d, landed). seat-lib.sh keeps both sides' index lines and functions; herdr.json and herdr.schema.json differ from main only by this ticket's three keys.
+- make lint rc 0; make -C herdr test: tests: 24 passed, 0 failed, from test pane wD3:pB7.
+
+#### Active Tasks
+
+- This step: the architect's re-merge after the crash and false 18:50 wake. Aggregates taken from main and re-rendered by script; push; git switch --detach to release the branch; repost pr.opened for PR 31.
+- Then hold.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- Aggregates (CHANGELOG, CONTEXT_STATE, INDEX, epic README) come from main each merge, then CHANGELOG and INDEX are rendered by their scripts; only the checkpoint this step writes is added to CONTEXT_STATE.
+
+#### Lessons Learned
+
+- A wake that says a PR merged must be checked against origin/main before acting on it; commit ad34828 merged main before PR 34 landed.
+
+### Hydration prompt
+
+WO-20261012-ee9c is done and PR 31 is open at the head posted in the latest pr.opened record, on a detached HEAD. Hold until the belt, reviewer or merger posts a record that wakes this seat.
+
+## Checkpoint 2026-10-12 19:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-277d on WO-20261012-277d - Supervisor judges a pane busy by the processes in its foreground, so a live bearings wait loop is never called dead and restarted.
+  Branch feat/supervisor-judges-a-pane-busy-by-the-processes-i, PR 34, treehouse slot 2, test pane wD3:pE4.
+
+#### Toolchain
+
+- origin/main merged into the branch at the architect's order (PR 34 lands first, PR 31 follows).
+  Conflicts were only in CHANGELOG.md, CONTEXT_STATE.md and work-orders/INDEX.md: main's side taken, CHANGELOG.md re-rendered with bin/changelog.sh render, INDEX.md and epic READMEs with work-order.sh reindex.
+- make lint, make -C herdr lint and make -C herdr test after the merge: 23 passed, 0 failed.
+
+#### Active Tasks
+
+- Push, git switch --detach, post pr.opened with the new sha and --pr 34.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: aggregates are never merged by hand; main's side is taken and they are re-rendered with their scripts.
+
+### Hydration prompt
+
+You are worker-wo-20261012-277d on WO-20261012-277d. Read this checkpoint and playbooks/worker.md. Next: repost pr.opened for PR 34 with the pushed sha, then idle.
+
 ## Checkpoint 2026-10-12 18:30 UTC
 
 ### Current state

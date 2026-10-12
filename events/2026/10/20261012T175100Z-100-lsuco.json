@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T175100Z-100-lsuco",
+  "at": "2026-10-12T17:51:00Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-277d",
+  "kind": "work.started",
+  "ticket": "WO-20261012-277d",
+  "pane": "wD3:pE2",
+  "note": "worker started WO-20261012-277d, reading the ticket",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

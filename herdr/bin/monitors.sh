@@ -66,7 +66,8 @@ proc_info() { sl_h pane process-info --pane "$1" 2>/dev/null; }
 fg_process() { local n; n="$(proc_info "$1" | jq -r 'first(.result.process_info.foreground_processes[]?.name) // empty')"; n="${n##*/}"; printf '%s' "${n#-}"; }
 # agent_in <pane>: the agent binary when a claude or codex runs in the pane's foreground (directly or as `bash .../claude`).
 agent_in() { proc_info "$1" | jq -r '[.result.process_info.foreground_processes[]? | .argv // [.name] | map(split("/") | last) | .[0:2][] | select(. == "claude" or . == "codex")] | first // empty'; }
-busy() { proc_info "$1" | jq -e '.result.process_info | .foreground_process_group_id != null and .shell_pid != null and .foreground_process_group_id != .shell_pid' >/dev/null; }
+# busy <pane>: a job runs in the pane's foreground. sl_pane_busy (seat-lib.sh, WO-20261012-277d) is the one rule, shared with supervisor.sh.
+busy() { proc_info "$1" | sl_pane_busy; }
 
 cmd_grid() {
   local rc=0 ti tlabel tid all ix p out dir from_i ratio pid lab want made held fresh from

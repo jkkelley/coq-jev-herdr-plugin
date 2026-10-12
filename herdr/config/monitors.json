@@ -20,7 +20,7 @@
           "pos": "1.1.2",
           "name": "guard",
           "what": "compaction-guard watch",
-          "command": "compaction-guard watch --interval 15"
+          "command": "${repo}/herdr/bin/guardwatch.sh --watch"
         },
         {
           "pos": "1.1.3",

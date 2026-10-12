@@ -64,4 +64,18 @@ h pane rename "$qp" "2.1.2 queue list - turnwatch" >/dev/null
 assert_match "health names the wrong holder" "$(cat "$WORLD/health")" "FAILED queue \\(slot 2\\.1\\.2 holds '2\\.1\\.2 queue list - turnwatch', not queue\\)"
 "$BU" --worktree "$REPO" > "$WORLD/out" 2>&1; assert_eq "apply exits 0" "$?" 0
 assert_match "the slot is restored to its owner" "$("$MON" status)" "2\\.1\\.2 queue list - queue  \\[$qp\\]  in use"
+echo "-- a job in the shell's own process group is still a job (WO-20261012-277d)"
+# set +m keeps the background job in the shell's group (fg group = shell pid), the way bearings' node wait.mjs ran on the live host.
+h pane send-keys "$ep" C-c >/dev/null; h pane send-keys "$ep" C-c >/dev/null; sleep 1
+h pane run "$ep" 'set +m; sleep 600 & p=$!; wait' >/dev/null; sleep 1
+h pane rename "$ep" "2.1.1 OPEN - event log tail" >/dev/null
+assert_eq "precondition: the job's group is the shell's group" "$(h pane process-info --pane "$ep" | jq -r '.result.process_info | .foreground_process_group_id == .shell_pid')" true
+"$MON" health > "$WORLD/health" 2>&1
+assert_match "health says the open slot runs a job, not that it is a bare shell" "$(cat "$WORLD/health")" "FAILED events \\(slot 2\\.1\\.1 is labelled open but pane $ep runs .*; left alone"
+assert_eq "the job was not interrupted" "$(h pane process-info --pane "$ep" | jq -r '[.result.process_info.foreground_processes[].argv[0]] | any(. == "sleep")')" true
+echo "-- and a bare shell in the same slot still reads idle"
+h pane send-keys "$ep" C-c >/dev/null; sleep 1; h pane run "$ep" 'kill $p; set -m' >/dev/null; sleep 1
+"$MON" health > "$WORLD/health" 2>&1
+assert_match "health says the open slot is a bare shell" "$(cat "$WORLD/health")" "FAILED events \\(slot 2\\.1\\.1 is open and its pane is a bare shell"
+
 case_done
