@@ -56,6 +56,42 @@
 
 
 
+
+## Checkpoint 2026-10-12 20:00 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-72a0 on WO-20261012-72a0 - Verifier seat: a merged record wakes a verifier that checks the merge on main against the ticket's criteria and posts verified or rejected, so no merge waits on the architect.
+  Branch feat/verifier-seat-a-merged-record-wakes-a-verifier-t, PR 29, treehouse slot 6, test pane wD3:p8F.
+- The merger posted merge.conflict 409 (record 20261012T184658Z-409-d43oc) on bf2042c: main gained PR 28 (WO-20261012-3bb0 - Gate rules as code), PR 30 (WO-20261012-8fb2 - Own checkpoint after compaction) and PR 24 (WO-20261011-ceea - Blueprint page).
+  The architect ordered the merge now, with the gate rules and the verifier routes kept side by side.
+
+#### Toolchain
+
+- origin/main (1220a1c) merged into the branch, then f7a891c (PR 34, WO-20261012-277d - Supervisor judges a pane busy by the processes in its foreground) merged on top; that one conflicted only in CHANGELOG.md, CONTEXT_STATE.md and work-orders/INDEX.md, taken from main and re-rendered.
+  factory/config/routes.json keeps this branch's merged -> seat verifier, verified and rejected rows, and main's merge-main on the 409 row.
+  Both routes schemas take main's enums (break-glass, none, merge-main, when, supersede) plus verifier in to and down.
+  factory/RUNBOOK.md takes main's table (with the when and supersede text) and this branch's rows 10, 12 and the new 13 (rejected); later rows renumbered 14 to 21.
+  CHANGELOG.md, CONTEXT_STATE.md and work-orders/INDEX.md taken from main, then re-rendered with bin/changelog.sh render and work-order.sh reindex.
+  The checkpoints this branch had before (16:27 and older of its own) are in git history, not in the file.
+- Verified in the test pane: make lint ok, factory suite 19 passed 0 failed, herdr suite 24 passed 0 failed on the 1220a1c merge; after the PR 34 merge (herdr files this branch does not touch) lint ok, factory 19 passed and herdr case 22 passed.
+  The loop suite (report/loop) failed 08-graph in two full runs (empty python output from graph.sh check inside the container, a different step each time) while the host load average was 13.
+  08-graph alone passed 3 of 3 and graph.sh check on this tree passes (102 nodes), so it is load flakiness in graph/bin/graph.sh validate, not this merge. graph/ is denied to the worker seat.
+
+#### Active Tasks
+
+- After this step lands: git switch --detach, then post pr.opened 100 with the new head sha and --pr 29, then idle for the belt.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-72a0 as worker-wo-20261012-72a0 in slot 6. Read playbooks/worker.md and this checkpoint. The merge of origin/main f7a891c is pushed; post pr.opened 100 with the new sha and pr 29 if it is not posted, then hold.
+
 ## Checkpoint 2026-10-12 19:06 UTC
 
 ### Current state
