@@ -80,10 +80,14 @@ Owner 2026-10-12 18:07Z: no file may ever clash on a PR; two agents on one file 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* starting a ticket whose files overlap an open PR's changed files exits non-zero naming the PR and the files
-- [ ] `AC-H2` *(human)* a PR whose diff touches a file outside its ticket's files field fails the gate with the path named
-- [ ] `AC-H3` *(human)* two PRs cut from the same main and merged in either order produce no conflict in CHANGELOG.md, INDEX.md, READMEs or CONTEXT_STATE.md
-- [ ] `AC-H4` *(human)* two PRs adding a SOP get different numbers
+- [x] `AC-H1` *(human)* starting a ticket whose files overlap an open PR's changed files exits non-zero naming the PR and the files
+  - observed `2026-10-12` factory/tests/cases/15-claims.test.sh and 16-claims-tools.test.sh, run in test pane wD3:pGN: claims.sh start / wo-start.sh against an open PR 31 on herdr/bin/seat.sh exits 3 printing 'PR 31 (feat/scoped) changes herdr/bin/seat.sh, which WO-20261012-aaaa claims as herdr/bin/seat.sh', and work-order.sh is never called; a live in-progress ticket in another worktree is named too. Full factory suite: tests: 21 passed, 0 failed
+- [x] `AC-H2` *(human)* a PR whose diff touches a file outside its ticket's files field fails the gate with the path named
+  - observed `2026-10-12` same cases: gate.sh pr-files --ticket exits 1 with one line naming 'factory/config/routes.json is outside the files field of WO-20261012-aaaa; CHANGELOG.md is an aggregate (CHANGELOG.md): it is rendered after the merge and never rides a PR'; a clean diff exits 0; and gate.sh pr-files on this very ticket exits 0. Wiring a route row to call it was not done: routes.json is another PR's file
+- [x] `AC-H3` *(human)* two PRs cut from the same main and merged in either order produce no conflict in CHANGELOG.md, INDEX.md, READMEs or CONTEXT_STATE.md
+  - observed `2026-10-12` case 15-claims AC-H3: two branches cut from one main, each running bin/changelog.sh add and git add -A, merge in both orders with exit 0 and no conflict, CHANGELOG.md rendered locally and not tracked; CHANGELOG.md, CONTEXT_STATE.md, work-orders/INDEX.md and every work-orders README are gitignored (git check-ignore) and removed from the index in 009374d; step.sh no longer commits a checkpoint
+- [x] `AC-H4` *(human)* two PRs adding a SOP get different numbers
+  - observed `2026-10-12` case 16-claims-tools AC-H4: with SOP-0002 in the tree and SOP-0003 in open PR 31, bin/mint-id.sh sop printed SOP-0004 then SOP-0005; four concurrent mints gave four different numbers; new-sop.sh through the real docs.sh wrote the SOP under the minted id (SOP-0006 in this PR); claims.sh ids exits 3 naming 'SOP-0002 is taken by PR 31 adds docs/sops/SOP-0002-b.md'
 
 ## Test plan
 
@@ -102,6 +106,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Retro. Built factory/bin/claims.sh (set, get, start, diff, ids), bin/wo-start.sh, bin/mint-id.sh, bin/new-sop.sh and gate.sh pr-files; the four aggregates are gitignored and removed from the index; step.sh stops committing checkpoints. Surprises: (1) work-order.sh and docs.sh are managed skill copies, so the start check is a wrapper and the SOP number is minted by running docs.sh on a scratch project; a direct work-order.sh start still skips the check, and only the gate catches that PR. (2) routes.json and seat.sh were another PR's, so no route calls gate.sh pr-files yet: a follow-up ticket should add the when row. (3) Every open PR touches the aggregates, so each meets a modify/delete conflict on CHANGELOG.md, CONTEXT_STATE.md or work-orders/INDEX.md once this merges: resolve by accepting the deletion. PR 32 already conflicts with main on .gitignore before this change. (4) Every ready ticket cut before today has no files field; wo-start refuses it until the architect runs claims.sh set. (5) make step lint takes over two minutes, so it runs in the test pane.
 
 ## Outcome
 
