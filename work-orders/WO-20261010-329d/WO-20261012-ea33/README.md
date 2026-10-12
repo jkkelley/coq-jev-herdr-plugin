@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261012-48ab` | in-progress | p0 | - | [Scheduler skeleton: Go module with pinned gRPC and protobuf, Makefile and Containerfile that build and test only in Podman, the core contracts and testkit of SPEC-16, the executor proto with its generated code, and the subcommand registry](WO-20261012-48ab-scheduler-skeleton-go-module-with-pinned-grpc-an.md) |
+| `WO-20261012-48ab` | in-review | p0 | - | [Scheduler skeleton: Go module with pinned gRPC and protobuf, Makefile and Containerfile that build and test only in Podman, the core contracts and testkit of SPEC-16, the executor proto with its generated code, and the subcommand registry](WO-20261012-48ab-scheduler-skeleton-go-module-with-pinned-grpc-an.md) |
