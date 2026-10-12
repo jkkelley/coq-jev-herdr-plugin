@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T171024Z-200-0ro98",
+  "at": "2026-10-12T17:10:24Z",
+  "code": 200,
+  "seat": "reviewer-ee9c",
+  "kind": "work.started",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pCB",
+  "note": "Reviewer seat up; reading PR 31 diff against the ticket criteria before any verdict",
+  "evidence": [],
+  "observations": []
+}

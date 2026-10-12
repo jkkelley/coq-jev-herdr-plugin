@@ -57,25 +57,41 @@
 
 
 
-## Checkpoint 2026-10-12 20:01 UTC
+## Checkpoint 2026-10-12 19:50 UTC
 
 ### Current state
+
 #### Infrastructure
-- Worktree ~/.cache/wt-sched-w1 on branch feat/scheduler-skeleton-go-module-with-pinned-grpc-an, seat sched-worker-1 (pane wD7:p2), routed by sched-architect.
-- Podman named volume coq-scheduler-gocache holds the Go module and build caches; local images localhost/coq-scheduler:1 and localhost/coq-scheduler-test:1.
+
+- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, PR 31 open. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+
 #### Toolchain
-- Go only in Podman: golang:1.26-bookworm by digest sha256:116d58cb...; grpc v1.84.0, protobuf v1.36.12, protoc-gen-go-grpc v1.6.2, protoc 3.21.12 (asserted).
-- make -C scheduler build, test, lint, image, proto all exit 0; proto regeneration is byte-identical.
+
+- Branch merged with origin/main f7a891c (PR 34, WO-20261012-277d, landed). seat-lib.sh keeps both sides' index lines and functions; herdr.json and herdr.schema.json differ from main only by this ticket's three keys.
+- make lint rc 0; make -C herdr test: tests: 24 passed, 0 failed, from test pane wD3:pB7.
+
 #### Active Tasks
-- WO-20261012-48ab - Scheduler skeleton: Go module with pinned gRPC and protobuf, Makefile and Containerfile that build and test only in Podman, the core contracts and testkit of SPEC-16, the executor proto with its generated code, and the subcommand registry.
-- Code landed in this step; next is close-out: evidence per AC, retro note, PR, git switch --detach, pr.opened record.
+
+- This step: the architect's re-merge after the crash and false 18:50 wake. Aggregates taken from main and re-rendered by script; push; git switch --detach to release the branch; repost pr.opened for PR 31.
+- Then hold.
+
 #### Blockers
-- none
+
+- None.
+
 ### New this checkpoint
-- tests/Containerfile adds python3-jsonschema: event.sh check needs it, so k-t1 can run the real writer check.
-- core.Row has no When or Supersede although routes.schema.json now has them; SPEC-16 c-row does not name them, so they are a question for the routes ticket, not an edit of core.
+
+#### Decisions
+
+- Aggregates (CHANGELOG, CONTEXT_STATE, INDEX, epic README) come from main each merge, then CHANGELOG and INDEX are rendered by their scripts; only the checkpoint this step writes is added to CONTEXT_STATE.
+
+#### Lessons Learned
+
+- A wake that says a PR merged must be checked against origin/main before acting on it; commit ad34828 merged main before PR 34 landed.
+
 ### Hydration prompt
-Read the ticket WO-20261012-48ab and playbooks/worker.md step 5, then close out: work-order.sh evidence --observed per AC, note the retro, open the PR, submit, done, git switch --detach, post pr.opened 100 with --sha and --pr via $COQ_REPO/events/bin/event.sh.
+
+WO-20261012-ee9c is done and PR 31 is open at the head posted in the latest pr.opened record, on a detached HEAD. Hold until the belt, reviewer or merger posts a record that wakes this seat.
 
 ## Checkpoint 2026-10-12 19:06 UTC
 

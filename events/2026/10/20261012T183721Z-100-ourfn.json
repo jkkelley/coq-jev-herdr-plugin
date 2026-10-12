@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T183721Z-100-ourfn",
+  "at": "2026-10-12T18:37:21Z",
+  "code": 100,
+  "seat": "tester-wo-20261012-ee9c",
+  "kind": "note",
+  "ticket": "WO-20261012-ee9c",
+  "pane": null,
+  "note": "Tester started on WO-20261012-ee9c, Scoped guard watch; test plan is make -C herdr test, run only in the test pane",
+  "evidence": [],
+  "observations": []
+}
