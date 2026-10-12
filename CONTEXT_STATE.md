@@ -50,6 +50,23 @@
 
 
 
+
+## Checkpoint 2026-10-12 15:32 UTC
+
+### Current state
+#### Infrastructure
+Worker seat for WO-20261012-da52 - Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand.
+Slot 1 leased to the ticket, branch feat/record-bus-every-slot-s-new-records-reach-the-ch.
+factory/bin/bus.sh, factory/config/bus.json and bus.schema.json are written; monitors.json slot 2.3.3 runs it; herdr cases 04 and 05 and world.sh expect the ninth pane.
+#### Toolchain
+make -C factory lint and test (16 cases, 12-bus new) green; make -C herdr lint and test (16 cases) green, both run in test pane wD3:p8C.
+#### Active Tasks
+Close out: commit and push, evidence for AC-H1 and AC-H2, retro note, PR, work-order submit and done, pr.opened 100 record.
+#### Blockers
+The interim record-bus.sh in the user cache directory is outside this worktree's allowed paths; its removal is left to the architect or owner.
+### Hydration prompt
+Resume WO-20261012-da52 at the close-out: evidence, retro note, gh pr create, work-order.sh submit and done, then post pr.opened 100 with the sha and pr.
+
 ## Checkpoint 2026-10-12 14:58 UTC
 
 ### Current state
