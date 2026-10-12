@@ -33,11 +33,11 @@ assert_match "1.1.1 runs the guard lease watcher" "$st" "1\.1\.1 guard lease wat
 assert_match "1.1.2 runs compaction-guard watch" "$st" "1\.1\.2 compaction-guard watch - guard  \[[^]]+\]  in use"
 assert_match "1.1.3 stays an open orchestrator watcher slot" "$st" "1\.1\.3 OPEN - orchestrator compaction watcher  \[[^]]+\]  open"
 # The status lines name the commands' panes; each must show its own output, not just a label (the watchers are the
-# real unfreeze.sh --watch and the suite's stub compaction-guard, so neither touches the host).
+# real unfreeze.sh --watch and guardwatch.sh --watch over the suite's stub compaction-guard, so neither touches the host).
 slot_pane() { sed -nE "s/^ +$1 .*\[([^]]+)\] +in use$/\1/p" <<<"$st"; }
 lp="$(slot_pane '1\.1\.1')"; gp="$(slot_pane '1\.1\.2')"
 h pane wait-output "$lp" --regex 'tick: [0-9]+ released, [0-9]+ ok, rc [0-9]' --source recent-unwrapped --timeout 20000 >/dev/null 2>&1; assert_eq "1.1.1 printed an unfreeze.sh --watch tick" "$?" 0
-h pane wait-output "$gp" --match 'stub compaction-guard watch --interval 15' --source recent-unwrapped --timeout 20000 >/dev/null 2>&1; assert_eq "1.1.2 runs compaction-guard watch --interval 15" "$?" 0
+h pane wait-output "$gp" --regex 'tick: [0-9]+ watched, [0-9]+ skipped, rc [0-9]' --source recent-unwrapped --timeout 20000 >/dev/null 2>&1; assert_eq "1.1.2 printed a guardwatch.sh tick (WO-20261012-ee9c)" "$?" 0
 assert_match "2.1.1 runs the event log tail" "$st" "2\.1\.1 event log tail - events  \[[^]]+\]  in use"
 assert_match "2.1.2 runs the queue list" "$st" "2\.1\.2 queue list - queue  \[[^]]+\]  in use"
 assert_match "2.2.1 runs the factory board watch (WO-20261011-616c)" "$st" "2\.2\.1 factory board watch - board  \[[^]]+\]  in use"

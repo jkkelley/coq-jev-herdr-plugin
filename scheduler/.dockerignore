@@ -1,0 +1,9 @@
+# The build context of scheduler/Containerfile is the scheduler directory; only the module's sources go in.
+dist/
+host/
+config/
+testdata/
+tests/
+RUNBOOK.md
+*.md
+**/*_test.go

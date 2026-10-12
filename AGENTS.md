@@ -12,6 +12,7 @@
 - Law: Google Drive first
 - Law: the surface follows the runtime
 - Law: scope small, integrate in CI
+- Law: no file is ever touched by two open PRs
 - Law: testing
 - Law: the architect model chain
 - Hard rule: read the window, not the history
@@ -166,6 +167,18 @@ Code is function-based and driven by a `Makefile`.
 Every entry point an agent or a pipeline uses is a `make` target.
 Full integration testing is CI's job, not an agent's.
 An agent proves its own unit of work and hands the rest to the pipeline.
+
+## Law: no file is ever touched by two open PRs
+
+Owner order, 2026-10-12 UTC: two agents on one file is forbidden.
+On 2026-10-12 five PRs edited the same seat.sh, routes.json and RUNBOOK.md, and every merge forced the next PR into a conflict and a full re-test.
+A ticket declares the files it will change (`factory/bin/claims.sh set`), and the architect cuts no two open tickets onto one file.
+Start a ticket with `bin/wo-start.sh`, which refuses an overlap with any open PR or live ticket; `factory/bin/gate.sh pr-files` fails a diff that strays.
+`CHANGELOG.md`, `work-orders/INDEX.md`, the work-orders READMEs and `CONTEXT_STATE.md` are gitignored and rendered locally (`make aggregates`); they never ride a PR.
+Doc numbers come from `bin/mint-id.sh` (SOP-0006), so two PRs cannot take one.
+
+GOOD: a ticket whose files field is `herdr/bin/seat.sh`, started only when no open PR changes that file.
+NEVER: `git add -f CHANGELOG.md`, or starting a ticket with `work-order.sh start` to skip the check.
 
 ## Law: testing
 
