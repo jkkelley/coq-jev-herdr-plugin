@@ -83,6 +83,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Architect ruling 2026-10-12 15:51Z on AC-H2, as the ticket's author: its intent is no merge or verification waits on the architect. The merged row now goes to the verifier, which meets it. The three escalation rows are WO-20261012-9b2c - Standing policies (PR 27) scope, and request.forwarded enqueue is ticket cutting, which stays the architect's job. Accept AC-H2 on that reading.
 - `2026-10-12` Retro: the block was the worker role deny on roles/, graph/ and specs/; the architect placed the role files. The architect per-ticket verifier-${ticket} label hit seat.sh door 1 refusing archived tickets and deleted branches, so seat.sh now special-cases role verifier (breadcrumb at the ticket lookup). playbooks/verifier.md cannot hold a breadcrumb because lint renders it from the role. Left for the architect: roles/bin/brief.sh and nudge.sh archive fallback, graph ROL-verifier node, WFL-integration text.
 
 ## Outcome
