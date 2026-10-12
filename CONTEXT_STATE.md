@@ -51,6 +51,42 @@
 
 
 
+
+## Checkpoint 2026-10-12 15:14 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
+  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
+- Architect order 2026-10-12: do not hold for compaction under 30 percent; keep going.
+
+#### Toolchain
+
+- Steps 1 to 3 pushed (ed59a75, a4b7097, 6771e9a): monitors.sh health, bringup and recover on it, turnwatch/recwatch in tab 4, supervisor.sh (herdr via systemctl unit, podman, bringup, belt.sh, bearings node).
+- Step 4+5 landed: supervisor.sh seat node (re-seat after two sightings past grace, caps, closed ticket downed, down.lock written by seat.sh --down), slot 4.1.3 supervisor log, belt.sh message keeps "belt stopped" when a bare-shell runner pane has a stale belt, herdr/systemd/*.in + bin/supervisor-units.sh (render install uninstall status, refuses a linked worktree), Makefile supervisor targets, docs/sops/SOP-0003 with observed verification and the three live AC recipes, cases 19 20 21.
+- Verified in the test pane: full suite after step 3 (19 of 20, 13-recover-belt then fixed and rerun green), then CASES='04 05 17 18 19 20 21' (7 passed) and root make lint ok. Full suite once more before the PR.
+
+#### Active Tasks
+
+- Close-out (remaining): full make -C herdr test; work-order.sh evidence --observed per AC (AC-H1..H3 are human criteria: the evidence is the suite plus the live recipe in SOP-0003, say the live run waits for the owner or architect after make -C herdr supervisor-install); retro note; push; gh pr create with the criteria as body; work-order.sh submit --pr N; work-order.sh done; push the archive move; post pr.opened 100 with sha and pr; stop.
+- Do not touch ~/.cache/coq-watch or install anything on the host.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: re-seat is a rerun of seat.sh, not down plus up: it keeps the treehouse lease and uncommitted work; the supervisor cap is 3 per 30 minutes.
+- Decision: bearings restart respects a stop that was meant (stopped.json reason stopped, newer than the herdr server, no pane labelled).
+- Decision: units are rendered from .in files by supervisor-units.sh; install is the owner's or architect's action, never a seat's.
+
+### Hydration prompt
+
+You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint, AGENTS.md first 60 lines, playbooks/worker.md and the ticket's close-out steps. Next: full suite in wD3:p89 through herdr/bin/testpane.sh, then the close-out flow of AGENTS.md.
+
 ## Checkpoint 2026-10-12 14:44 UTC
 
 ### Current state
