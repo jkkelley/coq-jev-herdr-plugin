@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T175539Z-201-mggew",
+  "at": "2026-10-12T17:55:39Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-3bb0",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:pDY",
+  "note": "make -C factory test in the worktree at 0544607: 19 passed, 0 failed",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-7-coq-jev-herdr-plugin/0544e526-5e73-4719-b453-77980250f8e6/scratchpad/factory-test-worktree.log"
+  ],
+  "observations": [],
+  "to": "architect",
+  "sha": "0544607",
+  "pr": 28
+}

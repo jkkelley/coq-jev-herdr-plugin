@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154946Z-100-umza0",
+  "at": "2026-10-12T15:49:46Z",
+  "code": 100,
+  "seat": "tester-wo-20261012-3bb0",
+  "kind": "note",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:p9E",
+  "note": "tester started on PR 28; test plan: make -C factory test in test pane wD3:p9E",
+  "evidence": [],
+  "observations": [],
+  "pr": 28
+}

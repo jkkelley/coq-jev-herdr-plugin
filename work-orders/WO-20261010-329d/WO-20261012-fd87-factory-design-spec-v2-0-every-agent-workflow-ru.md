@@ -69,7 +69,8 @@ specs/exports/factory-spec.xml v1.1.0 (303 rules, sections S1 to S6) predates th
   - observed `2026-10-12` specs/bin/export-check.sh coverage: ok specs/exports/factory-spec.xml cites 101 sources, covers 26 of 26 required files (roles/*.json, playbooks/*.md, factory/config/routes.json, docs/sops/*.md, every RUNBOOK.md); exit 0
 - [x] `AC-H3` *(human)* the check finds no /home/ path, no bearings key, no email address and no element over 240 chars
   - observed `2026-10-12` check exit 0 on the export, make lint all ok; on a seeded copy it reported forbidden home path, email address, host or url, page key, a 300-char element and an element with no source; exit 3
-- [ ] `AC-H4` *(human)* the owner reads it on the page and accepts it (human)
+- [x] `AC-H4` *(human)* the owner reads it on the page and accepts it (human)
+  - observed `2026-10-12` owner read factory-spec.xml v2.0.0 on the PR branch and answered Accept on the bearings page, card C8, 2026-10-12 UTC
 
 ## Test plan
 
