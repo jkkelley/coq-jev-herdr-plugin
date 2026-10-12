@@ -58,6 +58,38 @@
 
 
 
+
+## Checkpoint 2026-10-12 20:12 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Fixed seat sched-worker-2 (herdr workspace wD7) on WO-20261012-e27e - Scheduler config files: scheduler.json and executor.json with their schemas, every key of SPEC-16.G, variables only, validated by the repository lint.
+  Worktree ~/.cache/wt-sched-w2, branch feat/scheduler-config-files-scheduler-json-and-execut, PR 38, no test pane; tests run in the pinned coq-lint image.
+
+#### Toolchain
+
+- PR 38 amended for SPEC-16.G 1.1.0 (architect records 20261012T200750Z-100-41tjo and the design change before it): schema_version 1.1.0, halt_flag under ${state_dir}, runtime.image coq-scheduler:1 (name and tag only), runtime.image_digest ${ENV:COQ_SCHED_IMAGE_DIGEST}, runtime.memory 256m, runtime.container_name coq-scheduler.
+- make lint configs ok, TP-2 exit 0, spec and mutation script 41 of 41 in the lint image.
+- SPEC-16.G 1.1.0 was not yet pushed to PR 37 at 20:10 UTC; the remote file still read 1.0.0, so the change follows the records' text.
+
+#### Active Tasks
+
+- git switch --detach, post pr.opened 100 with the new sha and --pr 38, then wait for sched-architect.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision (architect): an image digest never sits in a config file; the tag is the file's, the digest comes from the wrapper's environment.
+
+### Hydration prompt
+
+You are sched-worker-2 on WO-20261012-e27e. Read this checkpoint and playbooks/worker.md. Next: if pr.opened for PR 38 with the newest branch sha is not in the event log, post it; else wait for sched-architect.
+
 ## Checkpoint 2026-10-12 19:59 UTC
 
 ### Current state
