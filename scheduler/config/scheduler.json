@@ -1,5 +1,5 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "mode": "${ENV:COQ_SCHED_MODE}",
   "seat": "scheduler",
   "herdr_session": "${ENV:COQ_HERDR_SESSION}",
@@ -11,7 +11,7 @@
   "flow_file": "${repo}/factory/config/flow.json",
   "roles_dir": "${repo}/roles",
   "playbooks_dir": "${host_repo}/playbooks",
-  "halt_flag": "${HOME}/.local/state/coq/HALT",
+  "halt_flag": "${state_dir}/HALT",
   "drain_seconds": 30,
   "intake.poll_seconds": 2,
   "intake.roots": [
@@ -67,5 +67,9 @@
   "housekeeping.prune_seconds": 3600,
   "shadow.dir": "${state_dir}/shadow",
   "shadow.parity_min_records": 200,
-  "log.level": "info"
+  "log.level": "info",
+  "runtime.image": "coq-scheduler:1",
+  "runtime.image_digest": "${ENV:COQ_SCHED_IMAGE_DIGEST}",
+  "runtime.memory": "256m",
+  "runtime.container_name": "coq-scheduler"
 }

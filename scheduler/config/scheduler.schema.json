@@ -52,7 +52,11 @@
     "housekeeping.prune_seconds",
     "shadow.dir",
     "shadow.parity_min_records",
-    "log.level"
+    "log.level",
+    "runtime.image",
+    "runtime.image_digest",
+    "runtime.memory",
+    "runtime.container_name"
   ],
   "$defs": {
     "env": {
@@ -73,7 +77,7 @@
     "seconds": { "type": "integer", "minimum": 1, "maximum": 86400 }
   },
   "properties": {
-    "schema_version": { "const": "1.0.0" },
+    "schema_version": { "const": "1.1.0" },
     "mode": {
       "anyOf": [
         { "enum": ["off", "shadow", "active"] },
@@ -114,7 +118,7 @@
     },
     "halt_flag": {
       "$ref": "#/$defs/path",
-      "description": "the same file herdr/config/herdr.json names (its state_dir plus HALT), because the supervisor reads the same flag (SPEC-16.F f-halt)"
+      "description": "under ${state_dir}, because the container sees only the repo, the roots, its state dir and the runtime dir (SPEC-16.H h-run-mounts); herdr's own flag under its state dir is not mounted and the belt has no halt flag in factory/config. Rejected: a ${HOME} path to herdr's flag, which the container cannot see (design change in SPEC-16.G 1.1.0)."
     },
     "drain_seconds": {
       "type": "integer",
@@ -241,6 +245,25 @@
       "minimum": 1,
       "maximum": 100000
     },
-    "log.level": { "enum": ["debug", "info", "warn", "error"] }
+    "log.level": { "enum": ["debug", "info", "warn", "error"] },
+    "runtime.image": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+([._-][a-z0-9]+)*:[A-Za-z0-9_][A-Za-z0-9._-]{0,127}$",
+      "description": "the scheduler image by name and tag only: no registry host (no slash) and no digest (no @), so the copy rule holds and the file lifts unchanged; a plain string, no variable, because the host wrapper reads it with jq. Rejected: name@sha256:<digest> here, which matched the forbidden 32-hex and host patterns of specs/scheduler/config/check.json (design change in SPEC-16.G 1.1.0)."
+    },
+    "runtime.image_digest": {
+      "$ref": "#/$defs/env",
+      "description": "the digest the image tag resolved to: the host wrapper resolves runtime.image at start and exports it; the loader resolves the variable and Status reports it, so the digest pin lives in the environment, never in this file"
+    },
+    "runtime.memory": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]*[kmg]$",
+      "description": "the container memory limit as podman --memory takes it: a number with k, m or g; plain string, read by the wrapper with jq"
+    },
+    "runtime.container_name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{0,62}$",
+      "description": "the container name, so Podman refuses a second start (h-run-flags); plain string, read by the wrapper with jq"
+    }
   }
 }
