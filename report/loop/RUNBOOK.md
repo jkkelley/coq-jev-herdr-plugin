@@ -14,6 +14,7 @@
 - 6. Prove it
 - Changing the page
 - When it goes wrong
+- The blueprint view and its tiers
 - Graph
 
 ## Rules that bind
@@ -145,6 +146,59 @@ After any template change run `loop.sh render` (or restart the watcher after del
 | "HERDR PANES UNAVAILABLE"                                    | herdr did not answer                      | start herdr; seats are trusted from their records meanwhile |
 | `loop: ...: poll_seconds + watch_seconds must be 30 or less` | the config breaks the 30 second promise   | lower one of them                                           |
 | the watcher prints `pass N failed`                           | a ticket or record could not be read      | read the line under it, fix the file                        |
+
+## The blueprint view and its tiers
+
+The same tool draws a second page, the system blueprint (WO-20261011-ceea), from `graph/nodes` and `work-orders/` instead of from records.
+It reuses the board's template, station and legend components; `config/blueprint.json` is its view config and `config/blueprint.schema.json` its schema.
+Nothing on it is typed in.
+
+### How a state is derived
+
+Each Component node (a superseded one is left out) lands in exactly one state, by this rule and no other:
+
+| State       | When                                                                                                                   |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| in flight   | a ticket that names the Component is `in-progress` or `in-review`. Work wins: a built Component being changed again.   |
+| done        | not in flight, and the Component node is `locked`, or a ticket that names it is `done`.                                |
+| coming up   | everything else: proposed or draft, with no finished ticket.                                                           |
+
+A cancelled ticket counts for nothing.
+A draft or ready ticket does not make a locked Component less done.
+A Component with no Runbook node joined to it by a `defined_in` edge, in either direction, shows "missing runbook".
+A decision it names through a `decided_by` edge that is not `locked`, or that the graph has no node for, blocks it.
+
+### How a ticket names a Component
+
+A ticket belongs to a Component when the Component's id (`CMP-` and its slug) appears in the ticket's title, its Problem section or its Scope section.
+An id in Notes, an acceptance criterion or the Outcome is a reference and is not counted.
+If the page shows 0 components in flight while tickets are open, the tickets do not name what they build; name it there, not in the collector.
+
+### Run it
+
+```sh
+make -C report/loop render-blueprint     # one collect and render into the dev tier's out_dir
+make -C report/loop serve-dev            # dev: serves and refreshes its own page every watch_seconds
+make -C report/loop promote-uat          # uat takes dev's current build, tagged by its build number
+make -C report/loop promote-stable       # stable takes uat's build
+```
+
+Three tiers, each a file in `report/blueprint/config/` (`dev.json`, `uat.json`, `stable.json`, checked by `tier.schema.json`) with its own `port`, `out_dir` and `pane_label`.
+Dev rebuilds its own page.
+Uat and stable serve only what a promotion put in `out_dir/releases/<build>`, behind a `current` link, so the build number on stable is the build uat held.
+`promote.sh` is the only way a page moves forward; a hand copy breaks that promise.
+`GET /blueprint` is the page, `GET /blueprint/data.json` its data and `GET /healthz` the tier's build, for the pane check.
+`herdr/bin/bringup.sh` plugs the three servers into slots 2.3.1, 2.3.2 and 2.3.3 of the monitors grid, and `herdr/bin/recover.sh` restarts one that was killed.
+`report/blueprint/serve.sh --check <tier>` is the check both use: a label outlives its process, so the label alone proves nothing.
+
+### Add a view or a tier to another repository, by config only
+
+1. Copy `report/loop/` and `report/blueprint/`, or point `LOOP_ROOT` and `BLUEPRINT_ROOT` at the other tree.
+2. Edit `inputs.graph_nodes_dir`, `inputs.graph_mermaid` and `inputs.work_orders_dir` in `config/blueprint.json`, and its `links`, `title` and `key`.
+3. A new tier is a new file in `report/blueprint/config/` that validates against `tier.schema.json`, with `promotes_from` naming the tier before it; add its Make target pair and one reserved slot with `command` and `check` in `herdr/config/monitors.json`.
+4. A second view is a second `config/<view>.json` and `loop.sh --view <view>`; `loop.sh` renders any view the config names into its own `out_dir` with the one template.
+
+CI runs this directory's suite and lint when its files change: `Jenkinsfile` stage `Blueprint`, whose `when` is a `changeset` on `report/**`, `graph/**` and `work-orders/**`.
 
 ## Graph
 
