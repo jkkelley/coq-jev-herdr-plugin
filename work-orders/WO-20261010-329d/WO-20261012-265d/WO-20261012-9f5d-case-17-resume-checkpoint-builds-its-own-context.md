@@ -62,7 +62,8 @@ On main c22cb99 herdr case 17-resume-checkpoint fails: PR 36 made CONTEXT_STATE.
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* make -C herdr test on a clean worktree of main passes case 17 with no CONTEXT_STATE.md in the repository
+- [x] `AC-H1` *(human)* make -C herdr test on a clean worktree of main passes case 17 with no CONTEXT_STATE.md in the repository
+  - observed `2026-10-12` Clean git clone of the branch head (no CONTEXT_STATE.md present): before the fix make -C herdr test CASES=17-resume failed 4 assertions (world has no checkpoint to show; output does not open with whose checkpoint; not the second one; heading appears once), exit 2. After the fix the same run passed (tests: 1 passed, 0 failed) and the full make -C herdr test passed (tests: 25 passed, 0 failed), make -C herdr lint exit 0, all run in test pane wD3:pNM through testpane.sh in Podman.
 
 ## Test plan
 
@@ -81,6 +82,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Retro: reproduced first on a git clone of the branch head, because the slot holds a gitignored CONTEXT_STATE.md that hides the bug (cp -a in world_up copies it). The case now writes a two-checkpoint CONTEXT_STATE.md into its own world; resume-checkpoint.sh is untouched. Lesson: a case that needs a gitignored file must build it, and the only honest run is on a clone, not the seat slot.
 
 ## Outcome
 
