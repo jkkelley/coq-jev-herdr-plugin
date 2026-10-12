@@ -37,7 +37,11 @@ GH=${COQ_GH:-gh}; PRIOS=(critical now next later); LABEL=backlog
 die() { local c=$1; shift; printf 'backlog: %s\n' "$*" >&2; exit "$c"; }
 for t in jq "$GH"; do command -v "$t" >/dev/null 2>&1 || die 4 "$t is required"; done
 GHR=(); [ -z "${COQ_BACKLOG_REPO:-}" ] || GHR=(-R "$COQ_BACKLOG_REPO")
-gh() { "$GH" "$@" ${GHR[@]+"${GHR[@]}"}; }
+# BREADCRUMB 2026-10-12 - WO-20261012-6c76. What broke: this wrapper was named gh, so with the default GH=gh the line below called the
+#   wrapper itself, recursed until bash gave up, and every verb died with "gh issue list failed" against the real gh. The selftest never
+#   saw it because its stub is a path, not a name on PATH. Why this fix: a name that no binary has (ghr); the selftest now also runs the
+#   default, a stub named gh found on PATH. Rejected: `command gh` (it would skip a COQ_GH override). Cost: none.
+ghr() { "$GH" "$@" ${GHR[@]+"${GHR[@]}"}; }
 
 VERB=${1:-}; [ $# -eq 0 ] || shift
 TITLE=""; WHY=""; DONEWHEN=""; PRIO=""; STATE=open; ID=""; TO=""; JSON=0; DRY=0; FROM_DIRS=(); FROM_REFS=()
@@ -51,18 +55,18 @@ is_prio() { local p; for p in "${PRIOS[@]}"; do [ "$p" = "$1" ] && return 0; don
 one_line() { printf '%s' "$1" | tr '\r\n\t' '   ' | sed 's/  */ /g; s/^ //; s/ $//'; }
 # issues_json: every backlog issue, open and closed, with the priority and the old suffix pulled out of the labels and the body.
 issues_json() {
-  gh issue list --label "$LABEL" --state all --limit 1000 --json number,title,state,labels,body,url | jq -c '
+  ghr issue list --label "$LABEL" --state all --limit 1000 --json number,title,state,labels,body,url | jq -c '
     map({number, title, state: (.state | ascii_downcase), url,
          priority: ([.labels[].name | select(startswith("priority: ")) | .[10:]] | first // null),
          legacy_id: (((.body // "") | capture("<!-- backlog-id: (?<i>[a-z0-9]{5}) -->") | .i) // null)})' || die 4 "gh issue list failed"
 }
 # ensure_labels: create the backlog label and the four priority labels that are missing (one list call, then one create per gap).
 ensure_labels() {
-  local have p n; have=$(gh label list --json name --limit 200 | jq -r '.[].name') || die 4 "gh label list failed"
+  local have p n; have=$(ghr label list --json name --limit 200 | jq -r '.[].name') || die 4 "gh label list failed"
   declare -A color=([critical]=B60205 [now]=D93F0B [next]=FBCA04 [later]=0E8A16)
-  printf '%s\n' "$have" | grep -qxF "$LABEL" || gh label create "$LABEL" --color 5319E7 --description "a backlog item (bin/backlog.sh)" >/dev/null || die 4 "cannot create label $LABEL"
+  printf '%s\n' "$have" | grep -qxF "$LABEL" || ghr label create "$LABEL" --color 5319E7 --description "a backlog item (bin/backlog.sh)" >/dev/null || die 4 "cannot create label $LABEL"
   for p in "${PRIOS[@]}"; do n="priority: $p"
-    printf '%s\n' "$have" | grep -qxF "$n" || gh label create "$n" --color "${color[$p]}" --description "backlog priority $p" >/dev/null || die 4 "cannot create label $n"
+    printf '%s\n' "$have" | grep -qxF "$n" || ghr label create "$n" --color "${color[$p]}" --description "backlog priority $p" >/dev/null || die 4 "cannot create label $n"
   done
 }
 # resolve_id VALUE: the issue's JSON object on stdout, or exit 6.
@@ -83,7 +87,7 @@ body_of() { # WHY DONEWHEN [SUFFIX ADDED SOURCE]
 # file_issue TITLE BODY PRIORITY(or empty): creates the issue, prints its number.
 file_issue() {
   local url labels=(--label "$LABEL"); [ -z "$3" ] || labels+=(--label "priority: $3")
-  url=$(printf '%s' "$2" | gh issue create --title "$1" --body-file - "${labels[@]}") || die 4 "gh issue create failed for: $1"
+  url=$(printf '%s' "$2" | ghr issue create --title "$1" --body-file - "${labels[@]}") || die 4 "gh issue create failed for: $1"
   printf '%s' "${url##*/}"
 }
 out_issue() { # JSON-with-number: print one issue as text or JSON
@@ -112,8 +116,8 @@ cmd_move() {
     if [ "$JSON" = 1 ]; then jq -nc --argjson n "$n" --arg p "$TO" '{ok: true, number: $n, priority: $p, moved: false}'; else printf '#%s is already %s - nothing to do\n' "$n" "$TO"; fi; return 0
   fi
   ensure_labels
-  if [ -n "$cur" ]; then gh issue edit "$n" --add-label "priority: $TO" --remove-label "priority: $cur" >/dev/null || die 4 "gh issue edit failed for #$n"
-  else gh issue edit "$n" --add-label "priority: $TO" >/dev/null || die 4 "gh issue edit failed for #$n"; fi
+  if [ -n "$cur" ]; then ghr issue edit "$n" --add-label "priority: $TO" --remove-label "priority: $cur" >/dev/null || die 4 "gh issue edit failed for #$n"
+  else ghr issue edit "$n" --add-label "priority: $TO" >/dev/null || die 4 "gh issue edit failed for #$n"; fi
   if [ "$JSON" = 1 ]; then jq -nc --argjson n "$n" --arg f "$cur" --arg p "$TO" '{ok: true, number: $n, from: $f, priority: $p, moved: true}'; else printf '#%s\n' "$n"; fi
 }
 cmd_done() {
@@ -121,7 +125,7 @@ cmd_done() {
   if [ "$(printf '%s' "$it" | jq -r .state)" = closed ]; then
     if [ "$JSON" = 1 ]; then jq -nc --argjson n "$n" '{ok: true, number: $n, state: "closed", closed: false}'; else printf '#%s is already closed - nothing to do\n' "$n"; fi; return 0
   fi
-  gh issue close "$n" --reason completed >/dev/null || die 4 "gh issue close failed for #$n"
+  ghr issue close "$n" --reason completed >/dev/null || die 4 "gh issue close failed for #$n"
   if [ "$JSON" = 1 ]; then jq -nc --argjson n "$n" '{ok: true, number: $n, state: "closed", closed: true}'; else printf '#%s\n' "$n"; fi
 }
 cmd_labels() { ensure_labels; if [ "$JSON" = 1 ]; then jq -nc '{ok: true}'; else echo "labels ok"; fi; }
@@ -171,12 +175,12 @@ cmd_migrate() {
     if [ -n "$hit" ]; then
       num=$(jq -r .number <<<"$hit"); state=skipped; skipped=$((skipped + 1))
       if [ "$bucket" = "done" ] && [ "$(jq -r .state <<<"$hit")" = open ] && [ "$DRY" = 0 ]; then
-        gh issue close "$num" --reason completed >/dev/null || die 4 "gh issue close failed for #$num"; state=closed-now
+        ghr issue close "$num" --reason completed >/dev/null || die 4 "gh issue close failed for #$num"; state=closed-now
       fi
     elif [ "$DRY" = 1 ]; then state=would-file; filed=$((filed + 1))
     else
       num=$(file_issue "$title" "$(body_of "$why" "$dw" "$id" "$added" "$src")" "$prio"); [[ $num =~ ^[0-9]+$ ]] || die 4 "gh issue create printed no issue number for $id"
-      [ "$bucket" != "done" ] || gh issue close "$num" --reason completed >/dev/null || die 4 "filed #$num for $id but gh issue close failed; run again to close it"
+      [ "$bucket" != "done" ] || ghr issue close "$num" --reason completed >/dev/null || die 4 "filed #$num for $id but gh issue close failed; run again to close it"
       state=filed; filed=$((filed + 1))
     fi
     res+=$(jq -nc --arg id "$id" --arg s "$state" --arg n "$num" --arg p "$prio" --arg t "$title" '{legacy_id: $id, result: $s, number: ($n | tonumber? // null), priority: (if $p == "" then null else $p end), title: $t}')$'\n'
@@ -256,6 +260,9 @@ cmd_selftest() {
   o=$(bb "done" --id 2 --json); check "done on a closed issue is a reported no-op" "$(printf '%s' "$o" | jq -e '.closed == false' >/dev/null; echo $?)"
   bb move --id 2 --to now >/dev/null 2>&1; rc=$?; check "move: a closed issue is exit 3" "$([ "$rc" = 3 ]; echo $?)"
   check "list: default hides the closed one, --state all shows both" "$([ "$(bb list | wc -l)" = 1 ] && [ "$(bb list --state all | wc -l)" = 2 ]; echo $?)"
+  # the default gh is a name on PATH, which is what a seat has; COQ_GH set to a path would not have caught the wrapper calling itself
+  o=$(cd "$T/repo" && env -u COQ_GH PATH="$T/stub:$PATH" COQ_BACKLOG_GIT="$T/repo" bash "$SELF" list --state all); rc=$?
+  check "list works with gh found on PATH (the default)" "$([ "$rc" = 0 ] && [ "$(printf '%s\n' "$o" | wc -l)" = 2 ]; echo $?)"
 
   # migrate
   local O="$T/old" before2
