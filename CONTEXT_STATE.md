@@ -49,6 +49,43 @@
 
 
 
+
+## Checkpoint 2026-10-12 14:36 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
+  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
+- Architect order 2026-10-12: at 22 percent context do not hold for compaction; keep going, the guard compacts at 30 percent.
+
+#### Toolchain
+
+- Step 1 (ed59a75): monitors.sh health, bringup and recover judge reserved panes by process; case 17.
+- Step 2 landed: herdr/bin/turnwatch.sh and recwatch.sh in the repo (config herdr.json watches.*, schema updated), monitors.json tab 4 "monitors 4 - watches" kind watch with slots 4.1.1 turnwatch and 4.1.2 recwatch, monitors.schema.json kind enum has watch; cases 04 and 05 counts updated (ten reserved panes, twelve note 100), case 18-watches added.
+- Verified in the test pane: make -C herdr lint, CASES='04 05 17 18' make -C herdr test (4 passed). Full suite last run after step 1 only.
+- Test recipe: herdr/bin/testpane.sh $COQ_TEST_PANE "cd $COQ_WORKTREE && clear; CASES='NN' make -C herdr test > $SCRATCH/run.log 2>&1; grep -E 'FAIL|^tests:' $SCRATCH/run.log; echo CASE-DONE" then loop herdr --session stable pane wait-output $COQ_TEST_PANE --regex '^CASE-DONE$' --source recent --timeout 115000 (each call under 120 s).
+
+#### Active Tasks
+
+- S3 supervisor.sh core: flock single instance, halt flag honoured, timeouts on every call, herdr started via systemctl --user start herdr-stable only, bringup --apply, belt (shared function from recover.sh belt node, or call recover's logic), podman check and podman system migrate (backlog 60l24), bearings (bearings.sh stable status --json; restart with HERDR_ENV=1 and HERDR_TAB_ID of the bearings pane, serve --join with session.json values, then wait --to herdr.json watches.architect_agent), one summary line per tick into <state>/supervisor/last.log, reserved slot 4.1.3 "supervisor" tailing it.
+- S4 re-seat (rerun seat.sh door 1 or door 2 when a seat's pane has no claude in the foreground twice in a row; down.lock in seat.sh --down; cap 3 per 30 min then one 500; closed ticket gets --down; adopted seats and the monitor seat skipped, monitor seat is bringup's).
+- S5 systemd units herdr/systemd (timer 30 s, oneshot, linger note), Makefile target, RUNBOOK, docs.sh sop, evidence per AC (all three are human; give the live recipe), retro note, PR, work-order done.
+- Leave ~/.cache/coq-watch alone (outside paths): after the owner or architect runs bringup apply the interim turnwatch at 2.3.1 is released by glass, interim recwatch at 2.3.2 keeps running and double-prompts until killed; say so in the runbook.
+
+#### Blockers
+
+- None. Installing the systemd units on the host is not a worker action.
+
+### New this checkpoint
+
+- Decision: turnwatch reads seats from seat records and finds the architect by agent name (config), recwatch walks events/YYYY/MM under the checkout and every treehouse status path, announces a file name once across roots, ignores records older than the watcher start.
+
+### Hydration prompt
+
+You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint, AGENTS.md first 60 lines and playbooks/worker.md. Next: step S3 (herdr/bin/supervisor.sh). Commit each step with make step, test only in wD3:p89 through herdr/bin/testpane.sh.
+
 ## Checkpoint 2026-10-12 14:26 UTC
 
 ### Current state
