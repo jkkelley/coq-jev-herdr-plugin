@@ -38,6 +38,9 @@
     "hook_post_timeout_seconds": 30,
     "bearings_tier": "stable"
   },
+  "resume_checkpoint": {
+    "hook_timeout_seconds": 10
+  },
   "halt_flag": "${state_dir}/HALT",
   "monitor_task": "watch the event log, the seats and the guard; wake a waiting seat on status change with one line; raise owner notifications for 423 and any 5xx; run cleanup every tick",
   "watches": {
