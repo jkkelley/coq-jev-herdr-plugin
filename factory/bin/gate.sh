@@ -66,11 +66,13 @@ same_head() {
 }
 # the event log as one JSON array on stdout.
 # One unreadable file must not blind the gate: the batch read is the fast path, and only when jq refuses it are the files read one by one,
-# skipping the bad ones (case 02-no-route plants one, and route.sh turns it into its own 500).
+# skipping the bad ones (case 02-no-route plants one, and route.sh turns it into its own 500). The `|| true` matters: under pipefail the
+# loop's status is the last file's jq status, so a bad file that find happened to list last made the whole read fail, one run in three
+# in 02-no-route on 2026-10-12 (backlog disva), depending on directory order.
 log_all() {
   local files f; mapfile -d '' files < <(find "$EVENTS" -path '*/20*/*.json' -name '*.json' -print0 2>/dev/null)
   [ "${#files[@]}" -gt 0 ] || { echo '[]'; return; }
-  jq -s '.' "${files[@]}" 2>/dev/null || { for f in "${files[@]}"; do jq -c '.' "$f" 2>/dev/null; done | jq -s '.'; }
+  jq -s '.' "${files[@]}" 2>/dev/null || { for f in "${files[@]}"; do jq -c '.' "$f" 2>/dev/null || true; done | jq -s '.'; }
 }
 # field NAME JSON: the record's field, empty when absent.
 field() { jq -r --arg k "$1" '.[$k] // empty' <<<"$2"; }

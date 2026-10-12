@@ -9,7 +9,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 T=WO-20261011-aaaa
 SHA=9ed0690f3a1c5b7d2e4f60718293a4b5c6d7e8f9
 world_up sha
-ev() { "$R/events/bin/event.sh" add "$@"; }
+ev() { evo "$@"; }   # evo keeps the ids in order across the host clock stepping back, and passes event.sh exit codes on
 
 echo "-- event.sh writes the sha and the pr, and refuses a malformed one"
 # a review.passed is held unless a test.passed names the same head (gate.sh heads_match, WO-20261012-3bb0), so the test comes first

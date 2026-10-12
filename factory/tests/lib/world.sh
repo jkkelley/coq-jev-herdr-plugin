@@ -11,7 +11,7 @@
 #   world_up <name>          sets W (case root), R (repo copy), ROUTE (the runner), STATE (runner state dir), HLOG (herdr log)
 #   rec KIND CODE SEAT [TICKET] [ATTEMPT]   one record through the copy's event.sh; prints its id; REC_SHA=<hex> and REC_PR=<n> in the
 #                            environment add --sha and --pr (a review.passed is held by gate.sh unless a test.passed names the same head)
-#   evo ARGS                 event.sh add, strictly after the last evo record; prints its id
+#   evo ARGS                 event.sh add, with an id strictly after every record already in the world; rec goes through it
 #   run_once [flags]         route.sh once --from-start --repo $R --state $STATE
 #   rec_json ID              the record's JSON
 #   hcalls                   how many times the runner called herdr
@@ -49,18 +49,22 @@ STUB
 rec() {
   local args=(--code "$2" --seat "$3" --kind "$1"); [ -z "${4:-}" ] || args+=(--ticket "$4"); [ -z "${5:-}" ] || args+=(--attempt "$5")
   [ -z "${REC_SHA:-}" ] || args+=(--sha "$REC_SHA"); [ -z "${REC_PR:-}" ] || args+=(--pr "$REC_PR")
-  "$R/events/bin/event.sh" add "${args[@]}"
+  evo "${args[@]}"
 }
-# evo EVENT.SH-ARGS: one record a second after the last, and never one that sorts before the last. Ids sort by UTC second, and the host
-# clock has stepped back a second mid-run before (06-belt breadcrumb); a record that landed before its predecessor changed which head was
-# "older". Prints the id. For the cases that compare records of one ticket by order (12-gate, 13-gate-route).
+# evo EVENT.SH-ARGS: event.sh add, but the id sorts strictly after the id of every other record in this world; prints the id.
+# Ids sort by UTC second then a random suffix, and the runner routes in id order. The host clock steps back about a second every ~35 s
+# (06-belt breadcrumb), so "sleep 1 between records" does not keep them in order: 02-no-route, 08-break-glass and 10-sha each failed
+# about one run in four on 2026-10-12 (backlog disva) when a later record landed in the same second as, and sorted before, an earlier one.
+# A record that would not sort after the last is deleted and written again a moment later. event.sh's own exit code is passed on.
 evo() {
-  local id last
-  for _ in 1 2 3; do
-    sleep 1; id=$("$R/events/bin/event.sh" add "$@") || return 1
-    last=$(cat "$W/evo.last" 2>/dev/null || true)
-    if [[ -z "$last" || "$id" > "$last" ]]; then printf '%s' "$id" > "$W/evo.last"; printf '%s\n' "$id"; return 0; fi
-    find "$R/events" -name "$id.json" -delete
+  local id last rc
+  for _ in $(seq 1 20); do
+    id=$("$R/events/bin/event.sh" add "$@"); rc=$?; [ "$rc" = 0 ] || return "$rc"
+    # the newest id of ANY other record in the world: the runner's own escalated and receipt records count too, since the table's
+    # `escalations` counts the ones with an id before the record (03-escalate failed when a blocked 423 sorted before one).
+    last=$(find "$R/events" -path '*/20*/*.json' -name '*.json' ! -name "$id.json" -printf '%f\n' 2>/dev/null | sort | tail -n 1); last=${last%.json}
+    if [[ -z "$last" || "$id" > "$last" ]]; then printf '%s\n' "$id"; return 0; fi
+    find "$R/events" -name "$id.json" -delete; sleep 0.3
   done
   return 1
 }
