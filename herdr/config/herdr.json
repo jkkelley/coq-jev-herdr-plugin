@@ -10,10 +10,14 @@
   "retire_poll_seconds": 10,
   "nudge_wait_seconds": 180,
   "nudge_settle_seconds": 10,
+  "session_wait_seconds": 10,
+  "claude_sessions_dir": "~/.claude/sessions",
+  "guard_watch_interval_seconds": 15,
   "max_agents": 8,
   "bringup_gate": true,
   "require_guard": true,
   "monitor_seat": "monitor",
+  "shells": ["sh", "bash", "dash", "zsh", "fish", "ksh"],
   "runtime_bin": {
     "claude": "claude",
     "codex": "codex"

@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T174443Z-201-s43mp",
+  "at": "2026-10-12T17:44:43Z",
+  "code": 201,
+  "seat": "tester-ee9c",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pD9",
+  "note": "make -C herdr test: tests: 22 passed, 0 failed, exit 0 (PR 31 sha 77225ac)",
+  "evidence": [
+    "/home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/8/coq-jev-herdr-plugin/.tester-run.log"
+  ],
+  "observations": [],
+  "sha": "77225ac",
+  "pr": 31
+}

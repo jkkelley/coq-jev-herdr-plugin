@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154804Z-100-pt4rz",
+  "at": "2026-10-12T15:48:04Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-3bb0",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:p8G",
+  "note": "PR 28 open on 2401f1b: gate.sh and the route guards, flow busy rule, RUNBOOK. Factory suite 18 passed 0 failed in the test pane.",
+  "evidence": [],
+  "observations": [],
+  "sha": "2401f1b",
+  "pr": 28
+}

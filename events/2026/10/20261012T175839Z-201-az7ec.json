@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T175839Z-201-az7ec",
+  "at": "2026-10-12T17:58:39Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261012-3bb0",
+  "kind": "review.passed",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:pEB",
+  "note": "AC-H1 and AC-H2 have evidence (cases 12, 13; test mggew 19 passed); lint all ok at 0544607; no roles/playbooks touched. Main moved: conflicts in CONTEXT_STATE.md, work-orders/INDEX.md",
+  "evidence": [
+    "/tmp/claude-1000/lint-3bb0.log"
+  ],
+  "observations": [
+    {
+      "path": "CONTEXT_STATE.md",
+      "line": 1,
+      "saw": "conflicts with origin/main f329478",
+      "expected": "merges cleanly"
+    },
+    {
+      "path": "work-orders/INDEX.md",
+      "line": 1,
+      "saw": "conflicts with origin/main f329478",
+      "expected": "merges cleanly"
+    }
+  ],
+  "to": "merger",
+  "sha": "0544607",
+  "pr": 28
+}

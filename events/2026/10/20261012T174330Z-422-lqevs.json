@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T174330Z-422-lqevs",
+  "at": "2026-10-12T17:43:30Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261012-3bb0",
+  "kind": "review.changes",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:pDA",
+  "note": "Gate code, wake line and case 13 satisfy AC-H1 and AC-H2 (bahk9 gaps closed in the wake line). make lint FAILS on fd36e21: bad changelog entry name, a duplicate added by 4211d75.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-7-coq-jev-herdr-plugin/feff0c60-b9f7-4bca-9cf2-40f746066871/scratchpad/lint-fd36e21.log"
+  ],
+  "observations": [
+    {
+      "path": "changelog/2026/10/20261012-wake-line-carries-the-supersedes-and-merge-main-st-ga.md",
+      "line": 1,
+      "saw": "name ends -ga, 2 chars, and duplicates ...merge-main-st.md (same title, same text); lint changelog check prints 'bad entry name' and FAIL (bin/changelog.sh",
+      "expected": "53 allows only a 5 char suffix)"
+    }
+  ],
+  "attempt": 2,
+  "sha": "fd36e21",
+  "pr": 28
+}

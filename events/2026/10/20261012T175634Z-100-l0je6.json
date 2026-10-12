@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T175634Z-100-l0je6",
+  "at": "2026-10-12T17:56:34Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261012-3bb0",
+  "kind": "seat.up",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:pED",
+  "note": "WO-20261012-3bb0 - Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker, all from routes and the merger's checks",
+  "evidence": [],
+  "observations": []
+}

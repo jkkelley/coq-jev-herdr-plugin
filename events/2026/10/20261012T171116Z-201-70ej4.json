@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T171116Z-201-70ej4",
+  "at": "2026-10-12T17:11:16Z",
+  "code": 201,
+  "seat": "reviewer-ee9c",
+  "kind": "review.passed",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pCB",
+  "note": "AC-H1..H5 each have evidence; lint rc 0 in test pane; tester record 201 17/17 at 2da884e; no em dash, config not literals",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-8-coq-jev-herdr-plugin/61227d5f-4937-4eb1-b385-16052b3e88b0/scratchpad/lint.log"
+  ],
+  "observations": [
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261012-265d/README.md",
+      "line": 1,
+      "saw": "sibling epic tickets 265d 898a 8fb2 c41f carried on this branch by commit 8129df7",
+      "expected": "non-blocking, parent ticket must exist on main, not a 422"
+    }
+  ],
+  "sha": "2da884e",
+  "pr": 31
+}

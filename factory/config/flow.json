@@ -2,6 +2,7 @@
   "schema_version": "1.0.0",
   "poll_seconds": 15,
   "stall_seconds": 90,
+  "busy_grace_seconds": 1800,
   "visible_within_seconds": 120,
   "watcher_seat": "flow-watch",
   "events_dir": "${repo}/events",

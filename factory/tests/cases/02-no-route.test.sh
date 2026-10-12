@@ -27,5 +27,6 @@ sleep 1; d="$R/events/$(date -u +%Y/%m)"; printf 'not json' > "$d/$(date -u +%Y%
 rec pr.opened 100 worker-wo-20261011-aaaa $T >/dev/null
 run_once; assert_eq "exit 0" "$?" 0
 assert_eq "the good record after it was still routed" "$(hcalls)" 1
+[ "$(hcalls)" = 1 ] || { echo "  DIAG herdr log:"; cat "$HLOG"; echo "  DIAG records and 500 notes:"; find "$R/events" -name "*.json" -path "*/20*/*" | sort | sed "s|.*/||"; cat "$R"/events/20*/*/*-500-*.json | jq -r .note; ls "$STATE/routed"; }
 assert_match "an unreadable-record 500 exists" "$(cat "$R"/events/20*/*/*-500-*.json | jq -r .note)" "unreadable record"
 case_done

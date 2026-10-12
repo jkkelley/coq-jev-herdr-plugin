@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # factory/tests/run.sh - the route runner suite. One command, one verdict: "tests: N passed, M failed".
-#   bash factory/tests/run.sh              re-execs itself in Podman (localhost/coq-factory-test:1), --network=none
+#   bash factory/tests/run.sh              re-execs itself in Podman (localhost/coq-factory-test:2), --network=none
 #   bash factory/tests/run.sh --image-only build the image and stop
 #   CASES="01 03" bash factory/tests/run.sh   a subset, by prefix
 # Each factory/tests/cases/*.test.sh builds its own world (lib/world.sh: a copy of the pieces the runner touches, a stub
@@ -9,7 +9,7 @@
 # runner only ever calls `herdr agent prompt`, so a stub proves exactly what it asks of herdr.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-IMAGE="localhost/coq-factory-test:1"
+IMAGE="localhost/coq-factory-test:2"
 
 if [ "${COQ_TEST_IN_CONTAINER:-0}" != 1 ]; then
   REPO_ROOT="$(cd "$HERE/../.." && pwd)"

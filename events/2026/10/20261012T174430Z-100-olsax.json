@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T174430Z-100-olsax",
+  "at": "2026-10-12T17:44:30Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-3bb0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-3bb0",
+  "pane": null,
+  "note": "review changes lqevs: fixing the changelog entry name",
+  "evidence": [],
+  "observations": []
+}
