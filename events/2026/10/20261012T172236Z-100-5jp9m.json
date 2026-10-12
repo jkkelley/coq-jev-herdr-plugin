@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T172236Z-100-5jp9m",
+  "at": "2026-10-12T17:22:36Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-da52",
+  "kind": "work.started",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:p8A",
+  "note": "wake after compaction; reading 422 3hdaj",
+  "evidence": [],
+  "observations": []
+}

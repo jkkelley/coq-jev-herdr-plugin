@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T172326Z-100-86hk0",
+  "at": "2026-10-12T17:23:26Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-da52",
+  "kind": "work.started",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:p8A",
+  "note": "attempt 4 per architect ruling on gg539: merge main, drop stale copies",
+  "evidence": [],
+  "observations": []
+}

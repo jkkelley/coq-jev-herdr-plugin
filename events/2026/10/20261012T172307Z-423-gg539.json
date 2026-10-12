@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T172307Z-423-gg539",
+  "at": "2026-10-12T17:23:07Z",
+  "code": 423,
+  "seat": "worker-wo-20261012-da52",
+  "kind": "blocked",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:p8A",
+  "note": "Third failure (review 3hdaj, attempt 3). Stale ready copies of 9b2c and da52 in the epic dir; origin/main also moved to 55e799e. Fix is git rm of both plus reindex; a fourth attempt is forbidden, architect to rule.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/61a6609e-1d7c-4028-90a8-5e314da8e63b/scratchpad/dups-wc.log"
+  ],
+  "observations": [],
+  "attempt": 3,
+  "to": "architect",
+  "sha": "a58ccd6",
+  "pr": 25
+}

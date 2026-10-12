@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T180227Z-100-t1lb1",
+  "at": "2026-10-12T18:02:27Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-da52",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:p8A",
+  "note": "Attempt 4 per architect ruling on blocked 423 gg539: merged origin/main 55e799e, removed stale epic-dir copies of 9b2c, b800, da52; answers review 3hdaj. lint ok, factory 17/17, herdr 21/21.",
+  "evidence": [],
+  "observations": [],
+  "sha": "7b91029",
+  "pr": 25
+}
