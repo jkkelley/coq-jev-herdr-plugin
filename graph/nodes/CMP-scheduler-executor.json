@@ -1,0 +1,34 @@
+{
+  "id": "CMP-scheduler-executor",
+  "type": "Component",
+  "title": "scheduler exec: the host half, a gRPC server on a unix socket in a labelled herdr pane that runs an allowlisted verb table (herdr, the seat script, the queue script, the event writer) with a timeout and returns exit code and output tails",
+  "status": "proposed",
+  "text": "It decides nothing: a verb not in its table is refused, an argument with a newline is refused, every call is one JSON log line. It is the one place that changes when the bus lands.",
+  "sources": [
+    {
+      "kind": "spec",
+      "id": "SPEC-16",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-scheduler-two-processes"
+    },
+    {
+      "kind": "implements",
+      "to": "IFC-scheduler-executor"
+    },
+    {
+      "kind": "depends_on",
+      "to": "IFC-herdr-socket"
+    },
+    {
+      "kind": "defined_in",
+      "to": "RUN-scheduler-operate"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:28Z"
+}

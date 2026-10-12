@@ -1,0 +1,27 @@
+{
+  "id": "RSK-executor-host-tools",
+  "type": "Risk",
+  "title": "The executor depends on the host's herdr, seat script, queue script and event writer being on its path and on their exit codes meaning what their headers say; a script that changes an exit code changes a retry class silently",
+  "status": "proposed",
+  "text": "Mitigation: the verb table pins every exit class in configuration, the contract test runs every verb against the real scripts in the test image, and the executor logs every call with its exit code.",
+  "sources": [
+    {
+      "kind": "file",
+      "id": "herdr/bin/seat.sh",
+      "at": null
+    },
+    {
+      "kind": "spec",
+      "id": "SPEC-16.H",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "risks",
+      "to": "CMP-scheduler-executor"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:21Z"
+}

@@ -1,0 +1,35 @@
+{
+  "id": "DEC-scheduler-two-processes",
+  "type": "Decision",
+  "title": "The scheduler decides inside a container that holds no host tool and acts only through the executor, a dumb host process behind gRPC on a unix socket; the bus later replaces the socket, not the split",
+  "status": "proposed",
+  "text": "Rejected: a container with the home directory mounted (every host tool bound in); the scheduler typing into a shell pane (prompt parsing, no exit code); the scheduler on the host (not Podman). Cost: two processes, two panes, one socket.",
+  "sources": [
+    {
+      "kind": "spec",
+      "id": "SPEC-16",
+      "at": "2026-10-12T19:30Z"
+    },
+    {
+      "kind": "owner",
+      "id": "bearings",
+      "at": "2026-10-12T18:34Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-scheduler-go-podman"
+    },
+    {
+      "kind": "depends_on",
+      "to": "DEC-nats-jetstream-grpc"
+    },
+    {
+      "kind": "implements",
+      "to": "DEC-no-process-under-agent"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:28Z"
+}

@@ -1,0 +1,36 @@
+{
+  "id": "REQ-stall-two-signal",
+  "type": "Requirement",
+  "title": "A gate is stalled only when its consumer record is overdue and the consumer seat is absent or idle past the threshold; a busy seat is never a stall, and the tick loop touches the belt so a long action never reads as a stopped belt",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "file",
+      "id": "factory/bin/flow.sh#stalled_gates",
+      "at": null
+    },
+    {
+      "kind": "file",
+      "id": "herdr/bin/turnwatch.sh",
+      "at": null
+    },
+    {
+      "kind": "spec",
+      "id": "SPEC-16.F",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-owner-notifications"
+    },
+    {
+      "kind": "depends_on",
+      "to": "REQ-status-change-wakeups"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:26Z"
+}

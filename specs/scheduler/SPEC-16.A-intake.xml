@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.A" domain="intake" version="1.0.0" title="Records intake: roots, order, the ledger and the one writer" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="a-purpose" title="What intake decides"/>
+    <item ref="a-roots" title="Roots: where records are read"/>
+    <item ref="a-source" title="The Source interface and the file source"/>
+    <item ref="a-order" title="Order and the first-start boundary"/>
+    <item ref="a-ledger" title="The routed ledger: claim before act"/>
+    <item ref="a-validate" title="Reading a record: what is checked, what is not"/>
+    <item ref="a-interrupted" title="Interrupted claims at start"/>
+    <item ref="a-writer" title="The one writer: records go out through the executor"/>
+    <item ref="a-config" title="Keys this domain reads"/>
+    <item ref="a-owned" title="Rows and codes this domain owns"/>
+    <item ref="a-tests" title="Cases the build ticket proves"/>
+    <item ref="a-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="factory/bin/route.sh#tick; spec:SPEC-16#s-domains">Intake turns files in the record log into Records exactly once each, in id order, from every root the configuration names, and hands each to routing with a claim already held. It reads; it never writes a record.</purpose>
+
+  <section id="a-purpose" title="What intake decides">
+    <node id="REQ-intake-exactly-once" status="proposed">
+      <title>Every record in every configured root is handed to routing exactly once across restarts, roots and the bash-to-Go cut-over, by a claim in a file ledger whose words the bash runner already writes</title>
+      <source kind="file" id="factory/bin/route.sh#route_file"/>
+      <source kind="spec" id="SPEC-16.A" at="2026-10-12T19:30Z"/>
+      <edge kind="implements" to="REQ-factory-node-contract"/>
+      <edge kind="depends_on" to="REQ-event-log"/>
+    </node>
+    <text id="a-in" source="factory/bin/route.sh#tick">In: the directories of the record log. Out: a stream of (Record, claim) pairs in id order, one per record id, plus the ledger words that say what became of each.</text>
+    <text id="a-not" level="NEVER" source="factory/bin/route.sh#route_file">Intake never reads a kind, a code or a note to decide anything: its only branches are on the file name, the ledger and the record's own seat.</text>
+  </section>
+
+  <section id="a-roots" title="Roots: where records are read">
+    <text id="a-roots-why" source="herdr/bin/recwatch.sh; factory/bin/route.sh#tick">The bash runner watches one directory, the checkout's log, while seats in slots write into their own copy of the log, so a bus copies files across. Intake watches every root the configuration names and makes the copy unnecessary.</text>
+    <key name="intake.roots" type="array of string" source="spec:SPEC-16.G#g-keys">Directory patterns, variables resolved, globs allowed; the first pattern is the checkout's log. Each root holds year and month directories of record files.</key>
+    <text id="a-roots-dedupe" level="MUST" source="herdr/bin/recwatch.sh">A record id seen in two roots is one record: the root earliest in the list that holds it is Record.Root; a later copy of the same id is the same ledger entry and is never routed again.</text>
+    <text id="a-roots-list" source="herdr/bin/recwatch.sh">A tick lists only the current and the previous month directory of each root, by UTC, and skips names that sort below the last id already seen in that root; a month turning needs no edit.</text>
+    <text id="a-roots-mount" level="MUST" source="spec:SPEC-16.H#h-run">Every root is mounted read-only into the container; intake cannot write into a root even by mistake.</text>
+    <text id="a-roots-poll" source="herdr/bin/recwatch.sh">Polling, not inotify: file notification is not available on every filesystem WSL mounts, and a one second listing of a few thousand names costs nothing the line can feel.</text>
+  </section>
+
+  <section id="a-source" title="The Source interface and the file source">
+    <text id="a-source-iface" level="MUST" source="spec:SPEC-16#s-contracts; node:DEC-nats-jetstream-grpc">Source is the interface: List(sinceID) returns new references across roots in id order; Read(ref) returns a Record or an unreadable error. The file source implements it now; a bus source later, and the ledger stays.</text>
+    <field name="Ref.ID, Ref.Root, Ref.Path" type="string" source="spec:SPEC-16.A#a-roots">A reference is the id, the root it was first seen in and its path there; List never opens the file.</field>
+    <text id="a-source-bus" source="node:DEC-nats-jetstream-grpc">With the bus, List becomes a durable pull consumer's fetch and Read the message body; the claim in the ledger still decides exactly-once, so an at-least-once bus delivery is safe.</text>
+    <text id="a-source-pure" source="node:DEC-functional-style">Ordering, dedupe across roots and the boundary filter are pure functions over lists of references; only the directory listing and the file read touch the file system.</text>
+  </section>
+
+  <section id="a-order" title="Order and the first-start boundary">
+    <text id="a-order-id" source="events/bin/event.sh; factory/tests/lib/world.sh">Ids sort by UTC second, then code, then a random suffix: two records in one second have no defined order, so nothing may depend on it; tests that depend on order write one second apart.</text>
+    <key name="intake.since" type="string: now or start" source="factory/bin/route.sh#start">What the first start routes: now writes the start stamp as the boundary and routes only later records; start writes the zero stamp and routes the whole log. The boundary file in the state directory persists it.</key>
+    <text id="a-order-boundary" level="MUST" source="factory/bin/route.sh#tick">A record whose id sorts below the boundary is never listed; a restart keeps the boundary file, so a log of old records never wakes every seat that ever existed.</text>
+    <text id="a-order-shadow" source="spec:SPEC-16.J#j-shadow">In shadow mode the boundary is the shadow start, in the shadow state directory; going active adopts the bash runner's boundary and ledger, so the switch skips nothing and repeats nothing.</text>
+  </section>
+
+  <section id="a-ledger" title="The routed ledger: claim before act">
+    <text id="a-ledger-file" level="MUST" source="factory/bin/route.sh#route_file">The ledger is one file per record id under the state directory's routed directory. Claim is an exclusive create of that file; the process that created it owns the record.</text>
+    <state name="claimed" source="factory/bin/route.sh#route_file">Written with the UTC at claim, before any job exists; a restart that finds it with no job files treats the record as interrupted.</state>
+    <state name="done" source="factory/bin/route.sh#route_file">The primary action reached done; the word is followed by the action name, exactly as the bash runner writes it.</state>
+    <state name="failed" source="factory/bin/route.sh#route_file">The primary action was dead-lettered; a 500 note names it.</state>
+    <state name="ignored" source="factory/bin/route.sh#route_file">The first row said ignore; no job, no receipt, the ledger entry is the only trace.</state>
+    <state name="unrouted" source="factory/bin/route.sh#route_file">No row matched; a 500 note to the monitor names the kind, the code and the id.</state>
+    <state name="own" source="factory/bin/route.sh#route_file">The record's seat is one of the scheduler's own seats; never routed, or a receipt would receipt itself without end.</state>
+    <state name="unreadable" source="factory/bin/route.sh#route_file">The file did not parse or lacks a required field; a 500 note names it.</state>
+    <state name="interrupted" source="factory/bin/route.sh#recover_interrupted">Claimed by a run that died before writing a job; a 500 note names it and the record is never repeated.</state>
+    <text id="a-ledger-parity" level="MUST" source="factory/bin/route.sh#route_file; spec:SPEC-16.J#j-active">The words and the layout match the bash runner's ledger byte for byte, so the cut-over adopts the bash state directory and the parity report can compare the two ledgers.</text>
+    <text id="a-ledger-own" source="factory/bin/route.sh#route_file">The own test uses the configured list of runner seats, which holds the scheduler's seat and the bash runner's seat, so a receipt the bash runner wrote during shadow mode is never routed either.</text>
+  </section>
+
+  <section id="a-validate" title="Reading a record: what is checked, what is not">
+    <text id="a-validate-what" level="MUST" source="events/schema/event.schema.json">Read decodes the file into Record with unknown fields refused and the required fields present: schema version, id, at, code, seat, kind; the id must equal the file name and the patterns of id, at and code must hold.</text>
+    <text id="a-validate-not" source="lint/lint.sh; events/bin/event.sh#check">Full schema validation is the lint's job on every file of the log, not the scheduler's at runtime; the scheduler checks the shape it reads and carries the rest through untouched.</text>
+    <text id="a-validate-bad" source="factory/bin/route.sh#route_file">A file that fails Read is ledgered unreadable with a 500 note naming the id; a file that appears and vanishes between List and Read is skipped and listed again next tick.</text>
+    <text id="a-validate-attempt" source="factory/bin/route.sh#match_route">A record with no attempt field reads as attempt 1; absent optional fields read as empty strings or zero and are never written back.</text>
+  </section>
+
+  <section id="a-interrupted" title="Interrupted claims at start">
+    <text id="a-int-rule" level="MUST" source="factory/bin/route.sh#recover_interrupted; spec:SPEC-16.D#d-store">At start, every ledger entry still claimed is examined: when job files exist for that record the jobs resume where they were; when none exist the entry becomes interrupted and one 500 note names it. Nothing is repeated silently.</text>
+    <text id="a-int-why" source="factory/bin/route.sh#route_file">The bash runner must abandon an interrupted record because its action was not durable; the scheduler's jobs are files, so a crash mid-action costs one retry, not the route.</text>
+  </section>
+
+  <section id="a-writer" title="The one writer: records go out through the executor">
+    <text id="a-writer-rule" level="MUST" source="AGENTS.md#Hard rule: dated entry files, one file per entry; events/bin/event.sh">The scheduler writes no record file. Every record it emits (receipts, escalations, notes, policy defaults) is a record job whose verb runs the event writer on the host with the scheduler's seat and the flags the writer takes.</text>
+    <text id="a-writer-seat" source="factory/bin/route.sh#emit">The executor forces the seat flag from its own configuration; the scheduler cannot write a record under another seat's name.</text>
+    <text id="a-writer-fail" level="MUST" source="factory/bin/route.sh#trouble">A record job that fails for good is a log line, never another record: a failed 500 note does not raise a 500 note, so a broken writer cannot flood the log.</text>
+    <text id="a-writer-note" source="events/bin/event.sh">Notes are cut to the writer's limit before the call; a note is for humans and nothing in the scheduler ever reads one back.</text>
+  </section>
+
+  <section id="a-config" title="Keys this domain reads">
+    <key name="intake.poll_seconds" type="integer" source="factory/config/runner.json#poll_seconds">Seconds between ticks; the belt is touched once per tick whatever the tick did.</key>
+    <key name="intake.roots" type="array of string" source="spec:SPEC-16.A#a-roots">The roots, in priority order.</key>
+    <key name="intake.since" type="string" source="spec:SPEC-16.A#a-order">now or start.</key>
+    <key name="intake.runner_seats" type="array of string" source="spec:SPEC-16.A#a-ledger">Seats whose records are own: the scheduler's seat and the bash runner's seat.</key>
+    <key name="state_dir" type="string" source="factory/config/runner.json#state_dir">The state directory; the ledger lives in its routed subdirectory and the boundary in its since file, as the bash runner lays them out.</key>
+    <ref spec="SPEC-16.G" anchor="g-keys"/>
+  </section>
+
+  <section id="a-owned" title="Rows and codes this domain owns">
+    <owns-code value="100" name="ACCEPTED" source="node:STC-http-shaped; events/schema/event.schema.json">A record with 100 is accepted into the line: a seat is up or down, work started, a ticket was cut, a pull request opened. Intake accepts every record whatever its code; routing says what happens next.</owns-code>
+  </section>
+
+  <section id="a-tests" title="Cases the build ticket proves">
+    <case id="a-t1" command="go test ./internal/intake -run TestListOrdersAcrossRoots" expected="exit 0: refs from two roots come back in id order, a duplicate id appears once with the first root" source="spec:SPEC-16.A#a-roots">A record copied from a slot root into the checkout root is still one record.</case>
+    <case id="a-t2" command="go test ./internal/intake -run TestBoundary" expected="exit 0: a record below the boundary is never listed; since=start lists the whole log" source="spec:SPEC-16.A#a-order">A restart on an old log wakes nobody.</case>
+    <case id="a-t3" command="go test ./internal/intake -run TestClaimOnce" expected="exit 0: two concurrent Claim calls on one id return true once; the ledger file holds claimed and a UTC" source="spec:SPEC-16.A#a-ledger">Exactly-once is the claim.</case>
+    <case id="a-t4" command="go test ./internal/intake -run TestLedgerWordsMatchBash" expected="exit 0: every word the bash runner writes is produced byte for byte by the Go ledger" source="spec:SPEC-16.A#a-ledger">Cut-over adopts the ledger unchanged.</case>
+    <case id="a-t5" command="go test ./internal/intake -run TestUnreadable" expected="exit 0: a file that does not parse is ledgered unreadable and yields one record job for a 500 note" source="spec:SPEC-16.A#a-validate">A bad file is named once and never again.</case>
+    <case id="a-t6" command="go test ./internal/intake -run TestInterruptedAtStart" expected="exit 0: a claimed entry with no job files becomes interrupted with one 500 note; one with job files is left for the job store" source="spec:SPEC-16.A#a-interrupted">A crash between claim and job write is reported, not repeated.</case>
+    <case id="a-t7" command="go test ./internal/intake -run TestOwnSeat" expected="exit 0: a record whose seat is in runner_seats is ledgered own and never handed to routing" source="spec:SPEC-16.A#a-ledger">A receipt never receipts itself.</case>
+  </section>
+
+  <section id="a-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="spec:SPEC-16.A#a-roots"><text>A tester in a slot writes test.passed into its slot's log; intake lists it from the slot root on the next tick and routing wakes the reviewer; the copy that the bus later puts in the checkout is the same id and is not routed.</text></example>
+    <example kind="GOOD" source="spec:SPEC-16.A#a-interrupted"><text>The container is restarted while a seat bring-up job is running; at start the claimed entry has a job file, the job resumes with its next attempt, and no 500 is written.</text></example>
+    <example kind="NEVER" source="spec:SPEC-16.A#a-writer"><text>Intake writes a receipt file itself because the executor socket was slow.</text><why>Two writers of one format; the lint cannot tell them apart.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.A#a-ledger"><text>A ledger that stores a cursor of the last routed id instead of one file per id.</text><why>Two records written in the same second sort by a random suffix; a cursor skips one.</why></example>
+  </section>
+</spec>

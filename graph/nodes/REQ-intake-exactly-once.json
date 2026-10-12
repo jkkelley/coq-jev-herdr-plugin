@@ -1,0 +1,31 @@
+{
+  "id": "REQ-intake-exactly-once",
+  "type": "Requirement",
+  "title": "Every record in every configured root is handed to routing exactly once across restarts, roots and the bash-to-Go cut-over, by a claim in a file ledger whose words the bash runner already writes",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "file",
+      "id": "factory/bin/route.sh#route_file",
+      "at": null
+    },
+    {
+      "kind": "spec",
+      "id": "SPEC-16.A",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-factory-node-contract"
+    },
+    {
+      "kind": "depends_on",
+      "to": "REQ-event-log"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:21Z"
+}

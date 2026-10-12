@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.D" domain="jobs" version="1.0.0" title="Jobs, retries, backoff and wake confirmation" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="d-purpose" title="What the jobs domain decides"/>
+    <item ref="d-job" title="A job is one durable side effect"/>
+    <item ref="d-store" title="The job store"/>
+    <item ref="d-idem" title="Idempotency and unknown outcomes"/>
+    <item ref="d-states" title="States"/>
+    <item ref="d-order" title="Order between jobs"/>
+    <item ref="d-args" title="Arguments and the prose fence"/>
+    <item ref="d-classify" title="Classifying a verdict"/>
+    <item ref="d-backoff" title="Backoff"/>
+    <item ref="d-dead" title="Dead letter"/>
+    <item ref="d-confirm" title="Wake confirmation"/>
+    <item ref="d-quiet" title="The quiet window"/>
+    <item ref="d-attempts" title="Attempts and escalations across the line"/>
+    <item ref="d-config" title="Keys this domain reads"/>
+    <item ref="d-owned" title="Rows and codes this domain owns"/>
+    <item ref="d-tests" title="Cases the build ticket proves"/>
+    <item ref="d-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="factory/bin/route.sh#perform; spec:SPEC-16#s-shape">Every side effect is a job: durable, idempotent, retried with backoff, confirmed when it is a wake, and dead-lettered with one note when it cannot be done. The bash belt lost wakes and retried nothing; this domain is the difference.</purpose>
+
+  <section id="d-purpose" title="What the jobs domain decides">
+    <node id="REQ-wake-confirmed" status="proposed">
+      <title>A wake is a job: sent through the executor, held while the seat's quiet window is open, confirmed by the seat's next record or its busy status, re-sent with backoff, and dead-lettered as a 500 note after the last attempt</title>
+      <source kind="file" id="factory/bin/route.sh#act_primary"/>
+      <source kind="spec" id="SPEC-05"/>
+      <source kind="spec" id="SPEC-16.D" at="2026-10-12T19:30Z"/>
+      <edge kind="implements" to="REQ-status-change-wakeups"/>
+      <edge kind="depends_on" to="REQ-compaction-quiet-window"/>
+    </node>
+    <node id="REQ-job-durable-idempotent" status="proposed">
+      <title>Every action the scheduler performs is a job file with an idempotency key, so a restart resumes it, a crash never doubles it, and a verdict the executor could not deliver is discovered from the world before any retry</title>
+      <source kind="file" id="factory/bin/route.sh#route_file"/>
+      <source kind="spec" id="SPEC-16.D" at="2026-10-12T19:30Z"/>
+      <edge kind="implements" to="REQ-factory-node-contract"/>
+    </node>
+    <text id="d-in" source="spec:SPEC-16#s-contracts">In: job specs from routing, policies, health and seats; verdicts from the executor; seat statuses and records for confirmation. Out: Run calls in order, state transitions, dead-letter notes.</text>
+  </section>
+
+  <section id="d-job" title="A job is one durable side effect">
+    <text id="d-job-one" level="MUST" source="spec:SPEC-16#s-contracts">One job is one executor verb with its arguments, about one record, with a key, a state, an attempt count, a next-due time and the keys it waits on. It is written before it is run and updated at every transition.</text>
+    <text id="d-job-kinds" source="spec:SPEC-16.B#b-actions; spec:SPEC-16.E#e-apply; spec:SPEC-16.F#f-stall">Kinds by origin: the primary, down and receipt of a routed record; the default and its wake from a policy; the notes and sweeps from health; the hold-and-release of seats. All go through the same store and runner.</text>
+    <text id="d-job-runner" level="MUST" source="spec:SPEC-16#s-shape">The runner takes due, runnable jobs each tick and sends each to the executor on its own goroutine with the job's timeout; the tick loop never waits on a Run. Concurrency is bounded by the configured in-flight limit.</text>
+    <text id="d-job-serial" source="factory/bin/route.sh#act_primary">Jobs on one seat run one at a time, in record order, so two prompts never interleave in one pane and a bring-up finishes before its prompt.</text>
+  </section>
+
+  <section id="d-store" title="The job store">
+    <text id="d-store-file" level="MUST" source="AGENTS.md#Hard rule: dated entry files, one file per entry">One file per job under the state directory's jobs directory, named by the key, written to a temporary name and renamed, so a reader never sees a half-written job.</text>
+    <text id="d-store-index" source="node:DEC-functional-style">At start the store reads every file into memory indexes by state, record and seat; a transition updates the file first and the index second.</text>
+    <text id="d-store-keep" source="spec:SPEC-16.I#i-status">Done and dead jobs stay for the configured keep days so status and the parity report can read them, then are pruned by the health domain's housekeeping.</text>
+  </section>
+
+  <section id="d-idem" title="Idempotency and unknown outcomes">
+    <text id="d-idem-key" level="MUST" source="factory/bin/route.sh#route_file">The key is the record id, a colon, the action, a colon, the target seat or file. A spec whose key already exists in the store is not created again; replaying a plan after a restart is a no-op.</text>
+    <text id="d-idem-verbs" source="herdr/bin/seat.sh; queue/bin/queue.sh">Naturally idempotent verbs: seat-up on a live seat, seat-down twice, enqueue of a queued ticket. Not idempotent: prompt and record, which would double a line in a pane or a file in the log.</text>
+    <text id="d-idem-unknown" level="MUST" source="spec:SPEC-16.H#h-proto">A Run whose outcome is unknown (timeout, connection lost mid-call, the executor restarted) is never retried blindly for prompt and record: the job enters discovery first.</text>
+    <text id="d-idem-discover" level="MUST" source="spec:SPEC-16.A#a-roots; spec:SPEC-16.C#c-status">Discovery, record job: intake saw a record from the scheduler's seat with the job's kind, ticket and note prefix after the attempt started: done. Prompt: the seat is busy or wrote a record after it: confirming. Else retry.</text>
+  </section>
+
+  <section id="d-states" title="States">
+    <state name="pending" source="spec:SPEC-16.D#d-job">Created, or scheduled for a retry; runnable when its next-due time has passed and every job it waits on is satisfied.</state>
+    <state name="held" source="spec:SPEC-16.C#c-caps; spec:SPEC-16.D#d-quiet">Runnable but held by a domain with a reason: quiet, cap, absent, shared. Re-examined every tick; released into pending with next-due now.</state>
+    <state name="running" source="spec:SPEC-16.D#d-job">A Run is in flight; the attempt count was incremented and the file written before the call.</state>
+    <state name="confirming" source="spec:SPEC-16.D#d-confirm">The Run returned exit 0 for a prompt job; waiting for the seat's record or busy status inside the confirmation window.</state>
+    <state name="done" source="spec:SPEC-16.D#d-classify">Finished: exit 0, a handled final exit, or a confirmed wake. The last exit and the finish time are kept.</state>
+    <state name="dead" source="spec:SPEC-16.D#d-dead">Given up after the last attempt, refused by the executor, or waiting on a job that died; the dead-letter note was written once.</state>
+  </section>
+
+  <section id="d-order" title="Order between jobs">
+    <text id="d-order-after" level="MUST" source="factory/bin/route.sh#perform">After lists the keys a job waits on: a plain key is satisfied by done only, a key with a trailing question mark by done or dead. The down of a routed record waits on the primary with the mark; the receipt waits on both without it.</text>
+    <text id="d-order-dead" source="factory/bin/route.sh#route_file">A job waiting on a plain key whose job died is dead itself with reason after and the key, without running and without its own note: the primary's note already names the record.</text>
+    <text id="d-order-seat" source="spec:SPEC-16.D#d-job">Across records, jobs on one seat are serialised by record id; a later record's prompt to a seat waits for the earlier record's prompt to leave running.</text>
+  </section>
+
+  <section id="d-args" title="Arguments and the prose fence">
+    <text id="d-args-list" level="MUST" source="spec:SPEC-16.H#h-verbs">Arguments are a list of strings bound to the verb's argv template by position; no job ever carries a shell line. The executor refuses an argument holding a newline, so no record field can smuggle a second command or a second prompt.</text>
+    <text id="d-args-ref" source="spec:SPEC-16.E#e-apply">An argument may carry the token that names an earlier job in After and is replaced at run time by the first line that job's Run printed: the id the event writer prints, which the wake after a policy default needs.</text>
+    <text id="d-args-cut" source="events/bin/event.sh">Note arguments are cut to the writer's limit before the Run; the writer's own refusal of a long note is then a bug, not a case.</text>
+  </section>
+
+  <section id="d-classify" title="Classifying a verdict">
+    <text id="d-classify-ok" level="MUST" source="spec:SPEC-16.H#h-proto">Exit 0: done, or confirming for a prompt. An exit code in the verb's final list: done with the exit kept, a handled result such as the seat script refusing a break glass it checked itself.</text>
+    <text id="d-classify-refused" level="MUST" source="spec:SPEC-16.H#h-verbs">Refused by the executor (verb not in its table, argument with a newline, template error): dead at once with the refusal as the reason; this is a scheduler bug, not a condition of the world.</text>
+    <text id="d-classify-transient" source="spec:SPEC-16.C#c-up">Any other exit code: a retry after backoff, until the verb's or the default maximum attempts. Timeout and connection loss: unknown, then discovery, then a retry when discovery finds nothing.</text>
+    <text id="d-classify-bug" source="herdr/bin/seat.sh; events/bin/event.sh">Exit 2 from a repository script is usage: a bug in the argument list, dead at once.</text>
+  </section>
+
+  <section id="d-backoff" title="Backoff">
+    <text id="d-backoff-rule" level="MUST" source="spec:SPEC-16.G#g-keys">Next due is now plus the base delay times the factor to the power of attempts already made, capped at the maximum delay, plus or minus the jitter fraction; every number is a configuration key, per verb where the verb table overrides.</text>
+    <text id="d-backoff-pure" source="node:DEC-functional-style">The arithmetic is a pure function of attempt, the policy and a random fraction the caller passes; tests pass zero.</text>
+    <text id="d-backoff-restart" source="spec:SPEC-16.D#d-store">A restart keeps next-due from the file; a job due in the past runs on the first tick.</text>
+  </section>
+
+  <section id="d-dead" title="Dead letter">
+    <text id="d-dead-note" level="MUST" source="factory/bin/route.sh#trouble; spec:SPEC-16.B#b-receipt">A primary job that dies writes the failure note of the routing domain and sets the ledger word to failed. Any other dead job writes one 500 note to the monitor naming the key, the attempts and the last reason. One note per job, ever.</text>
+    <text id="d-dead-note-dead" level="MUST" source="spec:SPEC-16.A#a-writer">A note job that dies writes no note: a log line at error level is its only trace, so a broken writer can never flood the log.</text>
+    <text id="d-dead-keep" source="spec:SPEC-16.I#i-status">Dead jobs are listed by status with their reason until pruned; an operator who fixes the cause re-runs one with the retry subcommand, which resets attempts and next-due and nothing else.</text>
+  </section>
+
+  <section id="d-confirm" title="Wake confirmation">
+    <text id="d-confirm-rule" level="MUST" source="spec:SPEC-16.C#c-status; spec:SPEC-16.A#a-source">A prompt job is confirmed when, after its Run started, the seat wrote any record on the job's ticket, or the seat was observed busy on any tick (the only signal for a fixed seat without a ticket). Confirmation ends the job as done.</text>
+    <text id="d-confirm-window" level="MUST" source="spec:SPEC-16.G#g-keys">The window is the role's acknowledgement seconds from the configuration; when it passes with no signal the job is re-sent as a new attempt with the same line, up to the wake maximum, then dead with a note saying wake unconfirmed.</text>
+    <text id="d-confirm-busy" source="spec:SPEC-16.C#c-status">A seat already busy with other work when the prompt lands reads as confirmed: the line sits in its input and is read at the next turn; the alternative, waiting for idle, would hold every wake behind every long command.</text>
+    <text id="d-confirm-quiet" source="spec:SPEC-16.D#d-quiet">A wake handed to the inbox during a quiet window starts its window when the quiet file is gone.</text>
+  </section>
+
+  <section id="d-quiet" title="The quiet window">
+    <text id="d-quiet-check" level="MUST" source="spec:SPEC-05#s-quiet">Before a prompt runs the quiet verb asks whether the seat's quiet file exists. If so the job is held (reason quiet) and the inbox verb writes the wake line as one UTC-named file into the seat's inbox; the guard drains it after the resume.</text>
+    <text id="d-quiet-once" source="spec:SPEC-05#s-quiet">The inbox write happens once per job: a held job whose line is in the inbox waits for the quiet file to go and then enters confirming, never a second prompt.</text>
+    <text id="d-quiet-absent" source="herdr/bin/seat.sh">A seat with no state directory has no quiet file and is never quiet; the verb answers not quiet.</text>
+  </section>
+
+  <section id="d-attempts" title="Attempts and escalations across the line">
+    <text id="d-attempts-rule" level="MUST" source="spec:SPEC-03#s-retry; factory/config/routes.json#max_attempts">A seat's attempt on one ticket counts 1 to 3 in its own records; the third failure routes to the architect as a 423 instead of a fourth wake, and a 423 that reaches the architect twice becomes an owner decision card.</text>
+    <text id="d-attempts-sep" source="spec:SPEC-16.D#d-backoff">Job attempts and seat attempts are different counters: a job retries a side effect that did not happen; a seat attempt is a try that happened and failed. The scheduler never raises a seat's attempt.</text>
+  </section>
+
+  <section id="d-config" title="Keys this domain reads">
+    <key name="retry.max_attempts" type="integer" source="spec:SPEC-16.D#d-backoff">Attempts before dead, unless the verb table overrides.</key>
+    <key name="retry.base_seconds" type="number" source="spec:SPEC-16.D#d-backoff">First delay.</key>
+    <key name="retry.factor" type="number" source="spec:SPEC-16.D#d-backoff">Growth per attempt.</key>
+    <key name="retry.max_seconds" type="number" source="spec:SPEC-16.D#d-backoff">Cap on one delay.</key>
+    <key name="retry.jitter" type="number" source="spec:SPEC-16.D#d-backoff">Fraction of the delay added or removed at random.</key>
+    <key name="jobs.in_flight" type="integer" source="spec:SPEC-16.D#d-job">Runs in flight at once.</key>
+    <key name="jobs.keep_days" type="integer" source="spec:SPEC-16.D#d-store">How long done and dead jobs stay.</key>
+    <key name="wake.ack_seconds" type="object: role to integer" source="spec:SPEC-16.D#d-confirm">Confirmation window per role; every role in the roles directory must have a key.</key>
+    <key name="wake.max_attempts" type="integer" source="spec:SPEC-16.D#d-confirm">Re-sends of an unconfirmed wake before it is dead.</key>
+    <ref spec="SPEC-16.G" anchor="g-keys"/>
+  </section>
+
+  <section id="d-owned" title="Rows and codes this domain owns">
+    <owns-route match='{"attempt_lt":3,"code":422,"kind":"test.failed"}' source="factory/config/routes.json">wake the worker with the record, down the tester.</owns-route>
+    <owns-route match='{"attempt":3,"code":422,"kind":"test.failed"}' source="factory/config/routes.json">escalate to the architect as 423, down the tester.</owns-route>
+    <owns-route match='{"attempt_lt":3,"code":422,"kind":"review.changes"}' source="factory/config/routes.json">wake the worker with the record, down the reviewer.</owns-route>
+    <owns-route match='{"attempt":3,"code":422,"kind":"review.changes"}' source="factory/config/routes.json">escalate to the architect as 423, down the reviewer.</owns-route>
+    <owns-route match='{"code":423,"escalations_lt":1,"kind":"blocked"}' source="factory/config/routes.json">escalate to the architect as 423, the first time.</owns-route>
+    <owns-route match='{"code":423,"escalations":1,"kind":"blocked"}' source="factory/config/routes.json">notify the owner through the interface agent, line decision, the second time.</owns-route>
+    <owns-code value="422" name="FAILED" source="node:STC-http-shaped; spec:SPEC-03#s-retry">A gate failed with evidence and an attempt count; attempts below 3 go back to the worker.</owns-code>
+    <owns-code value="423" name="BLOCKED" source="node:STC-http-shaped; spec:SPEC-03#s-retry">A seat cannot continue, or a third failure: the architect once, the owner the second time.</owns-code>
+  </section>
+
+  <section id="d-tests" title="Cases the build ticket proves">
+    <case id="d-t1" command="go test ./internal/job -run TestKeyDedupes" expected="exit 0: putting the same spec twice yields one file; a plan replayed after a simulated restart creates nothing" source="spec:SPEC-16.D#d-idem">Idempotent by key.</case>
+    <case id="d-t2" command="go test ./internal/job -run TestBackoffArithmetic" expected="exit 0: delays for attempts 1 to 5 equal base, base times factor, and so on, capped, with zero jitter" source="spec:SPEC-16.D#d-backoff">Pure arithmetic.</case>
+    <case id="d-t3" command="go test ./internal/job -run TestClassify" expected="exit 0: exit 0 done, a final exit done with the code kept, refused dead, other exit retry, timeout discovery" source="spec:SPEC-16.D#d-classify">Every verdict has one class.</case>
+    <case id="d-t4" command="go test ./internal/job -run TestOrderAfter" expected="exit 0: the down runs after a dead primary, the receipt never runs after a dead primary and is dead with reason after" source="spec:SPEC-16.D#d-order">Order is data.</case>
+    <case id="d-t5" command="go test ./internal/job -run TestWakeConfirmedByRecord" expected="exit 0: a prompt is confirming after exit 0 and done when the seat's record on the ticket lands inside the window" source="spec:SPEC-16.D#d-confirm">A record confirms.</case>
+    <case id="d-t6" command="go test ./internal/job -run TestWakeResentThenDead" expected="exit 0: no signal inside the window re-sends the same line, and after the maximum the job is dead with one 500 note" source="spec:SPEC-16.D#d-confirm">A lost wake is found.</case>
+    <case id="d-t7" command="go test ./internal/job -run TestQuietInbox" expected="exit 0: with the quiet verb answering quiet the inbox verb is called once with the line and no prompt runs; when it answers not quiet the job enters confirming" source="spec:SPEC-16.D#d-quiet">The quiet window is honoured.</case>
+    <case id="d-t8" command="go test ./internal/job -run TestUnknownOutcomeDiscovery" expected="exit 0: a timed-out record job is done when intake shows the record, and retried when it does not; a timed-out prompt is confirming when the seat is busy" source="spec:SPEC-16.D#d-idem">Never a blind double.</case>
+    <case id="d-t9" command="go test ./internal/job -run TestDeadNoteOnce" expected="exit 0: a dead primary writes the failure note once and the ledger word failed; a dead note job writes nothing" source="spec:SPEC-16.D#d-dead">One note, never a flood.</case>
+  </section>
+
+  <section id="d-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="spec:SPEC-16.D#d-confirm"><text>A worker wake is sent at 18:31:00; the worker's work.started lands at 18:31:40; the job is done and the log line says confirmed by record.</text></example>
+    <example kind="GOOD" source="spec:SPEC-16.D#d-idem"><text>The executor socket drops during a receipt write; on the next tick intake lists a record.routed from the scheduler's seat for that record and the job is done without a second write.</text></example>
+    <example kind="NEVER" source="spec:SPEC-16.D#d-idem"><text>Retrying a prompt the moment its Run timed out.</text><why>The line may already be in the pane; the seat would read it twice.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.D#d-attempts"><text>The scheduler raising a seat's attempt when it re-sends a wake.</text><why>Attempts count tries that happened; a re-sent wake is the same try.</why></example>
+  </section>
+</spec>

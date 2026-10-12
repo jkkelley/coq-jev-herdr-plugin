@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.K" domain="testing" version="1.0.0" title="Testing: the pyramid, the testkit, replay fixtures, the contract test and CI" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="k-purpose" title="What the testing domain decides"/>
+    <item ref="k-pyramid" title="The pyramid"/>
+    <item ref="k-testkit" title="The testkit"/>
+    <item ref="k-replay" title="Replay fixtures"/>
+    <item ref="k-coverage" title="Coverage of the table"/>
+    <item ref="k-contract" title="The contract test against the real scripts"/>
+    <item ref="k-images" title="Images"/>
+    <item ref="k-ci" title="CI"/>
+    <item ref="k-plan" title="The test plan every build ticket carries"/>
+    <item ref="k-tests" title="Cases the build ticket proves"/>
+    <item ref="k-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="AGENTS.md#Law: testing; node:DEC-local-fast-ci-full">Every domain proves itself with fakes in seconds, the whole scheduler proves itself against golden replays of the bash belt's cases, the executor proves itself against the real scripts, and CI runs all of it; nothing runs on the host.</purpose>
+
+  <section id="k-purpose" title="What the testing domain decides">
+    <text id="k-in" source="factory/tests/lib/world.sh; factory/tests/run.sh">In: the bash belt's test cases as the oracle, the routes table, the real scripts. Out: the testkit package, the replay fixtures, the test images, the make targets, the CI stage.</text>
+    <text id="k-rule" level="MUST" source="AGENTS.md#Law: testing">Tests run in isolation, in containers; the architect writes the plan into the ticket before the work starts; templates are reused, not rewritten.</text>
+  </section>
+
+  <section id="k-pyramid" title="The pyramid">
+    <text id="k-py-unit" source="node:DEC-functional-style">Unit: pure functions with values in and out, the fakes of the testkit for the edges; every domain's cases in its spec are this level.</text>
+    <text id="k-py-package" source="spec:SPEC-16.H#h-tests">Package integration: the file store, the ledger and the latches on a temporary directory; the executor on a real unix socket with stub scripts on the path.</text>
+    <text id="k-py-replay" source="spec:SPEC-16.K#k-replay">Replay: the engine over the golden fixtures with the fake executor, plans and jobs compared with the expected files.</text>
+    <text id="k-py-contract" source="spec:SPEC-16.K#k-contract">Contract: the real scripts in the test image, every verb once, every record the scheduler emits validated by the writer's own check.</text>
+    <text id="k-py-e2e" source="spec:SPEC-16.J#j-accept">End to end: the scratch herdr session with a stub agent, the acceptance of the cut-over domain.</text>
+  </section>
+
+  <section id="k-testkit" title="The testkit">
+    <text id="k-kit-exec" level="MUST" source="factory/tests/lib/world.sh">FakeExecutor: answers each Run from a script keyed by verb and argument pattern (exit code, tails, delay or timeout); records every call in order; can fail Health on demand. Cases assert on its call log, as the bash cases do on the stub's.</text>
+    <text id="k-kit-world" source="factory/tests/lib/world.sh#world_up">World: a temporary directory with roots, a state directory, the tables copied from the repository and a configuration rendered with the variables pointing into it.</text>
+    <text id="k-kit-clock" source="node:DEC-functional-style">Clock: a settable time; Advance moves it so deadlines, windows and backoff are tested without waiting.</text>
+    <text id="k-kit-records" source="events/bin/event.sh">Record builder: writes record files in the writer's exact layout and shape for a kind, code, seat, ticket and attempt, one second apart when order matters; the contract test proves the builder against the writer.</text>
+    <text id="k-kit-own" level="MUST" source="spec:SPEC-16#s-build">The testkit is written by the skeleton ticket with core, so every domain's tests compile from their first day; a fake a domain needs that is missing is a question, not an edit.</text>
+  </section>
+
+  <section id="k-replay" title="Replay fixtures">
+    <text id="k-replay-layout" level="MUST" source="factory/tests/cases/01-wake.test.sh">One directory per case under testdata replay: the records in order, a context file (escalation history, seat statuses), and an expected file with, per record id, the verdict, the row index and the jobs with verb, arguments and order.</text>
+    <text id="k-replay-oracle" source="factory/tests/cases/01-wake.test.sh">Each fixture is derived from a bash belt case: the same records, the same expected calls, so the Go engine proves the belt's behaviour before it proves its own improvements.</text>
+    <text id="k-replay-improve" source="spec:SPEC-16.J#j-parity">A case may carry an expected improvement: where the belt wrote a 500 the expected file says held or retry; the parity report's improvement count reads the same marker.</text>
+    <text id="k-replay-data" level="MUST" source="specs/scheduler/config/check.json">Fixtures are synthetic: no real ticket id, seat name, person or path; the check config's forbidden patterns apply to them.</text>
+  </section>
+
+  <section id="k-coverage" title="Coverage of the table">
+    <text id="k-cov-rows" level="MUST" source="specs/scheduler/bin/check.sh">Every row of the routes table is the chosen row of at least one replay record, and every policies row is exercised by at least one case; the replay suite fails naming the row that has none.</text>
+    <text id="k-cov-verbs" source="spec:SPEC-16.H#h-verbs">Every verb in the table is sent by at least one replay case and run by the contract test.</text>
+  </section>
+
+  <section id="k-contract" title="The contract test against the real scripts">
+    <text id="k-con-writer" level="MUST" source="events/bin/event.sh#check">For every record kind the scheduler emits, the arguments it would pass are run through the real writer in the test image and the result validated by the writer's check; a schema change in the log fails this test before it fails the line.</text>
+    <text id="k-con-scripts" source="herdr/bin/seat.sh; queue/bin/queue.sh">The seat and queue scripts run with their usage flags against the real files, so a changed flag or exit class is caught; their real actions are stubbed as the bash cases stub them.</text>
+    <text id="k-con-ledger" source="spec:SPEC-16.A#a-ledger">The bash runner is run once in the test image over a fixture log and its ledger compared word for word with the Go ledger over the same log.</text>
+  </section>
+
+  <section id="k-images" title="Images">
+    <text id="k-img-test" level="MUST" source="factory/tests/Containerfile; lint/Containerfile">The test image: the pinned Go image plus bash, jq and shellcheck, so Go tests, the contract test and the host wrappers' tests run in one container with the repository mounted read-only and the network off.</text>
+    <text id="k-img-cache" source="spec:SPEC-16.H#h-build">The module cache is a named volume filled once with the network on; every test run after that is offline.</text>
+  </section>
+
+  <section id="k-ci" title="CI">
+    <text id="k-ci-stage" source="Jenkinsfile">A stage runs the module's test target when the scheduler directory changes, in the test image on the build agents, which are a different architecture: the Go image is multi-architecture and the tests are architecture-neutral.</text>
+    <text id="k-ci-lint" source="lint/lint.sh">The repository lint already validates the configuration files; the lint ticket adds the scheduler specs' check script to it.</text>
+  </section>
+
+  <section id="k-plan" title="The test plan every build ticket carries">
+    <text id="k-plan-template" level="MUST" source="AGENTS.md#Law: testing">Each build ticket's test plan follows the test plan template: scope under test, cases with intent, command and expected, isolation naming the test image by digest, and what CI covers instead. The cases are the ones its domain spec lists.</text>
+    <text id="k-plan-tester" source="playbooks/tester.md">The tester runs exactly those cases through the module's test target in the test image and nothing else.</text>
+  </section>
+
+  <section id="k-tests" title="Cases the build ticket proves">
+    <case id="k-t1" command="go test ./internal/testkit" expected="exit 0: the fake executor answers by pattern, logs calls in order, injects a timeout; the clock advances; the builder writes a record the writer's check accepts" source="spec:SPEC-16.K#k-testkit">The fakes are trustworthy.</case>
+    <case id="k-t2" command="go test ./internal/engine -run TestReplay" expected="exit 0: every fixture's expected file equals the engine's plans and the fake executor's calls" source="spec:SPEC-16.K#k-replay">Golden.</case>
+    <case id="k-t3" command="go test ./internal/engine -run TestReplayCoversEveryRow" expected="exit 0: every routes row index appears as a chosen row in some fixture; a row with none fails naming it" source="spec:SPEC-16.K#k-coverage">No row untested.</case>
+    <case id="k-t4" command="make -C scheduler contract" expected="exit 0: every emitted record kind passes the writer's check; every verb runs against the real scripts' usage" source="spec:SPEC-16.K#k-contract">The scripts and the scheduler agree.</case>
+    <case id="k-t5" command="make -C scheduler test" expected="tests pass inside the test image with the network off" source="spec:SPEC-16.K#k-images">Offline, in Podman.</case>
+  </section>
+
+  <section id="k-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="factory/tests/cases/01-wake.test.sh"><text>The wake fixture: one pr.opened record; expected row 2, jobs seat-up tester, prompt with the wake line, receipt; the fake executor's log shows the three calls in order.</text></example>
+    <example kind="NEVER" source="AGENTS.md#Law: testing"><text>go test run on the host because the image build was slow.</text><why>There is no threshold below which host execution is acceptable.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.K#k-replay"><text>A fixture copied from the live log with real ticket ids and seat names.</text><why>Fixtures are synthetic; the copy rule applies to them.</why></example>
+  </section>
+</spec>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.H" domain="runtime" version="1.0.0" title="Podman runtime and the executor: image, run contract, verb table, gRPC services, build and panes" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="h-purpose" title="What the runtime domain decides"/>
+    <item ref="h-image" title="The image"/>
+    <item ref="h-run" title="The run contract"/>
+    <item ref="h-pane" title="Panes and the bring-up chain"/>
+    <item ref="h-executor" title="The executor process"/>
+    <item ref="h-verbs" title="The verb table"/>
+    <item ref="h-proto" title="The gRPC services"/>
+    <item ref="h-cli" title="Subcommands"/>
+    <item ref="h-build" title="Build, test and lint in Podman"/>
+    <item ref="h-layout" title="Module layout"/>
+    <item ref="h-tests" title="Cases the build ticket proves"/>
+    <item ref="h-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="owner:bearings:2026-10-12T18:34Z; node:DEC-scheduler-two-processes">One static binary: in a rootless Podman container with no network and no host tool it is the scheduler; on the host in a labelled pane it is the executor, a verb table behind gRPC on a unix socket. Builds and tests run only in Podman.</purpose>
+
+  <section id="h-purpose" title="What the runtime domain decides">
+    <text id="h-in" source="spec:SPEC-16#s-shape">In: the module, the two configuration files, the host's herdr session and scripts. Out: an image pinned by digest, a run wrapper, an executor pane, the proto and its generated code, make targets.</text>
+    <node id="RSK-executor-host-tools" status="proposed">
+      <title>The executor depends on the host's herdr, seat script, queue script and event writer being on its path and on their exit codes meaning what their headers say; a script that changes an exit code changes a retry class silently</title>
+      <text>Mitigation: the verb table pins every exit class in configuration, the contract test runs every verb against the real scripts in the test image, and the executor logs every call with its exit code.</text>
+      <source kind="file" id="herdr/bin/seat.sh"/>
+      <source kind="spec" id="SPEC-16.H" at="2026-10-12T19:30Z"/>
+      <edge kind="risks" to="CMP-scheduler-executor"/>
+    </node>
+  </section>
+
+  <section id="h-image" title="The image">
+    <text id="h-image-stages" level="MUST" source="lint/Containerfile; factory/tests/Containerfile">Two stages: a builder from the digest-pinned Go image compiles a static binary with cgo off for the target architecture; the runtime stage is an empty base with the binary and a non-root user, nothing else. Digests are repinned together.</text>
+    <text id="h-image-arch" source="node:DEC-sitrep-local-first">The target architecture comes from the build platform, so the same Containerfile builds for the WSL host now and the arm64 cluster later.</text>
+    <text id="h-image-tag" source="Makefile#LINT_IMAGE">The local tag names the tool and a major version; CI pushes the same image to the registry under that tag, as the lint image is pushed.</text>
+    <text id="h-image-content" level="NEVER" source="node:DEC-scheduler-two-processes">No shell, no package manager, no herdr, no git in the runtime image: anything the scheduler needs from the host is a verb.</text>
+  </section>
+
+  <section id="h-run" title="The run contract">
+    <text id="h-run-wrapper" level="MUST" source="spec:SPEC-16#s-laws">One wrapper script in the scheduler's host directory runs the container in the foreground of its pane; every flag below is in the wrapper and read from the configuration, never typed by hand.</text>
+    <text id="h-run-flags" level="MUST" source="factory/tests/run.sh">Rootless, network none, user namespace keep-id, init process on, a memory limit, the image by digest, removed on exit, a name so a second start is refused by Podman.</text>
+    <text id="h-run-mounts" level="MUST" source="spec:SPEC-16.A#a-roots; spec:SPEC-16.G#g-vars">Mounts: the repository read-only at the repo path; every intake root read-only at a fixed path; the state directory read-write; the runtime directory holding the executor socket; nothing from the home directory beyond those.</text>
+    <text id="h-run-env" source="spec:SPEC-16.G#g-vars">Environment: the mode, the host repository path, the state directory, the session; the configuration reads them through variables, so the wrapper is the only place that knows the host.</text>
+    <text id="h-run-signal" source="spec:SPEC-16.F#f-drain">The wrapper forwards termination to the binary, which drains; a stop from the pane is a clean drain, not a kill.</text>
+  </section>
+
+  <section id="h-pane" title="Panes and the bring-up chain">
+    <text id="h-pane-two" level="MUST" source="herdr/config/monitors.json; node:DEC-no-process-under-agent">Two reserved slots of the monitors grid: the executor, labelled as a tool pane, and the scheduler, labelled as a tool pane; the executor's slot comes first in the grid's order so bring-up starts it first.</text>
+    <text id="h-pane-cmd" source="herdr/config/monitors.json#reserved">Each slot's command is the wrapper for its process, with the repository variable, as the belt's slot names its runner today; bring-up and the supervisor need no new verb to restart either.</text>
+    <text id="h-pane-gate" source="spec:SPEC-16.F#f-supervisor">Bring-up refuses the scheduler slot while the executor's Health fails, and seats while the scheduler's Health fails, so no seat ever runs with nothing to route its records.</text>
+  </section>
+
+  <section id="h-executor" title="The executor process">
+    <text id="h-exec-what" level="MUST" source="node:CMP-scheduler-executor">The exec subcommand listens on the configured unix socket with mode 0600, serves Executor, and runs verbs from its table as child processes with the configured environment, a timeout per verb and the output tails bounded.</text>
+    <text id="h-exec-refuse" level="MUST" source="spec:SPEC-16.D#d-args">It refuses: a verb not in the table; an argument holding a newline or a null; a record flag not in the allowed set; more or fewer arguments than the template binds. A refusal is a verdict with refused set and the reason, never a run.</text>
+    <text id="h-exec-env" source="factory/bin/route.sh#herdr_prompt">Before every run the names in unset_env are removed, so a herdr call never targets the executor's own pane, and the session flag is added to every herdr verb from the configuration.</text>
+    <text id="h-exec-log" level="MUST" source="spec:SPEC-16.I#i-log">Every Run is one JSON log line in the pane: the verb, the key, the record id, the exit code, the duration, timed out or refused. Arguments are logged with the note argument cut to one line.</text>
+    <text id="h-exec-one" source="spec:SPEC-16.D#d-job">Runs are concurrent up to the configured limit; the scheduler already serialises jobs per seat, so the executor needs no ordering of its own.</text>
+    <text id="h-exec-path" source="herdr/systemd/coq-supervisor.service.in">The pane's shell carries the host path with herdr, the pool tool, jq and the rest; the executor inherits it and adds nothing.</text>
+  </section>
+
+  <section id="h-verbs" title="The verb table">
+    <text id="h-verbs-shape" level="MUST" source="spec:SPEC-16.G#g-executor">A verb is a name, an argv template with numbered positions and host variables, a timeout in seconds, the final exit codes, and for the record verb the allowed flag set. The scheduler emits exactly the names below and nothing else.</text>
+    <verb name="prompt" argv="herdr --session ${session} agent prompt ${1} ${2}" timeout_seconds="20" source="factory/bin/route.sh#herdr_prompt">Type one line into a seat: the seat name and the wake line.</verb>
+    <verb name="agent_list" argv="herdr --session ${session} agent list" timeout_seconds="10" source="herdr/bin/turnwatch.sh">Every agent with its status and pane, as JSON on stdout.</verb>
+    <verb name="pane_read" argv="herdr --session ${session} pane read ${1} --source recent --lines ${2} --format text" timeout_seconds="10" source="herdr/bin/turnwatch.sh">The last lines of a pane, for the busy and done patterns.</verb>
+    <verb name="pane_process_info" argv="herdr --session ${session} pane process-info --pane ${1}" timeout_seconds="10" source="factory/bin/flow.sh#runner_running">The foreground process group and the shell of a pane.</verb>
+    <verb name="notify" argv="herdr --session ${session} notification show ${1}" timeout_seconds="10" source="spec:SPEC-04#s-monitors">One owner notification.</verb>
+    <verb name="seat_up" argv="${host_repo}/herdr/bin/seat.sh --ticket ${1} --role ${2}" timeout_seconds="240" source="herdr/bin/seat.sh">Bring a role's seat up for a ticket; a live seat is left as it is.</verb>
+    <verb name="seat_down" argv="${host_repo}/herdr/bin/seat.sh --down ${1}" timeout_seconds="180" source="herdr/bin/seat.sh">Take a seat down; a second down exits 0.</verb>
+    <verb name="break_glass" argv="${host_repo}/herdr/bin/seat.sh --break-glass ${1} --record ${2}" timeout_seconds="60" final="3" source="herdr/bin/seat.sh">Run the owner's granted command through the seat script, which checks the page itself; 3 is its refusal.</verb>
+    <verb name="glass_sweep" argv="${host_repo}/herdr/bin/seat.sh --break-glass-sweep" timeout_seconds="60" source="herdr/config/monitors.json">Restore every break glass whose follow-up landed or whose ttl passed.</verb>
+    <verb name="enqueue" argv="${host_repo}/queue/bin/queue.sh enqueue --ticket ${1} --from ${2}" timeout_seconds="20" final="3" source="queue/bin/queue.sh">Queue a ticket for the architect; 3 means already queued, a handled result.</verb>
+    <verb name="enqueue_priority" argv="${host_repo}/queue/bin/queue.sh enqueue --ticket ${1} --from ${2} --priority ${3}" timeout_seconds="20" final="3" source="queue/bin/queue.sh">The same with a priority from the request.</verb>
+    <verb name="queue_sweep" argv="${host_repo}/queue/bin/queue.sh sweep" timeout_seconds="30" source="queue/bin/queue.sh">Release expired ticket leases.</verb>
+    <verb name="record" argv="${host_repo}/events/bin/event.sh add --seat ${seat} ${@}" timeout_seconds="20" source="events/bin/event.sh">Write one record as the scheduler's seat; the remaining arguments are writer flags from the allowed set, and the id printed on stdout is the verdict's first line.</verb>
+    <verb name="seat_quiet" argv="test -e ${state_dir}/seats/${1}/quiet.json" timeout_seconds="5" final="1" source="spec:SPEC-05#s-quiet">Whether the seat's quiet window is open: 0 open, 1 not, both handled.</verb>
+    <verb name="inbox" argv="${host_repo}/scheduler/host/bin/inbox.sh ${state_dir}/seats/${1}/inbox ${2}" timeout_seconds="10" source="spec:SPEC-05#s-quiet">Write one wake line as one UTC-named file into a seat's inbox for the guard to drain.</verb>
+    <text id="h-verbs-record-flags" level="MUST" source="events/bin/event.sh">Allowed record flags: code, kind, ticket, to, note, evidence, observe, attempt, sha, pr, action, answer, policy. The seat flag is never accepted from the scheduler; the executor's own seat is forced.</text>
+    <text id="h-verbs-final" source="spec:SPEC-16.D#d-classify">Final exit codes are handled results: the job is done with the code kept; every other non-zero code is the retry class of the jobs domain.</text>
+  </section>
+
+  <section id="h-proto" title="The gRPC services">
+    <text id="h-proto-pkg" level="MUST" source="node:IFC-scheduler-executor; node:DEC-nats-jetstream-grpc">Package coq.scheduler.v1, proto3, generated into the api directory of the module and checked in; the skeleton ticket writes the file from this section and generates once in the build container; a change to the file is a ticket of its own.</text>
+    <text id="h-proto-executor" source="spec:SPEC-16.H#h-executor">service Executor: rpc Run(RunRequest) returns (RunResponse); rpc Health(HealthRequest) returns (ExecutorHealth).</text>
+    <field name="RunRequest.verb, args, idempotency_key, timeout_seconds, record_id, ticket" type="string, repeated string, string, uint32, string, string" source="spec:SPEC-16.D#d-job">What to run and what it is about; the key and the ids are for the executor's log only.</field>
+    <field name="RunResponse.exit_code, timed_out, refused, refusal, stdout_tail, stderr_tail, started_at, finished_at" type="int32, bool, bool, string, string, string, string, string" source="spec:SPEC-16#s-contracts">The verdict; times are UTC strings in the record's at form.</field>
+    <field name="ExecutorHealth.version, started_at, verbs, herdr_session, herdr_ok" type="string, string, repeated string, string, bool" source="spec:SPEC-16.F#f-executor">Who answers, since when, which verbs it holds, and whether the session answers an agent list.</field>
+    <text id="h-proto-scheduler" source="spec:SPEC-16.I#i-status">service Scheduler, five unary calls: Health returns SchedulerHealth, Status returns StatusResponse, Reload returns ReloadResponse, Drain returns DrainResponse, Retry returns RetryResponse; each request message is named after its call.</text>
+    <field name="SchedulerHealth.version, started_at, mode, gate_passed, gate_reason, belt_age_seconds" type="string, string, string, bool, string, uint32" source="spec:SPEC-16.F#f-recovery">Up, in what mode, past the start gate or why not, and the belt.</field>
+    <field name="StatusResponse" type="message" source="spec:SPEC-16.I#i-status">The counters and lists the observability spec names.</field>
+    <field name="ReloadResponse.routes_version, policies_version, flow_version, roles_version" type="string" source="spec:SPEC-16.G#g-reload">The hashes loaded after the call.</field>
+    <field name="RetryRequest.job_key" type="string" source="spec:SPEC-16.D#d-dead">A dead job to put back to pending with its attempts reset.</field>
+    <text id="h-proto-sockets" level="MUST" source="spec:SPEC-16.G#g-keys">Both services listen on unix sockets only, mode 0600; no TCP port exists. The executor's socket lives in the host's runtime directory and is mounted into the container; the scheduler's in the state directory.</text>
+    <text id="h-proto-stream" level="NEVER" source="AGENTS.md#Law: the bus is NATS JetStream">No streaming call: records are the data plane and travel by the log or the bus, never by a gRPC stream.</text>
+  </section>
+
+  <section id="h-cli" title="Subcommands">
+    <text id="h-cli-registry" level="MUST" source="spec:SPEC-16#s-build">main calls the cli package's dispatch; each subcommand is one file in that package that registers its name, usage and function at init. A wave adds a file and edits none.</text>
+    <text id="h-cli-list" source="spec:SPEC-16#s-domains">run (the scheduler), exec (the executor), status (ask the socket; exit 1 on a stopped belt or failed gate), check (validate configuration and tables; list kinds with no row), parity (the cut-over report), retry (one dead job), version.</text>
+    <text id="h-cli-exit" source="events/bin/event.sh">Exit codes: 0 ok, 1 a status that is not ok, 2 usage, 3 validation, 4 io or socket.</text>
+  </section>
+
+  <section id="h-build" title="Build, test and lint in Podman">
+    <text id="h-build-rule" level="MUST" source="AGENTS.md#Law: testing; factory/tests/run.sh">No Go toolchain on the host: build, test, vet and format checks run in the pinned Go image through make targets, with the module cache in a named volume so only the first run needs the network, and tests with the network off.</text>
+    <text id="h-build-targets" source="Makefile">Targets: build (the static binary into dist), test (go test over the module), lint (vet and format check), image (the runtime image), proto (regenerate the api in the build container), run-exec and run (the pane wrappers), status, clean.</text>
+    <text id="h-build-deps" level="MUST" source="spec:SPEC-16#s-build">The module file pins the gRPC and protobuf modules and nothing else from outside the standard library; a later package that wants another dependency asks the architect, because the module file belongs to the skeleton.</text>
+    <text id="h-build-ci" source="Jenkinsfile; node:CMP-jenkins-lint">CI runs the test target when the scheduler directory changes, in a Go container on the build agents; the lint of the repository already covers the configuration files.</text>
+  </section>
+
+  <section id="h-layout" title="Module layout">
+    <text id="h-layout-tree" level="MUST" source="spec:SPEC-16#s-domains">Under the scheduler directory: cmd for main; internal with core, cli, testkit and one package per domain; api for the proto and its generated code; config; host for wrappers and units; testdata for replay fixtures.</text>
+    <text id="h-layout-pkgs" level="MUST" source="spec:SPEC-16#s-domains">Domain packages: intake, routes, seat, job, policy, health, config, executor, observe, cutover, engine.</text>
+    <text id="h-layout-own" level="MUST" source="spec:SPEC-16#s-build">A ticket owns whole directories; the only files two waves share are the module file and core, both written by the skeleton and read-only afterwards.</text>
+  </section>
+
+  <section id="h-tests" title="Cases the build ticket proves">
+    <case id="h-t1" command="make -C scheduler build" expected="exit 0: a static binary in dist, built inside the pinned Go image; file reports statically linked" source="spec:SPEC-16.H#h-build">Built in Podman only.</case>
+    <case id="h-t2" command="make -C scheduler test" expected="exit 0: go test over the module inside the image with the network off" source="spec:SPEC-16.H#h-build">Tested in Podman only.</case>
+    <case id="h-t3" command="go test ./internal/executor -run TestRefusals" expected="exit 0: an unknown verb, a newline argument, a disallowed record flag and a wrong argument count each come back refused with a reason and no child process" source="spec:SPEC-16.H#h-executor">The fence holds.</case>
+    <case id="h-t4" command="go test ./internal/executor -run TestRunVerbsAgainstStubs" expected="exit 0: every verb in the table runs against stub scripts on the path, binds its positions, forces the seat on record, times out when told, and returns tails of the configured length" source="spec:SPEC-16.H#h-verbs">Every verb has a case.</case>
+    <case id="h-t5" command="go test ./internal/executor -run TestSocketMode" expected="exit 0: the socket is created with mode 0600 and a second listener on the same path is refused" source="spec:SPEC-16.H#h-proto">One executor, private socket.</case>
+    <case id="h-t6" command="make -C scheduler image" expected="exit 0: the runtime image holds one binary and no shell; running it with a shell as the command fails" source="spec:SPEC-16.H#h-image">Nothing but the binary.</case>
+    <case id="h-t7" command="bash scheduler/host/tests/run.sh" expected="tests: N passed, 0 failed: the wrappers and inbox script pass shellcheck and run against a stub binary in the test image" source="spec:SPEC-16.H#h-run">Host files are tested too.</case>
+  </section>
+
+  <section id="h-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="spec:SPEC-16.H#h-verbs"><text>A prompt job becomes Run with verb prompt and two arguments; the executor types the line with herdr and returns exit 0 in 300 milliseconds.</text></example>
+    <example kind="GOOD" source="spec:SPEC-16.H#h-executor"><text>A record job carries a note with a newline in it; the executor refuses it and the job is dead at once with the refusal in the log, because that is a scheduler bug.</text></example>
+    <example kind="NEVER" source="spec:SPEC-16.H#h-image"><text>A runtime image with a shell so an operator can exec into it and look.</text><why>Looking is the status subcommand; a shell in the image is a second way to change the world.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.H#h-verbs"><text>A verb named shell that runs its argument as a command line.</text><why>The table is the whole surface; a shell verb is every verb.</why></example>
+  </section>
+</spec>

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.F" domain="health" version="1.0.0" title="Health: the belt, two-signal stalls, latches, halt, drain and recovery" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="f-purpose" title="What the health domain decides"/>
+    <item ref="f-belt" title="The belt heartbeat"/>
+    <item ref="f-stall" title="Stalls on two signals"/>
+    <item ref="f-latch" title="Latches"/>
+    <item ref="f-executor" title="Executor health"/>
+    <item ref="f-notify" title="What the monitor and the owner hear"/>
+    <item ref="f-halt" title="The halt flag"/>
+    <item ref="f-drain" title="Drain and shutdown"/>
+    <item ref="f-recovery" title="Recovery at start"/>
+    <item ref="f-housekeeping" title="Housekeeping on a schedule"/>
+    <item ref="f-supervisor" title="The supervisor and the bring-up chain"/>
+    <item ref="f-config" title="Keys this domain reads"/>
+    <item ref="f-owned" title="Rows and codes this domain owns"/>
+    <item ref="f-tests" title="Cases the build ticket proves"/>
+    <item ref="f-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="factory/bin/flow.sh; herdr/bin/belt.sh; herdr/bin/supervisor.sh">Health says whether the line moves: the belt is touched by the tick loop, not by jobs, a stall needs an overdue gate and a seat that is not working, and every verdict is latched so it is said once. It reports; the supervisor repairs.</purpose>
+
+  <section id="f-purpose" title="What the health domain decides">
+    <node id="REQ-stall-two-signal" status="proposed">
+      <title>A gate is stalled only when its consumer record is overdue and the consumer seat is absent or idle past the threshold; a busy seat is never a stall, and the tick loop touches the belt so a long action never reads as a stopped belt</title>
+      <source kind="file" id="factory/bin/flow.sh#stalled_gates"/>
+      <source kind="file" id="herdr/bin/turnwatch.sh"/>
+      <source kind="spec" id="SPEC-16.F" at="2026-10-12T19:30Z"/>
+      <edge kind="implements" to="REQ-owner-notifications"/>
+      <edge kind="depends_on" to="REQ-status-change-wakeups"/>
+    </node>
+    <text id="f-in" source="factory/config/flow.json#gates">In: the gates list of the flow configuration, records since the boundary, seat statuses, the executor's health, the clock. Out: the belt file, latched 500 notes, monitor wakes, owner notifications, housekeeping jobs, the halt verdict.</text>
+  </section>
+
+  <section id="f-belt" title="The belt heartbeat">
+    <text id="f-belt-touch" level="MUST" source="factory/bin/route.sh#belt_touch">Every tick writes the UTC and the process id into the belt file, from the tick loop itself and never from a job goroutine; the file's age is the belt's age.</text>
+    <text id="f-belt-stale" level="MUST" source="factory/bin/route.sh#status">The belt is running when its age is below the stale threshold and stopped at or above it, the same comparison the bash runner's status makes; the status subcommand prints the same words and exits 1 when stopped.</text>
+    <text id="f-belt-path" source="herdr/config/herdr.json#belt; spec:SPEC-16.J#j-active">The belt file's path is a key; going active points it at the bash runner's belt file so the supervisor's belt check works unchanged until its status command is switched.</text>
+    <text id="f-belt-why" source="factory/bin/route.sh#act_primary">The bash runner touched the belt between serial actions, so one bring-up past the threshold read as a stopped belt; here no action sits on the tick loop.</text>
+  </section>
+
+  <section id="f-stall" title="Stalls on two signals">
+    <text id="f-stall-gate" level="MUST" source="factory/config/flow.json#gates">A gate is a record of a gates row's kind and code; its consumer is the row's role, its answers are the row's consumer kinds. Overdue means no answer on the ticket after it and the record's at older than the kind's deadline.</text>
+    <text id="f-stall-seat" level="MUST" source="spec:SPEC-16.C#c-status">The second signal is the consumer seat for the ticket: absent, or idle for at least the idle threshold. Busy or unknown is never a stall; the gate is judged again next tick.</text>
+    <text id="f-stall-note" level="MUST" source="factory/bin/flow.sh#check_gates">A stall is one 500 note to the monitor on the ticket, latched by the gate record's id: stall, the kind, the code, the id, has no role record after the deadline, then the seat name and absent or idle and the seconds.</text>
+    <text id="f-stall-deadline" source="factory/config/flow.json#stall_seconds">Deadlines are per gate kind, because a test suite and a merge take different times; the single stall threshold of the bash watch is what made every long suite a false alarm.</text>
+    <text id="f-stall-clear" source="factory/bin/flow.sh#latched">A latched gate stall is never noted again even if it stays stuck; the monitor owns it from then on. The latch is dropped when an answer lands, so a later stall of the same gate is new.</text>
+    <text id="f-stall-visible" source="factory/config/flow.json#visible_within_seconds">The poll interval plus the smallest deadline must not pass the visible-within bound, so a real stall shows within it; a configuration that breaks the bound is refused at start.</text>
+    <text id="f-stall-reseat" source="herdr/bin/supervisor.sh">A stall whose seat is absent is the supervisor's to re-seat; the scheduler reports and never seats a role the row did not say to seat, so two repairers never race on one seat.</text>
+  </section>
+
+  <section id="f-latch" title="Latches">
+    <text id="f-latch-file" level="MUST" source="factory/bin/flow.sh#claim">A latch is a file under the state directory's latches directory, taken by exclusive create and dropped by removal; it survives a restart, so a verdict is said once across restarts.</text>
+    <text id="f-latch-names" source="spec:SPEC-16.F#f-stall; spec:SPEC-16.C#c-caps; spec:SPEC-16.G#g-reload">Names: gate and the record id; executor-down; config and the file name; cap and the job key; absent and the job key.</text>
+    <text id="f-latch-drop" source="factory/bin/flow.sh#latched">A condition latch (executor-down, config) is dropped when the condition clears, with one log line; a gate latch when the gate is answered.</text>
+  </section>
+
+  <section id="f-executor" title="Executor health">
+    <text id="f-exec-rule" level="MUST" source="spec:SPEC-16.H#h-proto">Every tick calls the executor's Health. When it fails the executor-down latch is taken with one 500 note, every seat status is unknown, and no job is sent; a failed dial is not a job attempt. When it answers the latch is dropped.</text>
+    <text id="f-exec-verbs" level="MUST" source="spec:SPEC-16.G#g-validate">Health returns the executor's verb names; the scheduler refuses to go active while a verb it can emit is missing from them, and says which.</text>
+  </section>
+
+  <section id="f-notify" title="What the monitor and the owner hear">
+    <text id="f-notify-monitor" level="MUST" source="spec:SPEC-04#s-monitors; node:REQ-status-change-wakeups">The 5xx records the scheduler writes are its own and are never routed; instead one prompt job per tick wakes the monitor seat with the ids written that tick, held if the monitor is absent, confirmed like any wake.</text>
+    <text id="f-notify-owner" level="MUST" source="node:REQ-owner-notifications; spec:SPEC-04#s-monitors">A herdr notification is shown through the notify verb for a 423 that reaches the owner and for any 5xx the scheduler writes, coalesced per tick; nothing else notifies.</text>
+    <text id="f-notify-5xx" source="factory/config/routes.json">A 5xx record another seat writes is routed by the table to the monitor like any record; the rows below carry it.</text>
+  </section>
+
+  <section id="f-halt" title="The halt flag">
+    <text id="f-halt-rule" level="MUST" source="herdr/config/herdr.json#halt_flag; herdr/bin/supervisor.sh">While the halt flag file exists the scheduler touches the belt and answers status as halted, but lists no records and sends no job; when the flag is gone it resumes where it was. The supervisor reads the same flag.</text>
+  </section>
+
+  <section id="f-drain" title="Drain and shutdown">
+    <text id="f-drain-rule" level="MUST" source="factory/bin/route.sh#run">On Drain or a termination signal: no new job is taken, running jobs get the drain seconds to finish, their state is written, exit 0. A job still running at exit stays running in the store and enters discovery at the next start.</text>
+    <text id="f-drain-signal" source="factory/bin/route.sh#run">The signal is handled at once, not after the poll interval, as the bash runner learned to do with its wait.</text>
+  </section>
+
+  <section id="f-recovery" title="Recovery at start">
+    <text id="f-rec-order" level="MUST" source="spec:SPEC-16.G#g-validate; spec:SPEC-16.A#a-interrupted; spec:SPEC-16.D#d-idem">In order: configuration validated or exit 3; state directory opened; job store read; executor Health and verbs checked; interrupted claims examined; running jobs into discovery; then the first tick. Nothing runs before the gate passes.</text>
+    <text id="f-rec-gate" source="spec:SPEC-04#s-bringup">A start that cannot pass the gate stays up, answers status with the failing step, and tries the gate every tick; it does not exit, so the pane stays and the supervisor sees the reason.</text>
+  </section>
+
+  <section id="f-housekeeping" title="Housekeeping on a schedule">
+    <text id="f-house-rule" source="herdr/config/monitors.json; queue/bin/queue.sh#sweep">Periodic jobs with keys of the form housekeeping, the name and the UTC period, so each period runs once: the queue sweep verb, the break glass sweep verb, the prune of done and dead jobs and of answered gate latches.</text>
+    <text id="f-house-why" source="herdr/config/monitors.json">The glass watcher pane and the monitor's sweep are loops in panes today; here they are rows of the housekeeping configuration, visible in status, retried like any job.</text>
+  </section>
+
+  <section id="f-supervisor" title="The supervisor and the bring-up chain">
+    <text id="f-sup-belt" source="herdr/bin/belt.sh; herdr/config/herdr.json#belt">The supervisor's belt step asks whether the runner slot is in use and the belt status command exits 0, else restarts the slot; after cut-over the slot runs the scheduler and the status command is the scheduler's; nothing else changes.</text>
+    <text id="f-sup-exec" source="herdr/bin/bringup.sh; spec:SPEC-16.H#h-pane">The executor is a reserved slot of the monitors grid that comes up before the scheduler slot; bring-up refuses the scheduler while the executor's Health fails, as it refuses a seat while the monitor is down.</text>
+    <text id="f-sup-reseat" source="herdr/bin/supervisor.sh#reseat">Re-seating a dead seat stays the supervisor's, bounded by its window; the scheduler's held jobs wait for it.</text>
+  </section>
+
+  <section id="f-config" title="Keys this domain reads">
+    <key name="belt.file" type="string" source="factory/config/runner.json#state_dir">Where the heartbeat is written.</key>
+    <key name="belt.stale_seconds" type="integer" source="factory/config/runner.json#stale_seconds">Age at which the belt reads stopped.</key>
+    <key name="flow_file" type="string" source="factory/config/flow.json">The flow configuration; only its gates list is read here.</key>
+    <key name="stall.deadline_seconds" type="object: gate kind to integer" source="factory/config/flow.json#stall_seconds">Per gate kind; every kind in the gates list must have a key.</key>
+    <key name="stall.visible_within_seconds" type="integer" source="factory/config/flow.json#visible_within_seconds">The bound on poll plus the smallest deadline.</key>
+    <key name="seat.idle_seconds" type="integer" source="spec:SPEC-16.C#c-config">How long idle must last before it counts for a stall.</key>
+    <key name="executor.health_seconds" type="integer" source="spec:SPEC-16.F#f-executor">How often Health is called; at most the poll interval.</key>
+    <key name="drain_seconds" type="integer" source="spec:SPEC-16.F#f-drain">How long running jobs may finish at shutdown.</key>
+    <key name="halt_flag" type="string" source="herdr/config/herdr.json#halt_flag">The flag file, variables resolved.</key>
+    <key name="notify.min_code" type="integer" source="spec:SPEC-16.F#f-notify">The lowest code that raises a herdr notification.</key>
+    <key name="housekeeping" type="object: name to seconds" source="spec:SPEC-16.F#f-housekeeping">queue_sweep, glass_sweep, prune.</key>
+    <ref spec="SPEC-16.G" anchor="g-keys"/>
+  </section>
+
+  <section id="f-owned" title="Rows and codes this domain owns">
+    <owns-route match='{"code":500,"kind":"seat.down"}' source="factory/config/routes.json">wake the monitor with the record: a seat went down badly.</owns-route>
+    <owns-route match='{"code_gte":500}' source="factory/config/routes.json">wake the monitor with the record: any other 5xx a seat wrote.</owns-route>
+    <owns-code value="412" name="GATE_FAILED" source="node:STC-http-shaped; spec:SPEC-04#s-bringup">A bring-up gate did not pass: the scheduler's start gate, or a node of the bring-up chain; the thing stays down and says why.</owns-code>
+    <owns-code value="500" name="FAILURE" source="node:STC-http-shaped; factory/bin/route.sh#trouble">Something the line could not do: no route, a dead job, a stall, an unreachable executor, a bad table on reload. Addressed to the monitor, said once.</owns-code>
+  </section>
+
+  <section id="f-tests" title="Cases the build ticket proves">
+    <case id="f-t1" command="go test ./internal/health -run TestBeltTouchedWhileJobRuns" expected="exit 0: with a Run that blocks for three ticks the belt file's age never passes one poll interval" source="spec:SPEC-16.F#f-belt">A long action is not a dead belt.</case>
+    <case id="f-t2" command="go test ./internal/health -run TestStallNeedsIdleSeat" expected="exit 0: an overdue gate with a busy seat yields nothing; with the seat idle past the threshold it yields one 500 note; with the seat absent likewise" source="spec:SPEC-16.F#f-stall">Two signals.</case>
+    <case id="f-t3" command="go test ./internal/health -run TestStallLatchedOnce" expected="exit 0: the same stall over ten ticks yields one note; an answer drops the latch; a later stall of the same gate is noted again" source="spec:SPEC-16.F#f-latch">Said once.</case>
+    <case id="f-t4" command="go test ./internal/health -run TestExecutorDownHoldsJobs" expected="exit 0: with Health failing no Run is attempted, job attempts do not rise, one note is written; when Health returns jobs run" source="spec:SPEC-16.F#f-executor">A dead executor costs no attempts.</case>
+    <case id="f-t5" command="go test ./internal/health -run TestHaltFlag" expected="exit 0: with the flag present the belt is touched, status says halted, nothing is listed or run; after removal the tick resumes" source="spec:SPEC-16.F#f-halt">Halt means halt.</case>
+    <case id="f-t6" command="go test ./internal/health -run TestDrainLeavesRunning" expected="exit 0: a drain with a job still running after the drain seconds exits 0 and leaves the job running in the store" source="spec:SPEC-16.F#f-drain">Nothing is lost at shutdown.</case>
+    <case id="f-t7" command="go test ./internal/health -run TestHousekeepingOncePerPeriod" expected="exit 0: ten ticks inside one period create one sweep job per housekeeping row" source="spec:SPEC-16.F#f-housekeeping">A period runs once.</case>
+    <case id="f-t8" command="go test ./internal/health -run TestVisibleBoundRefused" expected="exit 0: a configuration whose poll plus smallest deadline passes the bound is refused at start naming both keys" source="spec:SPEC-16.F#f-stall">A stall is visible in time.</case>
+  </section>
+
+  <section id="f-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="spec:SPEC-16.F#f-stall"><text>A tester's suite runs fourteen minutes; the gate deadline for pr.opened is ten; the tester's pane shows a spinner the whole time; no stall is noted; test.passed lands and the gate closes.</text></example>
+    <example kind="GOOD" source="spec:SPEC-16.F#f-executor"><text>The executor pane is restarted by the supervisor; for forty seconds Health fails, one 500 note is written, no job attempt is spent; the executor answers and the held jobs run.</text></example>
+    <example kind="NEVER" source="factory/bin/flow.sh#stalled_gates"><text>Calling a gate stalled from the wall clock alone.</text><why>That is the false alarm the owner named.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.F#f-stall"><text>The health domain seating a tester because the gate's seat is absent.</text><why>Re-seating is the supervisor's; two repairers race on one seat.</why></example>
+  </section>
+</spec>

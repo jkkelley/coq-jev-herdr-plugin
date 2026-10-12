@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.C" domain="seats" version="1.0.0" title="Seats: names, caps, bring-up and down, status, the shared seat" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="c-purpose" title="What the seats domain decides"/>
+    <item ref="c-names" title="Seat names from role labels"/>
+    <item ref="c-status" title="Observing seats: absent, idle, busy"/>
+    <item ref="c-caps" title="Caps: hold, never refuse"/>
+    <item ref="c-up" title="Bring-up through the seat script"/>
+    <item ref="c-down" title="Down, and the shared seat"/>
+    <item ref="c-absent" title="A wake to a seat that is not there"/>
+    <item ref="c-leases" title="Leases: who holds what"/>
+    <item ref="c-config" title="Keys this domain reads"/>
+    <item ref="c-owned" title="Rows and codes this domain owns"/>
+    <item ref="c-tests" title="Cases the build ticket proves"/>
+    <item ref="c-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="herdr/bin/seat.sh; spec:SPEC-04#s-seat">The seats domain knows every seat by name, sees whether it is absent, idle or busy, holds a bring-up that would pass a cap, and runs bring-up and down through the seat script on the host. It never starts an agent itself.</purpose>
+
+  <section id="c-purpose" title="What the seats domain decides">
+    <node id="REQ-seat-hold-not-refuse" status="proposed">
+      <title>A bring-up past its role's cap, or a down of a busy shared seat, is held and run when the way is clear; a seat script refusal is retried while its cause can clear and dead-lettered only after the last attempt</title>
+      <source kind="file" id="herdr/bin/seat.sh"/>
+      <source kind="spec" id="SPEC-16.C" at="2026-10-12T19:30Z"/>
+      <edge kind="implements" to="RUN-seat-up"/>
+      <edge kind="depends_on" to="REQ-locks-and-queues"/>
+    </node>
+    <text id="c-in" source="spec:SPEC-16#s-contracts">In: role files, the executor's observation verbs, the jobs that name a seat. Out: seat names, Seat statuses every tick, and the hold or release of seat jobs.</text>
+  </section>
+
+  <section id="c-names" title="Seat names from role labels">
+    <text id="c-names-rule" level="MUST" source="factory/bin/route.sh#seat_of; roles/schema/role.schema.json#label">The seat for a role on a ticket is the role file's label with the ticket variable replaced by the ticket id lowercased, the whole lowercased. A label that still holds a variable afterwards is an error naming the role.</text>
+    <text id="c-names-fixed" source="roles/merger.json; roles/monitor.json; roles/orchestrator.json">A role whose label holds no ticket variable is a fixed seat shared by every ticket: the merger, the monitor, the orchestrator, the interface agent.</text>
+    <text id="c-names-reverse" source="factory/bin/policy.sh#role_of_seat">The reverse lookup, role of a seat name, tries every role file's label against the name with the ticket substituted; policies use it to wake the seat that asked.</text>
+    <text id="c-names-pure" source="node:DEC-functional-style">Both are pure functions of the role files' labels, loaded once and reloaded with the configuration.</text>
+  </section>
+
+  <section id="c-status" title="Observing seats: absent, idle, busy">
+    <text id="c-status-list" level="MUST" source="herdr/bin/turnwatch.sh; spec:SPEC-16.H#h-verbs">Once per tick the observer runs the agent list verb: every agent herdr knows, with its name, status and pane. A seat with no agent of its name is absent.</text>
+    <text id="c-status-busy" level="MUST" source="herdr/bin/turnwatch.sh; herdr/bin/supervisor.sh">Busy: herdr reports it busy, or the last lines of its pane match the configured busy pattern (a spinner), because herdr says idle while a seat runs a long command. The pane is read only for seats a verdict waits on.</text>
+    <text id="c-status-idle" source="herdr/bin/turnwatch.sh">A seat is idle when it is present, not busy, and its pane's last lines match the done pattern or show a prompt; Seat.Since is the first tick that saw the current status and resets on change.</text>
+    <text id="c-status-unknown" source="spec:SPEC-16.F#f-executor">When the agent list verb fails the status of every seat is unknown for that tick; nothing is judged on unknown, and the executor health domain says why.</text>
+    <text id="c-status-cost" source="herdr/bin/turnwatch.sh">Cost: the footer text of the agent runtime is the busy signal, so a change to that footer silences it; the patterns are configuration, not Go, so a change is one key.</text>
+  </section>
+
+  <section id="c-caps" title="Caps: hold, never refuse">
+    <text id="c-caps-rule" level="MUST" source="roles/schema/role.schema.json#max_seats; spec:SPEC-04#s-seat">Before a seat-up job runs, the live seats of its role are counted from the observation; when the count is at the role's cap the job is held with reason cap and looked at again every tick.</text>
+    <text id="c-caps-why" source="herdr/bin/seat.sh">The seat script refuses over cap with exit 3 and a 429 record; holding before the call spares the refusal, the record and the retry, and keeps the order in which tickets asked.</text>
+    <text id="c-caps-wait" source="spec:SPEC-16.F#f-latch">A job held for cap longer than the configured cap wait raises one 500 note to the monitor naming the role and the ticket, latched per job, so a cap that never clears is seen.</text>
+    <text id="c-caps-order" source="spec:SPEC-16.D#d-store">Held seat-up jobs of one role release in the order of their record ids, oldest first.</text>
+  </section>
+
+  <section id="c-up" title="Bring-up through the seat script">
+    <text id="c-up-verb" level="MUST" source="herdr/bin/seat.sh; factory/bin/route.sh#act_primary">Bring-up is the seat-up verb: the seat script with the ticket and the role. It leases a slot, checks out the branch, builds the panes, starts the agent, binds the guard and sends the brief; the scheduler sees only the exit code.</text>
+    <text id="c-up-idem" source="herdr/bin/seat.sh">A live seat is left as it is by the script, so the job runs for every record that says seat and never asks first; two bring-ups of one seat cost one call.</text>
+    <text id="c-up-exit" level="MUST" source="herdr/bin/seat.sh; spec:SPEC-16.D#d-classify">Exit 0: done. Exit 3: a refusal whose cause can clear (bring-up gate, slot not back, branch held elsewhere, foreign process in the slot), retried with backoff. Exit 4 or a timeout: retried. Exit 2: a bug, dead at once.</text>
+    <text id="c-up-branch" source="herdr/bin/seat.sh#slot_to_branch">The branch case: a slot cannot be put on a branch another worktree holds, which clears when that worktree detaches; the retry carries it without reading the reason, and the last reason is in the dead-letter note if it never clears.</text>
+    <text id="c-up-prompt" source="spec:SPEC-16.B#b-act-seat; spec:SPEC-16.D#d-confirm">The prompt job that follows the bring-up waits for it to be done and is then confirmed like any wake.</text>
+  </section>
+
+  <section id="c-down" title="Down, and the shared seat">
+    <text id="c-down-verb" level="MUST" source="herdr/bin/seat.sh; factory/bin/route.sh#act_down">Down is the seat-down verb with the seat name: the script retires the agent, closes the tab, returns the slot and records seat.down. A second down prints already down and exits 0.</text>
+    <text id="c-down-exit" source="herdr/bin/seat.sh#lease_down">Exit 3, a foreign process still in the slot, is retried with backoff because the process may leave; exit 4, a slot that would not come back, likewise; after the last attempt the dead-letter note names the seat and the last reason.</text>
+    <text id="c-down-shared" level="MUST" source="factory/bin/route.sh#act_down; roles/merger.json">A down of a shared seat is held while that seat is busy or while a prompt job to it is still confirming, and runs when it is idle: a merged record for one ticket must not end the merger another ticket's review just woke.</text>
+    <text id="c-down-cost" source="factory/bin/route.sh#act_down">Cost: a shared seat that idles between two tickets is downed and seated again; the alternative, one merger per ticket, is a role label change the architect owns.</text>
+  </section>
+
+  <section id="c-absent" title="A wake to a seat that is not there">
+    <text id="c-absent-rule" level="MUST" source="factory/bin/route.sh#act_primary">A prompt job whose seat is absent is held with reason absent and re-examined every tick; the row said wake, not seat, so the scheduler never seats it. After the configured absent wait the job is dead with a 500 note naming the seat.</text>
+    <text id="c-absent-why" source="herdr/bin/supervisor.sh">The supervisor re-seats fixed seats that died; a hold gives it the time, where the bash runner wrote a 500 at once and lost the wake.</text>
+  </section>
+
+  <section id="c-leases" title="Leases: who holds what">
+    <text id="c-leases-slot" source="herdr/bin/seat.sh; herdr/config/leases.json">The slot lease belongs to the seat script and the pool; the scheduler never leases or returns a slot.</text>
+    <text id="c-leases-ticket" source="queue/bin/queue.sh; herdr/config/leases.json">The ticket lease belongs to the queue; the scheduler enqueues through the queue verb and sweeps expired leases through the sweep verb on the health domain's schedule.</text>
+    <text id="c-leases-seat" source="herdr/config/leases.json#seat">The seat lease is the agent answering and the seat record carrying no end; the observer is its proof, and an absent seat with a job waiting is the stall the health domain reports.</text>
+  </section>
+
+  <section id="c-config" title="Keys this domain reads">
+    <key name="roles_dir" type="string" source="factory/config/runner.json#roles_dir">Role files for labels and caps.</key>
+    <key name="seat.busy_regex" type="string" source="herdr/bin/turnwatch.sh">The pane footer pattern that means busy.</key>
+    <key name="seat.done_regex" type="string" source="herdr/bin/turnwatch.sh">The pane footer pattern that means a turn ended.</key>
+    <key name="seat.read_lines" type="integer" source="herdr/bin/turnwatch.sh">How many pane lines the read verb fetches.</key>
+    <key name="seat.cap_wait_seconds" type="integer" source="spec:SPEC-16.C#c-caps">How long a job may be held for cap before one 500 note.</key>
+    <key name="seat.absent_wait_seconds" type="integer" source="spec:SPEC-16.C#c-absent">How long a prompt may wait for an absent seat before it is dead.</key>
+    <key name="seat.idle_seconds" type="integer" source="spec:SPEC-16.F#f-stall">How long a seat must be idle before a stall verdict may count it idle.</key>
+    <ref spec="SPEC-16.G" anchor="g-keys"/>
+  </section>
+
+  <section id="c-owned" title="Rows and codes this domain owns">
+    <owns-code value="429" name="OVER_CAP" source="node:STC-http-shaped; spec:SPEC-04#s-seat">The seat script's refusal when a role is at its cap. The scheduler holds before the call and never writes a 429 itself; one it reads is a note for the board.</owns-code>
+  </section>
+
+  <section id="c-tests" title="Cases the build ticket proves">
+    <case id="c-t1" command="go test ./internal/seat -run TestSeatNameFromLabel" expected="exit 0: tester on a ticket yields the label with the ticket lowercased; the merger yields merger; a label with a leftover variable errors" source="spec:SPEC-16.C#c-names">Names are the seat script's names.</case>
+    <case id="c-t2" command="go test ./internal/seat -run TestObserveStatuses" expected="exit 0: from a scripted agent list and pane reads the observer yields absent, busy by herdr, busy by footer, idle, and unknown when the verb fails" source="spec:SPEC-16.C#c-status">Three signals, one status.</case>
+    <case id="c-t3" command="go test ./internal/seat -run TestCapHolds" expected="exit 0: a seat-up for a role at its cap is held with reason cap, released oldest first when a seat goes absent, and the fake executor saw no call while held" source="spec:SPEC-16.C#c-caps">Hold, never refuse.</case>
+    <case id="c-t4" command="go test ./internal/seat -run TestUpExitClasses" expected="exit 0: exit 3 and 4 and a timeout schedule a retry, exit 2 is dead at once, exit 0 is done" source="spec:SPEC-16.C#c-up">Refusals that can clear are retried.</case>
+    <case id="c-t5" command="go test ./internal/seat -run TestSharedDownWaitsForIdle" expected="exit 0: a down of the merger is held while it is busy or confirming and runs on the first idle tick" source="spec:SPEC-16.C#c-down">The shared seat is not pulled from under a ticket.</case>
+    <case id="c-t6" command="go test ./internal/seat -run TestAbsentWake" expected="exit 0: a prompt to an absent seat is held, runs when the seat appears, and is dead with one 500 after the absent wait" source="spec:SPEC-16.C#c-absent">A wake waits for the supervisor.</case>
+  </section>
+
+  <section id="c-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="spec:SPEC-16.C#c-up"><text>pr.opened lands while the worker's worktree still holds the branch; the seat script refuses, the job retries at 10, 20 and 40 seconds, the worker detaches, the fourth try seats the tester.</text></example>
+    <example kind="GOOD" source="spec:SPEC-16.C#c-caps"><text>Five pull requests open in one minute with a tester cap of four; the fifth bring-up is held and runs when the first tester is downed by its test.passed.</text></example>
+    <example kind="NEVER" source="spec:SPEC-16.C#c-up"><text>The scheduler running the agent runtime itself because the seat script was slow.</text><why>The script is the one way a seat comes up; the scheduler sees exit codes.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.C#c-status"><text>Judging a seat idle from herdr's status alone.</text><why>herdr says idle while a seat runs a long command; the pane footer is the second signal.</why></example>
+  </section>
+</spec>

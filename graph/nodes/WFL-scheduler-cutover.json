@@ -1,0 +1,35 @@
+{
+  "id": "WFL-scheduler-cutover",
+  "type": "Workflow",
+  "title": "Cut-over: shadow beside the bash belt until parity holds for the configured number of records, then active with the watcher panes stopped and the ledger adopted; rollback is the mode flag and the panes back",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "spec",
+      "id": "SPEC-16.J",
+      "at": "2026-10-12T19:30Z"
+    },
+    {
+      "kind": "owner",
+      "id": "bearings",
+      "at": "2026-10-12T18:34Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "CMP-route-runner"
+    },
+    {
+      "kind": "depends_on",
+      "to": "CMP-scheduler"
+    },
+    {
+      "kind": "implements",
+      "to": "WFL-sdlc"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:21Z"
+}

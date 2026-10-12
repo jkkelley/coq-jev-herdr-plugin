@@ -1,0 +1,31 @@
+{
+  "id": "REQ-seat-hold-not-refuse",
+  "type": "Requirement",
+  "title": "A bring-up past its role's cap, or a down of a busy shared seat, is held and run when the way is clear; a seat script refusal is retried while its cause can clear and dead-lettered only after the last attempt",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "file",
+      "id": "herdr/bin/seat.sh",
+      "at": null
+    },
+    {
+      "kind": "spec",
+      "id": "SPEC-16.C",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "RUN-seat-up"
+    },
+    {
+      "kind": "depends_on",
+      "to": "REQ-locks-and-queues"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:26Z"
+}

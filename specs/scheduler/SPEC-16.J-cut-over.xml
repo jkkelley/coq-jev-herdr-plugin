@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.J" domain="cutover" version="1.0.0" title="Cut-over: the mode flag, shadow and parity, going active, rollback, retiring the watchers" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="j-purpose" title="What the cut-over domain decides"/>
+    <item ref="j-mode" title="The mode flag"/>
+    <item ref="j-shadow" title="Shadow mode"/>
+    <item ref="j-parity" title="The parity report"/>
+    <item ref="j-active" title="Going active"/>
+    <item ref="j-rollback" title="Rollback"/>
+    <item ref="j-retire" title="Retiring the bash watchers"/>
+    <item ref="j-accept" title="Acceptance"/>
+    <item ref="j-config" title="Keys this domain reads"/>
+    <item ref="j-tests" title="Cases the build ticket proves"/>
+    <item ref="j-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="owner:bearings:2026-10-12T18:34Z; node:DEC-local-fast-ci-full">The scheduler replaces the bash belt behind a flag: it runs beside the belt, deciding without acting, until its decisions match the belt's for enough records, then takes the belt's state and place; the flag is the way back.</purpose>
+
+  <section id="j-purpose" title="What the cut-over domain decides">
+    <node id="WFL-scheduler-cutover" status="proposed">
+      <title>Cut-over: shadow beside the bash belt until parity holds for the configured number of records, then active with the watcher panes stopped and the ledger adopted; rollback is the mode flag and the panes back</title>
+      <source kind="spec" id="SPEC-16.J" at="2026-10-12T19:30Z"/>
+      <source kind="owner" id="bearings" at="2026-10-12T18:34Z"/>
+      <edge kind="depends_on" to="CMP-route-runner"/>
+      <edge kind="depends_on" to="CMP-scheduler"/>
+      <edge kind="implements" to="WFL-sdlc"/>
+    </node>
+    <text id="j-in" source="spec:SPEC-16.G#g-keys">In: the mode, the shadow directory, the bash belt's state directory and receipts. Out: the gate on the job runner, the shadow decision files, the parity report, the runbook steps.</text>
+  </section>
+
+  <section id="j-mode" title="The mode flag">
+    <text id="j-mode-values" level="MUST" source="spec:SPEC-16.G#g-keys">off: the scheduler answers health and status and does nothing else. shadow: it decides and writes decisions, runs only observation verbs. active: it decides and acts. The key is a variable, so the pane wrapper sets it from the environment.</text>
+    <text id="j-mode-gate" level="MUST" source="spec:SPEC-16.D#d-job">The job runner checks the mode before every Run: in shadow a mutating verb is never sent and the job is written to the shadow directory as decided; in off no job is created at all.</text>
+    <text id="j-mode-verbs" source="spec:SPEC-16.H#h-verbs">Observation verbs: agent_list, pane_read, pane_process_info, seat_quiet. Every other verb mutates.</text>
+  </section>
+
+  <section id="j-shadow" title="Shadow mode">
+    <text id="j-shadow-state" level="MUST" source="spec:SPEC-16.A#a-order">Shadow uses its own state directory: its own boundary, ledger, jobs and belt. It never reads or writes the bash belt's state, so the two run side by side on the same log.</text>
+    <text id="j-shadow-decision" level="MUST" source="spec:SPEC-16.B#b-plan">For every record intake lists, one decision file in the shadow directory named by the record id: the plan, the escalation count used, the table version, and every job it would have run with verb and arguments.</text>
+    <text id="j-shadow-policies" source="spec:SPEC-16.E#e-apply">Policies decide in shadow too: a default the scheduler would apply is a decision file naming the policy and the escalation, compared with the policy watch's policy.applied records.</text>
+    <text id="j-shadow-health" source="spec:SPEC-16.F#f-stall">Health judges in shadow and logs its verdicts; it writes no note and shows no notification.</text>
+  </section>
+
+  <section id="j-parity" title="The parity report">
+    <text id="j-parity-oracle" level="MUST" source="factory/bin/route.sh#route_file">The oracle is the bash belt: for each decision file, the bash ledger's word for that id, and when it says done, the receipt record the bash runner wrote naming the id. The report compares verdict, action, addressee and down.</text>
+    <text id="j-parity-note" source="factory/bin/route.sh#route_file">The receipt's note is parsed here and nowhere else in the scheduler: it is the bash runner's fixed format, read by a report tool, and the parity ticket's test pins the format with a fixture.</text>
+    <text id="j-parity-verdict" level="MUST" source="spec:SPEC-16.G#g-keys">The report lists every mismatch with both sides and exits 0 only when the records compared reach the configured minimum and mismatches are zero; otherwise 1. Going active is refused by the runbook while it exits 1.</text>
+    <text id="j-parity-known" source="spec:SPEC-16.D#d-confirm">Known, accepted differences are not mismatches: the scheduler holds and retries where the belt wrote a 500; the report shows them as a separate count, improvements, with the bash 500 note beside the scheduler's job.</text>
+  </section>
+
+  <section id="j-active" title="Going active">
+    <text id="j-active-steps" level="MUST" source="herdr/bin/monitors.sh; herdr/config/monitors.json">By the runbook, in order: parity exits 0; the three belt panes and two architect watches are released through the monitors script; the state directory key points at the belt's; mode active; pane restarted; status says active.</text>
+    <text id="j-active-adopt" level="MUST" source="spec:SPEC-16.A#a-ledger">Adopting the bash state directory means the ledger, the boundary and the belt file continue: a record the belt routed is never routed again, and the first unrouted record is the scheduler's first.</text>
+    <text id="j-active-config" source="herdr/config/herdr.json#belt; herdr/config/monitors.json">The belt status command in the herdr configuration becomes the scheduler's status with the belt flag, and the runner slot's command becomes the scheduler wrapper; the executor takes a slot the released watches held.</text>
+    <text id="j-active-window" source="spec:SPEC-16.F#f-stall">The window between the belt stopping and the scheduler going active is one restart of one pane; records written in it are routed when the scheduler ticks, because the ledger is shared.</text>
+  </section>
+
+  <section id="j-rollback" title="Rollback">
+    <text id="j-rollback-steps" level="MUST" source="herdr/bin/bringup.sh">Mode off, restart the pane, restore the slot and belt status commands, run bring-up: the belt panes come back on the shared ledger and route from the first record the scheduler had not finished. Every claim is a file; nothing is lost.</text>
+    <text id="j-rollback-jobs" source="spec:SPEC-16.D#d-store">Jobs the scheduler had in flight are left in its store; a record it claimed but did not finish is interrupted for the belt, which reports it once, as it does for its own.</text>
+  </section>
+
+  <section id="j-retire" title="Retiring the bash watchers">
+    <text id="j-retire-what" source="herdr/config/monitors.json; herdr/bin/recwatch.sh; herdr/bin/turnwatch.sh">Retired at cut-over: the route runner, flow watch, policy watch, gate record watch and seat turn watch (each a released grid slot) and the interim copies in the user cache; the scripts stay as the parity oracle until a ticket removes them.</text>
+    <text id="j-retire-architect" level="MUST" source="owner:bearings:2026-10-12T18:34Z; factory/config/routes.json">After cut-over the architect is woken only by rows: a merged record to verify, an escalation to re-scope. No watch prompts it for every gate record or every finished turn; the line runs without it.</text>
+  </section>
+
+  <section id="j-accept" title="Acceptance">
+    <text id="j-accept-scratch" level="MUST" source="spec:SPEC-04#s-testing">First in a scratch herdr session with a stub agent: a pr.opened written into the log is routed to a seated tester with no bash watcher running, receipt and ledger word match the fixtures, and the tester's down follows its test.passed.</text>
+    <text id="j-accept-live" level="MUST" source="owner:bearings:2026-10-12T18:34Z">Then on the live session for one real pull request: the same path, with the belt panes released, observed in status and in the two panes; that run is the epic's acceptance.</text>
+  </section>
+
+  <section id="j-config" title="Keys this domain reads">
+    <key name="mode" type="string" source="spec:SPEC-16.G#g-keys">off, shadow, active.</key>
+    <key name="shadow.dir" type="string" source="spec:SPEC-16.G#g-keys">Where decision files go.</key>
+    <key name="shadow.parity_min_records" type="integer" source="spec:SPEC-16.G#g-keys">How many compared records parity needs before it may exit 0.</key>
+    <key name="state_dir" type="string" source="spec:SPEC-16.G#g-keys">The shadow's own in shadow mode; the bash belt's when active.</key>
+    <ref spec="SPEC-16.G" anchor="g-keys"/>
+  </section>
+
+  <section id="j-tests" title="Cases the build ticket proves">
+    <case id="j-t1" command="go test ./internal/cutover -run TestShadowSendsNoMutatingVerb" expected="exit 0: over the replay fixtures in shadow the fake executor saw only observation verbs and one decision file exists per record" source="spec:SPEC-16.J#j-shadow">Shadow decides, never acts.</case>
+    <case id="j-t2" command="go test ./internal/cutover -run TestParityAgainstBashLedger" expected="exit 0: a fixture bash state directory with receipts yields zero mismatches for agreeing decisions and names each disagreeing one with both sides" source="spec:SPEC-16.J#j-parity">The report reads both sides.</case>
+    <case id="j-t3" command="go test ./internal/cutover -run TestParityExitCodes" expected="exit 0: below the minimum records or with a mismatch the report exits 1, otherwise 0" source="spec:SPEC-16.J#j-parity">The runbook can gate on it.</case>
+    <case id="j-t4" command="go test ./internal/cutover -run TestAdoptLedger" expected="exit 0: started active on a bash state directory the scheduler routes nothing already ledgered and routes the first unrouted record" source="spec:SPEC-16.J#j-active">Nothing twice, nothing skipped.</case>
+    <case id="j-t5" command="make -C scheduler e2e" expected="tests: N passed, 0 failed: in the scratch herdr session a pr.opened routes to a seated stub tester with no bash pane present" source="spec:SPEC-16.J#j-accept">The acceptance, rehearsed.</case>
+  </section>
+
+  <section id="j-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="spec:SPEC-16.J#j-parity"><text>Parity over 300 records: 297 agree, 3 are improvements where the belt wrote a 500 for a refused bring-up and the scheduler holds a retry; zero mismatches; the operator goes active.</text></example>
+    <example kind="NEVER" source="spec:SPEC-16.J#j-active"><text>Going active with the route runner pane still running.</text><why>Two routers on one ledger race on every claim; one of them reports every record as interrupted.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.J#j-shadow"><text>Shadow mode writing its belt into the bash belt's file to keep the supervisor quiet.</text><why>The supervisor would see a moving belt with no runner behind it.</why></example>
+  </section>
+</spec>

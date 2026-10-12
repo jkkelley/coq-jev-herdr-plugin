@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.G" domain="config" version="1.0.0" title="Config and schema: the two files, variables, validation and hot reload" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="g-purpose" title="What the config domain decides"/>
+    <item ref="g-files" title="The files"/>
+    <item ref="g-vars" title="Variables"/>
+    <item ref="g-nodefault" title="No defaults, no unknown keys"/>
+    <item ref="g-validate" title="Validation at start"/>
+    <item ref="g-reload" title="Hot reload of the tables"/>
+    <item ref="g-keys" title="The key registry of scheduler.json"/>
+    <item ref="g-executor" title="The key registry of executor.json"/>
+    <item ref="g-tests" title="Cases the build ticket proves"/>
+    <item ref="g-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="node:DEC-no-hardcode-config-s3; spec:SPEC-01#s-config">Every tunable is a key in one JSON file with a schema beside it; the executor's verb table is a second file. The loader resolves variables, refuses a missing or unknown key by name, validates at start, and reloads the tables while running.</purpose>
+
+  <section id="g-purpose" title="What the config domain decides">
+    <node id="SCH-scheduler-config" status="proposed">
+      <title>scheduler/config/scheduler.json and executor.json: every tunable of the scheduler and the verb table of the executor, validated by the schemas beside them, variables resolved at load, no default in Go</title>
+      <source kind="node" id="DEC-no-hardcode-config-s3"/>
+      <source kind="spec" id="SPEC-16.G" at="2026-10-12T19:30Z"/>
+      <edge kind="implements" to="DEC-no-hardcode-config-s3"/>
+      <edge kind="depends_on" to="SCH-routes"/>
+    </node>
+    <text id="g-in" source="lint/lint.sh">In: the two files and the tables they name. Out: one typed configuration value every domain reads, and a reload signal with the new table versions. The repository lint validates the files against their schemas on every change.</text>
+  </section>
+
+  <section id="g-files" title="The files">
+    <text id="g-files-sched" level="MUST" source="spec:SPEC-16.G#g-keys">scheduler.json in the scheduler's config directory, with scheduler.schema.json beside it: the scheduler's own settings and the paths of the tables it reads.</text>
+    <text id="g-files-exec" level="MUST" source="spec:SPEC-16.G#g-executor">executor.json with executor.schema.json beside it: the socket, the host paths, the seat the record verb writes as, and the verb table.</text>
+    <text id="g-files-tables" source="factory/config/routes.json; factory/config/policies.json; factory/config/flow.json">The tables stay where they are and keep their schemas: the routes table, the policies table, the flow configuration's gates, the role files. The scheduler reads them by the paths its own file names and never carries a copy.</text>
+    <text id="g-files-lint" source="lint/lint.sh">The repository lint validates every config file that has a schema beside it, so the two new files are covered by the existing step with no lint change.</text>
+  </section>
+
+  <section id="g-vars" title="Variables">
+    <text id="g-vars-set" level="MUST" source="spec:SPEC-01#s-config">A string value may carry repo, state_dir, host_repo, HOME or ENV:NAME in the variable form; the loader resolves them after the file is read, and an unknown variable or an unset environment name is exit 3 naming it.</text>
+    <text id="g-vars-two-repos" level="MUST" source="spec:SPEC-16.H#h-run">repo is the repository as mounted in the container, for reading; host_repo is the repository on the host, for the executor. The scheduler uses host_repo only in text typed or run on the host, such as a wake line's playbook path.</text>
+    <text id="g-vars-portable" source="node:DEC-no-hardcode-config-s3">No absolute path, host name or user name inside the file: every machine-specific value comes in through a variable, so the file can be lifted to another host or to object storage unchanged.</text>
+  </section>
+
+  <section id="g-nodefault" title="No defaults, no unknown keys">
+    <text id="g-nodefault-rule" level="MUST" source="node:DEC-no-hardcode-config-s3; factory/bin/route.sh#cfg">A key the scheduler reads and the file lacks is exit 3 naming the key. A key the file carries and the scheduler does not know is exit 3 naming the key. Go holds no fallback value for any key.</text>
+    <text id="g-nodefault-why" source="herdr/bin/supervisor.sh">A silent default is a literal nobody can find; the supervisor's fourteen literals were the last time this was learned.</text>
+  </section>
+
+  <section id="g-validate" title="Validation at start">
+    <text id="g-val-shape" level="MUST" source="spec:SPEC-16.G#g-keys">Shape: every key present with its type, ranges that the schema states, mode one of off, shadow, active.</text>
+    <text id="g-val-cross" level="MUST" source="spec:SPEC-16.D#d-config; spec:SPEC-16.F#f-config">Cross checks: every role has an acknowledgement window; every gate kind has a stall deadline; poll plus the smallest deadline stays within the visible bound; every root pattern resolves to at least one directory.</text>
+    <text id="g-val-tables" source="spec:SPEC-16.B#b-load; spec:SPEC-16.E#e-table">The tables are loaded and checked by their own domains at start; a failure there is exit 3 with the file, the row and the key.</text>
+    <text id="g-val-verbs" source="spec:SPEC-16.F#f-executor">The verbs the scheduler can emit are a fixed list in the executor domain; the executor's Health names the verbs its table holds, and a missing one blocks going active rather than failing at the first job.</text>
+  </section>
+
+  <section id="g-reload" title="Hot reload of the tables">
+    <text id="g-reload-what" level="MUST" source="factory/config/routes.json#description">The routes table, the policies table, the flow gates and the role files reload while running: each tick compares the file's size and modification time, re-reads a changed file, runs its domain's checks, and swaps it in whole or not at all.</text>
+    <text id="g-reload-fail" level="MUST" source="spec:SPEC-16.F#f-latch">A changed file that fails its checks is kept out: the loaded table stays, one 500 note names the file and the reason, latched by file name until a later change loads.</text>
+    <text id="g-reload-not" source="spec:SPEC-16.G#g-files">scheduler.json and executor.json do not reload; a change to either is a restart of the process it configures, because the socket, the roots and the mode are not things to swap under running jobs.</text>
+    <text id="g-reload-rpc" source="spec:SPEC-16.H#h-proto">The Reload call forces the comparison now and answers with the versions loaded.</text>
+  </section>
+
+  <section id="g-keys" title="The key registry of scheduler.json">
+    <key name="schema_version" type="string" source="spec:SPEC-01#s-config">The file's schema version.</key>
+    <key name="mode" type="string: off, shadow, active" source="spec:SPEC-16.J#j-mode">What the scheduler may do; a variable so the run wrapper can set it from the environment.</key>
+    <key name="seat" type="string" source="factory/config/runner.json#runner_seat">The scheduler's own seat name on the records it writes.</key>
+    <key name="herdr_session" type="string" source="factory/config/runner.json#herdr_session">The herdr session the executor addresses; carried to the executor's configuration too.</key>
+    <key name="repo" type="string" source="spec:SPEC-16.G#g-vars">The repository as mounted for reading.</key>
+    <key name="host_repo" type="string" source="spec:SPEC-16.G#g-vars">The repository on the host, for text typed or run there.</key>
+    <key name="state_dir" type="string" source="factory/config/runner.json#state_dir">The state directory: ledger, jobs, latches, belt, shadow.</key>
+    <key name="routes_file, policies_file, flow_file" type="string" source="factory/config/runner.json#routes_file">The tables.</key>
+    <key name="roles_dir, playbooks_dir" type="string" source="factory/config/runner.json#roles_dir">Role files and playbooks; playbooks_dir is a host path on the wake line.</key>
+    <key name="halt_flag, drain_seconds" type="string, integer" source="spec:SPEC-16.F#f-halt">The halt flag file and the shutdown grace.</key>
+    <key name="intake.poll_seconds, intake.roots, intake.since, intake.runner_seats" type="integer, array, string, array" source="spec:SPEC-16.A#a-config">Intake's keys.</key>
+    <key name="seat.busy_regex, seat.done_regex, seat.read_lines, seat.cap_wait_seconds, seat.absent_wait_seconds, seat.idle_seconds" type="string, string, integer, integer, integer, integer" source="spec:SPEC-16.C#c-config">The seats domain's keys.</key>
+    <key name="retry.max_attempts, retry.base_seconds, retry.factor, retry.max_seconds, retry.jitter" type="integer, number, number, number, number" source="spec:SPEC-16.D#d-config">The default retry policy.</key>
+    <key name="jobs.in_flight, jobs.keep_days" type="integer, integer" source="spec:SPEC-16.D#d-config">Concurrency and retention.</key>
+    <key name="wake.ack_seconds, wake.max_attempts" type="object, integer" source="spec:SPEC-16.D#d-config">Confirmation windows per role and re-sends.</key>
+    <key name="stall.deadline_seconds, stall.visible_within_seconds" type="object, integer" source="spec:SPEC-16.F#f-config">Stall deadlines per gate kind and the visibility bound.</key>
+    <key name="belt.file, belt.stale_seconds" type="string, integer" source="spec:SPEC-16.F#f-config">The heartbeat.</key>
+    <key name="executor.socket, executor.dial_seconds, executor.health_seconds" type="string, integer, integer" source="spec:SPEC-16.H#h-run">The executor socket as mounted in the container, the dial timeout, the health interval.</key>
+    <key name="control.socket" type="string" source="spec:SPEC-16.H#h-proto">The scheduler's own socket for status, reload, drain and retry.</key>
+    <key name="notify.min_code" type="integer" source="spec:SPEC-16.F#f-config">The lowest code that raises a herdr notification.</key>
+    <key name="housekeeping.queue_sweep_seconds, housekeeping.glass_sweep_seconds, housekeeping.prune_seconds" type="integer" source="spec:SPEC-16.F#f-housekeeping">The periods.</key>
+    <key name="shadow.dir, shadow.parity_min_records" type="string, integer" source="spec:SPEC-16.J#j-shadow">Where shadow decisions go and how many agreeing records parity needs.</key>
+    <key name="log.level" type="string: debug, info, warn, error" source="spec:SPEC-16.I#i-log">The log level.</key>
+  </section>
+
+  <section id="g-executor" title="The key registry of executor.json">
+    <key name="schema_version" type="string" source="spec:SPEC-01#s-config">The file's schema version.</key>
+    <key name="socket" type="string" source="spec:SPEC-16.H#h-run">The unix socket path the executor listens on, under the runtime directory variable.</key>
+    <key name="host_repo, state_dir, herdr_session" type="string" source="spec:SPEC-16.G#g-vars">Host paths and the session every herdr verb addresses.</key>
+    <key name="seat" type="string" source="spec:SPEC-16.A#a-writer">The seat the record verb forces on every record it writes; the scheduler cannot override it.</key>
+    <key name="tail_lines" type="integer" source="spec:SPEC-16.H#h-proto">How many lines of stdout and stderr come back in a verdict.</key>
+    <key name="verbs" type="object: name to verb" source="spec:SPEC-16.H#h-verbs">The verb table: argv template, timeout seconds, final exit codes, the allowed flag set for the record verb.</key>
+    <key name="unset_env" type="array of string" source="factory/bin/route.sh#herdr_prompt">Environment names removed before every verb, the pane identity of the executor's own pane among them, so a herdr call never targets the executor's pane by accident.</key>
+  </section>
+
+  <section id="g-tests" title="Cases the build ticket proves">
+    <case id="g-t1" command="go test ./internal/config -run TestMissingKeyNamed" expected="exit 0: a file lacking one key fails with exit 3 and the key's dotted name in the error" source="spec:SPEC-16.G#g-nodefault">A missing key is named.</case>
+    <case id="g-t2" command="go test ./internal/config -run TestUnknownKeyRefused" expected="exit 0: a file with an extra key fails naming it" source="spec:SPEC-16.G#g-nodefault">No silent extras.</case>
+    <case id="g-t3" command="go test ./internal/config -run TestVariablesResolved" expected="exit 0: repo, state_dir, host_repo, HOME and ENV names resolve; an unknown variable or unset name fails naming it" source="spec:SPEC-16.G#g-vars">Portable values.</case>
+    <case id="g-t4" command="go test ./internal/config -run TestCrossChecks" expected="exit 0: a role without an acknowledgement window, a gate kind without a deadline, and a broken visible bound each fail naming the key" source="spec:SPEC-16.G#g-validate">Cross checks at start.</case>
+    <case id="g-t5" command="go test ./internal/config -run TestReloadSwapsWholeOrNot" expected="exit 0: a changed valid table is swapped with a new version; a changed invalid one leaves the old version in place with one note" source="spec:SPEC-16.G#g-reload">Whole or not at all.</case>
+    <case id="g-t6" command="make lint" expected="configs: schema ok, with scheduler.json and executor.json validated against their schemas" source="lint/lint.sh">The repository lint covers the files.</case>
+  </section>
+
+  <section id="g-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="spec:SPEC-16.G#g-vars"><text>intake.roots holds the repo variable followed by the events directory, and a second pattern over the slot pool under the HOME variable; the run wrapper mounts both read-only.</text></example>
+    <example kind="GOOD" source="spec:SPEC-16.G#g-reload"><text>An operator adds a routes row and saves; the next tick loads it, the log says routes loaded with the new hash, and the next record uses it.</text></example>
+    <example kind="NEVER" source="spec:SPEC-16.G#g-nodefault"><text>poll := cfg.PollSeconds; if poll == 0 then poll = 10.</text><why>A default nobody can find; the key is required or the file is wrong.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.G#g-vars"><text>A slash home slash user path inside scheduler.json.</text><why>The file must lift to another host unchanged.</why></example>
+  </section>
+</spec>

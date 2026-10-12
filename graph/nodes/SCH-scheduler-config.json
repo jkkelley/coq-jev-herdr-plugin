@@ -1,0 +1,31 @@
+{
+  "id": "SCH-scheduler-config",
+  "type": "Schema",
+  "title": "scheduler/config/scheduler.json and executor.json: every tunable of the scheduler and the verb table of the executor, validated by the schemas beside them, variables resolved at load, no default in Go",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "node",
+      "id": "DEC-no-hardcode-config-s3",
+      "at": null
+    },
+    {
+      "kind": "spec",
+      "id": "SPEC-16.G",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "DEC-no-hardcode-config-s3"
+    },
+    {
+      "kind": "depends_on",
+      "to": "SCH-routes"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:21Z"
+}

@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.B" domain="routing" version="1.0.0" title="Routing: the table, the match, the plan and the receipt" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="b-purpose" title="What routing decides"/>
+    <item ref="b-load" title="Loading the table"/>
+    <item ref="b-match" title="The match: first row wins"/>
+    <item ref="b-plan" title="The plan: from a row to jobs"/>
+    <item ref="b-actions" title="Actions, one by one"/>
+    <item ref="b-receipt" title="The receipt and the failure note"/>
+    <item ref="b-noroute" title="No row, ignore, own"/>
+    <item ref="b-config" title="Keys this domain reads"/>
+    <item ref="b-owned" title="Rows and codes this domain owns"/>
+    <item ref="b-tests" title="Cases the build ticket proves"/>
+    <item ref="b-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="spec:SPEC-03#s-routes; factory/bin/route.sh">Routing applies the routes table to one record and returns a plan: the row that matched and the jobs it implies, in order. It is a pure function of the record, the table and the escalation count; it performs nothing.</purpose>
+
+  <section id="b-purpose" title="What routing decides">
+    <node id="REQ-routing-table-only" status="proposed">
+      <title>Routing is a pure function of the record, the routes table and the escalation count: the first matching row decides, the plan it returns is data, and no Go branch reads a kind, a code or a note outside a row match</title>
+      <source kind="node" id="SCH-routes"/>
+      <source kind="file" id="factory/bin/route.sh#match_route"/>
+      <source kind="spec" id="SPEC-16.B" at="2026-10-12T19:30Z"/>
+      <edge kind="implements" to="SCH-routes"/>
+      <edge kind="implements" to="REQ-factory-node-contract"/>
+    </node>
+    <text id="b-in" source="factory/bin/route.sh#route_file">In: a Record with its claim, the loaded Table, the escalation count for its ticket. Out: a Plan. The engine turns the plan's job specs into stored jobs; routing never touches the store or the executor.</text>
+  </section>
+
+  <section id="b-load" title="Loading the table">
+    <text id="b-load-file" level="MUST" source="factory/config/routes.schema.json">The table is the routes file named in the configuration, decoded with unknown keys refused: schema version, description, max attempts 3, and rows with match, do, and the parameters the schema allows.</text>
+    <text id="b-load-check" level="MUST" source="factory/config/routes.schema.json">Checks at load: do is one of enqueue, wake, seat, escalate, notify_owner, break-glass, ignore, none; every row but ignore names to; down is tester, reviewer or merger; with is ticket, pr, record or verify; line is done or decision.</text>
+    <text id="b-load-fail" source="spec:SPEC-16.G#g-reload">A table that fails at start is exit 3 naming the row index and the key; a table that fails on reload is kept out, the loaded one stays, and one 500 note names the file.</text>
+    <text id="b-load-version" source="spec:SPEC-16.I#i-status">Table.Version is the content hash of the loaded file; the status answer and every plan carry it, so a parity mismatch can say which table decided.</text>
+  </section>
+
+  <section id="b-match" title="The match: first row wins">
+    <text id="b-match-pred" level="MUST" source="factory/bin/route.sh#match_route">A row matches when every key its match names holds: kind equal, code equal, code at or above code_gte, attempt equal, attempt below attempt_lt, escalations equal, escalations below escalations_lt. An absent key holds for every record.</text>
+    <text id="b-match-first" level="MUST" source="factory/config/routes.json#description">Rows are tried top to bottom and the first that holds decides; the order of the file is the behaviour, which is why the table is data and the loader keeps the order.</text>
+    <text id="b-match-attempt" source="factory/bin/route.sh#match_route">A record with no attempt matches as attempt 1.</text>
+    <text id="b-match-esc" level="MUST" source="factory/bin/route.sh#escalations_before; spec:SPEC-16.A#a-ledger">The escalation count is the number of escalated records on the same ticket, written by a runner seat, whose id sorts before this record. Runner seats are the configured list, so counts survive the cut-over.</text>
+    <text id="b-match-pure" source="node:DEC-functional-style">Match takes values and returns a row or none; the escalation count is computed by the engine from intake's records and passed in, so the function needs no file system.</text>
+  </section>
+
+  <section id="b-plan" title="The plan: from a row to jobs">
+    <text id="b-plan-shape" level="MUST" source="factory/bin/route.sh#perform">A plan lists, in order: the primary job the row's do implies, the down job when the row names down, and the receipt job. Each later job names the earlier ones in After, so the job runner keeps the order.</text>
+    <text id="b-plan-down" level="MUST" source="factory/bin/route.sh#perform">The down runs even when the primary is dead-lettered: the gate record is on disk either way, the seat is finished, and a failed action is never retried past its attempts; the down's After allows dead as well as done.</text>
+    <text id="b-plan-receipt" level="MUST" source="factory/bin/route.sh#route_file">The receipt is a record job that runs after the primary and the down, and only when the primary is done; a dead primary gets the failure note of the jobs domain instead, and the ledger says failed.</text>
+    <text id="b-plan-seat" source="factory/bin/route.sh#seat_of; roles/schema/role.schema.json#label">Seat names come from the role file's label with the ticket substituted and lowercased, through the seats domain; a role whose label still holds a variable after substitution is a plan failure naming the role.</text>
+    <text id="b-plan-text" level="MUST" source="factory/bin/route.sh#act_primary">The wake line is: record, the id, then pr and sha when the row says with pr and the record carries them, then playbook and the playbook path for the row's to. Nothing else reaches a seat's prompt.</text>
+    <text id="b-plan-extras" source="factory/bin/route.sh#wake_extras">A pr that is not a positive integer or a sha that is not 7 to 40 lowercase hex is a plan failure naming the record; neither is passed on, because both reach a prompt as typed text.</text>
+    <text id="b-plan-ticket" source="factory/bin/route.sh#act_primary">seat, enqueue and down need a ticket; a row that asks for one on a record without one is a plan failure naming the action.</text>
+  </section>
+
+  <section id="b-actions" title="Actions, one by one">
+    <text id="b-act-wake" source="factory/bin/route.sh#act_primary">wake: one prompt job to the seat the row's to names for the record's ticket, with the wake line.</text>
+    <text id="b-act-seat" source="factory/bin/route.sh#act_primary">seat: a seat-up job for the ticket and the row's role, then the same prompt job after it. The seat script leaves a live seat as it is, so the job runs for every record and never asks whether the seat is up.</text>
+    <text id="b-act-notify" source="factory/bin/route.sh#act_primary">notify_owner: one prompt job to the interface seat with record, the id, line, the row's line, playbook and the interface playbook path.</text>
+    <text id="b-act-enqueue" source="factory/bin/route.sh#act_primary">enqueue: one enqueue job with the ticket, the record id as from, and the record's priority when it is p0 to p3.</text>
+    <text id="b-act-escalate" source="factory/bin/route.sh#act_primary">escalate: one record job that writes an escalated record with the row's code, addressed to the row's to, on the ticket, whose note names the escalated record id.</text>
+    <text id="b-act-glass" source="factory/bin/route.sh#act_primary; herdr/RUNBOOK.md#RUNBOOK: break glass">break-glass: one break-glass job for the record's seat with the record id; the seat script reads the owner's answer itself and refuses with exit 3, which is a handled result, never a failure.</text>
+    <text id="b-act-none" source="factory/bin/route.sh#act_primary">none: no primary job; the receipt still records that the record was seen.</text>
+    <text id="b-act-ignore" source="factory/bin/route.sh#route_file">ignore: no job at all; the ledger word is the only trace, so a seat coming up does not cost a receipt.</text>
+    <text id="b-act-down" source="factory/bin/route.sh#act_down">down: one seat-down job for the role's seat on the ticket; the seat script's second down prints already down and exits 0, so two gate records for one ticket cost nothing.</text>
+  </section>
+
+  <section id="b-receipt" title="The receipt and the failure note">
+    <text id="b-receipt-shape" level="MUST" source="factory/bin/route.sh#route_file">The receipt is record.routed 300, addressed to the row's to, on the record's ticket when it has one, with the routed file's repo-relative path as evidence.</text>
+    <text id="b-receipt-note" level="MUST" source="factory/bin/route.sh#route_file">Its note: routed, kind, code, the id in parentheses, colon, the action and the to, then comma down and the role when the row had one.</text>
+    <text id="b-receipt-why" source="report/loop/lib/collect.jq; spec:SPEC-16.I#i-board">The board reads receipts to place a ticket at a station; the shape is kept byte for byte so the board needs no change on cut-over.</text>
+    <text id="b-fail-shape" level="MUST" source="factory/bin/route.sh#trouble">The failure note is a 500 note to the monitor on the ticket: route failed for, kind, code, record, the id, colon, the reason the executor or the plan gave, cut to the writer's limit.</text>
+    <text id="b-fail-when" source="spec:SPEC-16.D#d-dead">The failure note is written by the jobs domain when the primary is dead-lettered, once, with the last reason; the ledger word becomes failed at the same moment.</text>
+  </section>
+
+  <section id="b-noroute" title="No row, ignore, own">
+    <text id="b-noroute-rule" level="MUST" source="factory/bin/route.sh#route_file">A record no row matches is ledgered unrouted and one 500 note to the monitor says no route for, kind, code, record, the id. Routing does not guess.</text>
+    <text id="b-noroute-check" source="spec:SPEC-16.K#k-coverage">The replay fixtures carry one case per row, so a row nobody exercises fails the suite; a kind the schema allows with no row at all is reported by the check subcommand as a gap, not at runtime.</text>
+    <text id="b-noroute-own" source="spec:SPEC-16.A#a-ledger">Own records never reach routing; intake ledgers them first.</text>
+  </section>
+
+  <section id="b-config" title="Keys this domain reads">
+    <key name="routes_file" type="string" source="factory/config/runner.json#routes_file">The routes table, variables resolved.</key>
+    <key name="roles_dir" type="string" source="factory/config/runner.json#roles_dir">Where role files are read for seat labels.</key>
+    <key name="playbooks_dir" type="string" source="factory/config/runner.json#playbooks_dir">Where the wake line's playbook path points; the path is written as the seat will read it, on the host.</key>
+    <key name="intake.runner_seats" type="array of string" source="spec:SPEC-16.A#a-config">Seats whose escalated records count toward escalations.</key>
+    <ref spec="SPEC-16.G" anchor="g-keys"/>
+  </section>
+
+  <section id="b-owned" title="Rows and codes this domain owns">
+    <owns-route match='{"code":300,"kind":"request.forwarded"}' source="factory/config/routes.json">enqueue to the architect's queue, priority from the request.</owns-route>
+    <owns-route match='{"code":100,"kind":"ticket.cut"}' source="factory/config/routes.json">wake the worker with the ticket.</owns-route>
+    <owns-route match='{"code":100,"kind":"pr.opened"}' source="factory/config/routes.json">seat the tester with the pr.</owns-route>
+    <owns-route match='{"code":201,"kind":"test.passed"}' source="factory/config/routes.json">seat the reviewer with the pr, down the tester.</owns-route>
+    <owns-route match='{"code":201,"kind":"review.passed"}' source="factory/config/routes.json">seat the merger with the pr, down the reviewer.</owns-route>
+    <owns-route match='{"code":200,"kind":"merged"}' source="factory/config/routes.json">wake the architect to verify, down the merger.</owns-route>
+    <owns-route match='{"code":409,"kind":"merge.conflict"}' source="factory/config/routes.json">wake the worker with the record, down the merger.</owns-route>
+    <owns-route match='{"code":201,"kind":"verified"}' source="factory/config/routes.json">notify the owner through the interface agent, line done.</owns-route>
+    <owns-route match='{"code":100,"kind":"seat.up"}' source="factory/config/routes.json">ignore.</owns-route>
+    <owns-route match='{"code":100,"kind":"seat.down"}' source="factory/config/routes.json">ignore.</owns-route>
+    <owns-route match='{"code":100,"kind":"note"}' source="factory/config/routes.json">ignore.</owns-route>
+    <owns-route match='{"code":300,"kind":"record.routed"}' source="factory/config/routes.json">ignore: a receipt is never routed.</owns-route>
+    <owns-code value="200" name="DONE" source="node:STC-http-shaped">The thing happened: a merge landed, a default was applied, a break glass was granted.</owns-code>
+    <owns-code value="201" name="PASSED" source="node:STC-http-shaped">A gate passed: test, review, verify.</owns-code>
+    <owns-code value="300" name="ROUTED" source="node:STC-http-shaped; factory/bin/route.sh#route_file">The receipt: the scheduler saw the record and performed its row; also a request forwarded into the line.</owns-code>
+    <owns-code value="409" name="CONFLICT" source="factory/config/routes.json; playbooks/merger.md">The merge could not land; the worker merges main.</owns-code>
+  </section>
+
+  <section id="b-tests" title="Cases the build ticket proves">
+    <case id="b-t1" command="go test ./internal/routes -run TestMatchFirstRowWins" expected="exit 0: for every replay record the chosen row index equals the fixture's expected index" source="spec:SPEC-16.B#b-match">The match is the bash runner's match.</case>
+    <case id="b-t2" command="go test ./internal/routes -run TestPlanJobsInOrder" expected="exit 0: a seat row yields seat-up, prompt, down, receipt with After edges in that order" source="spec:SPEC-16.B#b-plan">Order is data on the jobs.</case>
+    <case id="b-t3" command="go test ./internal/routes -run TestWakeLine" expected="exit 0: the wake line equals the fixture's line character for character, pr and sha included for with pr rows" source="spec:SPEC-16.B#b-plan">Nothing but the line reaches a prompt.</case>
+    <case id="b-t4" command="go test ./internal/routes -run TestMalformedExtras" expected="exit 0: a bad pr or sha yields a plan failure naming the record and no prompt job" source="spec:SPEC-16.B#b-plan">Typed text is fenced.</case>
+    <case id="b-t5" command="go test ./internal/routes -run TestReceiptShape" expected="exit 0: the receipt's note, to, ticket and evidence equal the bash runner's for the same record" source="spec:SPEC-16.B#b-receipt">The board sees no change.</case>
+    <case id="b-t6" command="go test ./internal/routes -run TestLoadRefusesBadTable" expected="exit 0: a row with an unknown do or a wake row without to is refused naming the row index and key" source="spec:SPEC-16.B#b-load">A bad table never loads.</case>
+    <case id="b-t7" command="go test ./internal/routes -run TestEscalationsCount" expected="exit 0: escalated records by a runner seat before the record count, later ones and other seats do not" source="spec:SPEC-16.B#b-match">A first 423 and a second 423 are told apart.</case>
+  </section>
+
+  <section id="b-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="factory/tests/cases/01-wake.test.sh"><text>pr.opened 100 on a ticket: the plan is seat-up tester, prompt record id playbook tester, receipt record.routed 300 to tester.</text></example>
+    <example kind="GOOD" source="factory/config/routes.json"><text>test.failed 422 attempt 3: the plan is an escalated 423 record to the architect, then down the tester, then the receipt.</text></example>
+    <example kind="NEVER" source="factory/bin/route.sh#route_file"><text>Routing reads the note field and decides the worker probably needs more context.</text><why>Routing is the table; a note is for humans.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.B#b-plan"><text>A plan that performs the prompt itself to save a round trip.</text><why>A plan is data so shadow mode can write it and parity can compare it.</why></example>
+  </section>
+</spec>

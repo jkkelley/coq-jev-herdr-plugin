@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.I" domain="observe" version="1.0.0" title="Observability: log lines, status, counters, the record id as the trace" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="i-purpose" title="What the observe domain decides"/>
+    <item ref="i-log" title="Log lines"/>
+    <item ref="i-trace" title="The record id is the trace"/>
+    <item ref="i-status" title="The status answer"/>
+    <item ref="i-board" title="What the board, the monitor and the owner read"/>
+    <item ref="i-metrics" title="Counters, not a metrics server"/>
+    <item ref="i-config" title="Keys this domain reads"/>
+    <item ref="i-tests" title="Cases the build ticket proves"/>
+    <item ref="i-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="spec:SPEC-04#s-monitors; node:REQ-owner-notifications">Everything the scheduler decides is readable in two places: one JSON line per state change in its pane, and one status answer over its socket. Nothing else is needed to know what the line did and why.</purpose>
+
+  <section id="i-purpose" title="What the observe domain decides">
+    <text id="i-in" source="spec:SPEC-16#s-blueprint">In: every state change of intake, routing, jobs, seats, policies, health and config. Out: log lines on standard output, the Status and Health answers, the status subcommand's rendering.</text>
+    <text id="i-not" level="NEVER" source="spec:SPEC-16.A#a-writer">Observe writes no record, no file but the log stream, and no page; the owner's surface is the interface agent's.</text>
+  </section>
+
+  <section id="i-log" title="Log lines">
+    <text id="i-log-shape" level="MUST" source="spec:SPEC-01#s-time">One JSON object per line on standard output: ts in UTC with seconds, level, comp (the domain), msg, and the ids the line is about: record, ticket, seat, job, verb, attempt, exit, ms, version. Keys absent when they do not apply.</text>
+    <text id="i-log-when" level="MUST" source="spec:SPEC-04#s-monitors">One line per change, never per poll: a tick that lists nothing and runs nothing logs nothing. The watcher log contract of the monitors tab holds for the scheduler's pane.</text>
+    <text id="i-log-levels" source="spec:SPEC-04#s-monitors">debug for ticks and listings when enabled; info for every transition; warn for a retry, a hold and a latch taken; error for a dead job, a refused config, an unreachable executor; alert only for a line that reaches the owner.</text>
+    <text id="i-log-prose" level="NEVER" source="spec:SPEC-01#s-prose">No record note is echoed whole; a note is cut to one line and the id beside it is the way to read it.</text>
+    <text id="i-log-pane" source="spec:SPEC-16.H#h-pane">The pane shows the stream as the container's foreground output; the executor's pane shows its own calls the same way.</text>
+  </section>
+
+  <section id="i-trace" title="The record id is the trace">
+    <text id="i-trace-rule" level="MUST" source="events/schema/event.schema.json#id">Every line about a record carries its id, from the listing through the plan, each job, each Run on the executor side, the confirmation and the receipt; one search for the id in both panes is the whole story of that record.</text>
+    <text id="i-trace-job" source="spec:SPEC-16.D#d-idem">A job's key begins with the record id, so the job and the record share the search.</text>
+  </section>
+
+  <section id="i-status" title="The status answer">
+    <text id="i-status-what" level="MUST" source="spec:SPEC-16.H#h-proto">Status answers: mode, start gate and reason, belt age, last tick, boundary, table versions, executor health, and the counters and lists below. The subcommand prints text or JSON and exits 1 when the belt is stopped or the gate failed.</text>
+    <field name="records" type="counters since start" source="spec:SPEC-16.A#a-ledger">listed, routed, ignored, unrouted, own, unreadable, interrupted.</field>
+    <field name="jobs" type="counters by state and lists" source="spec:SPEC-16.D#d-states">pending, held with reasons, running, confirming, done, dead; the dead list with key, attempts, reason and time; the held list with key and reason.</field>
+    <field name="wakes" type="counters" source="spec:SPEC-16.D#d-confirm">sent, confirmed by record, confirmed by busy, re-sent, unconfirmed, held for quiet.</field>
+    <field name="stalls" type="list" source="spec:SPEC-16.F#f-stall">Open latched stalls with gate id, ticket, kind, seat and status.</field>
+    <field name="policies" type="list" source="spec:SPEC-16.E#e-open">Escalations a row covers that still wait, with seconds to deadline, and defaults applied since start.</field>
+    <field name="seats" type="list" source="spec:SPEC-16.C#c-status">Every seat seen with status and since.</field>
+    <field name="shadow" type="counters" source="spec:SPEC-16.J#j-parity">In shadow mode: records compared, agreeing, mismatching, since when.</field>
+    <text id="i-status-belt" source="factory/bin/route.sh#status">The belt flag of the subcommand prints only the bash runner's belt words, so the supervisor's belt check can call it unchanged.</text>
+  </section>
+
+  <section id="i-board" title="What the board, the monitor and the owner read">
+    <text id="i-board-records" source="report/loop/lib/collect.jq; spec:SPEC-16.B#b-receipt">The board reads records and the receipts' first matching row; the scheduler writes the same kinds and the same receipt shape, so the board needs no change at cut-over.</text>
+    <text id="i-board-monitor" source="spec:SPEC-16.F#f-notify">The monitor seat is woken with the ids of the 5xx records written each tick; its own pane tails the log as today.</text>
+    <text id="i-board-owner" source="node:REQ-owner-notifications">The owner hears a herdr notification for a decision line and a 5xx, and a page line through the interface agent for done and decision; nothing else.</text>
+  </section>
+
+  <section id="i-metrics" title="Counters, not a metrics server">
+    <text id="i-metrics-rule" source="owner:bearings:2026-10-12T18:34Z">Lightweight: counters live in the status answer and reset at start; there is no metrics port, because there is no port. A metrics exporter is a later row on the control socket when the cluster wants one.</text>
+  </section>
+
+  <section id="i-config" title="Keys this domain reads">
+    <key name="log.level" type="string" source="spec:SPEC-16.G#g-keys">The lowest level written.</key>
+    <key name="control.socket" type="string" source="spec:SPEC-16.G#g-keys">Where Status is served and where the subcommand asks.</key>
+    <ref spec="SPEC-16.G" anchor="g-keys"/>
+  </section>
+
+  <section id="i-tests" title="Cases the build ticket proves">
+    <case id="i-t1" command="go test ./internal/observe -run TestOneLinePerChange" expected="exit 0: ten empty ticks at info level write nothing; one routed record writes the listing, plan, job and receipt lines, each carrying the record id" source="spec:SPEC-16.I#i-log">Change, not poll.</case>
+    <case id="i-t2" command="go test ./internal/observe -run TestStatusCounters" expected="exit 0: after a scripted run the Status answer's counters equal the fake executor's call log and the store's states" source="spec:SPEC-16.I#i-status">The answer is the truth.</case>
+    <case id="i-t3" command="go test ./internal/observe -run TestStatusExitCodes" expected="exit 0: the subcommand exits 1 on a stopped belt or a failed gate and 0 otherwise; the belt flag prints the bash runner's words" source="spec:SPEC-16.I#i-status">The supervisor can read it.</case>
+    <case id="i-t4" command="go test ./internal/observe -run TestNoteNeverWhole" expected="exit 0: a note of 240 characters with a newline in it appears in no log line beyond one cut line" source="spec:SPEC-16.I#i-log">Prose stays in the record.</case>
+  </section>
+
+  <section id="i-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="spec:SPEC-16.I#i-trace"><text>Searching one record id across the two panes shows: listed, plan row 3, seat-up run exit 0 in 41 s, prompt run exit 0, confirmed by record, receipt written.</text></example>
+    <example kind="NEVER" source="spec:SPEC-16.I#i-log"><text>A line every ten seconds saying tick, nothing new.</text><why>A pane that scrolls on nothing hides the line that matters.</why></example>
+  </section>
+</spec>

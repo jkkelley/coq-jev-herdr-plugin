@@ -1,0 +1,22 @@
+{
+  "id": "IFC-scheduler-executor",
+  "type": "Interface",
+  "title": "scheduler.v1 gRPC over unix sockets: Executor.Run(verb, args, idempotency key, timeout) and Executor.Health; Scheduler.Health, Status, Reload and Drain",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "spec",
+      "id": "SPEC-16.H",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-nats-jetstream-grpc"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:21Z"
+}

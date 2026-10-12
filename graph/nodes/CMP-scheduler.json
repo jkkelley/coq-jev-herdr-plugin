@@ -1,0 +1,42 @@
+{
+  "id": "CMP-scheduler",
+  "type": "Component",
+  "title": "scheduler/: a Go service in a Podman container that reads the record log, applies the routes and policies tables, runs every action as a retried job through the host executor, confirms wakes, calls stalls on two signals, writes receipts",
+  "status": "proposed",
+  "text": "One Go module, one binary, subcommands run, exec, status, parity, check. The container mounts the repository read-only and its own state directory read-write; its only way to change the world is the executor socket.",
+  "sources": [
+    {
+      "kind": "spec",
+      "id": "SPEC-16",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-scheduler-go-podman"
+    },
+    {
+      "kind": "decided_by",
+      "to": "DEC-scheduler-two-processes"
+    },
+    {
+      "kind": "implements",
+      "to": "SCH-routes"
+    },
+    {
+      "kind": "implements",
+      "to": "REQ-status-change-wakeups"
+    },
+    {
+      "kind": "depends_on",
+      "to": "CMP-scheduler-executor"
+    },
+    {
+      "kind": "defined_in",
+      "to": "RUN-scheduler-operate"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:28Z"
+}

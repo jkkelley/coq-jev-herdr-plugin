@@ -1,0 +1,26 @@
+{
+  "id": "DEC-scheduler-go-podman",
+  "type": "Decision",
+  "title": "The small loop and the factory DAG are scheduled by one lightweight Go service in Podman on WSL, designed domain by domain before it is built",
+  "status": "proposed",
+  "text": "Owner order. The service replaces the route runner, the flow watch, the policy watch and the two architect watches with one process that routes, retries, confirms and supervises from the same tables they read today.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "bearings",
+      "at": "2026-10-12T18:34Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "DEC-nats-jetstream-grpc"
+    },
+    {
+      "kind": "implements",
+      "to": "REQ-status-change-wakeups"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:21Z"
+}

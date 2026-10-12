@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.E" domain="policies" version="1.0.0" title="Policies, deadlines, defaults and break glass" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="e-purpose" title="What the policies domain decides"/>
+    <item ref="e-table" title="The policies table"/>
+    <item ref="e-open" title="Open escalations"/>
+    <item ref="e-apply" title="Applying a default"/>
+    <item ref="e-limit" title="Limits and the handled set"/>
+    <item ref="e-glass" title="Break glass: the owner's lever, never the scheduler's"/>
+    <item ref="e-config" title="Keys this domain reads"/>
+    <item ref="e-owned" title="Rows and codes this domain owns"/>
+    <item ref="e-tests" title="Cases the build ticket proves"/>
+    <item ref="e-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="factory/bin/policy.sh; factory/config/policies.json">An escalation nobody answers by its deadline gets the default its policy row names, as a record first and a wake second, bounded per ticket. Break glass is routed and never decided: the owner grants one command once, on the page.</purpose>
+
+  <section id="e-purpose" title="What the policies domain decides">
+    <node id="REQ-policy-default-is-a-record" status="proposed">
+      <title>A standing policy's default is a policy.applied record naming the row and the escalation it answers, written before the wake it implies, bounded by a limit per ticket counted from the log, and never defined for a break glass</title>
+      <source kind="file" id="factory/bin/policy.sh"/>
+      <source kind="file" id="factory/config/policies.json"/>
+      <source kind="spec" id="SPEC-16.E" at="2026-10-12T19:30Z"/>
+      <edge kind="implements" to="REQ-locks-and-queues"/>
+      <edge kind="depends_on" to="SCH-routes"/>
+    </node>
+    <text id="e-in" source="factory/bin/policy.sh#open_escalations">In: the policies table, the records since the boundary, the clock. Out: for each escalation past its deadline, one record job and one prompt job after it.</text>
+  </section>
+
+  <section id="e-table" title="The policies table">
+    <text id="e-table-shape" level="MUST" source="factory/config/policies.schema.json">A row: an id in the policy form, a match on kind, code and optional attempt, deadline seconds, the kinds that answer it, a limit per ticket, the decision it rests on, and a default with do, to and the answer text.</text>
+    <text id="e-table-glass" level="NEVER" source="factory/bin/policy.sh#start">A row whose match is break.glass is refused at load with exit 3, at start and on reload alike: a table that covered it would let the line grant itself the one thing it must never grant itself.</text>
+    <text id="e-table-ids" source="factory/bin/policy.sh#start">Policy ids are unique or the table is refused.</text>
+    <text id="e-table-reload" source="spec:SPEC-16.G#g-reload">The table reloads like the routes table: a bad file is kept out with one 500 note and the loaded one stays.</text>
+  </section>
+
+  <section id="e-open" title="Open escalations">
+    <text id="e-open-rule" level="MUST" source="factory/bin/policy.sh#open_escalations">An escalation is a record a row covers: its kind and code match and its attempt matches when the row names one. It is open while no record of one of the row's answering kinds has landed on the same ticket with a later id.</text>
+    <text id="e-open-deadline" source="factory/bin/policy.sh#open_escalations">The deadline is the record's at plus the row's deadline seconds, judged against the clock; a default can land up to one poll interval late.</text>
+    <text id="e-open-index" source="spec:SPEC-16.A#a-source">The index of records by ticket since the boundary is kept in memory by intake and shared; policies never list the log themselves.</text>
+    <text id="e-open-boundary" source="factory/bin/policy.sh#start">Only records after intake's boundary are judged, so a log of old escalations never wakes every seat that ever blocked.</text>
+  </section>
+
+  <section id="e-apply" title="Applying a default">
+    <text id="e-apply-record" level="MUST" source="factory/bin/policy.sh#apply">First a record job: policy.applied 200 on the ticket, with the policy id, the escalation's id as the answer, the role woken as the addressee, and the default text in the note after the words default and the policy id.</text>
+    <text id="e-apply-wake" level="MUST" source="factory/bin/policy.sh#apply; spec:SPEC-16.D#d-args">Then a prompt job after it: record, the printed id, playbook, the role's playbook path, to the seat the row's to names. Source means the escalation's own seat and role; a role name means that role's seat on the ticket.</text>
+    <text id="e-apply-confirm" source="spec:SPEC-16.D#d-confirm">The prompt is confirmed like every wake; a seat that does not pick up its default is a dead wake with a note, where the bash watch wrote one 500 and moved on.</text>
+    <text id="e-apply-noseat" source="factory/bin/policy.sh#apply">A target with no seat name or role is one 500 note naming the policy and the escalation; the record stands so a re-seated seat finds its answer in the log.</text>
+  </section>
+
+  <section id="e-limit" title="Limits and the handled set">
+    <text id="e-limit-count" level="MUST" source="factory/bin/policy.sh#open_escalations">Defaults already applied to a ticket by a row are the policy.applied records on that ticket naming that policy, counted from the log; past the row's limit the escalation waits for a person, which is what the second blocked row does.</text>
+    <text id="e-limit-handled" source="factory/bin/policy.sh#apply">An escalation is handled when a policy.applied record answers its id, or when a job with its apply key exists in the store; no separate latch file, so a pruned log resets the count and nothing else.</text>
+    <text id="e-limit-tick" source="factory/bin/policy.sh#tick">Two escalations of one ticket and one row judged in one tick count against the limit together.</text>
+  </section>
+
+  <section id="e-glass" title="Break glass: the owner's lever, never the scheduler's">
+    <text id="e-glass-rules" level="MUST" source="herdr/RUNBOOK.md#RUNBOOK: break glass">Only the owner authorises, on the page; one action per answer; the action is one plain command; the role comes back on the follow-up record or the ttl. The scheduler changes none of this: it routes the records and runs the seat script.</text>
+    <text id="e-glass-300" source="factory/config/routes.json">The 300 request goes to the interface agent as a decision line; the card on the page is the interface agent's.</text>
+    <text id="e-glass-200" source="factory/bin/route.sh#act_primary; herdr/bin/seat.sh">The 200 runs the break-glass verb for the record's seat with the record id. The seat script reads the owner's answer from the page and refuses with exit 3 and its own 423 when a check fails; exit 3 is handled for this verb.</text>
+    <text id="e-glass-423" source="factory/config/routes.json">A 423 wakes the monitor with the record.</text>
+    <text id="e-glass-lifecycle" source="herdr/RUNBOOK.md#The records">100 in effect, 201 the command finished, 204 the role settings restored: seen, receipted, nothing to do.</text>
+    <text id="e-glass-never" level="NEVER" source="herdr/RUNBOOK.md#What it never does">The scheduler never reads the page, never writes a 200, never has a policy for a break glass, and never runs the granted command: the seat does, under its own hook.</text>
+    <text id="e-glass-sweep" source="herdr/config/monitors.json; spec:SPEC-16.F#f-housekeeping">The restore sweep stays a periodic housekeeping job on the health domain's schedule, through the sweep verb, as the glass watcher pane runs it today.</text>
+  </section>
+
+  <section id="e-config" title="Keys this domain reads">
+    <key name="policies_file" type="string" source="factory/config/policies.json">The policies table, variables resolved.</key>
+    <key name="roles_dir" type="string" source="factory/config/runner.json#roles_dir">Role files for the reverse lookup and the seat names.</key>
+    <key name="playbooks_dir" type="string" source="factory/config/runner.json#playbooks_dir">The playbook path on the wake line.</key>
+    <ref spec="SPEC-16.G" anchor="g-keys"/>
+  </section>
+
+  <section id="e-owned" title="Rows and codes this domain owns">
+    <owns-route match='{"code":300,"kind":"break.glass"}' source="factory/config/routes.json">notify the owner through the interface agent, line decision.</owns-route>
+    <owns-route match='{"code":200,"kind":"break.glass"}' source="factory/config/routes.json">run the seat script's break glass for the record's seat.</owns-route>
+    <owns-route match='{"code":423,"kind":"break.glass"}' source="factory/config/routes.json">wake the monitor with the record.</owns-route>
+    <owns-route match='{"code":100,"kind":"break.glass"}' source="factory/config/routes.json">none: in effect.</owns-route>
+    <owns-route match='{"code":201,"kind":"break.glass"}' source="factory/config/routes.json">none: the command finished.</owns-route>
+    <owns-route match='{"code":204,"kind":"break.glass"}' source="factory/config/routes.json">none: role settings restored.</owns-route>
+    <owns-route match='{"code":200,"kind":"policy.applied"}' source="factory/config/routes.json">none: the default was recorded; the wake that follows it is the policy domain's own job.</owns-route>
+    <owns-code value="204" name="RESTORED" source="herdr/RUNBOOK.md#The records">A break glass is over: the role's own settings are back and verified.</owns-code>
+    <owns-code value="400" name="REJECTED" source="playbooks/orchestrator.md; roles/interface-agent.json">A request refused at the gate, with the failing key; never retried and never defaulted: a rejection waits for a new request.</owns-code>
+  </section>
+
+  <section id="e-tests" title="Cases the build ticket proves">
+    <case id="e-t1" command="go test ./internal/policy -run TestLoadRefusesBreakGlassRow" expected="exit 0: a table with a break.glass match is refused with exit 3 at load, and a duplicate id likewise" source="spec:SPEC-16.E#e-table">The line cannot grant itself a break glass.</case>
+    <case id="e-t2" command="go test ./internal/policy -run TestOpenUntilAnswered" expected="exit 0: a blocked 423 is open, closed by a later ticket.cut on the ticket, not closed by an earlier one or another ticket's" source="spec:SPEC-16.E#e-open">Answered means a later record of an answering kind.</case>
+    <case id="e-t3" command="go test ./internal/policy -run TestDefaultRecordThenWake" expected="exit 0: past the deadline one record job and one prompt job after it are created; the prompt's argument carries the writer's printed id" source="spec:SPEC-16.E#e-apply">Record first, wake second.</case>
+    <case id="e-t4" command="go test ./internal/policy -run TestLimitPerTicket" expected="exit 0: with one default already in the log a second escalation of the same ticket and row is left waiting" source="spec:SPEC-16.E#e-limit">The limit comes from the log.</case>
+    <case id="e-t5" command="go test ./internal/policy -run TestSourceSeat" expected="exit 0: to source resolves the escalation's seat and its role from the labels; a role name resolves that role's seat on the ticket" source="spec:SPEC-16.E#e-apply">The seat that asked is the seat that is woken.</case>
+    <case id="e-t6" command="go test ./internal/policy -run TestBreakGlassRoutes" expected="exit 0: the replay fixtures for the six break glass rows and the policy.applied row yield the plans the routing spec names, and a 200 yields the break-glass verb with exit 3 final" source="spec:SPEC-16.E#e-glass">Routed, never decided.</case>
+  </section>
+
+  <section id="e-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="factory/config/policies.json"><text>A worker's blocked 423 sits thirty minutes with no ticket.cut or work.started after it; the scheduler writes policy.applied 200 naming the row and the 423, then wakes the worker with that record's id.</text></example>
+    <example kind="GOOD" source="herdr/RUNBOOK.md#The flow, end to end"><text>A break.glass 200 lands; the scheduler runs the seat script with the record id; the script finds no owner answer on the page, writes its 423 and exits 3; the job is done with exit 3 kept and the monitor is woken by the 423.</text></example>
+    <example kind="NEVER" source="spec:SPEC-16.E#e-glass"><text>A policy row that defaults an unanswered break.glass 300 to granted after an hour.</text><why>The owner grants every break glass by hand, once.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.E#e-apply"><text>Waking the seat with the default text typed into its pane and no record.</text><why>The board, the flow and the next seat read the log; a default taken in a prompt leaves no trace.</why></example>
+  </section>
+</spec>

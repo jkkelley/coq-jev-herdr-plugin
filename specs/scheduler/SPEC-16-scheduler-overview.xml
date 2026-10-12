@@ -1,0 +1,261 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16" domain="scheduler" version="1.0.0" title="Go scheduler: overview, blueprint and shared contracts" status="proposed" updated="2026-10-12T19:30Z">
+  <contents>
+    <item ref="s-problem" title="What the bash belt loses today"/>
+    <item ref="s-laws" title="Laws the scheduler inherits"/>
+    <item ref="s-shape" title="Shape: one binary, two processes, one table"/>
+    <item ref="s-blueprint" title="Blueprint: the scheduler in the factory DAG"/>
+    <item ref="s-domains" title="Domain map: one spec, one package, one owner each"/>
+    <item ref="s-contracts" title="Shared contracts every domain codes against"/>
+    <item ref="s-ownership" title="Status codes and routes rows: who owns what"/>
+    <item ref="s-build" title="Build order: waves of disjoint files"/>
+    <item ref="s-rules" title="Rules every scheduler spec obeys"/>
+    <item ref="s-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="owner:bearings:2026-10-12T18:34Z">Route an agent to the right scheduler spec in one read, fix the contracts every domain shares, and show where the scheduler sits in the factory DAG. This file defines the shape; each domain spec defines its behaviour.</purpose>
+
+  <section id="s-problem" title="What the bash belt loses today">
+    <text id="p-today" source="factory/bin/route.sh; factory/bin/flow.sh; factory/bin/policy.sh">The line is run by three bash watchers in panes: the route runner applies the routes table, the flow watch calls stalls, the policy watch applies defaults. Each polls a directory, each is serial, none retries.</text>
+    <text id="p-wakes" source="factory/bin/route.sh#act_primary; spec:SPEC-05#s-quiet">Lost wakes: a wake is one herdr prompt; when it fails the record becomes a 500 and nothing tries again, and a prompt typed into a seat inside its quiet window is lost with the compaction.</text>
+    <text id="p-retry" source="factory/bin/route.sh#perform; herdr/bin/seat.sh">No retry: a seat bring-up refused once (a branch another worktree still holds, a slot not yet back in the pool) is a 500 for ever, though the cause clears a minute later.</text>
+    <text id="p-stall" source="factory/bin/flow.sh#stalled_gates; herdr/bin/turnwatch.sh">False stalls: a gate is called stalled by wall clock alone, so a tester mid-suite reads as a dead line, and a serial bring-up that holds the belt past stale_seconds reads as a stopped belt.</text>
+    <text id="p-architect" source="herdr/bin/recwatch.sh; herdr/bin/turnwatch.sh; owner:bearings:2026-10-12T18:34Z">By hand: two watches prompt the architect for every gate record and every finished turn, so the architect is a station of the line instead of its designer, and a dead architect stops tickets.</text>
+    <text id="p-order" level="MUST" source="owner:bearings:2026-10-12T18:34Z">Owner order: build a lightweight Go scheduler, run it in Podman on WSL, spec every domain in its own XML spec of at most 1000 lines, and put it into the small loop and the factory DAG.</text>
+  </section>
+
+  <section id="s-laws" title="Laws the scheduler inherits">
+    <text id="l-table" level="MUST" source="node:SCH-routes; factory/config/routes.json">Routing is the table: the scheduler matches a record against the routes table top to bottom and performs the first row. New behaviour is a row, never a branch in Go.</text>
+    <text id="l-records" level="MUST" source="node:REQ-factory-node-contract; factory/schema/record.schema.json">Records, not prose: the scheduler branches on kind, code, attempt and escalations only; a note is for the owner's line and the monitor's screen.</text>
+    <text id="l-bus" level="MUST" source="node:DEC-nats-jetstream-grpc; AGENTS.md#Law: the bus is NATS JetStream">The bus is the data plane and gRPC the synchronous control plane. Until the bus lands the record log is the data plane; the scheduler reads it through one interface so the bus is an adapter, not a rewrite.</text>
+    <text id="l-herdr" level="MUST" source="node:DEC-no-process-under-agent; AGENTS.md#Law: herdr-first, never background processes">Every long-running process is a labelled herdr pane: the container runs in one, the executor in one. No shell ampersand, no nohup, no harness background job.</text>
+    <text id="l-config" level="MUST" source="node:DEC-no-hardcode-config-s3">Nothing hardcoded: every tunable is a key in a schema-validated JSON file, variables are resolved at load, a missing key is exit 3 naming the key, and no Go default exists for any of them.</text>
+    <text id="l-make" level="MUST" source="node:DEC-makefiles-entry-point; AGENTS.md#Law: scope small, integrate in CI">Make is the entry point: build, test, lint, image, run, status are targets that call scripts, and every build and every test runs in Podman, never on the host.</text>
+    <text id="l-pure" level="SHOULD" source="node:DEC-functional-style">Pure core, thin edges: matching, planning, retry arithmetic and stall verdicts are pure functions of values; the clock, the file system, the socket and the executor are injected interfaces a test replaces.</text>
+    <text id="l-writer" level="MUST" source="AGENTS.md#Hard rule: dated entry files, one file per entry; events/bin/event.sh">One script owns the record format: the scheduler never writes a record file itself, it asks the executor to run the event writer, so the log keeps one writer.</text>
+    <text id="l-quiet" level="MUST" source="node:REQ-compaction-quiet-window; spec:SPEC-05#s-quiet">The quiet window is honoured: while a seat's quiet file exists, a wake for it is written into that seat's inbox instead of its pane, and the guard drains the inbox after the resume.</text>
+    <text id="l-glass" level="NEVER" source="herdr/RUNBOOK.md#RUNBOOK: break glass; factory/bin/policy.sh">Break glass is never automated: the owner grants one command once on the page, the scheduler only runs the seat script with the granted record, and no policy row may ever match a break.glass record.</text>
+    <text id="l-first" level="MUST" source="node:DEC-system-before-agents; spec:SPEC-04#s-bringup">System before agents: the executor and the scheduler come up in the bring-up chain before any seat, and a seat is refused while the scheduler is down.</text>
+    <ref spec="SPEC-03" anchor="s-routes"/>
+    <ref spec="SPEC-01" anchor="s-codes"/>
+  </section>
+
+  <section id="s-shape" title="Shape: one binary, two processes, one table">
+    <node id="DEC-scheduler-go-podman" status="proposed">
+      <title>The small loop and the factory DAG are scheduled by one lightweight Go service in Podman on WSL, designed domain by domain before it is built</title>
+      <text>Owner order. The service replaces the route runner, the flow watch, the policy watch and the two architect watches with one process that routes, retries, confirms and supervises from the same tables they read today.</text>
+      <source kind="owner" id="bearings" at="2026-10-12T18:34Z"/>
+      <edge kind="depends_on" to="DEC-nats-jetstream-grpc"/>
+      <edge kind="implements" to="REQ-status-change-wakeups"/>
+    </node>
+    <node id="DEC-scheduler-two-processes" status="proposed">
+      <title>The scheduler decides inside a container that holds no host tool and acts only through the executor, a dumb host process behind gRPC on a unix socket; the bus later replaces the socket, not the split</title>
+      <text>Rejected: a container with the home directory mounted (every host tool bound in); the scheduler typing into a shell pane (prompt parsing, no exit code); the scheduler on the host (not Podman). Cost: two processes, two panes, one socket.</text>
+      <source kind="spec" id="SPEC-16" at="2026-10-12T19:30Z"/>
+      <source kind="owner" id="bearings" at="2026-10-12T18:34Z"/>
+      <edge kind="decided_by" to="DEC-scheduler-go-podman"/>
+      <edge kind="depends_on" to="DEC-nats-jetstream-grpc"/>
+      <edge kind="implements" to="DEC-no-process-under-agent"/>
+    </node>
+    <node id="CMP-scheduler" status="proposed">
+      <title>scheduler/: a Go service in a Podman container that reads the record log, applies the routes and policies tables, runs every action as a retried job through the host executor, confirms wakes, calls stalls on two signals, writes receipts</title>
+      <text>One Go module, one binary, subcommands run, exec, status, parity, check. The container mounts the repository read-only and its own state directory read-write; its only way to change the world is the executor socket.</text>
+      <source kind="spec" id="SPEC-16" at="2026-10-12T19:30Z"/>
+      <edge kind="decided_by" to="DEC-scheduler-go-podman"/>
+      <edge kind="decided_by" to="DEC-scheduler-two-processes"/>
+      <edge kind="implements" to="SCH-routes"/>
+      <edge kind="implements" to="REQ-status-change-wakeups"/>
+      <edge kind="depends_on" to="CMP-scheduler-executor"/>
+      <edge kind="defined_in" to="RUN-scheduler-operate"/>
+    </node>
+    <node id="CMP-scheduler-executor" status="proposed">
+      <title>scheduler exec: the host half, a gRPC server on a unix socket in a labelled herdr pane that runs an allowlisted verb table (herdr, the seat script, the queue script, the event writer) with a timeout and returns exit code and output tails</title>
+      <text>It decides nothing: a verb not in its table is refused, an argument with a newline is refused, every call is one JSON log line. It is the one place that changes when the bus lands.</text>
+      <source kind="spec" id="SPEC-16" at="2026-10-12T19:30Z"/>
+      <edge kind="decided_by" to="DEC-scheduler-two-processes"/>
+      <edge kind="implements" to="IFC-scheduler-executor"/>
+      <edge kind="depends_on" to="IFC-herdr-socket"/>
+      <edge kind="defined_in" to="RUN-scheduler-operate"/>
+    </node>
+    <node id="IFC-scheduler-executor" status="proposed">
+      <title>scheduler.v1 gRPC over unix sockets: Executor.Run(verb, args, idempotency key, timeout) and Executor.Health; Scheduler.Health, Status, Reload and Drain</title>
+      <source kind="spec" id="SPEC-16.H" at="2026-10-12T19:30Z"/>
+      <edge kind="decided_by" to="DEC-nats-jetstream-grpc"/>
+    </node>
+    <node id="RUN-scheduler-operate" status="proposed">
+      <title>scheduler/RUNBOOK.md: build and test in Podman, bring the executor pane and the container pane up, read status, switch the mode between off, shadow and active, roll back, and read the parity report</title>
+      <source kind="spec" id="SPEC-16.H" at="2026-10-12T19:30Z"/>
+      <edge kind="depends_on" to="RUN-seat-up"/>
+    </node>
+    <text id="sh-planes" source="spec:SPEC-16.A; spec:SPEC-16.H">Two planes. Data: records in the log (later the bus), read by intake. Control: one gRPC socket from the scheduler to the executor for actions, one from the operator to the scheduler for status, reload and drain.</text>
+    <text id="sh-loop" source="spec:SPEC-16.A; spec:SPEC-16.B; spec:SPEC-16.D">One loop. Each tick: intake lists new records, routing turns each into a plan, the plan becomes jobs, the job runner sends due jobs to the executor, confirmation and health judge what came back, observe reports. Ticks never block on a job.</text>
+    <text id="sh-state" source="factory/bin/route.sh#route_file; spec:SPEC-16.A#a-ledger">One state directory, small files: the routed ledger (the same words the bash runner writes, so cut-over adopts it), one file per job, the latches, the belt file, the shadow decisions. Nothing in a database.</text>
+  </section>
+
+  <section id="s-blueprint" title="Blueprint: the scheduler in the factory DAG">
+    <text id="b-where" source="spec:SPEC-03#s-sdlc; node:WFL-sdlc">The SDLC DAG is unchanged: every edge is still a record kind in the routes table. The scheduler is the orchestrator's runner, the thing that moves a record along its edge; seats, gates and the owner's line stay where they are.</text>
+    <mermaid id="b-dag" source="spec:SPEC-03#s-sdlc; factory/config/routes.json">flowchart LR
+  subgraph seats[seats in labelled herdr panes]
+    IA[interface agent]
+    AR[architect]
+    WK[worker]
+    TS[tester]
+    RV[reviewer]
+    MG[merger]
+    MON[monitor]
+  end
+  LOG[(record log: events/, later the bus)]
+  IA -- request.forwarded 300 --> LOG
+  AR -- ticket.cut 100 / verified 201 --> LOG
+  WK -- work.started 100 / pr.opened 100 --> LOG
+  TS -- test.passed 201 / test.failed 422 --> LOG
+  RV -- review.passed 201 / review.changes 422 --> LOG
+  MG -- merged 200 / merge.conflict 409 --> LOG
+  subgraph sched[scheduler container, Podman]
+    IN[intake: new records, ledger claim]
+    RT[routing: first row of routes.json]
+    JB[jobs: retry, backoff, confirm]
+    PL[policies: deadlines and defaults]
+    HL[health: belt, two-signal stalls]
+  end
+  LOG --> IN --> RT --> JB
+  IN --> PL --> JB
+  IN --> HL
+  EX[executor: host pane, gRPC unix socket]
+  JB -- Run verb --> EX
+  EX -- herdr agent prompt --> WK
+  EX -- herdr agent prompt --> AR
+  EX -- seat.sh up / down --> TS
+  EX -- seat.sh up / down --> RV
+  EX -- seat.sh up / down --> MG
+  EX -- queue.sh enqueue --> Q[(queue)]
+  EX -- event.sh add: receipts 300, escalated 423, notes 500 --> LOG
+  HL -- stall 500 --> EX
+  EX -- notify / wake --> MON
+  JB -- verified 201 line done / blocked twice line decision --> IA
+  AR -. graph.sh find, cuts tickets .-> Q</mermaid>
+    <text id="b-inside" source="spec:SPEC-16#s-domains">The domains form their own DAG: config feeds everything, intake feeds routing, policies and health, routing feeds jobs, jobs feed the executor client, confirmation and health read what came back, observe reads all of it.</text>
+    <mermaid id="b-domains" source="spec:SPEC-16#s-domains">flowchart TD
+  CFG[G config: scheduler.json, tables, hot reload] --> IN
+  CFG --> RT
+  CFG --> PL
+  CFG --> HL
+  CFG --> RJ
+  IN[A intake: roots, order, ledger] --> RT[B routing: match, plan, receipt]
+  IN --> PL[E policies: deadlines, defaults, break glass]
+  IN --> HL[F health: belt, stalls, halt, recovery]
+  IN --> CF[D confirmation: wake acked by record or busy seat]
+  RT --> RJ[D jobs: idempotent, backoff, dead letter]
+  PL --> RJ
+  HL --> RJ
+  CF --> RJ
+  RJ --> EC[H executor client: gRPC unix socket]
+  EC --> EXS[H executor server on the host: verb table]
+  SE[C seats: names, caps, status, leases] --> RJ
+  SE --> HL
+  OB[I observe: JSON log lines, status, counters] -.reads.-> IN
+  OB -.reads.-> RJ
+  OB -.reads.-> HL
+  CO[J cut-over: off, shadow, active, parity] -.gates.-> RJ
+  TK[K testing: testkit, replay, parity, contract] -.proves.-> IN
+  TK -.proves.-> RT
+  TK -.proves.-> RJ</mermaid>
+    <text id="b-bringup" source="spec:SPEC-04#s-bringup; herdr/bin/bringup.sh; herdr/config/monitors.json">In the bring-up chain the executor pane and the scheduler pane take the belt's place: herdr, guard, monitors grid, executor, scheduler, then seats. The supervisor keeps both up the way it keeps the belt up today.</text>
+  </section>
+
+  <section id="s-domains" title="Domain map: one spec, one package, one owner each">
+    <text id="d-rule" level="MUST" source="owner:bearings:2026-10-12T18:34Z; node:DEC-xml-specs-bounded">One spec per domain, under 1000 lines, one Go package per domain, one build ticket per package. Two tickets that run at once never touch one file; a package is the unit of ownership.</text>
+    <text id="d-a" source="spec:SPEC-16.A">A intake: SPEC-16.A, package intake. Roots to watch, ordering by id, the routed ledger and its claim, the first-start boundary, interrupted claims, validation, the record reader.</text>
+    <text id="d-b" source="spec:SPEC-16.B">B routing: SPEC-16.B, package routes. The routes table loaded and matched, the plan for a record, the receipt, no-route, ignore, and the rows this domain owns.</text>
+    <text id="d-c" source="spec:SPEC-16.C">C seats: SPEC-16.C, package seat. Seat names from role labels, caps and holding, bring-up and down through the executor, status observation, leases, the shared merger seat.</text>
+    <text id="d-d" source="spec:SPEC-16.D">D jobs, retries and confirmation: SPEC-16.D, package job. The job store, backoff, idempotency, dead letter, wake confirmation, the quiet window hold, attempt and escalation rows.</text>
+    <text id="d-e" source="spec:SPEC-16.E">E policies and break glass: SPEC-16.E, package policy. Deadlines, defaults, limits per ticket, the policy.applied record, the break glass lifecycle rows.</text>
+    <text id="d-f" source="spec:SPEC-16.F">F health and supervision: SPEC-16.F, package health. The belt heartbeat, two-signal stalls, latches, the halt flag, graceful drain, recovery on start, the 5xx rows.</text>
+    <text id="d-g" source="spec:SPEC-16.G">G config and schema: SPEC-16.G, package config. scheduler.json and executor.json with their schemas, variable resolution, validation at start, hot reload of the tables.</text>
+    <text id="d-h" source="spec:SPEC-16.H">H Podman runtime and the executor: SPEC-16.H, packages executor and the api proto. The Containerfile, the run contract, the host pane, the verb table, the gRPC services, systemd units.</text>
+    <text id="d-i" source="spec:SPEC-16.I">I observability: SPEC-16.I, package observe. Structured log lines, the status answer, counters, the record id as the trace id, what the board and the monitor read.</text>
+    <text id="d-j" source="spec:SPEC-16.J">J cut-over: SPEC-16.J, package cutover. The mode flag, shadow mode and the parity report, going active, rollback, retiring the five bash watchers, the acceptance run.</text>
+    <text id="d-k" source="spec:SPEC-16.K">K testing: SPEC-16.K, package testkit and the replay fixtures. The test pyramid, the fake executor, golden replay cases per routes row, the contract test against the event writer, CI.</text>
+  </section>
+
+  <section id="s-contracts" title="Shared contracts every domain codes against">
+    <text id="c-where" level="MUST" source="spec:SPEC-16#s-build">These types and interfaces live in one package, core, written by the skeleton ticket before any domain package. A domain that needs a field not here raises a question; it never edits core in its own ticket.</text>
+    <text id="c-record" source="events/schema/event.schema.json; factory/schema/record.schema.json">Record is the event log entry as written, plus where it was seen. Optional fields are pointers or zero values; attempt defaults to 1 when absent, exactly as the bash runner reads it.</text>
+    <field name="Record.ID" type="string" source="events/schema/event.schema.json#id">UTC stamp, code and five-character suffix; the sort key of the log and the trace id of every log line about it.</field>
+    <field name="Record.At" type="time.Time (UTC)" source="events/schema/event.schema.json#at">When it was written; deadlines and stalls are measured from here, never from the file's mtime.</field>
+    <field name="Record.Code" type="int" source="events/schema/event.schema.json#code">100 to 599.</field>
+    <field name="Record.Seat" type="string" source="events/schema/event.schema.json#seat">The seat that wrote it; a record whose seat is the scheduler's own seat is never routed.</field>
+    <field name="Record.Kind" type="string" source="events/schema/event.schema.json#kind">One of the kinds the event schema allows; the scheduler matches it as a string and never enumerates it in Go.</field>
+    <field name="Record.Ticket" type="string, empty when absent" source="events/schema/event.schema.json#ticket">The work order id, or empty; rows that seat, enqueue or down need one.</field>
+    <field name="Record.To" type="string, empty when absent" source="events/schema/event.schema.json#to">The addressee role of a routed or escalated record.</field>
+    <field name="Record.Attempt" type="int, 1 when absent" source="factory/bin/route.sh#match_route">A seat's try count on one ticket, 1 to 3.</field>
+    <field name="Record.SHA, Record.PR" type="string, int" source="events/schema/event.schema.json#sha">The pull request head and number a row that says with pr copies onto the wake line.</field>
+    <field name="Record.Action, Record.Answer, Record.Policy" type="string" source="events/schema/event.schema.json#action">Break glass and policy fields, carried through, never interpreted outside their domains.</field>
+    <field name="Record.Note" type="string" source="events/schema/event.schema.json#note">Prose for humans; no domain branches on it.</field>
+    <field name="Record.Root, Record.Path" type="string" source="spec:SPEC-16.A#a-roots">The root it was first seen in and its path there; scheduler-side only, never written back.</field>
+    <text id="c-row" source="factory/config/routes.schema.json">Row is one entry of the routes table, kept exactly as the schema allows it, with its index in the table and its canonical match string as its identity.</text>
+    <field name="Row.Index" type="int" source="factory/config/routes.json">Position in the table; the first matching index wins.</field>
+    <field name="Row.Match" type="struct of optional ints and strings" source="factory/config/routes.schema.json#match">kind, code, code_gte, attempt, attempt_lt, escalations, escalations_lt; an absent key matches anything.</field>
+    <field name="Row.Do, Row.To, Row.With, Row.Down, Row.Code, Row.Line, Row.PriorityFrom" type="string, string, string, string, int, string, string" source="factory/config/routes.schema.json">The action and its parameters, as named in the schema.</field>
+    <text id="c-plan" source="factory/bin/route.sh#route_file">Plan is what routing decides for one record: pure data, no side effect, so shadow mode can write it down and the parity report can compare it.</text>
+    <field name="Plan.RecordID, Plan.RowIndex, Plan.Verdict" type="string, int, enum" source="factory/bin/route.sh#route_file">Verdict is one of routed, ignored, unrouted, own, unreadable.</field>
+    <field name="Plan.Jobs" type="[]JobSpec" source="factory/bin/route.sh#perform">In order: the primary action, then the down, then the receipt. An ignored or own record has none.</field>
+    <text id="c-job" source="spec:SPEC-16.D#d-job">Job is one side effect to perform through the executor, durable in the state directory, identified by its key so a restart never performs it twice.</text>
+    <field name="Job.Key" type="string" source="spec:SPEC-16.D#d-idem">record id, colon, action, colon, target; the idempotency key and the file name.</field>
+    <field name="Job.Verb, Job.Args" type="string, []string" source="spec:SPEC-16.H#h-verbs">The executor verb and its positional arguments; never a shell line.</field>
+    <field name="Job.RecordID, Job.Ticket, Job.Seat, Job.Role" type="string" source="spec:SPEC-16.D#d-job">What the job is about, for the log and for confirmation.</field>
+    <field name="Job.Attempt, Job.MaxAttempts, Job.NextDue" type="int, int, time.Time" source="spec:SPEC-16.D#d-backoff">The retry arithmetic's inputs and output.</field>
+    <field name="Job.State" type="enum" source="spec:SPEC-16.D#d-states">pending, held, running, confirming, done, dead.</field>
+    <field name="Job.HoldReason, Job.LastExit, Job.LastReason" type="string, int, string" source="spec:SPEC-16.D#d-states">Why it is held (quiet, cap, order), and what the last run said.</field>
+    <field name="Job.After" type="[]string" source="spec:SPEC-16.D#d-order">Keys of jobs that must reach done or dead first: the down after the primary, the receipt after both.</field>
+    <text id="c-verdict" source="spec:SPEC-16.H#h-proto">Verdict is the executor's answer to one Run, carried unchanged from the proto message.</text>
+    <field name="Verdict.ExitCode, Verdict.TimedOut, Verdict.Refused, Verdict.Refusal" type="int, bool, bool, string" source="spec:SPEC-16.H#h-proto">Refused means the executor did not run the verb (not in its table, bad argument); Refusal says why.</field>
+    <field name="Verdict.StdoutTail, Verdict.StderrTail, Verdict.StartedAt, Verdict.FinishedAt" type="string, string, time.Time, time.Time" source="spec:SPEC-16.H#h-proto">The last lines, bounded by the executor's config, for the log and the 500 note.</field>
+    <text id="c-seat" source="spec:SPEC-16.C#c-status">Seat is what the scheduler knows about one seat from the executor's observation verbs.</text>
+    <field name="Seat.Name, Seat.Role, Seat.Ticket" type="string" source="roles/schema/role.schema.json#label">The name is the role label with the ticket lowercased, as the seat script names it.</field>
+    <field name="Seat.Status, Seat.Since" type="enum, time.Time" source="spec:SPEC-16.C#c-status">absent, idle, busy, unknown; Since is when the status was first observed.</field>
+    <text id="c-ifaces" level="MUST" source="node:DEC-functional-style">Interfaces, so every domain is testable with fakes: Source, Ledger, Executor, Clock, Table, JobStore, SeatObserver, Latches. The engine wires the real ones; tests wire testkit's.</text>
+    <field name="Source" type="interface" source="spec:SPEC-16.A#a-source">List(sinceID) returns new record references across every root in id order; Read(ref) returns the Record or an error that says unreadable.</field>
+    <field name="Ledger" type="interface" source="spec:SPEC-16.A#a-ledger">Claim(id) reports whether this call won the claim; Set(id, word); Get(id); Interrupted() lists ids still claimed at start.</field>
+    <field name="Executor" type="interface" source="spec:SPEC-16.H#h-proto">Run(ctx, Job) Verdict; Health(ctx) error. The gRPC client implements it; testkit's fake records every call and answers from a script.</field>
+    <field name="Clock" type="interface" source="node:DEC-functional-style">Now() time.Time in UTC; tests set it; nothing calls the system clock directly.</field>
+    <field name="Table" type="interface" source="spec:SPEC-16.B#b-match">Match(Record, escalations) returns the first Row or none; Rows() lists them; Version() names the loaded file's hash.</field>
+    <field name="JobStore" type="interface" source="spec:SPEC-16.D#d-store">Put, Get, Due(now), ByRecord(id), ByState; one file per job under the state directory.</field>
+    <field name="SeatObserver" type="interface" source="spec:SPEC-16.C#c-status">Observe(ctx) returns every seat the executor can see with its status, in one call per tick.</field>
+    <field name="Latches" type="interface" source="spec:SPEC-16.F#f-latch">Take(name) reports whether the latch was free; Drop(name); a latch is a file so it survives a restart.</field>
+  </section>
+
+  <section id="s-ownership" title="Status codes and routes rows: who owns what">
+    <text id="o-rule" level="MUST" source="specs/scheduler/bin/check.sh; specs/scheduler/config/check.json">Every row of the routes table and every status code in the check config is owned by exactly one domain spec, declared there with owns-route or owns-code; the check script proves it and fails the set on a gap or a double.</text>
+    <text id="o-codes" source="node:STC-http-shaped; specs/scheduler/config/check.json">Codes: 100 and 300 to intake and routing (A, B); 200, 201, 409 to routing (B); 422, 423 to jobs (D); 204 and 400 to policies and break glass (E); 412, 429, 500 to health and seats (F, C). The domain specs carry the declarations.</text>
+    <text id="o-rows" source="factory/config/routes.json">Rows: the SDLC edges and the ignore rows to routing (B); the attempt and escalation rows to jobs (D); the break glass and policy rows to policies (E); the 5xx rows to health (F).</text>
+  </section>
+
+  <section id="s-build" title="Build order: waves of disjoint files">
+    <text id="w-rule" level="MUST" source="owner:bearings:2026-10-12T18:34Z; AGENTS.md#Law: scope small, integrate in CI">Four workers build in waves. Inside a wave every ticket owns its own directories and files; a wave starts only when the wave before it is merged, because its packages import the earlier ones.</text>
+    <text id="w0" source="spec:SPEC-16#s-contracts">Wave 0, no shared Go yet: the skeleton (module, pinned dependencies, Makefile, Containerfile, core, testkit, proto and generated code, subcommand registry); the config files and schemas; the replay fixtures; the host files and runbook.</text>
+    <text id="w1" source="spec:SPEC-16#s-domains">Wave 1, leaves on core: intake (A), routes (B), config loader (G), executor server and client (H).</text>
+    <text id="w2" source="spec:SPEC-16#s-domains">Wave 2, on wave 1: seats (C), jobs and confirmation (D), policies and break glass (E), health (F).</text>
+    <text id="w3" source="spec:SPEC-16#s-domains">Wave 3, on everything: the engine and the run subcommand, observe and the status subcommand (I), cut-over and parity (J), the end-to-end acceptance in a scratch herdr session and the lint and CI wiring.</text>
+    <text id="w-sub" level="MUST" source="spec:SPEC-16.H#h-cli">Subcommands register from their own file in the cli package at init, so a wave adds a file and edits none: the skeleton owns the registry and main, each domain owns its subcommand file.</text>
+    <text id="w-deps" level="MUST" source="spec:SPEC-16.H#h-build">The skeleton pins every dependency the whole module will need, so no later ticket touches the module file; a dependency a later ticket needs that is not pinned is a question to the architect, not an edit.</text>
+  </section>
+
+  <section id="s-rules" title="Rules every scheduler spec obeys">
+    <text id="r-schema" level="MUST" source="specs/scheduler/schema/scheduler-spec.xsd">Valid against the scheduler spec schema: contents first, every section listed in order, every element that carries words carries a source, graph nodes declared with their sources.</text>
+    <text id="r-copy" level="NEVER" source="specs/scheduler/config/check.json">No home path, host, URL, page key, email, ticket id, record id, pane id or em dash anywhere: a spec that ports to another host names only repo-relative files and config variables.</text>
+    <text id="r-size" level="MUST" source="node:DEC-xml-specs-bounded">Under 1000 lines, every element under 240 characters of its own words; a domain that needs more is two domains.</text>
+    <text id="r-graph" level="MUST" source="node:CMP-knowledge-graph; graph/bin/graph.sh#sync-specs">Every node a spec declares exists in the graph with the same title; the graph is the source and the spec cites it.</text>
+    <text id="r-prose" level="NEVER" source="spec:SPEC-01#s-prose">No prose addressed to another agent: a spec speaks in definitions, rules and examples to whoever reads it.</text>
+  </section>
+
+  <section id="s-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="spec:SPEC-16.B#b-match"><text>A new failure class: one row in the routes table, one replay case, make lint. No Go changes.</text><why>The table is the behaviour; Go only applies it.</why></example>
+    <example kind="GOOD" source="spec:SPEC-16.D#d-confirm"><text>A tester wake that herdr refused at 18:31 is retried at 18:31:10, 18:31:30 and 18:32:10, succeeds on the third try after the seat came up, and is confirmed by the tester's work.started record.</text></example>
+    <example kind="GOOD" source="spec:SPEC-16.F#f-stall"><text>A tester mid-suite for twelve minutes is busy in its pane; no stall is called although the gate deadline passed.</text></example>
+    <example kind="GOOD" source="spec:SPEC-16.J#j-shadow"><text>Shadow mode ran beside the bash belt for 200 records with zero plan mismatches; the operator flips the mode to active and stops the three watcher panes.</text></example>
+    <example kind="NEVER" source="spec:SPEC-16.B#b-match"><text>A branch in Go that reads a record's kind to decide what to do with it.</text><why>That is a row that does not exist yet.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.H#h-run"><text>The scheduler container with the home directory mounted so it can run the seat script itself.</text><why>Every host tool version is then bound into the container, and the container is a shell with extra steps.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.E#e-glass"><text>A policy row whose match is a break.glass record.</text><why>The owner grants every break glass by hand, once.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.A#a-writer"><text>A Go function that writes a record file into the log.</text><why>The event writer is the one writer; the executor runs it.</why></example>
+  </section>
+</spec>

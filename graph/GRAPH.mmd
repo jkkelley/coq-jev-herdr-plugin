@@ -19,6 +19,8 @@ flowchart LR
   CMP-queue["CMP-queue<br/>queue/: directory queue with p0..p3 prio"]
   CMP-route-runner["CMP-route-runner<br/>factory/bin/route.sh: the orchestrator's"]
   CMP-rust-terminal["CMP-rust-terminal<br/>Rust terminal with Kitty graphics: fallb"]
+  CMP-scheduler-executor["CMP-scheduler-executor<br/>scheduler exec: the host half, a gRPC se"]
+  CMP-scheduler["CMP-scheduler<br/>scheduler/: a Go service in a Podman con"]
   CMP-sitrep-site["CMP-sitrep-site<br/>SITREP site: Go server, websocket owner "]
   DEC-bearings-vendored-tiers["DEC-bearings-vendored-tiers<br/>Bearings is vendored into tools/bearings"]
   DEC-functional-style["DEC-functional-style<br/>Functional programming mindset: pure fun"]
@@ -39,6 +41,8 @@ flowchart LR
   DEC-permissions-by-role["DEC-permissions-by-role<br/>bypassPermissions for working roles; int"]
   DEC-qud-drm-free["DEC-qud-drm-free<br/>Spikes use a DRM-free GOG or itch Qud bu"]
   DEC-rust-terminal-parallel["DEC-rust-terminal-parallel<br/>A Rust terminal with Kitty graphics is s"]
+  DEC-scheduler-go-podman["DEC-scheduler-go-podman<br/>The small loop and the factory DAG are s"]
+  DEC-scheduler-two-processes["DEC-scheduler-two-processes<br/>The scheduler decides inside a container"]
   DEC-sitrep-local-first["DEC-sitrep-local-first<br/>SITREP client/server runs locally in WSL"]
   DEC-spike5-passed["DEC-spike5-passed<br/>Spike 5 passed 2026-10-10: a PNG pushed "]
   DEC-system-before-agents["DEC-system-before-agents<br/>Monitoring and the system come up before"]
@@ -50,6 +54,7 @@ flowchart LR
   IFC-herdr-socket["IFC-herdr-socket<br/>herdr socket API (protocol 22): workspac"]
   IFC-owner-channel["IFC-owner-channel<br/>Owner channel: websocket, schema JSON fr"]
   IFC-player-contract["IFC-player-contract<br/>Player contract: structured game state i"]
+  IFC-scheduler-executor["IFC-scheduler-executor<br/>scheduler.v1 gRPC over unix sockets: Exe"]
   REQ-agents-md-portable["REQ-agents-md-portable<br/>Every AGENTS.md and markdown file is run"]
   REQ-any-steam-game["REQ-any-steam-game<br/>Any Steam game the owner has can be play"]
   REQ-checkpoint-every-step["REQ-checkpoint-every-step<br/>Every task is cut into steps that each e"]
@@ -57,11 +62,18 @@ flowchart LR
   REQ-compaction-rule["REQ-compaction-rule<br/>Compaction at 30 percent AND task comple"]
   REQ-event-log["REQ-event-log<br/>One git-tracked event log dir, one file "]
   REQ-factory-node-contract["REQ-factory-node-contract<br/>Every factory node: schema in, schema ou"]
+  REQ-intake-exactly-once["REQ-intake-exactly-once<br/>Every record in every configured root is"]
+  REQ-job-durable-idempotent["REQ-job-durable-idempotent<br/>Every action the scheduler performs is a"]
   REQ-locks-and-queues["REQ-locks-and-queues<br/>Locks are leases with a TTL and automati"]
   REQ-mod-adapter-family["REQ-mod-adapter-family<br/>Game adapters are in-game mods; Qud and "]
   REQ-north-star["REQ-north-star<br/>A model plays Caves of Qud inside a labe"]
   REQ-owner-notifications["REQ-owner-notifications<br/>Decision-needed and failure events raise"]
+  REQ-policy-default-is-a-record["REQ-policy-default-is-a-record<br/>A standing policy's default is a policy."]
+  REQ-routing-table-only["REQ-routing-table-only<br/>Routing is a pure function of the record"]
+  REQ-seat-hold-not-refuse["REQ-seat-hold-not-refuse<br/>A bring-up past its role's cap, or a dow"]
+  REQ-stall-two-signal["REQ-stall-two-signal<br/>A gate is stalled only when its consumer"]
   REQ-status-change-wakeups["REQ-status-change-wakeups<br/>A waiting seat is woken through herdr on"]
+  REQ-wake-confirmed["REQ-wake-confirmed<br/>A wake is a job: sent through the execut"]
   ROL-architect["ROL-architect<br/>Architect (Opus): reads the graph, cuts "]
   ROL-interface-agent["ROL-interface-agent<br/>Interface agent: read only, the owner's "]
   ROL-merger["ROL-merger<br/>Merger (Sonnet or Haiku): integrates, me"]
@@ -72,6 +84,7 @@ flowchart LR
   ROL-tester["ROL-tester<br/>Tester (Sonnet or Haiku): runs exactly t"]
   ROL-worker["ROL-worker<br/>Worker (Opus or Sonnet by task): impleme"]
   RSK-compaction-sensor["RSK-compaction-sensor<br/>compaction-guard reads 0 percent for a s"]
+  RSK-executor-host-tools["RSK-executor-host-tools<br/>The executor depends on the host's herdr"]
   RSK-pixels-in-pane["RSK-pixels-in-pane<br/>Pixels in a pane exist only via Kitty gr"]
   RSK-proton-wsl["RSK-proton-wsl<br/>Proton in WSL2 is unproven; the ARM64 cl"]
   RSK-steam-tos["RSK-steam-tos<br/>Steam Subscriber Agreement 4.C bans bots"]
@@ -81,9 +94,11 @@ flowchart LR
   RUN-recover["RUN-recover<br/>recover.sh --check|--apply: halt flag, h"]
   RUN-retire["RUN-retire<br/>retire: agent send-keys esc, agent promp"]
   RUN-route-runner["RUN-route-runner<br/>factory/bin/route.sh once|run|status: re"]
+  RUN-scheduler-operate["RUN-scheduler-operate<br/>scheduler/RUNBOOK.md: build and test in "]
   RUN-seat-up["RUN-seat-up<br/>seat.sh --ticket WO --role R: workspace "]
   SCH-factory-record["SCH-factory-record<br/>factory/schema/record.schema.json: id, a"]
   SCH-routes["SCH-routes<br/>factory/config/routes.json: first matchi"]
+  SCH-scheduler-config["SCH-scheduler-config<br/>scheduler/config/scheduler.json and exec"]
   SPK-01-qud-on-wsl["SPK-01-qud-on-wsl<br/>Spike 1: native Linux Qud runs in WSL2 u"]
   SPK-02-harmony-mod["SPK-02-harmony-mod<br/>Spike 2: Harmony mod exports state per t"]
   SPK-03-ipc["SPK-03-ipc<br/>Spike 3: file IPC vs socket; pass = unde"]
@@ -100,6 +115,7 @@ flowchart LR
   STC-http-shaped["STC-http-shaped<br/>HTTP-shaped status codes from rime: 100 "]
   WFL-bringup["WFL-bringup<br/>Bring-up DAG: herdr session, control pla"]
   WFL-integration["WFL-integration<br/>Integration: the merger rebases the PR o"]
+  WFL-scheduler-cutover["WFL-scheduler-cutover<br/>Cut-over: shadow beside the bash belt un"]
   WFL-sdlc["WFL-sdlc<br/>SDLC DAG: request to ticket to work to t"]
   CMP-bearings-tool -- decided_by --> DEC-bearings-vendored-tiers
   CMP-bearings-tool -- owned_by --> ROL-interface-agent
@@ -139,6 +155,16 @@ flowchart LR
   CMP-route-runner -- defined_in --> RUN-route-runner
   CMP-route-runner -- depends_on --> CMP-queue
   CMP-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
+  CMP-scheduler-executor -- decided_by --> DEC-scheduler-two-processes
+  CMP-scheduler-executor -- implements --> IFC-scheduler-executor
+  CMP-scheduler-executor -- depends_on --> IFC-herdr-socket
+  CMP-scheduler-executor -- defined_in --> RUN-scheduler-operate
+  CMP-scheduler -- decided_by --> DEC-scheduler-go-podman
+  CMP-scheduler -- decided_by --> DEC-scheduler-two-processes
+  CMP-scheduler -- implements --> SCH-routes
+  CMP-scheduler -- implements --> REQ-status-change-wakeups
+  CMP-scheduler -- depends_on --> CMP-scheduler-executor
+  CMP-scheduler -- defined_in --> RUN-scheduler-operate
   CMP-sitrep-site -- decided_by --> DEC-sitrep-local-first
   CMP-sitrep-site -- depends_on --> IFC-owner-channel
   DEC-nats-jetstream-grpc -- supersedes --> REQ-locks-and-queues
@@ -148,20 +174,39 @@ flowchart LR
   DEC-nats-jetstream-grpc -- implements --> DEC-system-before-agents
   DEC-own-game-terminal -- supersedes --> DEC-rust-terminal-parallel
   DEC-per-package-cicd-semver -- decided_by --> DEC-monorepo-apache2
+  DEC-scheduler-go-podman -- depends_on --> DEC-nats-jetstream-grpc
+  DEC-scheduler-go-podman -- implements --> REQ-status-change-wakeups
+  DEC-scheduler-two-processes -- decided_by --> DEC-scheduler-go-podman
+  DEC-scheduler-two-processes -- depends_on --> DEC-nats-jetstream-grpc
+  DEC-scheduler-two-processes -- implements --> DEC-no-process-under-agent
   DEC-spike5-passed -- supersedes --> RSK-pixels-in-pane
   DEC-spike5-passed -- implements --> SPK-05-pane-graphics
   DEC-tiers-everywhere -- supersedes --> DEC-bearings-vendored-tiers
   DEC-variants-parallel -- decided_by --> DEC-own-game-terminal
   IFC-owner-channel -- decided_by --> DEC-page-only-owner-channel
   IFC-player-contract -- decided_by --> DEC-layla-system-one
+  IFC-scheduler-executor -- decided_by --> DEC-nats-jetstream-grpc
   REQ-checkpoint-every-step -- depends_on --> REQ-compaction-rule
   REQ-checkpoint-every-step -- implements --> DEC-system-before-agents
   REQ-compaction-quiet-window -- depends_on --> REQ-compaction-rule
   REQ-compaction-quiet-window -- depends_on --> CMP-compaction-guard
   REQ-compaction-quiet-window -- implements --> DEC-system-before-agents
   REQ-compaction-rule -- implements --> DEC-system-before-agents
+  REQ-intake-exactly-once -- implements --> REQ-factory-node-contract
+  REQ-intake-exactly-once -- depends_on --> REQ-event-log
+  REQ-job-durable-idempotent -- implements --> REQ-factory-node-contract
   REQ-locks-and-queues -- implements --> REQ-factory-node-contract
   REQ-north-star -- decided_by --> DEC-game-host-linux-native
+  REQ-policy-default-is-a-record -- implements --> REQ-locks-and-queues
+  REQ-policy-default-is-a-record -- depends_on --> SCH-routes
+  REQ-routing-table-only -- implements --> SCH-routes
+  REQ-routing-table-only -- implements --> REQ-factory-node-contract
+  REQ-seat-hold-not-refuse -- implements --> RUN-seat-up
+  REQ-seat-hold-not-refuse -- depends_on --> REQ-locks-and-queues
+  REQ-stall-two-signal -- implements --> REQ-owner-notifications
+  REQ-stall-two-signal -- depends_on --> REQ-status-change-wakeups
+  REQ-wake-confirmed -- implements --> REQ-status-change-wakeups
+  REQ-wake-confirmed -- depends_on --> REQ-compaction-quiet-window
   ROL-architect -- decided_by --> DEC-permissions-by-role
   ROL-interface-agent -- decided_by --> DEC-permissions-by-role
   ROL-merger -- decided_by --> DEC-permissions-by-role
@@ -171,6 +216,7 @@ flowchart LR
   ROL-reviewer -- decided_by --> DEC-permissions-by-role
   ROL-tester -- decided_by --> DEC-permissions-by-role
   ROL-worker -- decided_by --> DEC-permissions-by-role
+  RSK-executor-host-tools -- risks --> CMP-scheduler-executor
   RSK-proton-wsl -- decided_by --> DEC-game-host-linux-native
   RSK-steam-tos -- decided_by --> DEC-qud-drm-free
   RUN-bearings-promote -- defined_in --> CMP-bearings-tool
@@ -180,11 +226,14 @@ flowchart LR
   RUN-retire -- owned_by --> ROL-monitor
   RUN-route-runner -- implements --> SCH-routes
   RUN-route-runner -- depends_on --> CMP-queue
+  RUN-scheduler-operate -- depends_on --> RUN-seat-up
   RUN-seat-up -- depends_on --> WFL-bringup
   RUN-seat-up -- implements --> DEC-no-process-under-agent
   SCH-factory-record -- implements --> REQ-factory-node-contract
   SCH-routes -- implements --> REQ-factory-node-contract
   SCH-routes -- owned_by --> ROL-orchestrator
+  SCH-scheduler-config -- implements --> DEC-no-hardcode-config-s3
+  SCH-scheduler-config -- depends_on --> SCH-routes
   SPK-02-harmony-mod -- depends_on --> SPK-01-qud-on-wsl
   SPK-03-ipc -- depends_on --> SPK-02-harmony-mod
   SPK-04-text-vs-vision -- depends_on --> SPK-02-harmony-mod
@@ -200,5 +249,8 @@ flowchart LR
   WFL-integration -- depends_on --> SCH-routes
   WFL-integration -- depends_on --> STC-http-shaped
   WFL-integration -- implements --> WFL-sdlc
+  WFL-scheduler-cutover -- depends_on --> CMP-route-runner
+  WFL-scheduler-cutover -- depends_on --> CMP-scheduler
+  WFL-scheduler-cutover -- implements --> WFL-sdlc
   WFL-sdlc -- depends_on --> SCH-routes
   WFL-sdlc -- depends_on --> SCH-factory-record

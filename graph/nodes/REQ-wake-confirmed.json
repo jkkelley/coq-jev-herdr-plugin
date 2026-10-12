@@ -1,0 +1,36 @@
+{
+  "id": "REQ-wake-confirmed",
+  "type": "Requirement",
+  "title": "A wake is a job: sent through the executor, held while the seat's quiet window is open, confirmed by the seat's next record or its busy status, re-sent with backoff, and dead-lettered as a 500 note after the last attempt",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "file",
+      "id": "factory/bin/route.sh#act_primary",
+      "at": null
+    },
+    {
+      "kind": "spec",
+      "id": "SPEC-05#s-quiet",
+      "at": null
+    },
+    {
+      "kind": "spec",
+      "id": "SPEC-16.D",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-status-change-wakeups"
+    },
+    {
+      "kind": "depends_on",
+      "to": "REQ-compaction-quiet-window"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:21Z"
+}

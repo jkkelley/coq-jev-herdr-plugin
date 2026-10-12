@@ -1,0 +1,36 @@
+{
+  "id": "REQ-policy-default-is-a-record",
+  "type": "Requirement",
+  "title": "A standing policy's default is a policy.applied record naming the row and the escalation it answers, written before the wake it implies, bounded by a limit per ticket counted from the log, and never defined for a break glass",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "file",
+      "id": "factory/bin/policy.sh",
+      "at": null
+    },
+    {
+      "kind": "file",
+      "id": "factory/config/policies.json",
+      "at": null
+    },
+    {
+      "kind": "spec",
+      "id": "SPEC-16.E",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-locks-and-queues"
+    },
+    {
+      "kind": "depends_on",
+      "to": "SCH-routes"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:21Z"
+}

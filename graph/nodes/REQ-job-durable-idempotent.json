@@ -1,0 +1,27 @@
+{
+  "id": "REQ-job-durable-idempotent",
+  "type": "Requirement",
+  "title": "Every action the scheduler performs is a job file with an idempotency key, so a restart resumes it, a crash never doubles it, and a verdict the executor could not deliver is discovered from the world before any retry",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "file",
+      "id": "factory/bin/route.sh#route_file",
+      "at": null
+    },
+    {
+      "kind": "spec",
+      "id": "SPEC-16.D",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-factory-node-contract"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:21Z"
+}

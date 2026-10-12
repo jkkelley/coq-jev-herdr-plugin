@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "description": "The copy rule and the ownership rule of the scheduler specs (specs/scheduler/*.xml), checked by specs/scheduler/bin/check.sh in the lint image. A spec parses against the schema, stays under max_lines, keeps every element's own words under under_chars, cites a source that resolves for every element that carries words, names no host, key, person, ticket or record, and the set of specs owns every row of the routes table and every status code in codes exactly once.",
+  "specs": "specs/scheduler/*.xml",
+  "schema": "specs/scheduler/schema/scheduler-spec.xsd",
+  "specs_dir": "specs",
+  "graph_nodes": "graph/nodes",
+  "routes": "factory/config/routes.json",
+  "max_lines": 1000,
+  "under_chars": 240,
+  "codes": [
+    { "value": 100, "name": "ACCEPTED" },
+    { "value": 200, "name": "DONE" },
+    { "value": 201, "name": "PASSED" },
+    { "value": 204, "name": "RESTORED" },
+    { "value": 300, "name": "ROUTED" },
+    { "value": 400, "name": "REJECTED" },
+    { "value": 409, "name": "CONFLICT" },
+    { "value": 412, "name": "GATE_FAILED" },
+    { "value": 422, "name": "FAILED" },
+    { "value": 423, "name": "BLOCKED" },
+    { "value": 429, "name": "OVER_CAP" },
+    { "value": 500, "name": "FAILURE" }
+  ],
+  "forbidden": [
+    { "name": "home path", "regex": "/home/|/Users/|[A-Za-z]:\\\\Users|~/" },
+    { "name": "host or url", "regex": "localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|://" },
+    { "name": "page key", "regex": "[?&]key=|[0-9a-fA-F]{32,}" },
+    { "name": "email address", "regex": "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}" },
+    { "name": "ticket id", "regex": "WO-[0-9]{8}-[0-9a-f]{4}" },
+    { "name": "record id", "regex": "[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}" },
+    { "name": "herdr pane id", "regex": "\\bw[A-Z0-9]{2}:[pt][A-Z0-9]+\\b" },
+    { "name": "em dash", "regex": "\\u2014" }
+  ]
+}

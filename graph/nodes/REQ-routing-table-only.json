@@ -1,0 +1,36 @@
+{
+  "id": "REQ-routing-table-only",
+  "type": "Requirement",
+  "title": "Routing is a pure function of the record, the routes table and the escalation count: the first matching row decides, the plan it returns is data, and no Go branch reads a kind, a code or a note outside a row match",
+  "status": "proposed",
+  "text": "",
+  "sources": [
+    {
+      "kind": "node",
+      "id": "SCH-routes",
+      "at": null
+    },
+    {
+      "kind": "file",
+      "id": "factory/bin/route.sh#match_route",
+      "at": null
+    },
+    {
+      "kind": "spec",
+      "id": "SPEC-16.B",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "SCH-routes"
+    },
+    {
+      "kind": "implements",
+      "to": "REQ-factory-node-contract"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-12T19:21Z"
+}
