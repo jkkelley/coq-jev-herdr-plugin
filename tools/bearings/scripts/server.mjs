@@ -20,6 +20,23 @@ import { TOOL_ROOT, argv, loadConfig, resolveTier } from "./lib/config.mjs";
 
 const ASSETS = path.join(TOOL_ROOT, "assets");
 const REPO_ROOT = path.resolve(TOOL_ROOT, "..", "..");
+// The page's own version (WO-20261012-668a, ported from the sitrep-panel-v1 handoff). What broke: a renderer change reached
+// only tabs that happened to reload, so a tab left open met a SITREP payload its old code could not draw and printed
+// [object Object]. Why this fix: the server hashes page.html and theme.css, injects the hash as @@BUILD@@ and reports it on
+// /state; the page reloads itself once (sessionStorage guard) when the two differ. Rejected: a version constant edited by
+// hand, which is forgotten. Cost: two small file reads per /state poll.
+const buildStamp = () => {
+  try {
+    return crypto
+      .createHash("sha1")
+      .update(fs.readFileSync(path.join(ASSETS, "page.html")))
+      .update(fs.readFileSync(path.join(ASSETS, "theme.css")))
+      .digest("hex")
+      .slice(0, 12);
+  } catch {
+    return "";
+  }
+};
 const args = process.argv.slice(2);
 const { val, has } = argv(args);
 const usage = () => {
@@ -307,7 +324,8 @@ if (has("--stop")) {
       touch();
       const html = fs
         .readFileSync(path.join(ASSETS, "page.html"), "utf8")
-        .replace(/@@THEME@@;?/, () => fs.readFileSync(path.join(ASSETS, "theme.css"), "utf8"));
+        .replace(/@@THEME@@;?/, () => fs.readFileSync(path.join(ASSETS, "theme.css"), "utf8"))
+        .replace(/@@BUILD@@/g, buildStamp());
       res.setHeader("set-cookie", `${cfg.cookie_name}=${KEY}; HttpOnly; SameSite=Strict; Path=/`);
       return send(res, 200, `<!doctype html>\n${html}`, "text/html; charset=utf-8");
     }
@@ -346,6 +364,7 @@ if (has("--stop")) {
         answers: answersNow(),
         delivered: readJson("delivered.json", {}),
         messages: readJsonl("messages.jsonl").slice(-cfg.messages_window),
+        build: buildStamp(),
       });
     }
     // An upload ahead of the message text it will ride in with (WK-20260916-068). The body is

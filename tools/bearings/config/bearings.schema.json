@@ -19,6 +19,7 @@
     "max_body_bytes",
     "file_max_bytes",
     "max_message_chars",
+    "max_reply_chars",
     "max_words_chars",
     "messages_window",
     "pane_split",
@@ -74,6 +75,10 @@
       "minimum": 1024
     },
     "max_message_chars": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_reply_chars": {
       "type": "integer",
       "minimum": 1
     },

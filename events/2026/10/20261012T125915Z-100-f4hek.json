@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T125915Z-100-f4hek",
+  "at": "2026-10-12T12:59:15Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-668a",
+  "kind": "work.started",
+  "ticket": "WO-20261012-668a",
+  "pane": "wD3:p79",
+  "note": "WO-20261012-668a worker started in slot /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/1/coq-jev-herdr-plugin",
+  "evidence": [],
+  "observations": []
+}

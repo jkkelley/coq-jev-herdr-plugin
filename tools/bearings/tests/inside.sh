@@ -14,7 +14,7 @@ check python3 -c 'import json,jsonschema,sys; jsonschema.validate(json.load(open
 
 # A test config: state under /work, dev tier on a small port range.
 cat > /work/config.json <<JSON
-{"schema_version":"1.0.0","project":"t","state_root":"/work/state","listen_host":"127.0.0.1","allowed_hosts":["127.0.0.1","localhost"],"cookie_name":"bearings_key","idle_minutes":5,"settle_ms":300,"stop_tries":3,"stop_try_ms":1000,"max_body_bytes":65536,"max_message_chars":8000,"max_words_chars":4000,"messages_window":50,"open_label_prefix":"OPEN - any tool","pane_split":{"direction":"down","ratio":0.2},
+{"schema_version":"1.0.0","project":"t","state_root":"/work/state","listen_host":"127.0.0.1","allowed_hosts":["127.0.0.1","localhost"],"cookie_name":"bearings_key","idle_minutes":5,"settle_ms":300,"stop_tries":3,"stop_try_ms":1000,"max_body_bytes":65536,"max_message_chars":8000,"max_reply_chars":32000,"max_words_chars":4000,"messages_window":50,"open_label_prefix":"OPEN - any tool","pane_split":{"direction":"down","ratio":0.2},
  "tiers":{"stable":{"page":"\${project}-stable","port":45900,"pane_label":"b-stable","wait_pane_label":"b-stable-wait","checkout":"main"},
           "dev":{"page":"\${project}-dev-\${ticket}","port_range":[45920,45922],"pane_label":"b-dev-\${ticket}","wait_pane_label":"b-dev-\${ticket}-wait","checkout":"slot"}}}
 JSON
@@ -193,6 +193,8 @@ $B dev stop --ticket t4 "${C[@]}" >/dev/null; sleep 2
 jq '.board_dir = ""' /work/config.json > /work/config-empty.json
 set +e; out=$(node /skill/scripts/server.mjs --tier dev --ticket t5 --config /work/config-empty.json 2>&1); rc=$?; set -e
 CASE="an empty board_dir fails at start (exit 3) naming the key"; check test "$rc" = 3 -a "${out#*board_dir}" != "$out"
+
+. /skill/tests/sitrep.sh
 
 echo "bearings tests: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ] || exit 3

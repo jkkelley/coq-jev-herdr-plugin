@@ -1499,3 +1499,457 @@ footer {
     min-width: 0;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   SITREP panel. The owner's operational dashboard standard (STD-owner-sitrep-001),
+   rendered inside the thread rather than linked out. It commits to one dark
+   instrument look in both page themes: a briefing is read the same way at any hour,
+   and a panel that flips palette with the host loses the status colours' meaning.
+   --------------------------------------------------------------------------- */
+.sitrep {
+  --sr-ground: #0b0b0e;
+  --sr-card: rgba(255, 255, 255, 0.035);
+  --sr-edge: rgba(255, 255, 255, 0.085);
+  --sr-ink: #f4f4f5;
+  --sr-ink-2: #a1a1aa;
+  --sr-ink-3: #71717a;
+  --sr-good: #34d399;
+  --sr-warn: #fbbf24;
+  --sr-bad: #fb7185;
+  --sr-amber: #f59e0b;
+  align-self: stretch;
+  max-width: 100%;
+  margin-top: 18px;
+  padding: 22px 22px 26px;
+  border: 1px solid var(--sr-edge);
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 90% at 0% 0%, rgba(245, 158, 11, 0.07), transparent 60%),
+    var(--sr-ground);
+  color: var(--sr-ink);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.42);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.sitrep.new {
+  animation: pop 420ms cubic-bezier(0.2, 0.9, 0.25, 1.12) both;
+}
+.sr-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.sr-mark {
+  font-size: 18px;
+  line-height: 1;
+}
+.sr-title {
+  font-family: var(--mono);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.sr-slash {
+  font-family: var(--mono);
+  font-size: 18px;
+  color: var(--sr-ink-3);
+}
+.sr-scope {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sr-ink-2);
+  padding: 7px 13px;
+  border: 1px solid var(--sr-edge);
+  border-radius: 999px;
+  background: var(--sr-card);
+}
+.sr-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  color: var(--sr-warn);
+  background: rgba(251, 191, 36, 0.09);
+}
+.sr-pill.nominal {
+  color: var(--sr-good);
+  background: rgba(52, 211, 153, 0.09);
+}
+.sr-pill.critical {
+  color: var(--sr-bad);
+  background: rgba(251, 113, 133, 0.1);
+}
+.sr-ping {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 0 currentColor;
+  animation: sr-ping 2s ease-out infinite;
+}
+@keyframes sr-ping {
+  0% {
+    box-shadow: 0 0 0 0 currentColor;
+    opacity: 1;
+  }
+  70% {
+    box-shadow: 0 0 0 7px transparent;
+    opacity: 0.75;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+    opacity: 1;
+  }
+}
+.sr-updated {
+  margin-top: -8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--sr-ink-3);
+}
+.sr-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.sr-stat {
+  padding: 15px 16px 16px;
+  border: 1px solid var(--sr-edge);
+  border-radius: 14px;
+  background: var(--sr-card);
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.sr-stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sr-ink-3);
+}
+.sr-stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+.sr-stat-value {
+  font-family: var(--mono);
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sr-stat-note {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sr-good);
+}
+.sr-stat-note.warn {
+  color: var(--sr-warn);
+}
+.sr-stat-note.bad {
+  color: var(--sr-bad);
+}
+.sr-stat-note.mute {
+  color: var(--sr-ink-3);
+}
+.sr-block {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.sr-block + .sr-block {
+  border-top: 1px solid var(--sr-edge);
+  padding-top: 18px;
+}
+.sr-block-head {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+}
+.sr-block-n {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--sr-amber);
+  letter-spacing: 0.08em;
+}
+.sr-block-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.19em;
+  text-transform: uppercase;
+  color: var(--sr-ink-2);
+}
+.sr-item {
+  padding: 16px 18px 17px;
+  border: 1px solid var(--sr-edge);
+  border-radius: 14px;
+  background: var(--sr-card);
+}
+.sr-item.bad {
+  border-color: rgba(251, 113, 133, 0.28);
+  background: rgba(251, 113, 133, 0.05);
+}
+.sr-item-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 9px;
+}
+.sr-item-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--sr-good);
+}
+.sr-item-label.bad {
+  color: var(--sr-bad);
+}
+.sr-item-label.warn {
+  color: var(--sr-warn);
+}
+.sr-item-label.mute {
+  color: var(--sr-ink-3);
+}
+.sr-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--sr-bad);
+}
+.sr-check {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  color: var(--sr-good);
+  font-size: 11px;
+  line-height: 1;
+}
+.sr-item-text {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--sr-ink);
+  letter-spacing: -0.004em;
+}
+.sr-qs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+.sr-q {
+  padding: 15px 16px 16px;
+  border: 1px solid var(--sr-edge);
+  border-radius: 14px;
+  background: var(--sr-card);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sr-q-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sr-q-name {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--sr-ink-3);
+}
+.sr-q-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.sr-q-count {
+  font-family: var(--mono);
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.sr-q-delta {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sr-ink-3);
+}
+.sr-q-delta.good {
+  color: var(--sr-good);
+}
+.sr-q-delta.bad {
+  color: var(--sr-bad);
+}
+.sr-q-delta.warn {
+  color: var(--sr-warn);
+}
+.sr-badge {
+  align-self: flex-start;
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  color: var(--sr-ink-2);
+}
+.sr-badge.bad {
+  color: var(--sr-bad);
+  background: rgba(251, 113, 133, 0.08);
+}
+.sr-badge.warn {
+  color: var(--sr-warn);
+  background: rgba(251, 191, 36, 0.08);
+}
+.sr-badge.good {
+  color: var(--sr-good);
+  background: rgba(52, 211, 153, 0.08);
+}
+.sr-q-next {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.sr-q-next li {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--sr-ink-2);
+  padding-left: 12px;
+  position: relative;
+  overflow-wrap: anywhere;
+}
+.sr-q-next li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--sr-ink-3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .sr-ping {
+    animation: none;
+  }
+  .sitrep.new {
+    animation: none;
+  }
+}
+@media (max-width: 560px) {
+  .sitrep {
+    padding: 18px 15px 20px;
+    border-radius: 15px;
+  }
+  .sr-pill {
+    margin-left: 0;
+  }
+}
+
+/* The reference line. The sentence above it stays short; the ticket id and its full title live
+   here, where the title can be quiet without being dropped. */
+.sr-ref {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 11px;
+  padding-top: 10px;
+  border-top: 1px solid var(--sr-edge);
+}
+.sr-ref-id {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--sr-amber);
+  white-space: nowrap;
+}
+.sr-ref-title {
+  flex: 1 1 200px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sr-ink-3);
+}
+.sr-q-next li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 7px;
+}
+.sr-n-id {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--sr-ink-2);
+  white-space: nowrap;
+}
+.sr-n-title {
+  flex: 1 1 160px;
+  font-family: var(--font);
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--sr-ink-3);
+}
+
+/* Links are badges. The owner's directive: never raw text, and minify a url that is given. */
+.sr-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.sr-link {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 211, 153, 0.4);
+  color: var(--sr-good);
+  background: rgba(52, 211, 153, 0.08);
+  transition: background 140ms ease, border-color 140ms ease;
+}
+.sr-link:hover,
+.sr-link:focus-visible {
+  background: rgba(52, 211, 153, 0.16);
+  border-color: var(--sr-good);
+}

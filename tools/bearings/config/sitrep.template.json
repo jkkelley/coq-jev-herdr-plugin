@@ -1,0 +1,57 @@
+{
+  "scope": "{{project}} / FACTORY",
+  "state_rules": [
+    { "when": "friction", "state": "degraded", "label": "DEGRADED" }
+  ],
+  "state_default": { "state": "nominal", "label": "NOMINAL" },
+  "stats": [
+    { "label": "IN FLIGHT", "value": "{{in_progress.count}}", "note": "tickets in progress", "tone": "good" },
+    { "label": "MAIN", "value": "{{main_sha}}", "note": "{{main_ref}}", "tone": "mute" },
+    { "label": "STARTABLE", "value": "{{startable.count}}", "note": "{{startable.p0}} P0", "tone": "mute" },
+    { "label": "OPEN PRS", "value": "{{prs.count}}", "note": "awaiting merge", "tone": "mute" }
+  ],
+  "blocks": [
+    {
+      "n": "01",
+      "name": "EXECUTIVE GROUND TRUTH",
+      "items": [
+        { "label": "OBJECTIVE", "text": "Tickets in flight: {{in_progress.count}}, ready to start: {{startable.count}}.", "when": "in_progress.count" },
+        { "label": "FRICTION", "tone": "bad", "text": "The newest unresolved failure record is code {{friction.code}}, filed {{friction.ago}}.", "when": "friction", "ref_from": "friction.ticket" }
+      ]
+    },
+    {
+      "n": "02",
+      "name": "DELTA",
+      "items": [
+        { "label": "CLOSED", "check": true, "text": "Tickets closed in the last {{recent_days}} days: {{done_recent.count}}.", "when": "done_recent.count", "ref_from": "done_recent.0" },
+        { "label": "REVIEW", "text": "Open pull requests awaiting merge: {{prs.count}}.", "when": "prs.count", "links_from": "prs" }
+      ]
+    },
+    {
+      "n": "03",
+      "name": "ACTIVE OPERATIONS",
+      "items": [
+        { "label": "{{in_progress.0.priority}}", "text": "In progress, last updated {{in_progress.0.updated}}.", "when": "in_progress.0", "ref_from": "in_progress.0" },
+        { "label": "{{in_progress.1.priority}}", "text": "In progress, last updated {{in_progress.1.updated}}.", "when": "in_progress.1", "ref_from": "in_progress.1" }
+      ]
+    },
+    {
+      "n": "04",
+      "name": "QUEUE MATRIX",
+      "queues": [
+        { "name": "STARTABLE", "list": "startable", "tone": "good", "urgency": "{{startable.p0}} P0" },
+        { "name": "IN PROGRESS", "list": "in_progress", "tone": "good", "urgency": "{{in_progress.p0}} P0" },
+        { "name": "WAITING", "list": "waiting", "tone": "warn", "urgency": "{{waiting.count}} blocked" },
+        { "name": "OPEN PRS", "list": "prs", "tone": "warn", "urgency": "{{prs.count}} open" }
+      ]
+    },
+    {
+      "n": "05",
+      "name": "TACTICAL NEXT STEPS",
+      "items": [
+        { "label": "1 IMMEDIATE [T-0 TO T+2H]", "text": "Start the next ready ticket now.", "when": "startable.0", "ref_from": "startable.0" },
+        { "label": "2 FOLLOW-ON", "text": "Then take the one after it.", "when": "startable.1", "ref_from": "startable.1" }
+      ]
+    }
+  ]
+}
