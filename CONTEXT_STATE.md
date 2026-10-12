@@ -56,6 +56,33 @@
 
 
 
+
+## Checkpoint 2026-10-12 17:47 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code. Treehouse slot 7, branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, PR 28 open and CLEAN against main. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+- The reviewer sent review.changes 422 (record 20261012T174330Z-422-lqevs, attempt 2) on fd36e21: the gate code, wake line and case 13 are accepted, but make lint failed on a bad changelog entry name.
+
+#### Toolchain
+
+- Cause: bin/changelog.sh built its collision suffix from 16 random bytes filtered to a-z0-9, so the suffix was often 2 chars, and check wants exactly 5. The second make step with the same title wrote changelog/2026/10/20261012-wake-line-carries-the-supersedes-and-merge-main-st-ga.md, a duplicate of the first entry.
+- Fix: removed the duplicate entry, re-rendered CHANGELOG.md with bin/changelog.sh render, and changed the suffix source to 256 bytes with a breadcrumb in bin/changelog.sh. make -C factory lint ok.
+
+#### Active Tasks
+
+- Post pr.opened 100 with --pr 28 and the new head sha, then hold.
+
+#### Blockers
+
+- roles/tester.json and roles/worker.json need the supersedes and merge main steps; a worker cannot edit roles/.
+
+### Hydration prompt
+
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
+
 ## Checkpoint 2026-10-12 17:29 UTC
 
 ### Current state
