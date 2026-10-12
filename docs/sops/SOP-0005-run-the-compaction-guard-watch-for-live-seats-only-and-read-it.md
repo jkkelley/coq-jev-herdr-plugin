@@ -1,4 +1,4 @@
-# SOP-0003: Run the compaction-guard watch for live seats only and read it
+# SOP-0005: Run the compaction-guard watch for live seats only and read it
 
 ## Contents
 
