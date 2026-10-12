@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "claims.json",
+  "description": "Rules for factory/bin/claims.sh (WO-20261012-0677): the files no feature PR may carry, the paths every PR may add, the branch exempt from the files check, and the doc number series that must be unique.",
+  "type": "object",
+  "required": ["aggregates", "implicit", "exempt_branches", "doc_ids"],
+  "additionalProperties": false,
+  "properties": {
+    "aggregates": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "Generated or per-seat files, bash globs where * crosses /. A diff that adds or changes one fails; deleting one is allowed (untracking)." },
+    "implicit": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "Paths any ticket may add without declaring them: each entry is a new unique file." },
+    "exempt_branches": { "type": "array", "items": { "type": "string", "minLength": 1 }, "description": "Branch globs whose diff is not checked against a ticket (the architect records PR)." },
+    "doc_ids": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["dir", "prefix"],
+        "additionalProperties": false,
+        "properties": { "dir": { "type": "string", "minLength": 1 }, "prefix": { "type": "string", "pattern": "^[A-Z]{2,5}$" } }
+      }
+    }
+  }
+}

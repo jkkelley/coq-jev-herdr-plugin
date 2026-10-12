@@ -17,17 +17,10 @@ flowchart LR
   CMP-player-seat["CMP-player-seat<br/>Player seat: runtime-pluggable (claude, "]
   CMP-qud-adapter["CMP-qud-adapter<br/>Qud adapter: Harmony C# mod exporting st"]
   CMP-queue["CMP-queue<br/>queue/: directory queue with p0..p3 prio"]
-  CMP-role-seats["CMP-role-seats<br/>Tester, reviewer and merger seats: one r"]
   CMP-route-runner["CMP-route-runner<br/>factory/bin/route.sh: the orchestrator's"]
   CMP-rust-terminal["CMP-rust-terminal<br/>Rust terminal with Kitty graphics: fallb"]
   CMP-sitrep-site["CMP-sitrep-site<br/>SITREP site: Go server, websocket owner "]
-  DEC-architect-becomes-interface-agent["DEC-architect-becomes-interface-agent<br/>The architect session becomes the interf"]
-  DEC-automate-recover-retry["DEC-automate-recover-retry<br/>Templates, scripts, automation, recovery"]
   DEC-bearings-vendored-tiers["DEC-bearings-vendored-tiers<br/>Bearings is vendored into tools/bearings"]
-  DEC-blueprint-first["DEC-blueprint-first<br/>Design from the blueprint, never improvi"]
-  DEC-break-glass-one-time["DEC-break-glass-one-time<br/>Break glass: the owner alone authorises "]
-  DEC-clear-schemas-codes-token-efficiency["DEC-clear-schemas-codes-token-efficiency<br/>Clear schemas and status codes, token ef"]
-  DEC-components-first["DEC-components-first<br/>Components are the design unit: every pi"]
   DEC-functional-style["DEC-functional-style<br/>Functional programming mindset: pure fun"]
   DEC-game-host-linux-native["DEC-game-host-linux-native<br/>Qud MVP runs Linux-native inside WSL2 un"]
   DEC-interface-agent-owns-bearings["DEC-interface-agent-owns-bearings<br/>Only the interface agent runs the bearin"]
@@ -37,7 +30,6 @@ flowchart LR
   DEC-monorepo-apache2["DEC-monorepo-apache2<br/>One public monorepo under Apache-2.0"]
   DEC-mvp-player-haiku["DEC-mvp-player-haiku<br/>First MVP player model is Haiku 5.5; pla"]
   DEC-nats-jetstream-grpc["DEC-nats-jetstream-grpc<br/>NATS JetStream is the producer-consumer "]
-  DEC-never-hardcode["DEC-never-hardcode<br/>Never hardcode: every path, name, host, "]
   DEC-no-hardcode-config-s3["DEC-no-hardcode-config-s3<br/>Nothing hardcoded: every tunable in vers"]
   DEC-no-process-under-agent["DEC-no-process-under-agent<br/>No process or subagent under an agent; e"]
   DEC-own-game-terminal["DEC-own-game-terminal<br/>Build our own pane program (Rust) that r"]
@@ -45,13 +37,11 @@ flowchart LR
   DEC-page-only-owner-channel["DEC-page-only-owner-channel<br/>The owner decides and talks only through"]
   DEC-per-package-cicd-semver["DEC-per-package-cicd-semver<br/>Each package in the monorepo has its own"]
   DEC-permissions-by-role["DEC-permissions-by-role<br/>bypassPermissions for working roles; int"]
-  DEC-portable-reusable["DEC-portable-reusable<br/>Portability and reusability: every compo"]
   DEC-qud-drm-free["DEC-qud-drm-free<br/>Spikes use a DRM-free GOG or itch Qud bu"]
   DEC-rust-terminal-parallel["DEC-rust-terminal-parallel<br/>A Rust terminal with Kitty graphics is s"]
   DEC-sitrep-local-first["DEC-sitrep-local-first<br/>SITREP client/server runs locally in WSL"]
   DEC-spike5-passed["DEC-spike5-passed<br/>Spike 5 passed 2026-10-10: a PNG pushed "]
   DEC-system-before-agents["DEC-system-before-agents<br/>Monitoring and the system come up before"]
-  DEC-system-runs-the-loop["DEC-system-runs-the-loop<br/>The system runs the loop, never an agent"]
   DEC-templates-over-handwriting["DEC-templates-over-handwriting<br/>Test plans, harnesses and records are ge"]
   DEC-tiers-everywhere["DEC-tiers-everywhere<br/>stable, uat and dev tiers for every runn"]
   DEC-variants-parallel["DEC-variants-parallel<br/>Several coq-term variants are designed a"]
@@ -90,7 +80,6 @@ flowchart LR
   RUN-kickback["RUN-kickback<br/>Kickback: events/bin/event.sh add --kind"]
   RUN-recover["RUN-recover<br/>recover.sh --check|--apply: halt flag, h"]
   RUN-retire["RUN-retire<br/>retire: agent send-keys esc, agent promp"]
-  RUN-role-seats-on-a-pr["RUN-role-seats-on-a-pr<br/>SOP-0001: bring up a tester, reviewer or"]
   RUN-route-runner["RUN-route-runner<br/>factory/bin/route.sh once|run|status: re"]
   RUN-seat-up["RUN-seat-up<br/>seat.sh --ticket WO --role R: workspace "]
   SCH-factory-record["SCH-factory-record<br/>factory/schema/record.schema.json: id, a"]
@@ -134,9 +123,8 @@ flowchart LR
   CMP-jenkins-lint -- implements --> DEC-system-before-agents
   CMP-jenkins-lint -- depends_on --> CMP-knowledge-graph
   CMP-knowledge-graph -- decided_by --> DEC-xml-specs-bounded
-  CMP-monitor-seat -- decided_by --> DEC-system-before-agents
-  CMP-monitor-seat -- decided_by --> DEC-system-runs-the-loop
   CMP-monitor-seat -- implements --> REQ-event-log
+  CMP-monitor-seat -- decided_by --> DEC-system-before-agents
   CMP-pane-renderer -- risks --> RSK-pixels-in-pane
   CMP-pane-renderer -- verified_by --> SPK-05-pane-graphics
   CMP-player-seat -- decided_by --> DEC-mvp-player-haiku
@@ -146,10 +134,6 @@ flowchart LR
   CMP-qud-adapter -- verified_by --> SPK-02-harmony-mod
   CMP-queue -- implements --> REQ-locks-and-queues
   CMP-queue -- owned_by --> ROL-orchestrator
-  CMP-role-seats -- decided_by --> DEC-system-before-agents
-  CMP-role-seats -- decided_by --> DEC-system-runs-the-loop
-  CMP-role-seats -- defined_in --> RUN-role-seats-on-a-pr
-  CMP-role-seats -- implements --> REQ-event-log
   CMP-route-runner -- implements --> SCH-routes
   CMP-route-runner -- owned_by --> ROL-orchestrator
   CMP-route-runner -- defined_in --> RUN-route-runner
@@ -157,32 +141,15 @@ flowchart LR
   CMP-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
   CMP-sitrep-site -- decided_by --> DEC-sitrep-local-first
   CMP-sitrep-site -- depends_on --> IFC-owner-channel
-  DEC-architect-becomes-interface-agent -- implements --> REQ-north-star
-  DEC-architect-becomes-interface-agent -- depends_on --> DEC-blueprint-first
-  DEC-automate-recover-retry -- implements --> REQ-north-star
-  DEC-automate-recover-retry -- depends_on --> DEC-system-runs-the-loop
-  DEC-blueprint-first -- implements --> REQ-north-star
-  DEC-blueprint-first -- depends_on --> DEC-system-runs-the-loop
-  DEC-break-glass-one-time -- implements --> REQ-north-star
-  DEC-break-glass-one-time -- depends_on --> DEC-system-runs-the-loop
-  DEC-clear-schemas-codes-token-efficiency -- implements --> REQ-north-star
-  DEC-clear-schemas-codes-token-efficiency -- depends_on --> DEC-system-runs-the-loop
-  DEC-components-first -- implements --> REQ-north-star
   DEC-nats-jetstream-grpc -- supersedes --> REQ-locks-and-queues
   DEC-nats-jetstream-grpc -- depends_on --> STC-http-shaped
   DEC-nats-jetstream-grpc -- depends_on --> SCH-routes
   DEC-nats-jetstream-grpc -- implements --> REQ-status-change-wakeups
   DEC-nats-jetstream-grpc -- implements --> DEC-system-before-agents
-  DEC-never-hardcode -- implements --> REQ-north-star
-  DEC-never-hardcode -- depends_on --> DEC-components-first
   DEC-own-game-terminal -- supersedes --> DEC-rust-terminal-parallel
   DEC-per-package-cicd-semver -- decided_by --> DEC-monorepo-apache2
-  DEC-portable-reusable -- implements --> REQ-north-star
-  DEC-portable-reusable -- depends_on --> DEC-never-hardcode
   DEC-spike5-passed -- supersedes --> RSK-pixels-in-pane
   DEC-spike5-passed -- implements --> SPK-05-pane-graphics
-  DEC-system-runs-the-loop -- implements --> REQ-north-star
-  DEC-system-runs-the-loop -- depends_on --> DEC-system-before-agents
   DEC-tiers-everywhere -- supersedes --> DEC-bearings-vendored-tiers
   DEC-variants-parallel -- decided_by --> DEC-own-game-terminal
   IFC-owner-channel -- decided_by --> DEC-page-only-owner-channel
@@ -195,7 +162,6 @@ flowchart LR
   REQ-compaction-rule -- implements --> DEC-system-before-agents
   REQ-locks-and-queues -- implements --> REQ-factory-node-contract
   REQ-north-star -- decided_by --> DEC-game-host-linux-native
-  REQ-north-star -- decided_by --> DEC-system-runs-the-loop
   ROL-architect -- decided_by --> DEC-permissions-by-role
   ROL-interface-agent -- decided_by --> DEC-permissions-by-role
   ROL-merger -- decided_by --> DEC-permissions-by-role
@@ -212,8 +178,6 @@ flowchart LR
   RUN-kickback -- defined_in --> SCH-factory-record
   RUN-recover -- depends_on --> RUN-seat-up
   RUN-retire -- owned_by --> ROL-monitor
-  RUN-role-seats-on-a-pr -- depends_on --> RUN-seat-up
-  RUN-role-seats-on-a-pr -- depends_on --> RUN-kickback
   RUN-route-runner -- implements --> SCH-routes
   RUN-route-runner -- depends_on --> CMP-queue
   RUN-seat-up -- depends_on --> WFL-bringup

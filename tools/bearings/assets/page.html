@@ -312,16 +312,10 @@
       const d = drafts[b.id];
       const pick = d?.pick ?? a?.pick ?? b.rec ?? 0;
       const st = statusOf(b.id);
-      // Solves (owner 2026-10-12 16:26Z, page message m-20261012162648420-fi8cs: "state what each item solves in small prose on
-      // a new line for each item"). What broke: About is one span, so a card bundling several fixes ran them into one dense
-      // line the owner could not read. An optional solves array renders one line per item under its own label; a card
-      // without it renders exactly as before. Rejected: newlines inside about (one field doing two jobs, and the text
-      // collapses without pre-line). Backlog wnrrw carries the same stretch's spacing fix in theme.css.
       card.innerHTML = `
         <div class="bearing-top">
           <div class="facts">
             <span class="label">About</span><span>${esc(b.about)}</span>
-            ${(b.solves ?? []).length ? `<span class="label">Solves</span><span class="solves">${b.solves.map((s) => `<span>${esc(s)}</span>`).join("")}</span>` : ""}
             <span class="label">Decide</span><span class="decide">${esc(b.decide)}</span>
           </div>
           <span class="asked" title="${esc(askedIso(b))}">${esc(askedLabel(b))}</span>

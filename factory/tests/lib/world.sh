@@ -9,7 +9,9 @@
 #   $W/seat.fail          its text is the refusal: stderr, exit 3, nothing written   $W/seat.fail.down  the same, for --down only
 #   $W/seat.slow  writes the belt's mtime (ns) to $W/seat.belt, then sleeps a second
 #   world_up <name>          sets W (case root), R (repo copy), ROUTE (the runner), STATE (runner state dir), HLOG (herdr log)
-#   rec KIND CODE SEAT [TICKET] [ATTEMPT]   one record through the copy's event.sh; prints its id
+#   rec KIND CODE SEAT [TICKET] [ATTEMPT]   one record through the copy's event.sh; prints its id; REC_SHA=<hex> and REC_PR=<n> in the
+#                            environment add --sha and --pr (a review.passed is held by gate.sh unless a test.passed names the same head)
+#   evo ARGS                 event.sh add, with an id strictly after every record already in the world; rec goes through it
 #   run_once [flags]         route.sh once --from-start --repo $R --state $STATE
 #   rec_json ID              the record's JSON
 #   hcalls                   how many times the runner called herdr
@@ -46,7 +48,25 @@ STUB
 }
 rec() {
   local args=(--code "$2" --seat "$3" --kind "$1"); [ -z "${4:-}" ] || args+=(--ticket "$4"); [ -z "${5:-}" ] || args+=(--attempt "$5")
-  "$R/events/bin/event.sh" add "${args[@]}"
+  [ -z "${REC_SHA:-}" ] || args+=(--sha "$REC_SHA"); [ -z "${REC_PR:-}" ] || args+=(--pr "$REC_PR")
+  evo "${args[@]}"
+}
+# evo EVENT.SH-ARGS: event.sh add, but the id sorts strictly after the id of every other record in this world; prints the id.
+# Ids sort by UTC second then a random suffix, and the runner routes in id order. The host clock steps back about a second every ~35 s
+# (06-belt breadcrumb), so "sleep 1 between records" does not keep them in order: 02-no-route, 08-break-glass and 10-sha each failed
+# about one run in four on 2026-10-12 (backlog disva) when a later record landed in the same second as, and sorted before, an earlier one.
+# A record that would not sort after the last is deleted and written again a moment later. event.sh's own exit code is passed on.
+evo() {
+  local id last rc
+  for _ in $(seq 1 20); do
+    id=$("$R/events/bin/event.sh" add "$@"); rc=$?; [ "$rc" = 0 ] || return "$rc"
+    # the newest id of ANY other record in the world: the runner's own escalated and receipt records count too, since the table's
+    # `escalations` counts the ones with an id before the record (03-escalate failed when a blocked 423 sorted before one).
+    last=$(find "$R/events" -path '*/20*/*.json' -name '*.json' ! -name "$id.json" -printf '%f\n' 2>/dev/null | sort | tail -n 1); last=${last%.json}
+    if [[ -z "$last" || "$id" > "$last" ]]; then printf '%s\n' "$id"; return 0; fi
+    find "$R/events" -name "$id.json" -delete; sleep 0.3
+  done
+  return 1
 }
 run_once() { "$ROUTE" once --from-start --repo "$R" --state "$STATE" "$@"; }
 ids_of() { "$R/events/bin/event.sh" list --json | jq -r --arg k "$1" 'select(.kind == $k) | .id'; }
@@ -57,12 +77,13 @@ hcalls() { wc -l < "$HLOG" | tr -d ' '; }
 #   flow_world               after world_up: FLOW (the watcher), FSTATE, a herdr stub that answers pane list and process-info
 #                            from $W/panes.json and $W/procinfo.json, a fresh belt file, and a runner pane that is up
 #   runner_pane up|idle|gone the runner pane running a job, its shell sitting at a prompt, or no such pane
+#   agent_state working|idle|gone   the answer of `herdr agent get` for any seat (the flow watch skips a gate whose consumer seat is working)
 #   backdate ID SECONDS      rewrite the record's "at" to SECONDS ago (ids keep their order; the watcher judges age by "at")
 #   flow_once [flags]        flow.sh once --from-start --repo $R --state $FSTATE
 #   flow_notes               the 500 notes the watcher wrote, as JSON lines
 flow_world() {
   FLOW="$R/factory/bin/flow.sh"; FSTATE="$W/fstate"; mkdir -p "$R/factory/state"
-  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s"\ncase "$*" in\n *"pane list"*) cat "%s/panes.json" ;;\n *"process-info"*) cat "%s/procinfo.json" ;;\nesac\n' "$HLOG" "$W" "$W" > "$W/bin/herdr"
+  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s"\ncase "$*" in\n *"pane list"*) cat "%s/panes.json" ;;\n *"process-info"*) cat "%s/procinfo.json" ;;\n *"agent get"*) [ -f "%s/agent.json" ] && cat "%s/agent.json" || exit 1 ;;\nesac\n' "$HLOG" "$W" "$W" "$W" "$W" > "$W/bin/herdr"
   chmod +x "$W/bin/herdr"; runner_pane up; : > "$R/factory/state/belt"
 }
 runner_pane() {
@@ -73,6 +94,8 @@ runner_pane() {
        else echo '{"result":{"process_info":{"foreground_process_group_id":100,"shell_pid":100}}}' > "$W/procinfo.json"; fi ;;
   esac
 }
+# agent_state working|idle|gone   what `herdr agent get <any seat>` answers: that agent_status, or an error when there is no such agent
+agent_state() { if [ "$1" = gone ]; then rm -f "$W/agent.json"; else printf '{"result":{"agent":{"agent_status":"%s"}}}\n' "$1" > "$W/agent.json"; fi; }
 backdate() { local f; f=$(find "$R/events" -name "$1.json"); jq --arg at "$(date -u -d "-$2 seconds" +%Y-%m-%dT%H:%M:%SZ)" '.at = $at' "$f" > "$f.tmp" && mv "$f.tmp" "$f"; }
 flow_once() { "$FLOW" once --from-start --repo "$R" --state "$FSTATE" "$@"; }
 flow_notes() { "$R/events/bin/event.sh" list --json | jq -c 'select(.seat == "flow-watch")'; }

@@ -43,7 +43,7 @@
     "commands": [
       "gh pr merge --squash",
       "work-order.sh cleanup",
-      "herdr/bin/seat.sh --down",
+      "slot.sh release",
       "events/bin/event.sh add",
       "git fetch|rebase"
     ]
@@ -67,7 +67,7 @@
   "must": [
     "merge only a PR with review.passed 201 and test.passed 201 on the same sha",
     "on conflict: 409 with the files; never resolve by hand",
-    "after merge: work-order.sh cleanup, herdr/bin/seat.sh --down <worker seat> (returns its slot), post merged 200"
+    "after merge: work-order.sh cleanup, slot.sh release, post merged 200"
   ],
   "forbidden": [
     "spawning a subagent or any background process; every process is a labelled herdr pane",
@@ -78,8 +78,5 @@
     "naming a ticket without its full title in any owner-facing line",
     "merging without both 201s",
     "editing files"
-  ],
-  "breadcrumbs": [
-    "2026-10-11 WO-20261011-23df. What broke: allow.commands and the must line named slot.sh release, a script this repo never had (ported wording from bearings-v2), so the first merger seat would have been refused its third step. Why this fix: herdr/bin/seat.sh --down is the one way a slot comes back (SPEC-04); the merger downs the worker seat after the merge, which returns the slot and records seat.down. Rejected: adding a slot.sh wrapper (a second door to the pool). Cost: the merger may down a seat, so its deny list must keep it from downing anything but the merged ticket's worker."
   ]
 }

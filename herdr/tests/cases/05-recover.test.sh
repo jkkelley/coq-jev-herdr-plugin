@@ -58,10 +58,9 @@ assert_match "the guard ran and was ok" "$out" "^ok compaction-guard$"
 assert_match "the ticket nobody holds is warned, with its title" "$out" "^WARN $T2 - fixture ticket nobody holds \(no live seat"
 assert_eq "the ticket with a seat is not warned" "$(grep -c "^WARN $T " <<<"$out")" 0
 assert_eq "--check called the guard once, without --apply" "$(grep -c '^recover$' "$GUARD_LOG")" 1
-# Fourteen since WO-20261012-b800 (the seat turn watch, the gate record watch and the supervisor log joined): monitors, the monitor seat and twelve reserved panes (lease and guard joined events and queue in
-# WO-20261010-8fa8, the factory board watch in WO-20261011-616c, the route runner and the flow watch in WO-20261011-6842, the
-# break glass restore watch in WO-20261011-4562, the policy watch in WO-20261012-9b2c).
-assert_eq "--check wrote no note 100 beyond bringup's fourteen" "$(( $(event_count note 100) - notes0 ))" 14
+# Two nodes (monitors, the monitor seat) plus one per reserved pane that carries a command, read from monitors.json (WO-20261011-ceea):
+# a literal went stale on every landing of a ticket that adds a pane (4562, 9b2c, ceea), and each landing conflicted here.
+assert_eq "--check wrote no note 100 beyond bringup's" "$(( $(event_count note 100) - notes0 ))" "$(( $(jq '[.tabs[].reserved[] | select(.command != null)] | length' "$REPO/herdr/config/monitors.json") + 2 ))"
 
 echo "-- AC-H3: the halt flag stops both modes and changes nothing"
 touch "$STATE/HALT"; before="$(find "$EVENTS" -name '*.json' | wc -l)"; : > "$GUARD_LOG"

@@ -1,9 +1,5 @@
 # Documentation
 
-## Contents
-
-- The two rules
-
 Diataxis mode: **reference**.
 Last reviewed: 2026-10-11.
 

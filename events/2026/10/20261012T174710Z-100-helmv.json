@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T174710Z-100-helmv",
+  "at": "2026-10-12T17:47:10Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-3bb0",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:p8G",
+  "note": "PR 28 on 0544607: the bad changelog entry name is gone (duplicate removed, bin/changelog.sh suffix fixed), make lint ok. Open for the architect: roles/tester.json and roles/worker.json steps.",
+  "evidence": [],
+  "observations": [],
+  "sha": "0544607",
+  "pr": 28
+}

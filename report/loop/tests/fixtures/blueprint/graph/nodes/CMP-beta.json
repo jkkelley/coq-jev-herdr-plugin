@@ -1,0 +1,20 @@
+{
+  "id": "CMP-beta",
+  "type": "Component",
+  "title": "Beta: being built, no runbook",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-two"
+    },
+    {
+      "kind": "decided_by",
+      "to": "DEC-gone"
+    }
+  ],
+  "created": "2026-01-01T00:00Z",
+  "updated": "2026-01-01T00:00Z"
+}

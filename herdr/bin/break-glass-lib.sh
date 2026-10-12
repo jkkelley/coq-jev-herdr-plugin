@@ -131,11 +131,15 @@ bg_grant() {
   if [ "$DRY" = 1 ]; then sl_log "DRY: break glass $req_id for $seat: lift $ls, heads $hs, until $exp"; return 0; fi
   cp "$settings" "$sd/settings.pre-break-glass.json"
   tpre=$(sl_cfg .break_glass.hook_pre_timeout_seconds); tpost=$(sl_cfg .break_glass.hook_post_timeout_seconds)
+  # BREADCRUMB 2026-10-12 - WO-20261012-8fb2. What broke: `.hooks = {...}` below replaced the whole hooks key, which since this ticket
+  #   also holds render_settings' SessionStart compact entry, so a seat compacted during a break glass would lose its own checkpoint.
+  #   Why this fix: `.hooks +=` adds the two guard hooks beside whatever the render carries. Rejected: re-adding the entry here
+  #   (two places to keep identical). Cost: none; the restore re-renders the role's settings, which holds the entry alone.
   jq --arg a "$action" --argjson lifted "$ls" --argjson tpre "$tpre" --argjson tpost "$tpost" --arg pre "$(printf '%q pre %q' "$SL_HERE/break-glass-guard.sh" "$sf")" --arg post "$(printf '%q post %q' "$SL_HERE/break-glass-guard.sh" "$sf")" '
       .permissions.defaultMode = "bypassPermissions"
       | .permissions.deny -= $lifted
       | .permissions.allow += ["Bash(\($a))"]
-      | .hooks = {PreToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $pre, timeout: $tpre}]}],
+      | .hooks += {PreToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $pre, timeout: $tpre}]}],
                   PostToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $post, timeout: $tpost}]}]}' <<<"$base" > "$sd/settings.break-glass.json"
   jq -n --arg req "$req_id" --arg seat "$seat" --arg a "$action" --arg grant "$recid" --argjson lifted "$ls" --argjson heads "$hs" --arg now "$now" --arg exp "$exp" \
     --arg settings "$settings" --arg eb "$SL_REPO/events/bin/event.sh" --arg er "${COQ_EVENTS_ROOT:-$SL_REPO/events}" --arg t "$id" \

@@ -272,12 +272,10 @@ nav.top .live.off i {
 .bearing.out {
   animation: leave 420ms var(--ease) both;
 }
-/* Row gap 8px to 14px (backlog wnrrw, owner screenshot 2026-10-12 16:23Z): at 8px the About text sat on the DECIDE label and
-   the card read as one block. 14px separates rows without pushing the options below the fold on a phone. */
 .facts {
   display: grid;
   grid-template-columns: 84px 1fr;
-  gap: 14px 16px;
+  gap: 8px 16px;
   align-items: baseline;
   padding-bottom: 6px;
   color: var(--ink-2);
@@ -287,12 +285,6 @@ nav.top .live.off i {
 .facts .label {
   margin: 0;
   font-size: 12px;
-}
-/* One line per item a card solves (page.html Solves breadcrumb, message m-20261012162648420-fi8cs). */
-.facts .solves {
-  display: grid;
-  gap: 6px;
-  color: var(--ink);
 }
 .facts .decide {
   color: var(--ink);

@@ -6,11 +6,6 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../lib/assert.sh"; . "$HERE/../lib/world.sh"
 world_up gate '.bringup_gate=true | .max_agents=3' || exit 1
-# BREADCRUMB 2026-10-11 - WO-20261010-329d. What broke: this case read the role cap from the repo copy of roles/reviewer.json and
-#   assumed 2; the owner raised reviewer max_seats to 4 (16-agent budget, 19:05Z) so with max_agents 3 the system cap refused first and
-#   "the refusal names the role cap" failed on the records branch. Why this fix: the case pins the cap it tests in its own world, so a
-#   budget change never flips it. Rejected: lowering the role cap back (the budget is the owner's). Cost: none.
-jq '.max_seats = 2' "$REPO/roles/reviewer.json" > "$REPO/roles/reviewer.json.tmp" && mv "$REPO/roles/reviewer.json.tmp" "$REPO/roles/reviewer.json"
 T=WO-20261010-8777
 # BREADCRUMB 2026-10-11 - WO-20261011-f896, found running the suite. What broke: this case's "role cap" section expects the third
 #   reviewer to be refused by max_seats 2 ("2 reviewer seats already live"), but WO-20261010-329d (26f6daa) raised

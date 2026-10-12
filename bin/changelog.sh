@@ -6,7 +6,7 @@
 #
 #   changelog.sh add    --type feat|fix|docs|chore|decision --title T [--ticket WO-...] [--sha S] [--text T] [--json]
 #   changelog.sh render [--json]          writes CHANGELOG.md from every entry, newest first
-#   changelog.sh check                    exit 3 when CHANGELOG.md is not what render would write, or an entry is malformed
+#   changelog.sh check                    exit 3 when an entry is malformed (CHANGELOG.md is a local gitignored render, WO-20261012-0677)
 #
 # Exit codes: 0 ok, 2 usage, 3 validation, 4 io.
 set -euo pipefail
@@ -37,7 +37,12 @@ case $VERB in
     [ -z "$ticket" ] || [[ $ticket =~ ^WO-[0-9]{8}-[0-9a-f]{4}$ ]] || die 3 "bad ticket $ticket"
     at=$(date -u +%Y-%m-%dT%H:%M:%SZ); d=$(date -u +%Y%m%d); dir=$TREE/${d:0:4}/${d:4:2}; mkdir -p "$dir"
     name=$(slug "$title"); [ -n "$name" ] || die 3 "title slugs to nothing"
-    path=$dir/$d-$name.md; [ -e "$path" ] && path=$dir/$d-$name-$(head -c 16 /dev/urandom | tr -dc a-z0-9 | head -c 5).md
+    # BREADCRUMB 2026-10-12 - WO-20261012-3bb0. What broke: the collision suffix below read 16 random bytes and kept only a-z0-9, which is
+    #   about 2-3 of the 16, so `head -c 5` often gave a 2 char suffix; the second `make step` with the same title wrote
+    #   20261012-wake-line-...-st-ga.md, `check` (regex above, suffix of exactly 5) printed "bad entry name", and make lint failed on PR 28
+    #   (review.changes lqevs). Why this fix: 256 bytes keep 5 chars with a miss chance below 1e-30. Rejected: `|| true` or padding the
+    #   suffix, which hides a short read; a counter suffix, which two worktrees would race on. Cost: one longer urandom read, only on a collision.
+    path=$dir/$d-$name.md; [ -e "$path" ] && path=$dir/$d-$name-$(head -c 256 /dev/urandom | tr -dc a-z0-9 | head -c 5).md
     # BREADCRUMB 2026-10-10 - WO-20261010-c274. What broke: the group ended in `[ -n "$text" ] && printf ...`, so with no --text
     #   the group exited 1, the `&& mv` below it never ran, and the entry stayed `<name>.md.tmp`; render and check only read
     #   *.md, so the entry vanished from CHANGELOG.md and `add` printed the path of a file that did not exist (four such
@@ -55,7 +60,14 @@ case $VERB in
       for k in title at type; do grep -q "^$k: " "$f" || { echo "$f: frontmatter lacks $k" >&2; bad=1; }; done
       grep -q '^at: [0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}T[0-9]\{2\}:[0-9]\{2\}:[0-9]\{2\}Z$' "$f" || { echo "$f: at is not UTC ISO 8601 Z" >&2; bad=1; }
     done
-    if [ -e "$OUT" ] || [ -d "$TREE" ]; then diff -q <(render) "$OUT" >/dev/null 2>&1 || { echo "CHANGELOG.md is stale: run bin/changelog.sh render" >&2; bad=1; }; fi
+    # BREADCRUMB 2026-10-12 - WO-20261012-0677, no file is ever touched by two open PRs. What broke: this line failed lint when the tracked
+    #   CHANGELOG.md was not what render would write, so every PR that added an entry also rewrote CHANGELOG.md line 1 onward, and the
+    #   second PR to merge conflicted with the first in a file neither author meant to touch (PRs 25, 28, 29, 30, 31 on 2026-10-12).
+    #   Why this fix: CHANGELOG.md is now a local, gitignored render (make aggregates) and the entries under changelog/ are the record,
+    #   so there is nothing tracked to go stale and the check goes with it. Rejected: rendering it after merge from the merger seat (a
+    #   seat's role file is off limits to a worker, and a skipped render leaves main wrong) and keeping the check only when the file
+    #   exists (a stale local copy would fail a clean tree's lint). Cost: github.com no longer shows CHANGELOG.md; the entries are
+    #   still there under changelog/. Record: WO-20261012-0677.
     [ "$bad" = 0 ] && echo "changelog ok" || exit 3 ;;
   *) sed -n '2,11p' "$0" >&2; exit 2 ;;
 esac

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T172849Z-100-80j3q",
+  "at": "2026-10-12T17:28:49Z",
+  "code": 100,
+  "seat": "tester-wo-20261012-3bb0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:pD3",
+  "note": "Tester seat up on WO-20261012-3bb0 - Gate rules as code. Reading the test plan and the head to test before running anything.",
+  "evidence": [],
+  "observations": []
+}

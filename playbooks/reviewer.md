@@ -17,7 +17,7 @@ Every line below is a command or a record. Nothing else is yours to decide. Read
 
 ## Runtime and model
 
-Runtime claude (allowed: claude, codex). Model claude-sonnet-5-5, effort high; the architect may override the model per ticket. Compaction at 30 percent and task complete. Seat label `reviewer-${ticket}`, layout `seat-1x2`, at most 4 seats.
+Runtime claude (allowed: claude, codex). Model claude-sonnet-5-5, effort high; the architect may override the model per ticket. Compaction at 30 percent and task complete. Seat label `reviewer-${ticket}`, layout `seat-1x2`, at most 2 seats.
 
 ## Permissions
 
