@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261012-5826` | in-progress | p0 | - | [Go scheduler design: one XML spec per domain under specs/scheduler, each at most 1000 lines, plus the build tickets cut for four Opus workers](WO-20261012-5826-go-scheduler-design-one-xml-spec-per-domain-unde.md) |
+| `WO-20261012-5826` | in-review | p0 | - | [Go scheduler design: one XML spec per domain under specs/scheduler, each at most 1000 lines, plus the build tickets cut for four Opus workers](WO-20261012-5826-go-scheduler-design-one-xml-spec-per-domain-unde.md) |
