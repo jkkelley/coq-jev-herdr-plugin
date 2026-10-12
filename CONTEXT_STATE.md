@@ -52,6 +52,48 @@
 
 
 
+
+## Checkpoint 2026-10-12 16:47 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, no PR yet. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- herdr/bin/seat-lib.sh: sl_pane_claude_pid, sl_pane_session, sl_guard_targets. herdr/bin/guardwatch.sh is in monitors.json slot 1.1.2. unfreeze.sh sessions_of and pass() use them.
+- herdr.json has session_wait_seconds (10), claude_sessions_dir, guard_watch_interval_seconds (15), schema updated. session_wait_seconds is not read yet.
+- Suite subset run as: testpane.sh wD3:pB7 "<scratchpad>/runcase.sh '06 17' name"; output file read from the scratchpad.
+
+#### Active Tasks
+
+- Step A landed (a14c459): guardwatch.sh, case 17 (AC-H1, AC-H2), case 04 slot check.
+- Step B (this commit): unfreeze.sh releases only the live session of a pane; case 06 extended (AC-H3), proven to fail on the old unfreeze.sh (3 releases into one pane) and pass on the new.
+- Step C next: seat.sh writes claude_session into seat.json at seat up and on a repair rerun (AC-H4), waits up to session_wait_seconds; world.sh config sets it to 1; new case or extension of case 01 for the assertion.
+- Then RUNBOOK doc, full suite (make -C herdr test, no CASES), close-out per AGENTS.md.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- sessions_of no longer consults the binding's pane field; it keeps the binding's driver and herdr_session checks.
+- sl_guard_targets de-duplicates by pane, so a seat that is also exempt is visited once.
+- recover.sh stays unchanged (ticket scope does not list it); it can read claude_session from seat.json in a later ticket.
+
+#### Lessons Learned
+
+- A mutation check (run the case against the old script) is cheap and proved the AC-H3 assertions fail without the fix.
+
+### Hydration prompt
+
+Resume WO-20261012-ee9c at step C: in herdr/bin/seat.sh add a claude_session_set function (like nudged_set) and call it after the start/already-running branch, polling sl_pane_session "$a" up to .session_wait_seconds; add session_wait_seconds=1 to the world config filter in herdr/tests/lib/world.sh with a breadcrumb; assert seat.json claude_session equals the stub's session after seat up (AC-H4) in a case.
+
 ## Checkpoint 2026-10-12 16:43 UTC
 
 ### Current state
