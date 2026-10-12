@@ -51,73 +51,30 @@
 
 
 
-
-## Checkpoint 2026-10-12 16:13 UTC
-
-### Current state
-
-#### Infrastructure
-
-- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
-  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, PR 26, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
-
-#### Toolchain
-
-- Review 422 (record 20261012T160316Z-422-19hjw, attempt 1) blocked on 14 timeout literals in herdr/bin/supervisor.sh.
-  Fixed: nine supervisor.timeouts.* keys in herdr/config/herdr.json and herdr.schema.json, read with sl_cfg at the top of supervisor.sh, breadcrumb comment at the read site, SOP-0003 line updated.
-- Verified in wD3:p89: CASES='19 20' 2 passed, 0 failed; make -C herdr lint clean.
-
-#### Active Tasks
-
-- Post pr.opened 100 with --pr 26 --sha of this commit, then hold.
-
-#### Blockers
-
-- None.
-
-### New this checkpoint
-
-- Architect ruling on the two non-blocking notes: AC-H1 to AC-H3 stay ticked on suite evidence, the live kill-and-watch runs at verification on main; the epic 187e files ride every child branch on purpose (record 20261012T160310Z-100-iiao9).
-
-### Hydration prompt
-
-You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint and playbooks/worker.md. Next: post pr.opened for PR 26 with the pushed sha, then hold for review.
-
-## Checkpoint 2026-10-12 15:29 UTC
+## Checkpoint 2026-10-12 15:41 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
-  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
-- Architect order 2026-10-12: do not hold for compaction under 30 percent; keep going.
+- Worker seat worker-wo-20261012-9b2c on WO-20261012-9b2c - Standing policies: an escalation carries a deadline and a default drawn from the owner's locked decisions, so the line takes the default when nobody answers instead of waiting. Treehouse slot 8 (lease holder is this ticket), branch feat/standing-policies-an-escalation-carries-a-deadli, no PR yet. Test pane wD3:p8N, run only through herdr/bin/testpane.sh.
 
 #### Toolchain
 
-- Steps 1 to 3 pushed (ed59a75, a4b7097, 6771e9a): monitors.sh health, bringup and recover on it, turnwatch/recwatch in tab 4, supervisor.sh (herdr via systemctl unit, podman, bringup, belt.sh, bearings node).
-- Step 4+5 landed: supervisor.sh seat node (re-seat after two sightings past grace, caps, closed ticket downed, down.lock written by seat.sh --down), slot 4.1.3 supervisor log, belt.sh message keeps "belt stopped" when a bare-shell runner pane has a stale belt, herdr/systemd/*.in + bin/supervisor-units.sh (render install uninstall status, refuses a linked worktree), Makefile supervisor targets, docs/sops/SOP-0003 with observed verification and the three live AC recipes, cases 19 20 21.
-- Step 5 verification: full make -C herdr test, 21 passed, 0 failed, after step 4+5 (4de2b4a). origin/main (PR 21 belt seats the line, PR 23 SITREP) merged into the branch; conflicts only in CHANGELOG.md (re-rendered), work-orders/INDEX.md (reindexed) and CONTEXT_STATE.md (took main's file, this checkpoint added on top; checkpoints 1 to 3 of this ticket are in git history of the branch).
-- Earlier: full suite after step 3 (19 of 20, 13-recover-belt then fixed and rerun green), then CASES='04 05 17 18 19 20 21' (7 passed) and root make lint ok. 
+- Built: events/bin/event.sh and event.schema.json gain kind policy.applied with --policy and --answer; factory/config/policies.json and policies.schema.json (one row, POL-blocked-land-it, blocked 423, 1800 s, cites DEC-local-fast-ci-full); factory/bin/policy.sh (once, run, status); routes.json row for policy.applied 200 (do none, to monitor); monitors.json slot 2.3.2 policy; factory Makefile policy-once and policy-status; factory case 12 and policy helpers in tests/lib/world.sh; herdr cases 04 and 05 counts raised to eleven nodes and herdr tests/lib/world.sh stubs the policy slot; factory/RUNBOOK.md section Standing policies.
+- Verified in the test pane: make lint all ok, factory suite 16 passed 0 failed, herdr cases 04, 05 and 13 passed.
 
 #### Active Tasks
 
-- Close-out (remaining): rerun CASES='13-recover 19 20' after the merge if route.sh from PR 21 changes seat behaviour; work-order.sh evidence --observed per AC (AC-H1..H3 are human criteria: the evidence is the suite plus the live recipe in SOP-0003, say the live run waits for the owner or architect after make -C herdr supervisor-install); retro note; push; gh pr create with the criteria as body; work-order.sh submit --pr N; work-order.sh done; push the archive move; post pr.opened 100 with sha and pr; stop.
-- Do not touch ~/.cache/coq-watch or install anything on the host.
+- Close out: evidence per criterion with --observed, retro note, push, one PR carrying the code and the finished ticket, work-order.sh submit and done, post pr.opened 100 with sha and pr, then hold.
 
 #### Blockers
 
 - None.
 
-### New this checkpoint
-
-- Decision: re-seat is a rerun of seat.sh, not down plus up: it keeps the treehouse lease and uncommitted work; the supervisor cap is 3 per 30 minutes.
-- Decision: bearings restart respects a stop that was meant (stopped.json reason stopped, newer than the herdr server, no pane labelled).
-- Decision: units are rendered from .in files by supervisor-units.sh; install is the owner's or architect's action, never a seat's.
-
 ### Hydration prompt
 
-You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint, AGENTS.md first 60 lines, playbooks/worker.md and the ticket's close-out steps. Next: full suite in wD3:p89 through herdr/bin/testpane.sh, then the close-out flow of AGENTS.md.
+Resume WO-20261012-9b2c as worker-wo-20261012-9b2c in slot 8. Read playbooks/worker.md and this checkpoint. The code is committed; do the close-out in Active Tasks, then hold.
 
 ## Checkpoint 2026-10-12 14:58 UTC
 

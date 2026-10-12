@@ -82,6 +82,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Add to scope at start: flow-watch stall rule (90s after a gate trigger with no next record) fired three false alarms on 2026-10-12 (ch471, 0ui6q-class, 06gu1) while the seat was mid-task; judge a stall by the seat's process/turn state, not a fixed timer.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._

@@ -43,7 +43,7 @@ Setting up a host, after changing herdr/bin/supervisor.sh or herdr/config/herdr.
 6. Read it: `make -C herdr supervisor-status` (the timer and the last tick), `journalctl --user -u coq-supervisor -n 50`, the `supervisor` slot (4.1.3 in the watches tab), `events/bin/event.sh list --seat supervisor`.
    `make -C herdr supervisor CHECK=1` runs one tick that changes nothing and exits 1 when anything FAILED.
 7. Stop it on purpose: `touch ~/.local/state/coq/HALT` (ticks do nothing until it is removed) or `make -C herdr supervisor-uninstall`.
-8. After installing, the interim watchers from `~/.cache/coq-watch/` must go: `turn-watch.sh` sits in slot 2.3.1 and is released by `glass` on the first apply, `record-watch.sh` in 2.3.2 keeps running beside the repo's `recwatch` (two prompts per record) until its pane is released with `herdr/bin/monitors.sh release <pane>`.
+8. After installing, the interim watchers from `~/.cache/coq-watch/` must go: `turn-watch.sh` sits in slot 2.3.1 and is released by `glass` on the first apply, `record-watch.sh` was in 2.3.2, which the policy watch owns since WO-20261012-9b2c, so release its pane with `herdr/bin/monitors.sh release <pane>` or it keeps prompting beside the repo's `recwatch` (two prompts per record) until bringup takes the slot back.
 
 ## Verification
 
