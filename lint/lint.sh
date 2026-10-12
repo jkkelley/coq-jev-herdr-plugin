@@ -24,6 +24,9 @@ for p in glob.glob(root+"/specs/SPEC-*.xml"):
 sys.exit(bad)
 PY
 then echo ok; else echo FAIL; FAIL=1; fi
+# A spec export (specs/exports/*.xml) is handed to another host, so lint holds it to its copy rule (specs/config/export.json):
+# it parses, every element is under the char limit and cites a source, and no home path, host, key, email or id leaks out.
+step "specs: exports generic + bounded"; if out=$(bash "$R/specs/bin/export-check.sh" check 2>&1); then echo ok; else echo FAIL; printf '%s\n' "$out" >&2; FAIL=1; fi
 step "graph: check + specs agree"; if (cd "$R/graph" && bin/graph.sh check >/dev/null && bin/graph.sh sync-specs "$R/specs" >/dev/null); then echo ok; else echo FAIL; FAIL=1; fi
 step "configs: schema"; ok=1
 while IFS= read -r c; do s="${c%.json}.schema.json"; [ -f "$s" ] || continue; python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" "$c" "$s" || ok=0; done < <(find "$R" -path '*/config/*.json' -not -name '*.schema.json' 2>/dev/null)
