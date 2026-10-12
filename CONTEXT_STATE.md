@@ -56,6 +56,41 @@
 
 
 
+
+## Checkpoint 2026-10-12 20:09 UTC
+
+### Current state
+
+#### Infrastructure
+
+- sched-worker-3 (fixed herdr seat of the scheduler team) on WO-20261012-8d87 - Replay fixtures: one golden case per routes row and per policies row under scheduler/testdata/replay, derived from the factory suite's cases, synthetic, with a schema and a check script.
+  Worktree ~/.cache/wt-sched-w3, branch feat/replay-fixtures-one-golden-case-per-routes-row-a.
+
+#### Toolchain
+
+- scheduler/testdata/: README.md, replay.schema.json, forbidden.json (pinned copy of the specs check config's forbidden list until PR 37 lands), bin/check.sh, eleven cases under replay/.
+- check.sh in the lint image (localhost/coq-lint by digest): all 27 routes rows, the one policies row and the four verdicts covered; 12 of 15 verbs.
+- Removing a case fails naming the rows it alone covered; a wrong wake line or a forbidden id fails naming both sides.
+
+#### Active Tasks
+
+- Three verbs have no call any spec derives: pane_process_info (no domain uses it), enqueue_priority (records cannot carry priority: the event schema refuses the field) and notify (the text is unspecified). Ask the architect how the check treats them, then close out.
+- Close-out: evidence per criterion, retro note, PR, submit, done, git switch --detach, pr.opened with --sha and --pr.
+
+#### Blockers
+
+- The three verbs above, pending the architect's answer.
+
+### New this checkpoint
+
+- Decision: fixtures hold placeholders (ticket, lowercased ticket, record id with second and code) expanded before parsing, because the copy rule forbids every real-shaped id and intake requires the shape.
+- Decision: check.sh recomputes each decision and default from routes.json and policies.json the way route.sh and policy.sh do, so a fixture cannot say anything the bash belt does not.
+- Finding: TP-2 starts with rm -r /tmp/fx, which fails in a fresh container; rm -rf is what it needs.
+
+### Hydration prompt
+
+You are sched-worker-3 on WO-20261012-8d87. Read this checkpoint and playbooks/worker.md. Next: get the architect's answer on the three uncovered verbs, apply it, then close out.
+
 ## Checkpoint 2026-10-12 19:06 UTC
 
 ### Current state
