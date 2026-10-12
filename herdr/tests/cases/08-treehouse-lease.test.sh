@@ -167,10 +167,13 @@ assert_eq "the pool is empty again" "$(pool | jq length)" 0
 stamp_branch "$E" feat/dated-entry-files; origin_branch feat/dated-entry-files
 
 echo "-- a refused bring-up leases nothing"
+# WO-20261011-f896: seat-1x2 builds its own test pane, so the refusal belongs to a layout that has none.
+notest_layout; role_layout worker seat-nt
 gets=$(calls get)
 env -u HERDR_TAB_ID "$SEAT" --ticket "$E" --role worker >/dev/null 2>"$WORLD/err"; rc=$?
 assert_eq "no test pane: exit 3" "$rc" 3
 assert_eq "no lease was taken" "$(calls get)" "$gets"
+role_layout worker seat-1x2
 
 echo "-- a pool that cannot give a slot builds nothing"
 before=$(ws_count)

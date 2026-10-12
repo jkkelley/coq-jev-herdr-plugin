@@ -3,6 +3,7 @@ flowchart LR
   CMP-compaction-guard["CMP-compaction-guard<br/>compaction-guard 1.2.8 hooks and status-"]
   CMP-control-plane["CMP-control-plane<br/>Go gRPC control plane: inventory, status"]
   CMP-coq-term["CMP-coq-term<br/>coq-term: Rust pane program. Backends: h"]
+  CMP-factory-board["CMP-factory-board<br/>report/loop: the factory board, loop.sh "]
   CMP-factory-dashboard["CMP-factory-dashboard<br/>Factory dashboard with a Factorio feel, "]
   CMP-game-host-linux["CMP-game-host-linux<br/>Game host, Linux-native: Qud under Xvfb "]
   CMP-game-host-windows["CMP-game-host-windows<br/>Game host, Windows: capture plus input m"]
@@ -17,6 +18,7 @@ flowchart LR
   CMP-qud-adapter["CMP-qud-adapter<br/>Qud adapter: Harmony C# mod exporting st"]
   CMP-queue["CMP-queue<br/>queue/: directory queue with p0..p3 prio"]
   CMP-role-seats["CMP-role-seats<br/>Tester, reviewer and merger seats: one r"]
+  CMP-route-runner["CMP-route-runner<br/>factory/bin/route.sh: the orchestrator's"]
   CMP-rust-terminal["CMP-rust-terminal<br/>Rust terminal with Kitty graphics: fallb"]
   CMP-sitrep-site["CMP-sitrep-site<br/>SITREP site: Go server, websocket owner "]
   DEC-bearings-vendored-tiers["DEC-bearings-vendored-tiers<br/>Bearings is vendored into tools/bearings"]
@@ -76,10 +78,12 @@ flowchart LR
   RSK-proton-wsl["RSK-proton-wsl<br/>Proton in WSL2 is unproven; the ARM64 cl"]
   RSK-steam-tos["RSK-steam-tos<br/>Steam Subscriber Agreement 4.C bans bots"]
   RUN-bearings-promote["RUN-bearings-promote<br/>Promote a bearings change: dev slot, mak"]
+  RUN-factory-board["RUN-factory-board<br/>report/loop/RUNBOOK.md: set up the facto"]
   RUN-kickback["RUN-kickback<br/>Kickback: events/bin/event.sh add --kind"]
   RUN-recover["RUN-recover<br/>recover.sh --check|--apply: halt flag, h"]
   RUN-retire["RUN-retire<br/>retire: agent send-keys esc, agent promp"]
   RUN-role-seats-on-a-pr["RUN-role-seats-on-a-pr<br/>SOP-0001: bring up a tester, reviewer or"]
+  RUN-route-runner["RUN-route-runner<br/>factory/bin/route.sh once|run|status: re"]
   RUN-seat-up["RUN-seat-up<br/>seat.sh --ticket WO --role R: workspace "]
   SCH-factory-record["SCH-factory-record<br/>factory/schema/record.schema.json: id, a"]
   SCH-routes["SCH-routes<br/>factory/config/routes.json: first matchi"]
@@ -110,6 +114,8 @@ flowchart LR
   CMP-coq-term -- depends_on --> CMP-herdr-browser-prior-art
   CMP-coq-term -- depends_on --> SPK-05-result-socket-accepts
   CMP-coq-term -- implements --> REQ-north-star
+  CMP-factory-board -- defined_in --> RUN-factory-board
+  CMP-factory-board -- depends_on --> CMP-bearings-tool
   CMP-factory-dashboard -- depends_on --> CMP-control-plane
   CMP-game-host-linux -- decided_by --> DEC-game-host-linux-native
   CMP-game-host-linux -- verified_by --> SPK-01-qud-on-wsl
@@ -136,6 +142,10 @@ flowchart LR
   CMP-role-seats -- decided_by --> DEC-system-runs-the-loop
   CMP-role-seats -- defined_in --> RUN-role-seats-on-a-pr
   CMP-role-seats -- implements --> REQ-event-log
+  CMP-route-runner -- implements --> SCH-routes
+  CMP-route-runner -- owned_by --> ROL-orchestrator
+  CMP-route-runner -- defined_in --> RUN-route-runner
+  CMP-route-runner -- depends_on --> CMP-queue
   CMP-rust-terminal -- decided_by --> DEC-rust-terminal-parallel
   CMP-sitrep-site -- decided_by --> DEC-sitrep-local-first
   CMP-sitrep-site -- depends_on --> IFC-owner-channel
@@ -175,11 +185,14 @@ flowchart LR
   RSK-proton-wsl -- decided_by --> DEC-game-host-linux-native
   RSK-steam-tos -- decided_by --> DEC-qud-drm-free
   RUN-bearings-promote -- defined_in --> CMP-bearings-tool
+  RUN-factory-board -- depends_on --> CMP-bearings-tool
   RUN-kickback -- defined_in --> SCH-factory-record
   RUN-recover -- depends_on --> RUN-seat-up
   RUN-retire -- owned_by --> ROL-monitor
   RUN-role-seats-on-a-pr -- depends_on --> RUN-seat-up
   RUN-role-seats-on-a-pr -- depends_on --> RUN-kickback
+  RUN-route-runner -- implements --> SCH-routes
+  RUN-route-runner -- depends_on --> CMP-queue
   RUN-seat-up -- depends_on --> WFL-bringup
   RUN-seat-up -- implements --> DEC-no-process-under-agent
   SCH-factory-record -- implements --> REQ-factory-node-contract

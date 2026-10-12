@@ -11,38 +11,407 @@
 > Never edit a checkpoint. A new one is prepended above the last; the ones below
 > are history and are immutable. Written by `checkpoint.sh`, never by hand.
 
+## Checkpoint 2026-10-12 14:58 UTC
 
+### Current state
 
+#### Infrastructure
 
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p83, run only through herdr/bin/testpane.sh.
+- The merger posted merge.conflict 409 (record 20261012T143647Z-409-e1nbe) on head 2d3f8b8: main gained PR 22 (WO-20261011-4562 - break glass, one owner-authorised action at a time) and PR 23 (WO-20261012-668a - SITREP panel in this project's bearings).
 
+#### Toolchain
 
+- origin/main merged into the branch. Resolved by keeping both sides: route.sh has main's perform with break-glass and none plus this branch's act_primary, act_down, seat and ignore; routes.json has this branch's ignore rows then main's break.glass rows; routes.schema.json do enum carries all eight actions; event.sh and event.schema.json carry sha, pr, action and answer; factory/RUNBOOK.md table has all eight rows; CHANGELOG.md was re-rendered from its entries, never edited; CONTEXT_STATE.md is the union of both sides' checkpoints, newest first, no block edited.
+- Verified in the test pane on the merged tree: make lint all ok, factory suite 15 passed 0 failed (main added a break-glass case), herdr suite 16 passed 0 failed.
 
+#### Active Tasks
 
+- After this step lands: post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester again. Then stop and hold.
 
+#### Blockers
 
+- None.
 
+### Hydration prompt
 
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The merge of origin/main is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
 
+## Checkpoint 2026-10-12 14:09 UTC
 
+### Current state
 
+#### Infrastructure
 
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p83, run only through herdr/bin/testpane.sh.
+- The tester failed 49ab55b with test.failed 422 (record 20261012T132330Z-422-hyds1): factory case 06-belt read a belt backdated 61 s as running.
 
+#### Toolchain
 
+- Cause: route.sh status used -le against stale_seconds, so a belt exactly 60 s old read running, against the file header and AC-H6 which say fresher than. The host clock steps back about a second every ~35 s, so a 61 s backdate can be 60 s old by the time route.sh reads it.
+- Fix: factory/bin/route.sh status uses -lt. Case 06-belt now backdates 65 and 55 s on the real clock and pins 59, 60 and 61 with a date stub. factory/RUNBOOK.md states the boundary. Breadcrumbs sit at both fix sites.
+- Verified in the test pane: factory suite 14 passed 0 failed, make lint all ok, case 06 alone three more times 1 passed each.
 
+#### Active Tasks
 
+- After this step lands: work-order.sh evidence, submit and done are already recorded by earlier steps, so post pr.opened 100 with the new sha and pr 21 so the route table wakes the tester again. Then stop and hold.
 
+#### Blockers
 
+- None.
 
+### Hydration prompt
 
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The 06-belt boundary fix is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
 
+## Checkpoint 2026-10-12 13:55 UTC
 
+### Current state
 
+#### Infrastructure
+- Worker seat worker-wo-20261012-668a on WO-20261012-668a, PR 23, slot 1, test pane wD3:p7B. Review record 20261012T132207Z-422-ucd33 (attempt 1): remove the tracked .claude/skills symlink, add GOOD and NEVER to tools/bearings/RUNBOOK.md and standards/SITREP-PAYLOAD.md.
+- Done in this step: git rm --cached .claude/skills (kept on disk, excluded in the worktree's info/exclude), both docs have a GOOD and NEVER section and a contents entry.
 
+#### Toolchain
+- make lint runs inside make step. No code changed, so the bearings suite (113 passed) is not rerun.
 
+#### Active Tasks
+- After the step lands: post pr.opened 100 with the new head sha and PR 23, then stop.
 
+#### Blockers
+- None.
 
+### Hydration prompt
+Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/worker.md and this checkpoint. The review fixes are committed; post pr.opened 100 with the new head and PR 23 if the record is missing, then stop.
 
+## Checkpoint 2026-10-12 13:15 UTC
 
+### Current state
+
+#### Infrastructure
+- Worker seat worker-wo-20261012-668a on WO-20261012-668a - SITREP panel in this project's bearings: a #SITREP/v1# reply renders as the colored status card, built from records by a script and checked against the owner standard before it is sent. Slot 1, branch feat/sitrep-panel-in-this-project-s-bearings-a-sitrep, test pane wD3:p7B.
+- Landed in tools/bearings: panel renderer and styles ported from the handoff (page.html hunk 3 hand-ported, announcer says SITREP received), build stamp in server.mjs, max_reply_chars 32000 in config, schema and reply.mjs, standards/ (two generic standards and SITREP-PAYLOAD.md), config/sitrep.json, config/sitrep.template.json, scripts/sitrep-check.mjs, scripts/sitrep-build.mjs, bearings.sh sitrep verb, Makefile targets, RUNBOOK.md, AGENTS.md section, tests/sitrep.sh with fixtures.
+
+#### Toolchain
+- make -C tools/bearings test: 113 passed, 0 failed, run in the test pane. make lint run by make step.
+- Screenshots of the rendered panel are in /tmp/claude-1000/shots when BEARINGS_SHOT_DIR is set on the test run.
+
+#### Active Tasks
+- Next: open PR work is not started. Remaining: AC evidence with --observed, retro note, then send the real SITREP for this repo to the owner with bearings.sh stable sitrep (needs the stable page running; check make bearings-status), then work-order submit, done, PR, pr.opened 100.
+
+#### Blockers
+- None.
+
+### Hydration prompt
+Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/worker.md and this checkpoint. The code and tests are done and green; what is left is the evidence per acceptance criterion, the live send of a SITREP on the stable page (AC-H4), the close-out flow in AGENTS.md, and the pr.opened 100 record.
+
+## Checkpoint 2026-10-12 12:50 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p72, run only through herdr/bin/testpane.sh with output sent to a file in the scratchpad.
+- The reviewer passed head 2c5f807 (record 20261012T123900Z-201-lay41), but PR 21 then conflicted with main after PR 20 (WO-20261011-f896 - Test pane per seat) merged as 05ef0d2.
+
+#### Toolchain
+
+- origin/main was merged into the branch. The only conflict was CONTEXT_STATE.md: both sides kept, this branch's checkpoints plus main's 2026-10-11 23:09 UTC block (the other ticket's) below the newest. CHANGELOG.md was re-rendered from its entries, never edited.
+- make lint (all ok) and make -C factory test (14 passed, 0 failed) ran in the test pane on the merged tree before the commit.
+
+#### Active Tasks
+
+- Push, then post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester again. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The merge of origin/main is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
+
+## Checkpoint 2026-10-12 12:40 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4562 on WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day.
+  Branch feat/break-glass-one-owner-authorised-action-at-a-tim, treehouse slot 2, test pane wD3:p1V through herdr/bin/testpane.sh only.
+  PR 22 is open; this step answers the architect record 20261012T121854Z-200-uqz6z (owner decision of 2026-10-12).
+
+#### Toolchain
+
+- Obs 1 reverted by owner order: break-glass-lib.sh sets defaultMode bypassPermissions on every flip, dontAsk seats included; breadcrumb 4 cites the record; RUNBOOK and seat.sh header say bypass again; case 13 asserts bypass on an orchestrator seat.
+- Kept: hook timeouts from break_glass.hook_pre_timeout_seconds and hook_post_timeout_seconds in herdr.json and its schema.
+- Obs 3 and 4: work-order note on WO-20261011-4562 re-homes the AC-H1 and AC-H3 live halves to WO-20261012-2a12 - Break glass live proof: the owner's first real grant through the interface card flips a live seat to bypass permissions, runs one action, and restores it.
+- Verified in the test pane: make lint, make -C herdr lint, CASES=13-break make -C herdr test (1 passed).
+
+#### Active Tasks
+
+- Merge origin/main (PR 20 test pane per seat, conflicts in case 04 and CONTEXT_STATE.md), re-run the herdr suite, push, post pr.opened 100 with the new head sha and PR 22, then stop.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Lesson: the test pane queues commands from every seat; wait on my own done file in a bounded foreground loop, never a Monitor or background shell (owner rule 2026-10-12).
+
+### Hydration prompt
+
+Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 2. Read playbooks/worker.md and this checkpoint.
+The code, the note and the push are done; the only step left is pr.opened 100 with the head sha, then stop and wait for the reviewer.
+
+## Checkpoint 2026-10-12 12:19 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p72, run only through herdr/bin/testpane.sh with output sent to a file in the scratchpad.
+- Woken by the reviewer's 422 (record 20261012T022449Z-422-t39yq): attempt 1 of 3.
+
+#### Toolchain
+
+- The reviewer's first finding is fixed: factory/RUNBOOK.md has its Graph and Ticket lines back, verbatim from origin/main, after the contents list. 3c255dc had dropped them with no reason. The change is three added lines.
+- The reviewer's second finding needs a test.passed 201 for the new head from the tester, not code. make lint (all ok) and make -C factory test (14 passed, 0 failed) were run in the test pane on this tree before the commit.
+- A formatter hook rewrites Markdown tables on Edit and realigned all of RUNBOOK.md (109 changed lines for a three line fix). Apply Markdown edits through python replace in Bash so the diff stays reviewable.
+
+#### Active Tasks
+
+- Push this step, then post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Evidence in the ticket (AC-H1 to AC-H5) cites tree 8f72207; the tester's test.passed for the new head is what supersedes it. The ticket file is not edited again.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md, the reviewer record 20261012T022449Z-422-t39yq and this checkpoint. The RUNBOOK fix is pushed; post pr.opened 100 with sha and pr 21 if it is not posted, then hold. Run commands only through herdr/bin/testpane.sh.
+
+## Checkpoint 2026-10-11 23:09 UTC
+
+### Current state
+
+#### Infrastructure
+- Worker seat worker-wo-20261011-f896 on WO-20261011-f896 - Test pane per seat: seat.sh opens a labelled test pane in the seat's own tab and exports it as COQ_TEST_PANE, so sixteen seats test in parallel instead of queueing on the architect tab's one pane. Branch feat/test-pane-per-seat-seat-sh-opens-a-labelled-test, slot 9, PR 20 open against main. Ticket submitted and done, archived on the branch.
+- Reviewer record 20261011T222140Z-422-r8xoi (attempt 1 of 3): SOP-0002 lacked Contents, GOOD and NEVER, and observed Verification, and PR 20 was CONFLICTING. Fixed: SOP-0002 now has all three (Contents from bin/md-contents.sh --fix).
+- main moved to 55f4e22 (PR 18, seat.sh adopt and resume, merged). origin/main merged into the branch: seat.sh conflict kept both the adopt block and the test pane block; my case was renamed 14-test-pane-per-seat to 16-test-pane-per-seat because main took 14 (adopt) and 15 (resume); CONTEXT_STATE.md keeps both sides.
+
+#### Toolchain
+- make lint and make -C herdr test after this merge are queued in the shared pane wD3:p1V (log post2.log in the scratchpad); the push waits for them.
+
+#### Active Tasks
+- When both are green: commit the merge, push (no force), post pr.opened 100 with the new sha and the pr, stop.
+- For the architect: specs/ is denied to a worker, so SPEC-04 s-seat and specs/exports/factory-spec.xml S1-059 still describe two panes; the layout keeps the name seat-1x2 with three panes until roles/ is renamed.
+
+#### Blockers
+- None.
+
+### Hydration prompt
+Resume WO-20261011-f896 as worker-wo-20261011-f896 in slot 9. Read playbooks/worker.md and this checkpoint. The merge of origin/main is staged; read the post-merge lint and suite log, commit, push, post pr.opened 100 and stop.
+
+## Checkpoint 2026-10-11 21:36 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 4, branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-. Test pane wD3:p1V, shared and serial: a command can wait 20 to 40 minutes behind other seats. Run it as a harness background job and poll its log; never resend.
+- The branch was rebuilt on origin/main on the architect's order (record 20261011T203650Z-422-4xk1v): the first cut came from the records branch and carried other tickets' files. Old tip kept locally as backup/4db1-old-base. The architect pushed the rebuilt branch (record 20261011T205133Z-100-12zp4); a worker may not push --force*.
+- The ticket file is not on origin/main (it was cut on the records branch), so the rebuilt branch does not carry it yet.
+
+#### Toolchain
+
+- All five steps are in code and RUNBOOK is written; origin/main (flow watch, PR 19) was merged into the branch, conflicts in CHANGELOG.md (rendered), CONTEXT_STATE.md (taken from main) and factory/RUNBOOK.md (both appended sections kept). make -C factory test and make lint are rerun on the merged tree before the PR.
+- Rebuild notes: events/bin/event.sh on main has no COQ_EVENTS_ROOT block (that is PR 15's), so only the --sha and --pr breadcrumb was kept. CHANGELOG.md is generated: restore from main, then bin/changelog.sh render.
+- A formatter hook rewrites .json files on Edit and Write. Use python replace through Bash.
+
+#### Active Tasks
+
+- Close-out: restore the ticket file (git checkout 74ace3b -- work-orders/WO-20261010-329d/WO-20261011-4db1-*.md), work-order.sh evidence --observed for AC-H1 to AC-H5, a retro note, work-order.sh submit --pr N after gh pr create, done, push the archive move, post pr.opened 100 with --sha and --pr.
+
+#### Blockers
+
+- None. WO-20261011-4562 in slot 6 also edits route.sh, event.sh and routes.json; the merge overlap is the architect's.
+
+### New this checkpoint
+
+- Findings for the retro: work.started 100 has no row (four 500s in the live log) and is left alone because an ignore row with no to would move a ticket's board line to the owner station (report/loop/lib/collect.jq route_of needs select(.do != "ignore")); ticket.cut still wakes a worker that does not exist yet; a bring-up can outlast stale_seconds (WO-20261011-5355); the merger is one shared seat so down merger is safe for one ticket at a time.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 4. Read playbooks/worker.md, the ticket and this checkpoint. Code and RUNBOOK are committed. Do the close-out in Active Tasks, run work-order.sh evidence per criterion, then open one PR. Run commands only through the scratchpad tp.sh as a background job.
+
+## Checkpoint 2026-10-11 21:26 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-8fb3 on WO-20261011-8fb3 - seat.sh adopt: a running claude session becomes a seat in place, keeping its context, under the role's label, settings and record. PR 18 is open on the old head a930f3c, which is CONFLICTING and carries the records branch.
+- The branch in this slot was rebuilt locally on origin/main 4860361 as the architect ordered (record 20261011T203651Z-422-3navb) and the reviewer asked (20261011T210527Z-422-er3bq). It holds this ticket alone: herdr/bin/seat.sh, cases 13 and 14, docs/sops/SOP-0001 (the runbook, with Verification and GOOD and NEVER), the archived ticket, its changelog entry and this checkpoint.
+- make lint and make -C herdr test on the rebuilt tree: 13 passed, 0 failed. The old tip is the local branch backup/8fb3-a930f3c.
+- The rebuilt branch is NOT pushed. origin's branch diverged from it, so the push is a force push, and this seat's role denies git push --force*.
+
+#### Toolchain
+
+- Run the suite only through herdr/bin/testpane.sh in the pane named by COQ_TEST_PANE, with output to a scratchpad file.
+
+#### Active Tasks
+
+- The architect pushes: git push --force-with-lease origin feat/seat-sh-adopt-a-running-claude-session-becomes-a, from this slot.
+- After that push the tester re-runs the plan on the pushed head and posts a new test.passed; the reviewer re-reviews.
+
+#### Blockers
+
+- Force push denied to this seat. docs/sops/SOP-0001 here and SOP-0001 on PR 15 share an id; whichever merges second needs renumbering.
+
+### Hydration prompt
+
+Resume WO-20261011-8fb3 in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/7/coq-jev-herdr-plugin. The rebuilt branch is committed locally and waits for the architect's force push. Do nothing else until a record wakes you; a review.changes means fixing inside this ticket's paths.
+
+## Checkpoint 2026-10-11 20:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-6842 in slot 5 on WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (gate record with no consumer, belt heartbeat stale, runner pane gone) and recover.sh restarts the belt. Branch feat/flow-watch-a-shell-watcher-in-a-monitors-pane-tu, pushed. work.started 100 record 20261011T185747Z-100-3rtr5. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped is still draft; this ticket added the runner (2.2.2) and flow (2.2.3) reserved slots to herdr/config/monitors.json, so bringup plugs both in with no code change (breadcrumb in bringup.sh).
+
+#### Toolchain
+
+- Landed: lint conflict-marker check (AC-H3, factory case 08); factory/bin/flow.sh with flow.json and schema (factory cases 09 and 10); monitors.json slots runner and flow with the herdr world running them as sleep loops (cases 04 and 05); recover.sh belt node with herdr.json belt.slot, belt.status and belt.settle_seconds plus schema (herdr case 13 runs the real runner; case 05 counts ok belt). make -C factory test 10 passed; make -C herdr test CASES="05 13" 2 passed.
+- make -C factory test is 10 passed; make -C herdr test CASES='04 05' is 2 passed.
+
+#### Active Tasks
+
+- Close-out: full make -C factory test and make -C herdr test were queued from the test pane after this step (outputs in the scratchpad: f5.txt and h5.txt); read them. Then ticket evidence per criterion with work-order.sh evidence --observed, a retro note that hands the graph nodes to the architect (graph/ is denied to workers: RUN-recover gains the belt node, a flow watch component, monitors slots runner and flow), push, gh pr create, work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened 100 with sha and pr, stop.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-6842 as worker-wo-20261011-6842 in slot 5. Read playbooks/worker.md, the ticket and this checkpoint. All five build steps are committed (conflict lint, flow.sh, bringup slots, recover belt node, RUNBOOK section). Do the close-out: read the full suite results, evidence each acceptance criterion, retro note, PR, submit, done, pr.opened 100. Run make only through herdr/bin/testpane.sh wD3:p1V, and expect to queue behind other seats there.
+
+## Checkpoint 2026-10-11 19:53 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-6842 in slot 5 on WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (gate record with no consumer, belt heartbeat stale, runner pane gone) and recover.sh restarts the belt. Branch feat/flow-watch-a-shell-watcher-in-a-monitors-pane-tu, pushed. work.started 100 record 20261011T185747Z-100-3rtr5. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped is still draft; this ticket added the runner (2.2.2) and flow (2.2.3) reserved slots to herdr/config/monitors.json, so bringup plugs both in with no code change (breadcrumb in bringup.sh).
+
+#### Toolchain
+
+- Landed: lint conflict-marker check (AC-H3, factory case 08); factory/bin/flow.sh with flow.json and schema (factory cases 09 and 10); monitors.json slots runner and flow with the herdr world running them as sleep loops (cases 04 and 05); recover.sh belt node with herdr.json belt.slot, belt.status and belt.settle_seconds plus schema (herdr case 13 runs the real runner; case 05 counts ok belt). make -C factory test 10 passed; make -C herdr test CASES="05 13" 2 passed.
+- make -C factory test is 10 passed; make -C herdr test CASES='04 05' is 2 passed.
+
+#### Active Tasks
+
+- Step 5: factory/RUNBOOK.md flow watch section (contents list updated, first 100 lines still route), a note on the graph nodes for the architect (graph/ is denied to workers: RUN-recover gains the belt node, CMP flow watch, monitors slots runner and flow), then the full suites from the test pane (make -C factory test, make -C herdr test, make lint), ticket evidence per criterion with --observed, retro note, push, gh pr create, work-order.sh submit --pr N, work-order.sh done, push, post pr.opened 100, stop.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-6842 as worker-wo-20261011-6842 in slot 5. Read playbooks/worker.md, the ticket and this checkpoint. Steps 1 to 4 are committed (conflict lint, flow.sh, bringup slots, recover belt node). Start step 5, the RUNBOOK section and the close-out. Run make only through herdr/bin/testpane.sh wD3:p1V, make step included, because lint takes longer than the harness timeout.
+
+## Checkpoint 2026-10-11 19:24 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-6842 in slot 5 on WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (gate record with no consumer, belt heartbeat stale, runner pane gone) and recover.sh restarts the belt. Branch feat/flow-watch-a-shell-watcher-in-a-monitors-pane-tu, pushed. work.started 100 record 20261011T185747Z-100-3rtr5. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped is still draft; this ticket added the runner (2.2.2) and flow (2.2.3) reserved slots to herdr/config/monitors.json, so bringup plugs both in with no code change (breadcrumb in bringup.sh).
+
+#### Toolchain
+
+- Landed: lint conflict-marker check (AC-H3, factory case 08); factory/bin/flow.sh with flow.json and schema (factory cases 09 and 10); monitors.json slots runner and flow; herdr test world runs both as sleep loops (world_real_belt puts the real commands back); herdr cases 04 and 05 updated to nine bringup notes, both green from the test pane.
+- make -C factory test is 10 passed; make -C herdr test CASES='04 05' is 2 passed.
+
+#### Active Tasks
+
+- Step 4: recover.sh belt node. herdr.json gains belt.slot (runner), belt.status (${repo}/factory/bin/route.sh status), belt.settle_seconds, with schema; node runs after the monitor seat: ok belt when the runner pane is in use (monitors.sh status line) and the status exits 0, else --check prints FAILED belt (reason), --apply restarts through monitors.sh take runner runner -- <command from monitors.json>, waits settle_seconds for a fresh belt, prints fixed belt. New herdr case 13 with world_real_belt; existing cases that count ok lines in recover output (05 says four) need the extra ok belt line.
+- Step 5: factory/RUNBOOK.md flow watch section (graph node if the RUNBOOK is a graph node), ticket evidence per criterion with --observed, retro note, PR, submit, done.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-6842 as worker-wo-20261011-6842 in slot 5. Read playbooks/worker.md, the ticket and this checkpoint. Steps 1 to 3 are committed (conflict lint, flow.sh, bringup slots). Start step 4, the recover.sh belt node: read herdr/bin/recover.sh, herdr/tests/cases/05-recover.test.sh and herdr/config/herdr.schema.json first. Run make only through herdr/bin/testpane.sh wD3:p1V, make step included, because lint takes longer than the harness timeout.
+
+## Checkpoint 2026-10-11 19:15 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-6842 in slot 5 on WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (gate record with no consumer, belt heartbeat stale, runner pane gone) and recover.sh restarts the belt. Branch feat/flow-watch-a-shell-watcher-in-a-monitors-pane-tu, pushed. work.started 100 record 20261011T185747Z-100-3rtr5. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- The runner pane is not in bringup.sh on this branch (WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped is still draft), so step 4 adds both the runner and the flow reserved slots to herdr/config/monitors.json; bringup's pane loop needs no code change.
+
+#### Toolchain
+
+- Landed: lint/check-conflict-markers.sh (AC-H3, case 08); factory/bin/flow.sh once|run|status with factory/config/flow.json and flow.schema.json (gate stall latched per record id, belt via route.sh status, runner pane via herdr pane list and process-info), factory/Makefile flow-once and flow-status, suite cases 09 (AC-H1) and 10 (belt and pane half of AC-H2). make -C factory test is 10 passed from the test pane.
+- Pane labels the config expects: the runner pane label ends in "route runner - runner"; step 4 must name the slot so monitors.sh gives that label (used_label is "<pos> <what> - <name>", so what = "route runner", name = "runner").
+
+#### Active Tasks
+
+- Step 3: recover.sh belt node (--check prints FAILED belt when the runner pane is missing or the belt is stale; --apply restarts through monitors.sh take and prints fixed belt), herdr case 05 extended or a new case, using the herdr world stub.
+- Step 4: monitors.json reserved slots runner (2.2.2) and flow (2.2.3), bringup --check lists both ok, herdr case 04 updated.
+- Step 5: factory/RUNBOOK.md flow watch section, ticket evidence per criterion, retro note, PR, submit, done.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-6842 as worker-wo-20261011-6842 in slot 5. Read playbooks/worker.md, the ticket and this checkpoint. Steps 1 and 2 are committed. Start step 3, the recover.sh belt node: read herdr/bin/recover.sh and herdr/tests/cases/05-recover.test.sh first. Run make only through herdr/bin/testpane.sh wD3:p1V, and run make step through it too because lint takes longer than the harness timeout.
+
+## Checkpoint 2026-10-11 19:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-6842 in slot 5 on WO-20261011-6842 - Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (gate record with no consumer, belt heartbeat stale, runner pane gone) and recover.sh restarts the belt. Branch feat/flow-watch-a-shell-watcher-in-a-monitors-pane-tu. work.started 100 record 20261011T185747Z-100-3rtr5. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- The runner pane is not in bringup.sh on this branch (WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped is still draft), so this ticket adds both the runner and the flow reserved slots to herdr/config/monitors.json; bringup's pane loop needs no code change.
+
+#### Toolchain
+
+- Step 1 landed: lint/check-conflict-markers.sh, called from lint/lint.sh, and suite case factory/tests/cases/08-conflict-lint.test.sh (green from the test pane). AC-H3 is covered.
+
+#### Active Tasks
+
+- Step 2: factory/config/flow.json + flow.schema.json and factory/bin/flow.sh once (stalled gate record with no consumer record -> one 500 note to the monitor, latched so a second tick repeats nothing), suite case 09.
+- Step 3: belt stale and runner pane gone in flow.sh, case 10; recover.sh belt node (--check FAILED belt, --apply restart through monitors.sh take, fixed), herdr case.
+- Step 4: monitors.json reserved slots runner and flow, bringup --check lists both, case 04 updated.
+- Step 5: RUNBOOK section in factory/RUNBOOK.md, ticket evidence per criterion, retro note, PR, submit, done.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-6842 as worker-wo-20261011-6842 in slot 5. Read playbooks/worker.md, the ticket and this checkpoint. Step 1 (conflict marker lint) is committed; start step 2, flow.sh once with its config and schema. Run make only through herdr/bin/testpane.sh wD3:p1V.
 
 ## Checkpoint 2026-10-11 17:59 UTC
 
@@ -107,6 +476,8 @@ WO-20261011-e618 is closed out on its branch with PR 17 open. Post pr.opened 100
 ### Hydration prompt
 
 Resume WO-20261011-e618 at the PR: gh pr create with the five criteria as the body, work-order.sh submit --id WO-20261011-e618 --pr N, work-order.sh done, git add -A and commit the archive move, push, then events/bin/event.sh add --code 100 --seat worker-wo-20261011-e618 --kind pr.opened --ticket WO-20261011-e618 --note "sha and pr", and stop.
+
+## Checkpoint 2026-10-11 17:49 UTC
 
 ## Checkpoint 2026-10-11 17:48 UTC
 
@@ -212,6 +583,32 @@ Resume WO-20261011-e618 at step 4: add snapshot --to to interface/bin/interface.
 
 Resume WO-20261011-e618 at step 3: write herdr/layouts/interface-2x3.json and the seat.sh support (layout pre_start list) so bearings serve and wait come up in the interface-agent seat's tab, with a herdr test case run through herdr/bin/testpane.sh, then make step.
 
+## Checkpoint 2026-10-11 17:03 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, PR 16 open, slot 2.
+- Reviewer record 20261011T163507Z-422-uii0r asked for evidence on AC-H3 and AC-H6 and a contents list in report/loop/RUNBOOK.md. Worker work.started record: 20261011T165015Z-100-kdyzx.
+
+#### Toolchain
+
+- report/loop/RUNBOOK.md now opens with a contents list, the binding rules and GOOD/NEVER lines, all inside the first 100 lines. make lint rc 0 from the test pane.
+- AC-H3 and AC-H6 stay unchecked on purpose: a live stable restart and graph/ writes belong to the architect. The ticket note carries the exact steps (graph-handoff/apply.sh, then work-order.sh evidence).
+
+#### Active Tasks
+
+- Landed: RUNBOOK review fix and the ticket note. Next: push, then post pr.opened 100 naming the new sha, then stop.
+
+#### Blockers
+
+- None for the worker; AC-H3 and AC-H6 wait on the architect.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. The RUNBOOK review fix is committed; push it, post pr.opened 100 with the sha and stop. Do not tick AC-H3 or AC-H6.
+
 ## Checkpoint 2026-10-11 16:36 UTC
 
 ### Current state
@@ -243,6 +640,413 @@ Resume WO-20261011-e618 at step 3: write herdr/layouts/interface-2x3.json and th
 ### Hydration prompt
 
 Resume WO-20261011-e618 at step 2: create interface/bin/interface.sh (forward, line, snapshot) with a test in interface/tests run by make -C interface test, then make step.
+
+## Checkpoint 2026-10-11 16:30 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, PR 16 open, slot 2.
+- The architect applied the graph half (7aa5892) and evidenced AC-H3 and AC-H6; every acceptance criterion is evidenced.
+
+#### Toolchain
+
+- work-order.sh submit --pr 16 and done ran; the ticket is archived under work-orders/archive/2026/ and INDEX.md and the epic README follow.
+
+#### Active Tasks
+
+- Landed: close-out step. Next: push (done by step.sh), post pr.opened 100 naming the new head, then stop. The architect merges.
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- factory/bin/route.sh (once, run, status), factory/config/runner.json and runner.schema.json, factory/Makefile, factory/tests (run.sh, lib/world.sh, cases 01-07), factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner.
+- events/bin/event.sh accepts the factory record kinds and an optional --to ROLE; events/schema/event.schema.json carries both.
+- make -C factory test from the test pane: 7 passed, 0 failed.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: PR 14 open; review.changes 422 (20261011T154551Z-422-kuyed) asked for GOOD and NEVER lines in factory/RUNBOOK.md, added; the architect widened scope to event.sh, event.schema.json and .gitignore. Remaining: post one pr.opened for the new head (note records the scope widening) and stop.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume nothing: WO-20261011-616c is done and archived on its branch. Post pr.opened 100 with the head sha if not yet posted, then hold for the merge.
+
+## Checkpoint 2026-10-11 16:10 UTC
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
+Post one pr.opened 100 for the new head through events/bin/event.sh, naming the scope widening in its note, then stop.
+
+## Checkpoint 2026-10-11 16:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, treehouse slot 2 leased to that ticket. Test pane wD3:p1V, run through herdr/bin/testpane.sh only (wrapper in the scratchpad: tp.sh; start every command with cd into the worktree). The pane is shared: another seat's long herdr suite can occupy it and my commands then queue behind it; read it with herdr pane read, never touch it.
+- A blocked 423 record was posted (events 20261011T155317Z-423-lvhaz): graph/ is a denied path for workers, so the graph half is handed over in report/loop/graph-handoff/ (apply.sh, graph.sh.patch, the grandfather list, case 08-graph.test.sh), verified on a scratch copy of the repo: apply.sh gives "graph ok: 100 nodes" and the 08 cases pass.
+
+#### Toolchain
+
+- tools/bearings serves GET /board and /board/data.json (board_dir in config/bearings.json, relative to the repo root or absolute; 503 board not built, 404 no board_dir; same key and cookie as the page, no-store). make -C tools/bearings test = 52 passed (T9 cases). make -C report/loop test-browser = 12 passed against the real server.mjs. make -C report/loop test = 7 passed.
+- herdr/config/monitors.json has a reserved slot 2.2.1 board that runs report/loop/loop.sh watch; herdr cases 04 and 05 updated (seven note 100 records) and pass.
+- report/loop/RUNBOOK.md written. Makefile lint checks that bearings board_dir equals the board config's out_dir.
+
+#### Active Tasks
+
+- Step 4 and 5 landed together (bearings routes, monitor slot, RUNBOOK, graph handoff).
+- Next: close-out. make lint at the top level (must stay green; the handoff scripts are shellchecked), work-order.sh evidence --index N --observed for AC-H1..AC-H6 (AC-H6 graph half is the handoff, say so; AC-H3 live stable needs the architect to restart stable on main), work-order.sh note (retro), work-order.sh done if the playbook allows, one push, gh pr create with the acceptance criteria as body and the findings (graph blocked, prettierignore, belt age in sources, shared test pane, one waiter script run with an ampersand), post pr.opened 100 with the sha, stop.
+
+#### Blockers
+
+- graph/ writes: the architect applies report/loop/graph-handoff/apply.sh (nodes CMP-factory-board and RUN-factory-board, the ratchet rule, the grandfather list of 19) and moves 08-graph.test.sh into report/loop/tests/cases/.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. All build steps are landed except the graph writes, which are handed over. Do the close-out: top-level make lint, evidence for AC-H1..AC-H6 with work-order.sh evidence --observed, the retro note, one push, gh pr create with the acceptance criteria as the body, pr.opened 100 with the sha, then stop.
+
+## Checkpoint 2026-10-11 15:54 UTC
+
+## Checkpoint 2026-10-11 15:27 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, treehouse slot 2 leased to that ticket. Test pane wD3:p1V, run through herdr/bin/testpane.sh only (wrapper in the scratchpad: tp.sh, start every command with cd into the worktree because the pane sits in the main checkout).
+- Global prettier hook reformats Write and Edit targets; report/loop/assets/template.html and report/loop/design/ are in .prettierignore.
+
+#### Toolchain
+
+- report/loop/loop.sh: collect, validate, render, watch. watch [--out DIR] [--iterations N] [--sleep S] runs collect, compares with DIR/data.json ignoring at and number, and only on a difference renders DIR and records the build number in DIR/.watch.json. A failed pass keeps the last page and says why on stderr. Prints one line per build or failure, nothing otherwise.
+- The entry's sources line no longer carries the belt's age in seconds ("stale, over 30s old"), because a growing age made every pass a change (breadcrumb in lib/collect.jq).
+- Tests: make -C report/loop test = cases 01 to 07 green (07-watch proves same inode and mtime when nothing changed). make -C report/loop test-browser = 12 green. make lint all ok. Makefile gained a watch target.
+
+#### Active Tasks
+
+- Step 3 landed: watch with case 07-watch. A live two-pass run on the real repo wrote build 1 once with the three real lines.
+- Next: S4 bearings stable GET /board and /board/data.json in tools/bearings/scripts/server.mjs (keyed like /, cookie, no-store, 503 JSON when not built), board dir in config/bearings.json and bearings.schema.json, tests in tools/bearings/tests/inside.sh, run make -C tools/bearings test from the test pane; then S5 monitor pane (herdr/bin/monitors.sh take, monitors.json slot, make -C herdr test); S6 graph nodes CMP-factory-board and RUN-factory-board plus the lint rule (graph/ may be fenced; if the harness refuses, post blocked 423 and stop); S7 RUNBOOK.md, evidence, retro note, work-order.sh done, PR, pr.opened 100.
+- S6 decision: the lint rule is a ratchet with a closed grandfather list, because the existing Component nodes have no defined_in edge to a RUN node.
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- factory/bin/route.sh (once, run, status), factory/config/runner.json and runner.schema.json, factory/Makefile, factory/tests (run.sh, lib/world.sh, cases 01-07), factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner.
+- events/bin/event.sh accepts the factory record kinds and an optional --to ROLE; events/schema/event.schema.json carries both.
+- make -C factory test from the test pane: 7 passed, 0 failed.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: all seven criteria evidenced on the ticket, retro note written. Remaining: push, open the one PR with the acceptance criteria as the body, post pr.opened 100 with the sha, stop. The architect reviews and merges; this seat does not run submit or done.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. Step 4: tools/bearings/scripts/server.mjs serves the board. Add keyed GET /board (the page at report/loop/out/index.html, same cookie handling as /, no-store, a 503 JSON body when the page is not built) and GET /board/data.json; declare the board directory in config/bearings.json and its schema; cases in tools/bearings/tests/inside.sh; run make -C tools/bearings test from the test pane only.
+
+## Checkpoint 2026-10-11 15:21 UTC
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin.
+If the PR is not open yet, open it with gh pr create (acceptance criteria as the body) and post pr.opened 100 with the sha through events/bin/event.sh; then stop.
+
+## Checkpoint 2026-10-11 15:10 UTC
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do the close-out: evidence --observed for AC-H1 to AC-H7, note, make lint and make -C factory test from wD3:p1V, one PR carrying the code and the ticket, post pr.opened 100, stop.
+
+## Checkpoint 2026-10-11 15:05 UTC
+- Worker seat worker-wo-20261011-dc0d in treehouse slot 1 on branch feat/seat-sh-nudges-a-fresh-seat-past-the-compaction-, test pane wD3:p1V. PR 11 is open; main was merged into the branch (CHANGELOG.md re-rendered, not hand-merged).
+- Blocked record 423 (20261011T060054Z-423-qkuw4) stays open for the roles/ file: roles/bin/nudge.sh is the architect's to add.
+
+#### Toolchain
+
+- Verified on the merged head from wD3:p1V: make lint ok, render-playbook --check ok, make -C herdr test: tests: 11 passed, 0 failed.
+- Close-out done on the branch: evidence on AC-H1 to AC-H3 (stub claude only), retro note, submit --pr 11, done, ticket archived.
+
+#### Active Tasks
+
+- WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else': done on the branch, awaiting the reviewer and the merge.
+
+#### Blockers
+
+- None for the PR. A live bring-up with a real Claude seat is the one observation nobody has made.
+
+### Hydration prompt
+
+Nothing to resume for WO-20261011-dc0d; hold until the reviewer answers.
+
+## Checkpoint 2026-10-11 15:03 UTC
+- Worker seat worker-wo-20261011-dc0d in treehouse slot 1 on branch feat/seat-sh-nudges-a-fresh-seat-past-the-compaction-, test pane wD3:p1V. No PR yet; it opens right after this step.
+- Blocked record 423 (20261011T060054Z-423-qkuw4) stays open for the roles/ file: roles/bin/nudge.sh is outside the worker fence. seat.sh uses it when it exists and an inline line naming the ticket and its title when not.
+
+#### Toolchain
+
+- Verified from wD3:p1V: make lint ok, render-playbook --check ok, make -C herdr test: tests: 11 passed, 0 failed.
+- The first full run sat 8 minutes in case 03 because each claude seat waited the 180 s default for an ack the stub never sent; fixed in herdr/tests/lib/world.sh (nudge keys at 1 s in every world, case 11 raises them).
+
+#### Active Tasks
+
+- WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else': code, case 11 and verification done; PR opens next. AC-H1 to AC-H3 are human ACs for the architect's live check.
+
+#### Blockers
+
+- roles/bin/nudge.sh is the architect's to add (contract: --role R --ticket ID --project DIR, prints one line). Not a blocker for the PR.
+
+### Hydration prompt
+
+Resume WO-20261011-dc0d at the PR: gh pr create with the acceptance criteria as the body, post pr.opened 100 with the sha, stop.
+
+## Checkpoint 2026-10-11 15:00 UTC
+- Worker seat worker-wo-20261011-dc0d in treehouse slot 1 on branch feat/seat-sh-nudges-a-fresh-seat-past-the-compaction-, test pane wD3:p1V. No PR yet.
+- Blocked record 423 (20261011T060054Z-423-qkuw4) stays open for the roles/ file: roles/bin/nudge.sh is outside the worker fence. seat.sh uses it when it exists and an inline line naming the ticket and its title when not.
+
+#### Toolchain
+
+- Landed: config keys nudge_wait_seconds (180) and nudge_settle_seconds (10); seat.sh nudge_seat (waits for "● ACK compaction-guard " with pane wait-output, polls agent_status twice idle, one agent prompt, seat.json nudged_at); stub claude mode file; Podman case 11-guard-ack-nudge, which passes from wD3:p1V (ack+idle nudged once, ack+working not, no ack not, rerun not, nudge.sh wording, DRY_RUN).
+- Still to run: make lint, roles/bin/render-playbook.sh roles playbooks --check, the full make -C herdr test (cases 01-11) from wD3:p1V, then the PR with the three ACs as the body.
+
+#### Active Tasks
+
+- WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else': in progress, code and case 11 landed, full verification and PR left.
+
+#### Blockers
+
+- roles/bin/nudge.sh is the architect's to add (contract: --role R --ticket ID --project DIR, prints one line). Not a blocker for the PR.
+
+### Hydration prompt
+
+Resume WO-20261011-dc0d from verification: run make lint and the full make -C herdr test from wD3:p1V through herdr/bin/testpane.sh, check render-playbook, then open the PR.
+
+## Checkpoint 2026-10-11 14:54 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Steps 1, 2 and 3 done: event.sh kinds and --to; factory/config/runner.json and runner.schema.json (factory/state/ is gitignored). factory/bin/route.sh (once, run, status; claim-then-perform ledger under factory/state/routed; --from-start, --repo, --routes, --state) smoke-tested against a scratch repo with a stub herdr. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Step 5: RUNBOOK.md and the graph nodes CMP-route-runner and RUN-route-runner. Then the PR with the acceptance criteria as the body.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do step 4: factory/Makefile and factory/tests (run.sh in Podman, --network=none, stub herdr on PATH; cases wake, 500, escalate, restart idempotence, new routes row, belt state), then land it with make step from the test pane wD3:p1V through herdr/bin/testpane.sh.
+
+## Checkpoint 2026-10-11 14:52 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Steps 1 and 2 done: event.sh kinds and --to; factory/config/runner.json and runner.schema.json (factory/state/ is gitignored). Step 3: factory/bin/route.sh. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Step 5: RUNBOOK.md and the graph nodes CMP-route-runner and RUN-route-runner. Then the PR with the acceptance criteria as the body.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do step 3: factory/bin/route.sh (once, run, status; claim-then-perform ledger; --repo, --routes, --state, --from-start flags), then land it with make step from the test pane wD3:p1V through herdr/bin/testpane.sh.
+
+## Checkpoint 2026-10-11 14:50 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Step 1 done: event.sh kinds and --to. Step 2: factory/config/runner.json and its schema. Step 3: factory/bin/route.sh. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Step 5: RUNBOOK.md and the graph nodes CMP-route-runner and RUN-route-runner. Then the PR with the acceptance criteria as the body.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do step 2: factory/config/runner.json and runner.schema.json, then land it with make step from the test pane wD3:p1V through herdr/bin/testpane.sh.
+- Worker seat worker-wo-20261011-dc0d in treehouse slot 1 on branch feat/seat-sh-nudges-a-fresh-seat-past-the-compaction-, test pane wD3:p1V. No PR yet.
+- Blocked record 423 (20261011T060054Z-423-qkuw4) is open: the ticket wants the nudge text under roles/, which the worker fence denies. The architect answered with a continue nudge, not a decision, so the roles/ file stays unwritten.
+
+#### Toolchain
+
+- Step 1 landed: herdr/config/herdr.json and herdr.schema.json carry nudge_wait_seconds (180) and nudge_settle_seconds (10).
+- Plan: step 2 seat.sh waits for the line "● ACK compaction-guard" with herdr pane wait-output, polls agent_status through herdr pane list, sends one herdr agent prompt when idle is stable, writes nudged_at into seat.json. Text comes from roles/bin/nudge.sh when that file exists, else an inline fallback naming the ticket and its title. Step 3 the stub claude modes and Podman case 11. Step 4 lint, render-playbook --check, full suite from wD3:p1V, PR.
+
+#### Active Tasks
+
+- WO-20261011-dc0d - seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else': in progress, step 1 of 4 done.
+
+#### Blockers
+
+- The roles/bin/nudge.sh file is outside the worker fence; the architect adds it. seat.sh works without it through the fallback text.
+
+### Hydration prompt
+
+Resume WO-20261011-dc0d from step 2: edit herdr/bin/seat.sh (nudge after the brief, both doors, runtime claude only), then the stub claude modes and herdr/tests/cases/11-nudge.test.sh.
+
+## Checkpoint 2026-10-11 06:35 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, slot 2. Test pane wD3:p1V through herdr/bin/testpane.sh only.
+- Blocked 423 posted (events 20261011T155317Z-423-lvhaz) for graph/ writes; the graph half waits in report/loop/graph-handoff/.
+
+#### Toolchain
+
+- All steps landed: collect, watch, bearings /board routes, monitors slot 2.2.1, RUNBOOK. Evidence recorded for AC-H1, AC-H2, AC-H4, AC-H5; AC-H3 and AC-H6 left unchecked on purpose (live stable restart, graph writes). Retro note written.
+
+#### Active Tasks
+
+- Remaining: gh pr create with the acceptance criteria as the body and the findings, then post pr.opened 100 with the sha, then stop. The architect merges, applies the graph handoff and restarts stable.
+
+#### Blockers
+
+- None for the close-out; the graph writes need the architect.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c. The branch is pushed. Run gh pr create with the ticket's acceptance criteria as the body (state AC-H3 and AC-H6 as not yet observed and why), post pr.opened 100 with the sha, and stop.
+
+## Checkpoint 2026-10-11 06:11 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, treehouse slot 2 leased to that ticket. Test pane wD3:p1V, run through herdr/bin/testpane.sh only (wrapper in the scratchpad: tp.sh).
+- Global prettier hook reformats Write and Edit targets; report/loop/assets/template.html and report/loop/design/ are in .prettierignore.
+
+#### Toolchain
+
+- report/loop/loop.sh: collect, validate, render. collect gathers events (last events_days), ticket frontmatters, roles, routes, playbooks, the herdr pane list (--panes FILE, --no-panes, else herdr by the session in herdr/config/herdr.json) and the belt state file age, runs lib/collect.jq, validates, prints. config/board.json now holds inputs, the nine stations, kickback routes, the board ticket list and legend notes; its schema is found beside loop.sh.
+- Derivation rules live in the header of lib/collect.jq: a record's kind is its own or the "kind:" prefix of a note; where the work is = the routes.json row the newest work record matches; by hand = PR in frontmatter and no pr.opened record (worker station hand, PR at the tester); a seat is up when its newest record is not seat.down and its pane is in the pane list.
+- Tests: make -C report/loop test = cases 01 to 06 green (schema, render, parity, derive, by-hand, board). make -C report/loop test-browser = 12 green. make lint all ok.
+
+#### Active Tasks
+
+- Step 2 landed: collect with cases 04-derive, 05-by-hand, 06-board. Live check: the board showed three real lines (eaa3, 616c, dc0d) with the right seats.
+- Next: S3 watch (loop.sh watch: collect every watch_seconds, write only when the data minus at and number changed, number from out_dir state) with a test case; S4 bearings stable GET /board and /board/data.json plus bearings tests; S5 monitor pane through monitors.sh take (monitors.json slot or bringup); S6 graph nodes CMP-factory-board and RUN-factory-board plus the lint rule (graph/ may be fenced; if the harness refuses, post blocked 423); S7 RUNBOOK.md, evidence, notes, PR.
+- S6 decision: the lint rule is a ratchet with a closed grandfather list, because 17 existing Component nodes have no defined_in edge to a RUN node.
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Steps 1 to 5 done (step 5: factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner with defined_in, graph check ok, graph index regenerated). Steps 1 to 4 done (step 4: factory/Makefile, factory/tests run.sh, world.sh and cases 01-07, make -C factory test = 7 passed, 0 failed from wD3:p1V; route.sh run now stops on TERM at once via read -t). Steps 1 to 3: event.sh kinds and --to; factory/config/runner.json and runner.schema.json (factory/state/ is gitignored). factory/bin/route.sh (once, run, status; claim-then-perform ledger under factory/state/routed; --from-start, --repo, --routes, --state) smoke-tested against a scratch repo with a stub herdr. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Remaining: evidence for AC-H1 to AC-H7, retro note, work-order submit, then one PR with the finished ticket.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md, the ticket and this checkpoint. Step 3 is loop.sh watch: a loop that collects every watch_seconds and rewrites out_dir only when the entry changed apart from at and number, keeps number in a state file under out_dir, never leaves a half-written page, and has a case that proves the output files are untouched (same mtime) when nothing changed. Run it only in a labelled herdr pane; tests use a once or iterations seam, never a background process.
+
+## Checkpoint 2026-10-11 06:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-616c on ticket WO-20261011-616c - Factory board: report/loop renders the lines from records and bearings stable serves it live, branch feat/factory-board-report-loop-renders-the-lines-from, treehouse slot 2 leased to that ticket.
+- Test pane wD3:p1V, run through herdr/bin/testpane.sh only.
+- A global PostToolUse prettier hook reformats files the Write and Edit tools touch; report/loop/assets/template.html and report/loop/design/ are opted out in the repo's .prettierignore.
+
+#### Toolchain
+
+- report/loop/loop.sh: validate FILE, render [--in FILE] [--out DIR]; schema/loop.schema.json (urn id); config/board.json with its schema; assets/template.html is the owner-locked design markup and CSS byte for byte plus a script that reads one JSON element and polls data.json.
+- make -C report/loop test: cases 01-schema, 02-render, 03-parity green in the lint image. make -C report/loop test-browser: 12 checks green in the bearings test image, including byte-identical screenshots of the rendered fixture and the design at 1100 and 390 px and redraw in place without reload.
+- make lint all ok; lint.sh now shellchecks report/loop (only report/rail/ is excluded).
+
+#### Active Tasks
+
+- Step 1 landed: schema, config, template, render, validate, tests. Next steps: S2 collect from events, work-orders, routes.json, roles, herdr pane list and the belt state file; S3 watch (writes only on change) and the board bars; S4 bearings stable GET /board and /board/data.json with tests; S5 monitor pane through monitors.sh take; S6 graph nodes CMP-factory-board and RUN-factory-board plus the lint rule (graph/ may be fenced for a worker: if the harness refuses, post blocked 423); S7 RUNBOOK.md, evidence, notes, PR.
+- Decision for S6: a global "every Component needs defined_in to a RUN node" rule would fail 17 existing Component nodes, so the rule will be a ratchet with a closed grandfather list.
+- Worker seat worker-wo-20261011-38c7 holds treehouse slot 3 (lease holder WO-20261011-38c7) at /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on branch feat/route-runner-factory-bin-route-sh-applies-routes.
+- Test pane wD3:p1V, reached only through herdr/bin/testpane.sh; output goes to a file in the scratchpad and is read from there.
+- work.started 100 is events/2026/10/20261011T144745Z-100-pleyz.json.
+
+#### Toolchain
+
+- events/bin/event.sh now accepts the factory record kinds (pr.opened, test.failed, escalated, record.routed and the rest of factory/schema/record.schema.json) and an optional --to ROLE addressee; events/schema/event.schema.json carries both.
+- The runner will be factory/bin/route.sh with factory/config/runner.json (poll seconds, state dir, runner seat), tests in factory/tests run by factory/Makefile in Podman with --network=none and a stubbed herdr.
+
+#### Active Tasks
+
+- WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else: in progress.
+- Steps 1 to 4 done (step 4: factory/Makefile, factory/tests run.sh, world.sh and cases 01-07, make -C factory test = 7 passed, 0 failed from wD3:p1V; route.sh run now stops on TERM at once via read -t). Steps 1 to 3: event.sh kinds and --to; factory/config/runner.json and runner.schema.json (factory/state/ is gitignored). factory/bin/route.sh (once, run, status; claim-then-perform ledger under factory/state/routed; --from-start, --repo, --routes, --state) smoke-tested against a scratch repo with a stub herdr. Step 4: factory/Makefile and the test cases (wake, 500, escalate, restart, new row, belt state). Step 5: factory/RUNBOOK.md and the graph nodes CMP-route-runner and RUN-route-runner. Then the PR with the acceptance criteria as the body.
+- Design fixed in step 1: the runner never routes a record its own seat wrote, which is what stops record.routed 300 and the 500 receipt from looping; escalations_lt and escalations count the runner's own escalated records for the ticket.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-616c as worker-wo-20261011-616c in slot 2. Read playbooks/worker.md and the ticket, then the top checkpoint. Step 2 is loop.sh collect: add config keys for inputs, a fixtures tree with events, work-orders, panes and belt state, cases for derivation including the by-hand rule (PR in frontmatter, no pr.opened record), and keep the entry schema-valid with no absolute path or project name.
+Resume WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else, in /home/luna/.treehouse/coq-jev-herdr-plugin-f314e6/3/coq-jev-herdr-plugin on its branch.
+Read the top checkpoint, then do step 5: factory/RUNBOOK.md, graph nodes CMP-route-runner and RUN-route-runner with defined_in, graph.sh check, then land it, then evidence for AC-H1 to AC-H7 and the PR with make step from the test pane wD3:p1V through herdr/bin/testpane.sh.
 
 ## Checkpoint 2026-10-11 05:58 UTC
 

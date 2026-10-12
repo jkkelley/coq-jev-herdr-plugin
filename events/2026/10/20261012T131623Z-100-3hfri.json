@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T131623Z-100-3hfri",
+  "at": "2026-10-12T13:16:23Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-668a",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-668a",
+  "pane": "wD3:p79",
+  "note": "pr.opened: PR 23 head 86c4bdc, make -C tools/bearings test 113 passed, make lint green; live stable send left to the interface agent after merge",
+  "evidence": [],
+  "observations": []
+}

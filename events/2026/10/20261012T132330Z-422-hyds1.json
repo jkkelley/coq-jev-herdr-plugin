@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T132330Z-422-hyds1",
+  "at": "2026-10-12T13:23:30Z",
+  "code": 422,
+  "seat": "tester-wo-20261011-4db1",
+  "kind": "test.failed",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p1V",
+  "note": "failed 49ab55b: factory 06-belt (13/14). Belt 61s old reads running (touched 60s ago), exit 0; wants stopped, exit 1. herdr 15/15 pass.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-3-coq-jev-herdr-plugin/6d422f8b-3401-4ad2-aa70-37241e60182a/scratchpad/rerun-49ab55b.log"
+  ],
+  "observations": [
+    {
+      "path": "factory/tests/cases/06-belt.test.sh",
+      "line": 27,
+      "saw": "status",
+      "expected": " belt"
+    }
+  ],
+  "attempt": 1,
+  "to": "worker",
+  "sha": "49ab55b",
+  "pr": 21
+}

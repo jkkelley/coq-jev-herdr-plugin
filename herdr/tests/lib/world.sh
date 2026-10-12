@@ -6,6 +6,7 @@
 #   world_up <name> [jq filter applied to herdr.json]   e.g. world_up gate '.bringup_gate=true'
 #   h <args>                                            herdr --session t-<name> <args>, markers unset
 #   SEAT, REPO, STATE, EVENTS                            the paths a case asserts on
+#   notest_layout / role_layout ROLE LAYOUT              a world whose role names a layout with no test slot (AC-H4)
 world_up() {
   local name="$1" filt="${2:-.}"
   WORLD="${COQ_CASE_WORK:-${WORK_ROOT:-/tmp}}/$name"; mkdir -p "$WORLD"
@@ -19,6 +20,15 @@ world_up() {
   #   absolute count in a case means "this world made it". Rejected: pointing the cases at a ticket that is still open
   #   (the test would break again the day that one closes), and baselining each count in each case (five places to
   #   forget). Cost: a case cannot assert anything about the repo's real events or about archive/ staying archived.
+  # BREADCRUMB 2026-10-11 - WO-20261011-6842. What would break: bringup now plugs the route runner (2.2.2) and the flow watch
+  #   (2.2.3) into the world, and a live runner writes a 500 note for every record it has no route for (seat.up, seat.down, the
+  #   closing notes), so the cases that assert "no event was written" or count records would see events they did not make.
+  #   Why this fix: both slots keep their name, label and place but run a sleep loop here; case 13 puts the real commands back
+  #   with world_real_belt. Rejected: leaving them live and loosening every count, which hides the next real change.
+  #   Cost: cases 01-12 do not exercise route.sh or flow.sh through a pane; the factory suite and case 13 do. The same goes
+#   for recover.sh's belt node: .belt.status is `true` in the world's config, so the node reads ok; case 13 sets the real one.
+  jq '(.tabs[].reserved[] | select(.name == "runner" or .name == "flow") | .command) = "while :; do sleep 30; done"' \
+    "$REPO/herdr/config/monitors.json" > "$REPO/herdr/config/monitors.json.new" && mv "$REPO/herdr/config/monitors.json.new" "$REPO/herdr/config/monitors.json"
   find "$REPO/work-orders/archive" -name 'WO-*.md' -exec cp -n {} "$REPO/work-orders/" \; 2>/dev/null
   rm -rf "$REPO"/events/20*
   # shellcheck disable=SC2034  # SEAT, EVENTS and STATE are the case's handles
@@ -30,7 +40,14 @@ world_up() {
   local stubs; stubs="$(cd "$(dirname "${BASH_SOURCE[0]}")/../stubs" && pwd)"; export PATH="$stubs:$PATH"
   export COQ_HERDR_SESSION="t-$name" COQ_STATE="$STATE" DRY_RUN=0
   export COQ_HERDR_CONFIG="$WORLD/herdr.json"
-  jq --arg s "t-$name" --arg st "$STATE" '.session=$s | .state_dir=$st | .require_guard=false | .bringup_gate=false | .down_wait_seconds=0 | .retire_poll_seconds=3' \
+  # BREADCRUMB 2026-10-11 - WO-20261011-dc0d. What broke: the first full run after seat.sh learned to nudge sat in case 03 for
+  #   8 minutes, because every claude seat now waits nudge_wait_seconds (180 in herdr.json) for the guard's ack line and the
+  #   stub claude never sends one unless a case writes its mode file, so each seat of every case paid 3 minutes. Why this fix:
+  #   the world's config shortens both nudge keys to 1 s, which is a seat with no memo moving on at once; case 11 raises them
+  #   in its own filter, the only case that plays the memo. Rejected: a stub that always acks (it would send the nudge prompt
+  #   into every case's agent read) and skipping the nudge when require_guard is false (the production path would go untested).
+  #   Cost: a case that wants the ack must write the mode file and set the keys itself, as 11 does. Record: WO-20261011-dc0d.
+  jq --arg s "t-$name" --arg st "$STATE" '.session=$s | .state_dir=$st | .require_guard=false | .bringup_gate=false | .down_wait_seconds=0 | .retire_poll_seconds=3 | .nudge_wait_seconds=1 | .nudge_settle_seconds=1 | .belt.status="true"' \
     "$REPO/herdr/config/herdr.json" | jq "$filt" > "$COQ_HERDR_CONFIG"
   unset HERDR_PANE_ID HERDR_TAB_ID HERDR_WORKSPACE_ID HERDR_SOCKET_PATH HERDR_SESSION
   (herdr --session "t-$name" server > "$WORLD/server.log" 2>&1 &)
@@ -51,6 +68,16 @@ world_up() {
   export HERDR_WORKSPACE_ID HERDR_TAB_ID WORLD_TEST_PANE
   trap 'world_down' EXIT
 }
+# BREADCRUMB 2026-10-11 - WO-20261011-f896. What broke (would break): seat-1x2 now carries its own test pane, so cases 01 and 08,
+#   which prove the architect-tab fallback and its refusal (a ticket seat with no 'test - herdr' pane to name is refused before
+#   any lease), could no longer reach that path with the real worker role. Why this fix: the world copies the repo, so it
+#   can point its copy of a role at seat-nt, seat-1x2 minus its test slot, which is exactly the shape of a layout that has
+#   none (player-1x3, interface-2x2). Rejected: an env switch in seat.sh (the production path would go untested). Cost: a
+#   case that calls role_layout must put the role back (role_layout ROLE seat-1x2) before it asserts on the real shape.
+#   notest_layout            writes herdr/layouts/seat-nt.json in the world
+#   role_layout ROLE LAYOUT  points the world's copy of roles/ROLE.json at LAYOUT
+notest_layout() { jq '.id = "seat-nt" | .panes |= map(select(.kind != "test"))' "$REPO/herdr/layouts/seat-1x2.json" > "$REPO/herdr/layouts/seat-nt.json"; }
+role_layout() { jq --arg l "$2" '.pane_layout = $l' "$REPO/roles/$1.json" > "$REPO/roles/$1.json.tmp" && mv "$REPO/roles/$1.json.tmp" "$REPO/roles/$1.json"; }
 h() { herdr --session "$COQ_HERDR_SESSION" "$@"; }
 world_down() {
   [ -n "${COQ_HERDR_SESSION:-}" ] || return 0
@@ -63,3 +90,5 @@ world_down() {
 event_count() { local n=0 f; for f in "$EVENTS"/2*/*/*.json; do [ -f "$f" ] || continue; jq -e --arg k "$1" --argjson c "$2" '.kind == $k and .code == $c' "$f" >/dev/null 2>&1 && n=$((n + 1)); done; echo "$n"; }
 # pane_labels WS TAB: labels of a tab's panes, sorted, pipe-joined.
 pane_labels() { h pane list --workspace "$1" | jq -r --arg t "$2" '[.result.panes[] | select(.tab_id == $t) | .label // ""] | sort | join("|")'; }
+# world_real_belt: put the repo's own runner and flow commands back in the world's monitors.json (before bringup runs).
+world_real_belt() { cp "${REPO_ROOT:-/repo}/herdr/config/monitors.json" "$REPO/herdr/config/monitors.json"; }

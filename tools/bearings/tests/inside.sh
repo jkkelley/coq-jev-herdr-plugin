@@ -14,7 +14,7 @@ check python3 -c 'import json,jsonschema,sys; jsonschema.validate(json.load(open
 
 # A test config: state under /work, dev tier on a small port range.
 cat > /work/config.json <<JSON
-{"schema_version":"1.0.0","project":"t","state_root":"/work/state","listen_host":"127.0.0.1","allowed_hosts":["127.0.0.1","localhost"],"cookie_name":"bearings_key","idle_minutes":5,"settle_ms":300,"stop_tries":3,"stop_try_ms":1000,"max_body_bytes":65536,"max_message_chars":8000,"max_words_chars":4000,"messages_window":50,"open_label_prefix":"OPEN - any tool","pane_split":{"direction":"down","ratio":0.2},
+{"schema_version":"1.0.0","project":"t","state_root":"/work/state","listen_host":"127.0.0.1","allowed_hosts":["127.0.0.1","localhost"],"cookie_name":"bearings_key","idle_minutes":5,"settle_ms":300,"stop_tries":3,"stop_try_ms":1000,"max_body_bytes":65536,"max_message_chars":8000,"max_reply_chars":32000,"max_words_chars":4000,"messages_window":50,"open_label_prefix":"OPEN - any tool","pane_split":{"direction":"down","ratio":0.2},
  "tiers":{"stable":{"page":"\${project}-stable","port":45900,"pane_label":"b-stable","wait_pane_label":"b-stable-wait","checkout":"main"},
           "dev":{"page":"\${project}-dev-\${ticket}","port_range":[45920,45922],"pane_label":"b-dev-\${ticket}","wait_pane_label":"b-dev-\${ticket}-wait","checkout":"slot"}}}
 JSON
@@ -153,6 +153,48 @@ CASE="that refusal split nothing"; check test "$(calls split)" = 0
 env PATH=/work/stubbin:$PATH HERDR_ENV=1 HERDR_PANE_ID=s2 HERDR_TAB_ID=tC $B dev serve "${D[@]}" >/dev/null 2>&1 || true
 CASE="outside a seat layout the calling pane is split once and the new pane takes the label"; check test "$(calls split)" = 1 -a "$(jq -r '[.[] | select(.label == "b-dev-t2")] | length' /work/stub/panes.json)" = 1
 env PATH=/work/stubbin:$PATH HERDR_ENV=1 HERDR_PANE_ID=s2 HERDR_TAB_ID=tC $B dev stop "${D[@]}" >/dev/null 2>&1; sleep 2
+
+# T9 the factory board routes (WO-20261011-616c): /board and /board/data.json serve report/loop's built page behind the page key.
+# board_dir is absolute here because the tool is mounted alone at /skill, with no repository around it.
+jq '.board_dir = "/work/board"' /work/config.json > /work/config-board.json
+BC=(--ticket t3 --config /work/config-board.json --no-herdr)
+BURL=$($B dev serve "${BC[@]}")
+BASE=${BURL%%/\?key=*}; BKEY=${BURL##*key=}
+get() { node -e '
+const [url, cookie] = process.argv.slice(1);
+fetch(url, { headers: cookie ? { cookie } : {} }).then(async (r) => {
+  const body = await r.text();
+  console.log(JSON.stringify({ status: r.status, type: r.headers.get("content-type"), cache: r.headers.get("cache-control"), cookie: r.headers.get("set-cookie"), body }));
+});' "$@"; }
+CASE="/board before the page is built is 503 saying so"; check bash -c 'r=$(cat); test "$(jq -r .status <<<"$r")" = 503 && jq -r .body <<<"$r" | jq -e ".error == \"board not built\"" >/dev/null' < <(get "$BASE/board?key=$BKEY")
+CASE="/board/data.json before the page is built is 503 too"; check bash -c 'test "$(jq -r .status < <(cat))" = 503' < <(get "$BASE/board/data.json?key=$BKEY")
+CASE="a 503 does not leak the server's own directory"; check bash -c '! grep -q /work/board < <(cat)' < <(get "$BASE/board?key=$BKEY")
+mkdir -p /work/board
+printf '<!doctype html><title>board</title><p id="x">first &lt;draw&gt;</p>\n' > /work/board/index.html
+printf '{"number":1,"headline":"first"}\n' > /work/board/data.json
+get "$BASE/board?key=$BKEY" > /work/board-page.json
+CASE="/board serves the built page as html"; check bash -c 'test "$(jq -r .status /work/board-page.json)" = 200 && jq -r .type /work/board-page.json | grep -q "^text/html" && test "$(jq -r .body /work/board-page.json)" = "$(cat /work/board/index.html)"'
+CASE="/board is never cached"; check test "$(jq -r .cache /work/board-page.json)" = no-store
+CASE="/board sets the page cookie so the page's own poll is allowed"; check bash -c 'jq -r .cookie /work/board-page.json | grep -q "^bearings_key=$0; HttpOnly; SameSite=Strict; Path=/"' "$BKEY"
+get "$BASE/board/data.json" "bearings_key=$BKEY" > /work/board-data.json
+CASE="/board/data.json with only the cookie serves the data as json"; check bash -c 'test "$(jq -r .status /work/board-data.json)" = 200 && jq -r .type /work/board-data.json | grep -q "^application/json" && test "$(jq -c ".body | fromjson" /work/board-data.json)" = "{\"number\":1,\"headline\":\"first\"}"'
+CASE="/board/ with a trailing slash is the page too"; check test "$(get "$BASE/board/?key=$BKEY" | jq -r .status)" = 200
+printf '{"number":2,"headline":"second"}\n' > /work/board/data.json
+CASE="a rewritten data.json is served at once"; check test "$(get "$BASE/board/data.json?key=$BKEY" | jq -r '.body | fromjson | .number')" = 2
+CASE="/board without the key is refused with 403"; check test "$(get "$BASE/board" | jq -r .status)" = 403
+CASE="/board/data.json with a wrong key is refused with 403"; check test "$(get "$BASE/board/data.json?key=0000" | jq -r .status)" = 403
+CASE="/board is read only (POST is not a route)"; check test "$(node -e 'fetch(process.argv[1],{method:"POST",body:"{}"}).then(r=>console.log(r.status))' "$BASE/board?key=$BKEY")" != 200
+$B dev stop "${BC[@]}" >/dev/null; sleep 2
+# Without board_dir in the config the routes answer 404 and say why.
+$B dev serve --ticket t4 "${C[@]}" >/work/t4.url
+T4=$(cat /work/t4.url)
+CASE="no board_dir in the config -> /board is 404 naming the key"; check bash -c 'r=$(cat); test "$(jq -r .status <<<"$r")" = 404 && jq -r .body <<<"$r" | grep -q board_dir' < <(get "${T4%%/\?key=*}/board?key=${T4##*key=}")
+$B dev stop --ticket t4 "${C[@]}" >/dev/null; sleep 2
+jq '.board_dir = ""' /work/config.json > /work/config-empty.json
+set +e; out=$(node /skill/scripts/server.mjs --tier dev --ticket t5 --config /work/config-empty.json 2>&1); rc=$?; set -e
+CASE="an empty board_dir fails at start (exit 3) naming the key"; check test "$rc" = 3 -a "${out#*board_dir}" != "$out"
+
+. /skill/tests/sitrep.sh
 
 echo "bearings tests: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ] || exit 3

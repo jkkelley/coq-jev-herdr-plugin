@@ -19,6 +19,24 @@ import path from "node:path";
 import { TOOL_ROOT, argv, loadConfig, resolveTier } from "./lib/config.mjs";
 
 const ASSETS = path.join(TOOL_ROOT, "assets");
+const REPO_ROOT = path.resolve(TOOL_ROOT, "..", "..");
+// The page's own version (WO-20261012-668a, ported from the sitrep-panel-v1 handoff). What broke: a renderer change reached
+// only tabs that happened to reload, so a tab left open met a SITREP payload its old code could not draw and printed
+// [object Object]. Why this fix: the server hashes page.html and theme.css, injects the hash as @@BUILD@@ and reports it on
+// /state; the page reloads itself once (sessionStorage guard) when the two differ. Rejected: a version constant edited by
+// hand, which is forgotten. Cost: two small file reads per /state poll.
+const buildStamp = () => {
+  try {
+    return crypto
+      .createHash("sha1")
+      .update(fs.readFileSync(path.join(ASSETS, "page.html")))
+      .update(fs.readFileSync(path.join(ASSETS, "theme.css")))
+      .digest("hex")
+      .slice(0, 12);
+  } catch {
+    return "";
+  }
+};
 const args = process.argv.slice(2);
 const { val, has } = argv(args);
 const usage = () => {
@@ -31,6 +49,8 @@ const tier = val("--tier");
 if (!tier) usage();
 const { cfg } = loadConfig(val("--config"));
 const T = resolveTier(cfg, tier, val("--ticket"));
+// Where the factory board's page is built; relative to the repository root, or absolute. Absent: /board answers 404.
+const BOARD_DIR = cfg.board_dir ? path.resolve(REPO_ROOT, cfg.board_dir) : null;
 const DIR = T.stateDir;
 const file = (f) => path.join(DIR, f);
 fs.mkdirSync(DIR, { recursive: true });
@@ -304,9 +324,33 @@ if (has("--stop")) {
       touch();
       const html = fs
         .readFileSync(path.join(ASSETS, "page.html"), "utf8")
-        .replace(/@@THEME@@;?/, () => fs.readFileSync(path.join(ASSETS, "theme.css"), "utf8"));
+        .replace(/@@THEME@@;?/, () => fs.readFileSync(path.join(ASSETS, "theme.css"), "utf8"))
+        .replace(/@@BUILD@@/g, buildStamp());
       res.setHeader("set-cookie", `${cfg.cookie_name}=${KEY}; HttpOnly; SameSite=Strict; Path=/`);
       return send(res, 200, `<!doctype html>\n${html}`, "text/html; charset=utf-8");
+    }
+    // The factory board (WO-20261011-616c): report/loop's watch writes index.html and data.json into cfg.board_dir and this serves
+    // them, behind the same key and cookie as the bearings page. The cookie is set here too because the board page polls
+    // /board/data.json with no ?key= of its own: opened by key link on /board first, it would be refused on its first poll
+    // otherwise (the same 403 the bearings page avoids by setting it on /). Nothing is cached: the page redraws from data.json
+    // every few seconds and a cached copy would show a stale floor. A board that was never built answers 503 in JSON naming the
+    // fix, not a bare 404, so the owner's page says "not built" instead of "not found". touch() only for the page, not the
+    // poll: an open board must not keep a bearings tier alive past idle_minutes.
+    if (req.method === "GET" && (url.pathname === "/board" || url.pathname === "/board/" || url.pathname === "/board/data.json")) {
+      if (!BOARD_DIR) return send(res, 404, { error: "no board_dir in the bearings config" });
+      const isPage = url.pathname !== "/board/data.json";
+      let text;
+      try {
+        text = fs.readFileSync(path.join(BOARD_DIR, isPage ? "index.html" : "data.json"), "utf8");
+      } catch (e) {
+        if (e.code === "ENOENT") return send(res, 503, { error: "board not built", fix: "run loop.sh watch (report/loop) so it writes the page" });
+        return send(res, 500, { error: "board unreadable" });
+      }
+      if (isPage) {
+        touch();
+        res.setHeader("set-cookie", `${cfg.cookie_name}=${KEY}; HttpOnly; SameSite=Strict; Path=/`);
+      }
+      return send(res, 200, text, isPage ? "text/html; charset=utf-8" : "application/json");
     }
     if (req.method === "GET" && url.pathname === "/health") {
       return send(res, 200, { ok: true, page: T.page, tier: T.tier, ticket: T.ticket, pid: process.pid });
@@ -320,6 +364,7 @@ if (has("--stop")) {
         answers: answersNow(),
         delivered: readJson("delivered.json", {}),
         messages: readJsonl("messages.jsonl").slice(-cfg.messages_window),
+        build: buildStamp(),
       });
     }
     // An upload ahead of the message text it will ride in with (WK-20260916-068). The body is

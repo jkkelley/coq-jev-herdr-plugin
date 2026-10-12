@@ -19,6 +19,7 @@
     "max_body_bytes",
     "file_max_bytes",
     "max_message_chars",
+    "max_reply_chars",
     "max_words_chars",
     "messages_window",
     "pane_split",
@@ -74,6 +75,10 @@
       "minimum": 1024
     },
     "max_message_chars": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_reply_chars": {
       "type": "integer",
       "minimum": 1
     },
@@ -173,6 +178,11 @@
       "type": "integer",
       "minimum": 1024,
       "description": "Cap on one uploaded attachment in bytes (POST /file); the JSON body cap max_body_bytes does not apply to uploads."
+    },
+    "board_dir": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Where the factory board page is built (report/loop watch writes index.html and data.json there). GET /board and GET /board/data.json serve it behind the page key. Relative to the repository root, or absolute. Must equal out_dir in report/loop/config/board.json (make -C report/loop lint checks). Absent: /board answers 404."
     }
   }
 }

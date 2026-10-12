@@ -102,3 +102,10 @@
 
 # runtime work queue state (queue/bin/queue.sh), never committed
 queue/items/
+
+# the factory board's drawn page and data (report/loop/loop.sh watch): derived from the records, rebuilt on every change
+report/loop/out/
+# route runner state (factory/bin/route.sh): the routed ledger, the first-start boundary and the belt file. WO-20261011-38c7.
+# What it would break if committed: every runner start in another checkout would read this checkout's ledger and either
+# skip records it never saw or route ones already routed. Runtime state, never committed, same as queue/items/ above.
+factory/state/

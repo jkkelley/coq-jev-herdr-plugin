@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T162339Z-201-f74ub",
+  "at": "2026-10-11T16:23:39Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-616c",
+  "kind": "test",
+  "ticket": "WO-20261011-616c",
+  "pane": null,
+  "note": "test.passed: report/loop 7 of 7, tools/bearings suite green, make lint green (rc 0)",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/b96760da-eed3-413f-ad22-5564a12c07d8/scratchpad/loop-test.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/b96760da-eed3-413f-ad22-5564a12c07d8/scratchpad/bearings-test.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/b96760da-eed3-413f-ad22-5564a12c07d8/scratchpad/lint.log"
+  ],
+  "observations": []
+}

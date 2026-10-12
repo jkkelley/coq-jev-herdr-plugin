@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T010000Z-409-ccccc",
+  "at": "2026-10-11T01:00:00Z",
+  "code": 409,
+  "seat": "merger",
+  "kind": "merge",
+  "ticket": "WO-20261001-dd01",
+  "pane": null,
+  "note": "synthetic conflict, answered below",
+  "evidence": [],
+  "observations": []
+}

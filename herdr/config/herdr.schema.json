@@ -15,6 +15,8 @@
     "agent_start_timeout_ms",
     "down_wait_seconds",
     "retire_poll_seconds",
+    "nudge_wait_seconds",
+    "nudge_settle_seconds",
     "max_agents",
     "bringup_gate",
     "require_guard",
@@ -22,6 +24,8 @@
     "runtime_bin",
     "keys",
     "control_plane",
+    "belt",
+    "break_glass",
     "halt_flag",
     "monitor_task"
   ],
@@ -65,6 +69,16 @@
       "type": "integer",
       "minimum": 1,
       "description": "how long retire.sh waits for the agent to leave after /exit before it escalates"
+    },
+    "nudge_wait_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "WO-20261011-dc0d: how long seat.sh watches a freshly briefed claude seat for the compaction-guard ack line before it logs no ack and moves on (not an error)"
+    },
+    "nudge_settle_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "WO-20261011-dc0d: after the ack, how long seat.sh polls agent_status for a stable idle; idle sends the one continue prompt, still working at the end sends none"
     },
     "max_agents": {
       "type": "integer",
@@ -131,6 +145,69 @@
             "null"
           ],
           "description": "null until WO-20261010-539f stands the bus up; bringup.sh then requires a 200"
+        }
+      }
+    },
+    "belt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "slot",
+        "status",
+        "settle_seconds"
+      ],
+      "properties": {
+        "slot": {
+          "type": "string",
+          "minLength": 1,
+          "description": "the reserved monitors slot (herdr/config/monitors.json name) that runs the route runner; recover.sh restarts it through monitors.sh take"
+        },
+        "status": {
+          "type": "string",
+          "minLength": 1,
+          "description": "command whose exit 0 means the belt file is fresh; ${repo} is the checkout. The definition of stale stays in factory/config/runner.json"
+        },
+        "settle_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 120,
+          "description": "how long recover.sh --apply waits for a fresh belt after restarting the runner"
+        }
+      }
+    },
+    "break_glass": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ttl_seconds",
+        "hook_pre_timeout_seconds",
+        "hook_post_timeout_seconds",
+        "bearings_tier"
+      ],
+      "description": "DEC-break-glass-one-time: the owner-authorised, one-command bypass of seat.sh --break-glass",
+      "properties": {
+        "ttl_seconds": {
+          "type": "integer",
+          "minimum": 30,
+          "maximum": 3599,
+          "description": "how long a break glass may last before seat.sh restores the role settings; under one hour, never a session or a day"
+        },
+        "hook_pre_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "description": "timeout Claude Code gives the PreToolUse guard hook of a break glass (break-glass-guard.sh pre); it only reads a file and takes a mkdir"
+        },
+        "hook_post_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120,
+          "description": "timeout Claude Code gives the PostToolUse guard hook of a break glass (break-glass-guard.sh post); it writes the 201 record and runs seat.sh --break-glass-restore, so it gets longer"
+        },
+        "bearings_tier": {
+          "type": "string",
+          "minLength": 1,
+          "description": "the bearings tier whose answers.jsonl holds the owner answer"
         }
       }
     },

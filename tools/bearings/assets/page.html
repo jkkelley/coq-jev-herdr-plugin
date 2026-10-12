@@ -242,6 +242,7 @@
       return `${h} hr${rem ? ` ${rem} min` : ""} ago`;
     };
 
+    const PAGE_BUILD = "@@BUILD@@";
     const tick = () => {
       $("clock").textContent = `${iso().slice(11, 19)}Z`;
       setTimeout(tick, 1000 - (Date.now() % 1000) + 5);
@@ -483,6 +484,163 @@
       el.appendChild(text);
       return el;
     };
+
+    // ---- SITREP panel -------------------------------------------------------
+    // A message whose text starts with SITREP_TAG carries a JSON briefing instead of prose.
+    // It renders as a full width instrument panel in the thread, built node by node so every
+    // string still lands as text and nothing in the payload can be markup. An unparseable
+    // payload falls back to an ordinary bubble, which is the existing behaviour.
+    const SITREP_TAG = "#SITREP/v1#";
+    const sitrepData = (t) => {
+      if (typeof t !== "string" || !t.startsWith(SITREP_TAG)) return null;
+      try {
+        const d = JSON.parse(t.slice(SITREP_TAG.length));
+        return d && typeof d === "object" ? d : null;
+      } catch {
+        return null;
+      }
+    };
+    const mk = (tag, cls, text) => {
+      const el = document.createElement(tag);
+      if (cls) el.className = cls;
+      if (text !== undefined && text !== null && text !== "")
+        el.textContent = String(text);
+      return el;
+    };
+    const srStat = (s) => {
+      const c = mk("div", "sr-stat");
+      c.append(mk("span", "sr-stat-label", s.label));
+      const row = mk("div", "sr-stat-row");
+      row.append(mk("span", "sr-stat-value", s.value));
+      if (s.note) row.append(mk("span", "sr-stat-note " + (s.tone || "good"), s.note));
+      c.append(row);
+      return c;
+    };
+    // A link is a badge, never raw text, and its label is short. Only http and https are built:
+    // anything else is dropped rather than rendered, because the payload is data and data does not
+    // get to choose a scheme.
+    const srShortUrl = (href) => {
+      try {
+        const u = new URL(href);
+        const pr = u.pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/(\d+)/);
+        if (pr) return pr[2] + " #" + pr[3];
+        const tail = u.pathname.replace(/\/$/, "").split("/").filter(Boolean).pop();
+        return (u.hostname.replace(/^www\./, "") + (tail ? " / " + tail : "")).slice(0, 40);
+      } catch {
+        return String(href).slice(0, 40);
+      }
+    };
+    const srLinks = (links) => {
+      const row = mk("div", "sr-links");
+      let n = 0;
+      links.forEach((l) => {
+        if (n >= 3 || !l || !l.href) return;
+        let ok = false;
+        try {
+          const u = new URL(l.href);
+          ok = u.protocol === "http:" || u.protocol === "https:";
+        } catch {}
+        if (!ok) return;
+        n += 1;
+        const a = document.createElement("a");
+        a.className = "sr-link";
+        a.href = l.href;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = l.label || srShortUrl(l.href);
+        a.title = l.href;
+        row.append(a);
+      });
+      return n ? row : null;
+    };
+    const srRef = (id, title) => {
+      // The reference sits under the sentence, never inside it. The owner's rule is that a ticket is
+      // never named without its full title, and the sentence only stays short if the title is not in it.
+      const r = mk("div", "sr-ref");
+      r.append(mk("span", "sr-ref-id", id));
+      if (title) r.append(mk("span", "sr-ref-title", title));
+      return r;
+    };
+    const srItem = (it) => {
+      const c = mk("div", "sr-item " + (it.tone === "bad" ? "bad" : ""));
+      const head = mk("div", "sr-item-head");
+      if (it.check) head.append(mk("span", "sr-check", "✓"));
+      if (it.tone === "bad") head.append(mk("span", "sr-dot", ""));
+      head.append(mk("span", "sr-item-label " + (it.tone || ""), it.label));
+      c.append(head, mk("p", "sr-item-text", it.text));
+      if (it.ref) c.append(srRef(it.ref, it.ref_title));
+      if (Array.isArray(it.links) && it.links.length) {
+        const row = srLinks(it.links);
+        if (row) c.append(row);
+      }
+      return c;
+    };
+    const srQueue = (q) => {
+      const c = mk("div", "sr-q");
+      const top = mk("div", "sr-q-top");
+      top.append(mk("span", "sr-q-name", q.name));
+      const nums = mk("span", "sr-q-nums");
+      nums.append(mk("span", "sr-q-count", q.count));
+      if (q.delta) nums.append(mk("span", "sr-q-delta " + (q.tone || ""), q.delta));
+      top.append(nums);
+      c.append(top);
+      if (q.urgency) c.append(mk("span", "sr-badge " + (q.tone || ""), q.urgency));
+      // next_items is the structured form; next stays as plain strings so a tab running an older
+      // renderer shows the same information as text instead of [object Object].
+      const entries = Array.isArray(q.next_items) && q.next_items.length ? q.next_items : q.next;
+      if (Array.isArray(entries) && entries.length) {
+        const list = mk("ul", "sr-q-next");
+        entries.slice(0, 5).forEach((n) => {
+          const li = mk("li", "");
+          if (n && typeof n === "object") {
+            li.append(mk("span", "sr-n-id", n.id));
+            if (n.title) li.append(mk("span", "sr-n-title", n.title));
+          } else {
+            li.textContent = String(n);
+          }
+          list.append(li);
+        });
+        c.append(list);
+      }
+      return c;
+    };
+    const sitrepEl = (n) => {
+      const d = n.data;
+      const el = mk("div", "sitrep" + (n.fresh ? " new" : ""));
+      el.dataset.key = n.key;
+      const head = mk("div", "sr-head");
+      head.append(mk("span", "sr-mark", "⚡"), mk("span", "sr-title", "SITREP"));
+      head.append(mk("span", "sr-slash", "//"));
+      if (d.scope) head.append(mk("span", "sr-scope", d.scope));
+      if (d.state_label) {
+        const pill = mk("span", "sr-pill " + (d.state || "nominal"));
+        pill.append(mk("i", "sr-ping", ""), mk("span", "", d.state_label));
+        head.append(pill);
+      }
+      el.append(head);
+      if (d.updated) el.append(mk("div", "sr-updated", "UPDATED " + d.updated));
+      if (Array.isArray(d.stats) && d.stats.length) {
+        const g = mk("div", "sr-stats");
+        d.stats.slice(0, 4).forEach((s) => g.append(srStat(s)));
+        el.append(g);
+      }
+      (Array.isArray(d.blocks) ? d.blocks : []).forEach((b) => {
+        const sec = mk("section", "sr-block");
+        const h = mk("div", "sr-block-head");
+        h.append(mk("span", "sr-block-n", b.n), mk("span", "sr-block-name", b.name));
+        sec.append(h);
+        if (Array.isArray(b.queues) && b.queues.length) {
+          const g = mk("div", "sr-qs");
+          b.queues.forEach((q) => g.append(srQueue(q)));
+          sec.append(g);
+        }
+        (Array.isArray(b.items) ? b.items : []).slice(0, 2).forEach((it) =>
+          sec.append(srItem(it)),
+        );
+        el.append(sec);
+      });
+      return el;
+    };
     const drawThread = () => {
       const server = state.messages || [];
       const known = new Set(server.map((m) => m.id));
@@ -530,16 +688,26 @@
         ]
           .filter(Boolean)
           .join(" ");
-        nodes.push({
-          kind: "bubble",
-          key: m.id,
-          cls,
-          title: `${m.at.slice(11, 16)}Z`,
-          text: m.text,
-          files: m.files || null,
-          meta: m === lastMine ? CHAT_WORD[m.st] : "",
-          metaGood: m.st === "received",
-        });
+        const sr = side(m) === "claude" ? sitrepData(m.text) : null;
+        nodes.push(
+          sr
+            ? {
+                kind: "sitrep",
+                key: m.id,
+                data: sr,
+                fresh: !shown.has(m.id),
+              }
+            : {
+                kind: "bubble",
+                key: m.id,
+                cls,
+                title: `${m.at.slice(11, 16)}Z`,
+                text: m.text,
+                files: m.files || null,
+                meta: m === lastMine ? CHAT_WORD[m.st] : "",
+                metaGood: m.st === "received",
+              },
+        );
       });
       if (typingNow) nodes.push({ kind: "typing", key: "typing" });
       // Stay pinned to the newest message unless the user scrolled up to read; their own new
@@ -571,7 +739,9 @@
             ? stampEl(n)
             : n.kind === "typing"
               ? typingEl()
-              : bubbleEl(n),
+              : n.kind === "sitrep"
+                ? sitrepEl(n)
+                : bubbleEl(n),
         );
       }
       all.forEach((m) => shown.add(m.id));
@@ -593,8 +763,9 @@
       if (newClaude.length) {
         if (!pinned || document.hidden)
           newClaude.forEach((m) => unread.add(m.id));
+        // A SITREP message is a JSON payload; a screen reader gets its label, not the braces.
         $("live-announcer").textContent = newClaude
-          .map((m) => m.text)
+          .map((m) => (sitrepData(m.text) ? "SITREP received" : m.text))
           .join(" ");
       }
       updateJumpBadge();
@@ -1003,6 +1174,17 @@
         if (text !== seen) {
           const newQuestions =
             JSON.stringify(s.questions) !== JSON.stringify(state.questions);
+          // A renderer newer than this tab is running: take it once, then carry on.
+          if (s.build && s.build !== PAGE_BUILD) {
+            const once = "bearings-build-" + s.build;
+            try {
+              if (!sessionStorage.getItem(once)) {
+                sessionStorage.setItem(once, "1");
+                location.reload();
+                return;
+              }
+            } catch {}
+          }
           seen = text;
           state = s;
           if (at < 0 || newQuestions)

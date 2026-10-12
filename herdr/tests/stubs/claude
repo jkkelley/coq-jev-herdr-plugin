@@ -3,12 +3,31 @@
 # herdr's claude manifest (agent-detection/remote/claude.toml) reads the pane as idle from the OSC title's ✳ prefix
 # (rule osc_title_idle) and from the ❯ prompt box line, so `agent start` returns ready in a few seconds. The flags are
 # echoed so a case can read them back off the screen, and /exit ends it the way the real one does.
+#
+# WO-20261011-dc0d: what the stub does after the FIRST line it is given (the seat's brief) is read from the file
+# ${CLAUDE_STUB_MODE_FILE:-$HOME/claude-stub.mode}, so a case picks the behaviour per seat without restarting herdr:
+#   (absent or empty)   nothing: no guard memo ever arrives
+#   ack                 prints the guard's reply line "● ACK compaction-guard ..." and stays idle (the seat that stalls)
+#   ack-work N          the same ack, then the OSC title shows a working spinner for N seconds (the seat that carries on)
+# Every later line is only echoed, so a case counts the prompts the seat received by grepping "> ".
 printf '\033]0;\xe2\x9c\xb3 stub claude\007'
 printf '\n stub claude %s\n\n' "$*"
 printf '\xe2\x95\xad%s\xe2\x95\xae\n' "$(printf '\xe2\x94\x80%.0s' $(seq 1 60))"
 printf '\xe2\x94\x82 \xe2\x9d\xaf %-57s\xe2\x94\x82\n' ""
 printf '\xe2\x95\xb0%s\xe2\x95\xaf\n' "$(printf '\xe2\x94\x80%.0s' $(seq 1 60))"
+mode_file="${CLAUDE_STUB_MODE_FILE:-$HOME/claude-stub.mode}"
+n=0
 while IFS= read -r line; do
   printf '> %s\n' "$line"
   [ "$line" = /exit ] && exit 0
+  n=$((n + 1))
+  [ "$n" = 1 ] || continue
+  read -r mode secs < "$mode_file" 2>/dev/null || mode=""
+  case "$mode" in
+    ack | ack-work)
+      printf '\n\xe2\x97\x8f ACK compaction-guard stub-claude 30\n\n'
+      if [ "$mode" = ack-work ]; then
+        printf '\033]0;\xe2\xa0\x90 stub claude\007'; sleep "${secs:-10}"; printf '\033]0;\xe2\x9c\xb3 stub claude\007'
+      fi ;;
+  esac
 done

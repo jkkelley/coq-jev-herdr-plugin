@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T131923Z-201-1uk94",
+  "at": "2026-10-12T13:19:23Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-668a",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-668a",
+  "pane": "wD3:p7Q",
+  "note": "make -C tools/bearings test: 113 passed, 0 failed (exit 0). make lint: lint all ok (exit 0).",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/6ad0442e-630b-4707-88ec-f6adc75c7597/scratchpad/bearings-test.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/6ad0442e-630b-4707-88ec-f6adc75c7597/scratchpad/lint.log"
+  ],
+  "observations": []
+}

@@ -10,7 +10,6 @@ One level down only. A child of a child is listed in its own directory, not here
 |---|---|---|---|---|
 | `WO-20261011-5355` | draft | p0 | WO-20261011-38c7 | [Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped](WO-20261011-5355-belt-on-bringup-sh-starts-the-route-runner-in-it.md) |
 | `WO-20261010-d354` | ready | p0 | - | [Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree](WO-20261010-d354-dated-entry-files-yyyy-mm-yyyymmdd-name-ext-fron.md) |
-| `WO-20261011-616c` | in-progress | p0 | - | [Factory board: report/loop renders the lines from records and bearings stable serves it live](WO-20261011-616c-factory-board-report-loop-renders-the-lines-from.md) |
 | `WO-20261011-fa78` | draft | p0 | - | [First ticket through the line: PR 11 closes with a seat at every station and no by-hand record](WO-20261011-fa78-first-ticket-through-the-line-pr-11-closes-with-.md) |
 | `WO-20261010-fbad` | ready | p0 | - | [Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles](WO-20261010-fbad-land-the-p0-foundation-branch-spec-00-01-03-04-0.md) |
 | `WO-20261011-af9d` | draft | p0 | - | [Merger seat leases its own slot: a door 2 seat that runs git gets a treehouse worktree held by its own name, so cleanup never checks out main in a PR's slot](WO-20261011-af9d-merger-seat-leases-its-own-slot-a-door-2-seat-th.md) |
@@ -21,5 +20,4 @@ One level down only. A child of a child is listed in its own directory, not here
 | `WO-20261010-976e` | draft | p1 | - | [SPEC-02 roles and permissions written from roles/*.json](WO-20261010-976e-spec-02-roles-and-permissions-written-from-roles.md) |
 | `WO-20261010-1c23` | draft | p1 | - | [SPEC-13 testing and lint: local fast, CI full, container-sandbox as source of truth](WO-20261010-1c23-spec-13-testing-and-lint-local-fast-ci-full-cont.md) |
 | `WO-20261010-2dab` | draft | p1 | - | [SPEC-15 SDLC end to end with parallel PRs and cleanup](WO-20261010-2dab-spec-15-sdlc-end-to-end-with-parallel-prs-and-cl.md) |
-| `WO-20261011-dc0d` | in-progress | p2 | - | [seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never ends its first turn on the memo's 'nothing else'](WO-20261011-dc0d-seat-sh-nudges-a-fresh-seat-past-the-compaction-.md) |
 | `WO-20261011-3435` | draft | p3 | - | [Worker test-pane fence closes its gaps: SPEC-04 s-seat lists COQ_TEST_PANE, testpane.sh denies pane send-text and send-keys, brief.sh usage names --test-pane](WO-20261011-3435-worker-test-pane-fence-closes-its-gaps-spec-04-s.md) |
