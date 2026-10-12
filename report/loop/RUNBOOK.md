@@ -188,7 +188,7 @@ Dev rebuilds its own page.
 Uat and stable serve only what a promotion put in `out_dir/releases/<build>`, behind a `current` link, so the build number on stable is the build uat held.
 `promote.sh` is the only way a page moves forward; a hand copy breaks that promise.
 `GET /blueprint` is the page, `GET /blueprint/data.json` its data and `GET /healthz` the tier's build, for the pane check.
-`herdr/bin/bringup.sh` plugs the three servers into slots 2.3.1, 2.3.2 and 2.3.3 of the monitors grid, and `herdr/bin/recover.sh` restarts one that was killed.
+`herdr/bin/bringup.sh` plugs the three servers into slots 3.3.1, 3.3.2 and 3.3.3 of the monitors grid (the bottom row of the shells tab; the free row of tab 2 belongs to the owner's watches), and `herdr/bin/recover.sh` restarts one that was killed.
 `report/blueprint/serve.sh --check <tier>` is the check both use: a label outlives its process, so the label alone proves nothing.
 
 ### Add a view or a tier to another repository, by config only

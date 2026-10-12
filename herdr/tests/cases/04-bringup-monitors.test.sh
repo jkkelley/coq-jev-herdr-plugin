@@ -46,9 +46,9 @@ h pane wait-output "$bp" --match 'watch: ' --source recent-unwrapped --timeout 3
 assert_match "2.2.2 runs the route runner (WO-20261011-6842)" "$st" "2\.2\.2 route runner - runner  \[[^]]+\]  in use"
 assert_match "2.2.3 runs the flow watch (WO-20261011-6842)" "$st" "2\.2\.3 flow watch - flow  \[[^]]+\]  in use"
 # The three blueprint servers of WO-20261011-ceea: dev, uat and stable, one labelled pane each, started by the same bringup.
-assert_match "2.3.1 runs the blueprint dev server" "$st" "2\.3\.1 blueprint dev server - blueprint-dev  \[[^]]+\]  in use"
-assert_match "2.3.2 runs the blueprint uat server" "$st" "2\.3\.2 blueprint uat server - blueprint-uat  \[[^]]+\]  in use"
-assert_match "2.3.3 runs the blueprint stable server" "$st" "2\.3\.3 blueprint stable server - blueprint-stable  \[[^]]+\]  in use"
+assert_match "3.3.1 runs the blueprint dev server" "$st" "3\.3\.1 blueprint dev server - blueprint-dev  \[[^]]+\]  in use"
+assert_match "3.3.2 runs the blueprint uat server" "$st" "3\.3\.2 blueprint uat server - blueprint-uat  \[[^]]+\]  in use"
+assert_match "3.3.3 runs the blueprint stable server" "$st" "3\.3\.3 blueprint stable server - blueprint-stable  \[[^]]+\]  in use"
 assert_match "3.1.1 is an open shell" "$st" "3\.1\.1 OPEN - any shell  \[[^]]+\]  open"
 assert_eq "the monitor seat is live" "$(h agent get monitor | jq -r .result.agent.agent_status)" idle
 assert_eq "twelve note 100 records, one per repaired node" "$(event_count note 100)" 12

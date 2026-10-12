@@ -90,13 +90,16 @@ fi
 #   when either pane cannot be plugged in, and both need jq and herdr on PATH where herdr was started.
 MC="${COQ_MONITORS_CONFIG:-$SL_HERDR/config/monitors.json}"
 # BREADCRUMB 2026-10-11 - WO-20261011-ceea. What broke: this loop judged a pane by its label alone, and the label outlives the
-#   process: a blueprint server killed in its pane left "2.2.2 blueprint dev server - blueprint-dev [..] in use", so --check said ok
+#   process: a blueprint server killed in its pane left "3.3.1 blueprint dev server - blueprint-dev [..] in use", so --check said ok
 #   and a rerun repaired nothing while the page was down (AC-H3 asks that a killed server pane be restarted). Why this fix: a
 #   reserved slot may carry `check` beside `command` in monitors.json, a command that exits 0 while the process answers; a slot
 #   that is labelled but fails its check is restarted by `monitors.sh take`, which restarts in the slot's own pane. Slots with no
 #   `check` behave as before. Rejected: probing the pane's foreground process (herdr does not expose it to this script) and
 #   dropping the label on failure (take already restarts in place). Cost: the check runs once per slot per run, and a server
 #   restarted by this run is not re-checked until the next one, because it needs a moment to listen.
+#   Slots: the three servers sit at 3.3.1 to 3.3.3 (bottom row of the shells tab), not in the free row of tab 2 (2.3.1 to 2.3.3):
+#   the owner's turn and record watches live at 2.3.1 and 2.3.2 (backlog 60l24 moves them into this repo), and a blueprint server
+#   reserved there would be "restarted" over a watch. monitors.json is JSON and cannot carry this comment.
 while IFS=$'\t' read -r name what cmd chk; do
   cmd="${cmd//\$\{repo\}/$SL_REPO}"; chk="${chk//\$\{repo\}/$SL_REPO}"
   st="$("$MON" status 2>/dev/null)"

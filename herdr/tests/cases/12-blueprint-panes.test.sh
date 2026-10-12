@@ -24,7 +24,7 @@ assert_match "the three server panes read ok" "$(tr '\n' ' ' <<<"$chk")" "ok pan
 
 echo "-- a killed server: the label stays, the check fails, recover restarts it"
 pkill -f 'server.py --tier dev'; dead dev; assert_eq "the dev server is dead" "$?" 0
-assert_match "its slot is still labelled in use" "$("$REPO/herdr/bin/monitors.sh" status)" "2\.2\.2 blueprint dev server - blueprint-dev  \[[^]]+\]  in use"
+assert_match "its slot is still labelled in use" "$("$REPO/herdr/bin/monitors.sh" status)" "3\.3\.1 blueprint dev server - blueprint-dev  \[[^]]+\]  in use"
 chk="$("$BU" --check --worktree "$REPO" 2>&1)"; rc=$?
 assert_eq "bringup --check now exits 1" "$rc" 1
 assert_match "and names the dead server" "$chk" "FAILED pane-blueprint-dev \(slot blueprint-dev is up but its check failed\)"
