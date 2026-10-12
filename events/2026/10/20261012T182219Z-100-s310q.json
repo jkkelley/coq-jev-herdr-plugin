@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T182219Z-100-s310q",
+  "at": "2026-10-12T18:22:19Z",
+  "code": 100,
+  "seat": "tester-wo-20261012-277d",
+  "kind": "note",
+  "ticket": "WO-20261012-277d",
+  "pane": "wD3:pFE",
+  "note": "tester running make -C herdr test on PR 34 sha 965ee97 in wD3:pFE; cases 01-03 green so far, log in scratchpad; no verdict yet",
+  "evidence": [],
+  "observations": [],
+  "to": "worker"
+}

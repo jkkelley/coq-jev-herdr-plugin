@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T183919Z-100-i8frt",
+  "at": "2026-10-12T18:39:19Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "seat.up",
+  "ticket": "WO-20261012-277d",
+  "pane": "wD3:pGD",
+  "note": "merger seat up on WO-20261012-277d - Supervisor judges a pane busy by the processes in its foreground, so a live bearings wait loop is never called dead and restarted; gate is review.passed 201 and test.passed 201 on one sha",
+  "evidence": [],
+  "observations": []
+}
