@@ -75,6 +75,12 @@
           "name": "glass",
           "what": "break glass restore watch",
           "command": "while :; do ${repo}/herdr/bin/seat.sh --break-glass-sweep; sleep 15; done"
+        },
+        {
+          "pos": "2.3.2",
+          "name": "policy",
+          "what": "policy watch",
+          "command": "${repo}/factory/bin/policy.sh run"
         }
       ]
     },
