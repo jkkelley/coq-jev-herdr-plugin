@@ -52,6 +52,32 @@
 
 
 
+
+## Checkpoint 2026-10-12 15:46 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker. Treehouse slot 7 (lease holder is this ticket), branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, no PR yet. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Step 3 landed: factory/RUNBOOK.md documents the optional row fields (with merge-main, when, supersede), the routes table rows 3, 4, 5, 6, 7 and 11, a new section The gate rules, and busy_grace_seconds under Tune it.
+- Steps 1 and 2 are in earlier checkpoints: gate.sh with route.sh guards (cases 12-gate, 13-gate-route), and the flow watch busy rule (case 14-flow-busy). Factory suite 18 passed 0 failed, make -C factory lint ok.
+
+#### Active Tasks
+
+- Step 4: close out. Run the factory suite once more on the final tree, then work-order.sh evidence --observed for AC-H1 and AC-H2, the retro note (findings: tester and merger playbooks cannot name supersedes or the tree rule because roles/ is denied to a worker; case 04-restart raced a TERM; routes.schema.json existed twice and had drifted, now identical; event.sh in a slot writes to the slot, not the checkout), work-order.sh done, push, gh pr create with the criteria as the body, work-order.sh submit --pr N, push the archive move, pr.opened 100 with sha and pr.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Step 4 above remains; run every command through herdr/bin/testpane.sh in pane wD3:p8J.
+
 ## Checkpoint 2026-10-12 15:44 UTC
 
 ### Current state
