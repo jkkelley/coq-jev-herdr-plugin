@@ -10,8 +10,8 @@
 # Flags: --config FILE (default factory/config/runner.json)   --repo DIR (what ${repo} means)   --routes FILE   --state DIR
 #        --from-start   on the first start only, route the records already in the log (default: only records written after it)
 # Actions: wake and notify_owner = herdr agent prompt <seat> "record <id> playbook <path>"; enqueue = queue.sh enqueue;
-#          escalate = event.sh add --kind escalated --to <role>. A record no row matches, or an action that fails, becomes a
-#          500 note addressed to the monitor.
+#          escalate = event.sh add --kind escalated --to <role>; break-glass = seat.sh --break-glass <record's seat> --record <id>;
+#          none = the receipt only. A record no row matches, or an action that fails, becomes a 500 note addressed to the monitor.
 # Exit: 0 ok, 1 belt stale (status only), 2 usage, 3 validation, 4 io.
 #
 # BREADCRUMB 2026-10-11 - WO-20261011-38c7. Three choices that look arbitrary:
@@ -27,6 +27,15 @@
 #      record under factory/state/, gitignored.
 #   3. The first start routes nothing already in the log (state/since holds the boundary) unless --from-start is given.
 #      What would break: starting on a log of hundreds of old records would wake every seat that ever existed.
+#   4. Two actions that are not a queue or a wake, break-glass and none (WO-20261011-4562, DEC-break-glass-one-time). What broke
+#      without them: the ticket asks for a route row "do:break-glass", and the lifecycle records of one break glass (100 in effect,
+#      201 action done, 204 restored) matched no row, so each became a "no route" 500 to the monitor, the same noise seat.up 100
+#      already makes. Why this fix: break-glass runs seat.sh with the 200 record's id and nothing else; seat.sh reads the owner's
+#      answer itself and writes its own 423 when it refuses, so exit 3 is a handled refusal here, not a runner failure (a second
+#      500 for the same refusal would bury it). none is the generic "seen, nothing to do" row, with no branch on any kind.
+#      Rejected: a break-glass branch that reads the record's action or answer (the verdict must stay in seat.sh, where the page
+#      is) and routing the three lifecycle records to the monitor (three agent wakes per grant for no decision). Cost: the
+#      runner blocks for the length of one seat.sh call, a few file writes and one herdr prompt.
 #   A record with no attempt counts as attempt 1; escalations is the number of escalated records the runner wrote for the
 #   ticket before this one, which is how the table tells a first 423 from a second.
 set -uo pipefail
@@ -47,7 +56,7 @@ case $VERB in once|run|status) ;; *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' 
 cfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$CONFIG") || die 3 "config $CONFIG is not JSON"; [ -n "$v" ] || die 3 "config key $1 missing"; printf '%s' "${v//\$\{repo\}/$REPO}"; }
 POLL=$(cfg poll_seconds); SEAT=$(cfg runner_seat); SESSION=${COQ_HERDR_SESSION:-$(cfg herdr_session)}
 EVENTS=$(cfg events_dir); EVENT_BIN=$(cfg event_bin); QUEUE_BIN=$(cfg queue_bin)
-ROLES=$(cfg roles_dir); PLAYBOOKS=$(cfg playbooks_dir); STALE=$(cfg stale_seconds)
+SEAT_BIN=$(cfg seat_bin); ROLES=$(cfg roles_dir); PLAYBOOKS=$(cfg playbooks_dir); STALE=$(cfg stale_seconds)
 [ -n "$ROUTES" ] || ROUTES=$(cfg routes_file); [ -n "$STATE" ] || STATE=$(cfg state_dir)
 LEDGER=$STATE/routed; BELT=$STATE/belt; SINCE=$STATE/since
 
@@ -85,7 +94,7 @@ herdr_prompt() { env -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u H
 
 # perform ROW ID TICKET RECORD_JSON: the row's action; prints a reason and returns 1 when it fails.
 perform() {
-  local row=$1 id=$2 ticket=$3 rec=$4 act to seat text prio qargs=()
+  local row=$1 id=$2 ticket=$3 rec=$4 act to seat text prio rc qargs=()
   act=$(jq -r .do <<<"$row"); to=$(jq -r .to <<<"$row")
   case $act in
     wake|notify_owner)
@@ -100,6 +109,10 @@ perform() {
     escalate)
       local args=(--code "$(jq -r .code <<<"$row")" --kind escalated --to "$to" --note "escalated record $id"); [ "$ticket" = - ] || args+=(--ticket "$ticket")
       emit "${args[@]}" || { echo "event.sh escalated record failed"; return 1; } ;;
+    break-glass)
+      "$SEAT_BIN" --break-glass "$(jq -r .seat <<<"$rec")" --record "$id" >/dev/null 2>&1; rc=$?
+      case $rc in 0|3) ;; *) echo "seat.sh --break-glass exited $rc"; return 1;; esac ;;
+    none) ;;
     *) echo "unknown action $act"; return 1;;
   esac
 }

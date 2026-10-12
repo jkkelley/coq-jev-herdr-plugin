@@ -299,8 +299,22 @@ function lineHTML(L, d) {
   </section>`;
 }
 
+// WO-20261011-4562: one row per break glass, under the lines table. The markup above is the locked design, so this is built here.
+function glassHTML(d) {
+  const g = d.glass || [];
+  if (!g.length) return "";
+  const kind = { asked: "queued", granted: "building", refused: "blocked", "in effect": "blocked", done: "building", restored: "live" };
+  const rows = g.map(x => `<tr>
+      <td><span class="badge">${esc(x.id)}</span></td>
+      <td>${esc(x.seat)}<br><span class="hint">${esc(x.action)}</span></td>
+      <td>${pill(kind[x.state] || "queued", x.state)}</td>
+      <td>${esc(x.at.slice(11, 16))}Z</td>
+    </tr>`).join("");
+  return `<table class="glass"><tr><th>break glass</th><th>seat and command</th><th>state</th><th>at</th></tr>${rows}</table>`;
+}
+
 function floorHTML(d) {
-  if (!d.lines.length) return `<p class="hint">No ticket is in progress or in review, so no line is running.</p>`;
+  if (!d.lines.length) return `<p class="hint">No ticket is in progress or in review, so no line is running.</p>` + glassHTML(d);
   const rows = d.lines.map(L => {
     const stations = d.stations.map(s => Object.assign({}, s, L.st[s.id] || { status: "queued", parts: [] }));
     const meter = stations.map(s => `<i class="${s.hand ? "hand" : s.status}${L.here === s.id ? " here" : ""}" title="${esc(s.role)}: ${esc(s.status)}"></i>`).join("");
@@ -313,7 +327,7 @@ function floorHTML(d) {
       <td>${pill(L.belt === "live" ? "live" : "blocked", L.belt === "live" ? "running" : "stopped")}</td>
     </tr>`;
   }).join("");
-  return `<table><tr><th>line</th><th>stream</th><th>stations</th><th>work is at</th><th>belt</th></tr>${rows}</table>`;
+  return `<table><tr><th>line</th><th>stream</th><th>stations</th><th>work is at</th><th>belt</th></tr>${rows}</table>` + glassHTML(d);
 }
 
 function render(d) {

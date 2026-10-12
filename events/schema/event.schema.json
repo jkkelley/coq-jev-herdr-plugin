@@ -11,13 +11,15 @@
     "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
     "code": { "type": "integer", "minimum": 100, "maximum": 599 },
     "seat": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$" },
-    "kind": { "enum": ["seat.up", "seat.down", "seat.stalled", "gate", "test", "review", "merge", "deploy", "compaction", "blocked", "escalation", "note", "request.forwarded", "request.accepted", "request.rejected", "ticket.cut", "work.started", "pr.opened", "test.passed", "test.failed", "review.passed", "review.changes", "merged", "merge.conflict", "verified", "rejected", "escalated", "record.routed"] },
+    "kind": { "enum": ["seat.up", "seat.down", "seat.stalled", "gate", "test", "review", "merge", "deploy", "compaction", "blocked", "escalation", "note", "request.forwarded", "request.accepted", "request.rejected", "ticket.cut", "work.started", "pr.opened", "test.passed", "test.failed", "review.passed", "review.changes", "merged", "merge.conflict", "verified", "rejected", "escalated", "record.routed", "break.glass"] },
     "ticket": { "type": ["string", "null"], "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
     "pane": { "type": ["string", "null"] },
     "to": { "enum": ["interface-agent", "orchestrator", "architect", "worker", "tester", "reviewer", "merger", "player", "monitor"], "description": "addressee role of a routed or escalated record; optional" },
     "note": { "type": "string", "maxLength": 240 },
     "evidence": { "type": "array", "items": { "type": "string" }, "maxItems": 20 },
     "observations": { "type": "array", "maxItems": 5, "items": { "type": "object", "additionalProperties": false, "required": ["saw", "expected"], "properties": { "path": { "type": "string" }, "line": { "type": "integer" }, "saw": { "type": "string", "maxLength": 240 }, "expected": { "type": "string", "maxLength": 240 } } } },
-    "attempt": { "type": "integer", "minimum": 1, "maximum": 3 }
+    "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+    "action": { "type": "string", "minLength": 1, "maxLength": 240, "description": "break.glass only: the one command the owner is asked to allow, exactly as the seat will run it" },
+    "answer": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$", "description": "break.glass only: the id of the 300 request, which is also the id of the owner's card on the bearings page" }
   }
 }
