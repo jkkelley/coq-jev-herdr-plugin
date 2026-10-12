@@ -13,6 +13,7 @@
 #   6 every seat     each seat record with no ended_at: seat.sh --check
 #                    "agent not running" -> check FAILED <name> (agent gone); apply seat.sh --down, fixed <name>
 #                    any other difference -> FAILED <name> (<difference>), reported in both modes and never repaired
+#   6b panes         monitors.sh health, one line per reserved pane, judged by its process   (apply: bringup.sh, once)
 #   7 guard          compaction-guard recover [--apply], once, only when config .require_guard is true
 #   8 tickets        one WARN per in-progress ticket with no live seat (the queue resumes it; WARN never fails the run)
 # Lines: ok <object> | fixed <object> (what) | skipped <object> (why) | FAILED <object> (why) | WARN <ticket> - <title> (..)
@@ -156,6 +157,28 @@ for f in "$STATE"/seats/*/seat.json; do
     else failln "$n" "agent gone, seat.sh --down failed: $(tail -n 1 <<<"$out")"; fi
   else failln "$n" "$SEAT_WHY"; fi
 done
+
+# 6b. the reserved panes, judged by their process.
+# BREADCRUMB 2026-10-12 - WO-20261012-b800, backlog m2jhs. What broke: this script never looked at the reserved panes' commands at
+#   all (step 3 reads labels), so after the 2026-10-12 WSL reboot it printed ok while six watchers were bare shells for 40
+#   minutes. Why this fix: `monitors.sh health` asks herdr what each reserved pane runs (BREADCRUMB in monitors.sh), and the
+#   repair is bringup.sh, the one place a pane is plugged in; it runs once however many panes need it and the health lines are
+#   read again afterwards, so "fixed" means the process is back. Rejected: a second take loop here (two ways to start a pane)
+#   and restarting from health alone (a slot labelled open under a human's job is bringup's `left alone`, not a repair).
+#   Cost: a repair run here runs bringup's whole DAG once, monitor seat included, which step 4 already does when it fails.
+pane_health() { PH="$("$MON" health 2>/dev/null)"; }
+pane_health
+if grep -q '^FAILED ' <<<"$PH" && apply && [ "$DRY" != 1 ]; then
+  pane_before="$PH"; "$BU" --worktree "$SL_REPO" >/dev/null 2>&1 || true; pane_health
+fi
+while IFS= read -r hl; do
+  [ -n "$hl" ] || continue
+  pn="${hl#* }"; pn="${pn%% *}"
+  case "$hl" in
+    "ok "*) if grep -q "^FAILED $pn " <<<"${pane_before:-}"; then fixedln "pane-$pn" "bringup.sh plugged it in again"; else okln "pane-$pn"; fi ;;
+    *) failln "pane-$pn" "$(sed -E 's/^FAILED [^ ]+ \((.*)\)$/\1/' <<<"$hl")" ;;
+  esac
+done <<<"$PH"
 
 # 7. the guard, once. The count is of sessions whose pane is gone and that the guard can re-arm; see the breadcrumb for why
 #    that is a WARN and not a FAILED.

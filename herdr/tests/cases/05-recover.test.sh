@@ -83,7 +83,9 @@ run --check
 echo "$out" | sed 's/^/    /'
 assert_eq "--check exits 1" "$rc" 1
 assert_match "it names the seat and the reason" "$out" "^FAILED $N \(agent gone\)$"
-assert_eq "the healthy objects still print ok" "$(grep -c '^ok ' <<<"$out")" 5
+# Five objects (herdr, monitors, the monitor seat, the belt, the guard) plus one ok line per reserved pane that carries a command (6b, WO-20261012-b800).
+panes="$(jq '[.tabs[].reserved[] | select(.command != null)] | length' "$REPO/herdr/config/monitors.json")"
+assert_eq "the healthy objects still print ok, and every reserved pane is one of them" "$(grep -c '^ok ' <<<"$out")" "$((5 + panes))"
 assert_eq "no event was written" "$(find "$EVENTS" -name '*.json' | wc -l)" "$before"
 assert_eq "the seat record has no ended_at" "$(jq -r '.ended_at // "null"' "$STATE/seats/$N/seat.json")" null
 assert_eq "no seat.down was recorded" "$(( $(event_count seat.down 100) - downs0 ))" 0

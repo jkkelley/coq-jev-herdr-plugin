@@ -5,6 +5,8 @@
 #                                                        plug a job into an open pane; prints the pane id
 #   monitors.sh release <pane> [label]                   stop what runs there, clear, back to the neutral cwd, relabel open
 #   monitors.sh status                                   one line per slot, grouped by tab; exit 1 when a slot is missing
+#   monitors.sh health                                   one line per reserved slot that carries a command: `ok NAME` or `FAILED NAME (why)`, judged by the
+#                                                        pane's foreground process and never by its label; exit 1 when any is FAILED
 # Exit: 0 ok, 1 nothing free or a pane left alone, 2 usage, 3 a slot another job holds, 4 herdr failure.
 #
 # BREADCRUMB 2026-10-10 - ported from ~/tools/bearings-v2/bin/monitors.sh (F-28, owner orders of 2026-09-24: "it should
@@ -31,7 +33,7 @@ ROWS="$(jq -r '.grid | split("x")[0]' "$LAYOUT")"; COLS="$(jq -r '.grid | split(
 NSLOT=$((ROWS * COLS))
 ntabs="$(mc '.tabs | length')"
 K_INT="$(sl_cfg .keys.interrupt)"; PROMPT_MS="$(sl_cfg .prompt_timeout_ms)"
-usage() { sed -n '2,7p' "$(readlink -f "$0")" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '2,9p' "$(readlink -f "$0")" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 # All panes of the workspace, one JSON array: pane_id, tab_id, label; agent is null until cmd_grid fills it (agent_in).
 all_panes() { sl_h pane list --workspace "$WS" 2>/dev/null | jq -c '[(.result.panes // [])[] | {pane_id, tab_id, label: (.label // ""), agent: null}]'; }
@@ -218,7 +220,42 @@ cmd_status() {
   return "$rc"
 }
 
-verb="${1:-}"; case "$verb" in grid|take|release|status) ;; *) usage ;; esac
+# BREADCRUMB 2026-10-12 - WO-20261012-b800, backlog m2jhs. What broke: after the 2026-10-12 WSL reboot six of seven reserved
+#   monitor panes (lease, guard, events, queue, board, flow) were bare shells for 40 minutes while bringup.sh --check printed
+#   ok for each, because bringup grepped the slot label from `status` and a label says what a pane was told to do, not what
+#   it is doing. Why this fix: the same `busy` test cmd_grid and cmd_release already trust (herdr `pane process-info`: the
+#   foreground process group differs from the pane's shell) is asked of every reserved slot that has a command, so a dead
+#   command reads FAILED whatever the pane is called. A slot labelled OPEN whose pane is busy is FAILED too and is never
+#   restarted by a caller: `take` would type a second command into a running job. Rejected: matching the foreground argv to
+#   the configured command (the commands are `while` loops whose foreground is a sleep) and a heartbeat file per watcher
+#   (a second thing to keep true). Cost: a command that exits at once (a typo in monitors.json) is restarted every run, and
+#   a command that is alive but hung reads ok; hung ones are the supervisor's timeout, not this verb's.
+cmd_health() {
+  local rc=0 ti tid all pos name ix pane lab why
+  all="$(all_panes)"
+  for ((ti = 0; ti < ntabs; ti++)); do
+    tid="$(sl_tab_id "$WS" "$(tf "$ti" .label)")"
+    [ -n "$tid" ] && load_tab "$ti" "$tid" "$all"
+    while IFS=$'\t' read -r pos name; do
+      [ -n "$pos" ] || continue
+      if [ -z "$tid" ]; then echo "FAILED $name (tab $(tf "$ti" .n) is not built; run herdr/bin/monitors.sh grid)"; rc=1; continue; fi
+      ix="$(slot_index "$ti" "$pos")"; pane="${SLOT_PANE[ix]}"; lab="${SLOT_LABEL[ix]}"
+      if [ -z "$pane" ]; then echo "FAILED $name (slot $pos has no pane)"; rc=1; continue; fi
+      if ! proc_info "$pane" | jq -e '.result.process_info | .shell_pid != null' >/dev/null 2>&1; then echo "FAILED $name (herdr process-info for pane $pane failed)"; rc=1; continue; fi
+      if busy "$pane"; then
+        if is_open "$lab"; then echo "FAILED $name (slot $pos is labelled open but pane $pane runs $(fg_process "$pane"); left alone)"; rc=1
+        elif [ "$lab" != "$(used_label "$ti" "$pos" "$name")" ]; then echo "FAILED $name (slot $pos holds '$lab', not $name)"; rc=1
+        else echo "ok $name"; fi
+      else
+        if is_open "$lab"; then why="slot $pos is open and its pane is a bare shell"; else why="pane $pane is a bare shell, the command in slot $pos is not running"; fi
+        echo "FAILED $name ($why)"; rc=1
+      fi
+    done < <(jq -r --argjson i "$ti" '.tabs[$i].reserved // [] | .[] | select(.command != null) | [.pos, .name] | @tsv' "$MC")
+  done
+  return "$rc"
+}
+
+verb="${1:-}"; case "$verb" in grid|take|release|status|health) ;; *) usage ;; esac
 sl_h workspace list >/dev/null 2>&1 || { SL_EXIT=4 sl_die "herdr session $HS is not running; herdr/bin/bringup.sh starts it"; }
 WS="$(sl_ws_id)"; WS_ROOT_TAB=""; WS_ROOT_PANE=""
 if [ -z "$WS" ]; then
@@ -233,4 +270,5 @@ case "$verb" in
   take) shift; cmd_take "$@" ;;
   release) shift; cmd_release "$@" ;;
   status) cmd_status ;;
+  health) cmd_health ;;
 esac
