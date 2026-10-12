@@ -56,6 +56,39 @@
 
 
 
+
+## Checkpoint 2026-10-12 19:57 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Fixed seat sched-worker-2 (herdr workspace wD7, not seated by seat.sh) on WO-20261012-e27e - Scheduler config files: scheduler.json and executor.json with their schemas, every key of SPEC-16.G, variables only, validated by the repository lint.
+  Worktree ~/.cache/wt-sched-w2, branch feat/scheduler-config-files-scheduler-json-and-execut, no test pane; tests run directly in the pinned coq-lint image.
+
+#### Toolchain
+
+- scheduler/config/ holds scheduler.json, scheduler.schema.json, executor.json, executor.schema.json.
+- make lint: configs: schema ok, lint: all ok. TP-2 grep exit 0. A spec-equality and mutation script (scratchpad, lint image) passed 34 of 34 against the SPEC-16.G and SPEC-16.H XML on the design branch.
+
+#### Active Tasks
+
+- Push, open the PR, work-order.sh submit --pr N and done, make step for the archive move, git switch --detach, post pr.opened with --sha and --pr.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: scheduler.json keys are flat and dotted, because g-keys names both seat and seat.busy_regex; nesting by the dot would collide.
+- Lesson: a schema with a relative $id breaks $ref resolution in jsonschema 4.10 (the lint image); use a urn $id, as report/loop does.
+- Lesson: no $schema keyword in scheduler/config schemas, because the test plan greps every file there for '://'.
+
+### Hydration prompt
+
+You are sched-worker-2 on WO-20261012-e27e. Read this checkpoint and playbooks/worker.md. Next: the close-out in Active Tasks, then wait for sched-architect.
+
 ## Checkpoint 2026-10-12 19:06 UTC
 
 ### Current state
