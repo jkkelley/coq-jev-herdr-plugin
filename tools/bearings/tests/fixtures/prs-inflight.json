@@ -1,0 +1,7 @@
+[
+  { "number": 11, "title": "WO-20261001-aa01 - Synthetic ready ticket one, first pull request", "url": "https://github.com/example/synthetic/pull/11", "headRefName": "feat/aa01" },
+  { "number": 12, "title": "WO-20261001-aa02 - Synthetic ready ticket two", "url": "https://github.com/example/synthetic/pull/12", "headRefName": "feat/aa02" },
+  { "number": 13, "title": "WO-20261001-aa03 - Synthetic ready ticket three", "url": "https://github.com/example/synthetic/pull/13", "headRefName": "feat/aa03" },
+  { "number": 14, "title": "WO-20261001-aa01 - Synthetic ready ticket one, a second pull request for the same ticket", "url": "https://github.com/example/synthetic/pull/14", "headRefName": "feat/aa01-again" },
+  { "number": 15, "title": "Synthetic pull request without a ticket prefix", "url": "https://github.com/example/synthetic/pull/15", "headRefName": "feat/none" }
+]

@@ -9,7 +9,11 @@
 #   loop.sh watch [--out DIR] [--iterations N] [--sleep S] [collect's --root --now --panes --no-panes]
 #                                             collect every watch_seconds and rewrite DIR only when the entry changed apart from
 #                                             `at` and `number`; run it in a labelled herdr pane (monitors.sh take), never detached
-# Env: LOOP_CONFIG overrides config/board.json, LOOP_ROOT the tree collect reads, LOOP_PANES_FILE a saved herdr pane list.
+# Views: loop.sh --view NAME VERB ... reads config/NAME.json instead of config/board.json. The config's `view` key names how collect
+#   derives the entry: absent is the factory board above, `blueprint` is the system design from graph/ and work-orders/
+#   (WO-20261011-ceea, lib/blueprint). Validate, render and watch are the same for every view, so a view is a config and a collect,
+#   never a second renderer.
+# Env: LOOP_CONFIG overrides the config file (and --view), LOOP_ROOT the tree collect reads, LOOP_PANES_FILE a saved herdr pane list.
 # Exit: 0 ok, 2 usage, 3 validation, 4 io.
 set -euo pipefail
 HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
@@ -21,7 +25,7 @@ TEMPLATE=$HERE/assets/template.html
 die() { local c=$1; shift; printf 'loop: %s\n' "$*" >&2; exit "$c"; }
 command -v jq >/dev/null || die 4 "jq is required"
 command -v python3 >/dev/null || die 4 "python3 with jsonschema is required"
-usage() { sed -n '2,13p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 # schema_check INSTANCE SCHEMA: exit 3 with the first violation on stderr.
 schema_check() {
@@ -44,11 +48,16 @@ except jsonschema.ValidationError as e:
 PY
 }
 
+# view_of: the view the config names; a config with no `view` key is the factory board.
+view_of() { jq -r '.view // "board"' "$CONFIG" 2>/dev/null || echo board; }
+
 # config_check: the config against its schema, and the one rule a schema cannot say: a record is drawn within
 # poll_seconds + watch_seconds, and AC-H3 promises 30.
 config_check() {
-  # The config's schema is the tool's, found beside loop.sh and not beside whichever config LOOP_CONFIG names.
-  schema_check "$CONFIG" "$HERE/config/board.schema.json" || return 3
+  # The config's schema is the tool's, found beside loop.sh and not beside whichever config LOOP_CONFIG names. The view picks it.
+  local schema=$HERE/config/board.schema.json
+  [ "$(view_of)" != blueprint ] || schema=$HERE/config/blueprint.schema.json
+  schema_check "$CONFIG" "$schema" || return 3
   jq -e '.poll_seconds + .watch_seconds <= 30' "$CONFIG" >/dev/null \
     || { printf 'loop: %s: poll_seconds + watch_seconds must be 30 or less\n' "$CONFIG" >&2; return 3; }
 }
@@ -121,6 +130,28 @@ panes_json() {
   hq pane list --workspace "$ws" | jq '{ok: true, panes: [(.result.panes // [])[] | {pane_id, label: (.label // "")}]}' 2>/dev/null || echo '{"ok":false,"panes":[]}'
 }
 
+# collect_blueprint ROOT NOW NUMBER OUT: the blueprint view's collect (WO-20261011-ceea). The impure reads are lib/blueprint/gather.sh,
+# every derivation is a pure jq file beside it, and the entry is the same shape the board draws, so validate and render are shared.
+collect_blueprint() {
+  local root=$1 now=$2 number=$3 out=$4 t L=$HERE/lib/blueprint mmd
+  # shellcheck source=lib/blueprint/gather.sh
+  . "$L/gather.sh"
+  t=$(mktemp -d) || die 4 "no scratch directory"
+  # shellcheck disable=SC2064 # $t is expanded now on purpose: the trap must remove this run's directory
+  trap "rm -rf '$t'" EXIT
+  mmd=$root/$(jq -r .inputs.graph_mermaid "$CONFIG")
+  [ -f "$mmd" ] || die 4 "no mermaid graph at $(jq -r .inputs.graph_mermaid "$CONFIG")"
+  bp_nodes "$root/$(jq -r .inputs.graph_nodes_dir "$CONFIG")" > "$t/nodes.json" || die 4 "cannot read the graph nodes"
+  bp_tickets "$root/$(jq -r .inputs.work_orders_dir "$CONFIG")" | jq -f "$L/tickets.jq" > "$t/tickets.json" || die 3 "a ticket's frontmatter is not valid JSON"
+  jq -f "$L/components.jq" "$t/nodes.json" > "$t/components.json" || die 3 "the graph nodes could not be read as components"
+  jq -f "$L/decisions.jq" "$t/nodes.json" > "$t/decisions.json" || die 3 "the graph nodes could not be read as decisions"
+  jq -n --slurpfile c "$t/components.json" --slurpfile k "$t/tickets.json" '{components: $c[0], tickets: $k[0]}' | jq -f "$L/state.jq" > "$t/state.json" || die 3 "component states could not be derived"
+  jq -n -f "$L/entry.jq" --slurpfile cfg_f "$CONFIG" --slurpfile comps_f "$t/state.json" --slurpfile decs_f "$t/decisions.json" --slurpfile tickets_f "$t/tickets.json" \
+    --rawfile mermaid "$mmd" --argjson nodes "$(jq length "$t/nodes.json")" --arg now "$now" --argjson number "$number" > "$t/entry.json" || die 3 "the entry could not be derived (see above)"
+  validate "$t/entry.json"
+  if [ -n "$out" ]; then mkdir -p "$(dirname "$out")" && mv "$t/entry.json" "$out" || die 4 "cannot write $out"; else cat "$t/entry.json"; fi
+}
+
 # cmd_collect [--root DIR] [--now UTC] [--number N] [--panes FILE | --no-panes] [--out FILE]
 cmd_collect() {
   local root=${LOOP_ROOT:-$ROOT} now="" number=1 panes_file=${LOOP_PANES_FILE:-} out="" t cutoff now_epoch mtime age max days
@@ -137,6 +168,7 @@ cmd_collect() {
   config_check || exit 3
   [ -n "$now" ] || now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
   now_epoch=$(date -u -d "$now" +%s) || die 2 "--now must be a UTC time like 2026-10-11T14:21:00Z"
+  if [ "$(view_of)" = blueprint ]; then collect_blueprint "$root" "$now" "$number" "$out"; return $?; fi
   t=$(mktemp -d) || die 4 "no scratch directory"
   # shellcheck disable=SC2064 # $t is expanded now on purpose: the trap must remove this run's directory whatever $t is later
   trap "rm -rf '$t'" EXIT
@@ -220,6 +252,12 @@ cmd_watch() {
   return "$last"
 }
 
+if [ "${1:-}" = --view ]; then
+  [[ ${2:-} =~ ^[a-z][a-z0-9-]*$ ]] || usage
+  [ -n "${LOOP_CONFIG:-}" ] || CONFIG=$HERE/config/$2.json
+  [ -f "$CONFIG" ] || die 4 "no config for the view $2 at $CONFIG"
+  shift 2
+fi
 verb=${1:-}; [ $# -eq 0 ] || shift
 case $verb in
   validate) [ $# -eq 1 ] || usage; validate "$1" ;;

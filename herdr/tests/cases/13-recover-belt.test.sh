@@ -25,11 +25,20 @@ assert_match "ok belt is in the output" "$out" "^ok belt$"
 
 echo "-- the runner stops and the belt goes stale: --check says FAILED belt and changes nothing"
 h pane send-keys "$pane" C-c >/dev/null 2>&1; sleep 2; touch -d '-100 seconds' "$BELT"
-before="$(find "$EVENTS" -name '*.json' | wc -l)"
+# BREADCRUMB 2026-10-12 - WO-20261011-ceea. What broke: this count took every file in events/, and the flow watch pane that bringup
+#   starts in this same world (seat flow-watch, factory/bin/flow.sh, every 15 seconds) writes its own 500 "stall" note while the
+#   belt is stale, which is what it is for. On the branch of WO-20261011-ceea, with the three blueprint servers started by the same
+#   bringup, a tick landed inside the window every time (3 of 3, got 17 want 15) and "no event was written" failed; on main the
+#   tick fell outside it, so the test passed by timing. Why this fix: the claim is that recover.sh --check writes nothing, so count
+#   what recover.sh could write, every record whose seat is not the flow watch. Rejected: sleeping past the tick (still a race) and
+#   stopping the flow pane (then the world is not the one that ships). Cost: a record recover.sh wrote under seat flow-watch would
+#   go unseen; recover.sh uses its own seat name.
+nonflow() { find "$EVENTS" -name '*.json' -print0 | xargs -0 -r jq -r 'select(.seat != "flow-watch") | .id' | wc -l; }
+before="$(nonflow)"
 run --check; echo "$out" | sed 's/^/    /'
 assert_eq "--check exits 1" "$rc" 1
 assert_match "FAILED belt says the belt is stopped" "$out" "^FAILED belt \(belt stopped \(last touched 1[0-9][0-9]s ago"
-assert_eq "no event was written" "$(find "$EVENTS" -name '*.json' | wc -l)" "$before"
+assert_eq "no event was written" "$(nonflow)" "$before"
 "$STATUS" status >/dev/null 2>&1; assert_eq "the belt is still stale" "$?" 1
 
 echo "-- --apply restarts the runner in its own pane and reports fixed belt"

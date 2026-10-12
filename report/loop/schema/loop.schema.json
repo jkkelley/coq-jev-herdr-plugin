@@ -50,7 +50,7 @@
     },
     "lines": {
       "type": "array",
-      "maxItems": 24,
+      "maxItems": 80,
       "items": { "$ref": "#/$defs/line" }
     },
     "glass": {
@@ -65,18 +65,90 @@
     },
     "board": {
       "type": "array",
-      "maxItems": 24,
+      "maxItems": 120,
       "items": { "$ref": "#/$defs/boardrow" }
     },
     "legend": {
       "type": "array",
-      "maxItems": 40,
+      "maxItems": 80,
       "items": {
         "type": "array",
         "minItems": 2,
         "maxItems": 2,
         "prefixItems": [{ "$ref": "#/$defs/text" }, { "$ref": "#/$defs/text" }]
       }
+    },
+    "title": {
+      "$ref": "#/$defs/text",
+      "description": "the document title, when the view is not the factory board (WO-20261011-ceea); optional"
+    },
+    "label": {
+      "$ref": "#/$defs/text",
+      "description": "the word before the build number in the eyebrow, the board's LOOP; optional"
+    },
+    "legend_title": {
+      "$ref": "#/$defs/text",
+      "description": "the legend fold's heading when the design's wording does not fit; optional"
+    },
+    "legend_open": {
+      "type": "boolean",
+      "description": "the legend fold starts open; optional"
+    },
+    "links": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node"],
+      "properties": {
+        "node": {
+          "type": "string",
+          "maxLength": 400,
+          "pattern": "^https?://.*\\{id\\}"
+        }
+      },
+      "description": "where a graph node id at the head of a station part links to; {id} stands for the id; optional"
+    },
+    "key": {
+      "type": "array",
+      "maxItems": 6,
+      "description": "replaces the key block when the view is not the factory board: groups of [pill:status | dot:part | ks:swatch, label, meaning]; optional",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["eyebrow", "items"],
+        "properties": {
+          "eyebrow": { "$ref": "#/$defs/text" },
+          "items": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 8,
+            "items": {
+              "type": "array",
+              "minItems": 3,
+              "maxItems": 3,
+              "prefixItems": [
+                { "type": "string", "pattern": "^(pill|dot|ks):[a-z-]+$" },
+                { "$ref": "#/$defs/text" },
+                { "$ref": "#/$defs/text" }
+              ],
+              "items": false
+            }
+          }
+        }
+      }
+    },
+    "diagram": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "source"],
+      "properties": {
+        "title": { "$ref": "#/$defs/text" },
+        "source": {
+          "type": "string",
+          "maxLength": 200000,
+          "description": "mermaid source; drawn when mermaid loads, shown as text when it does not"
+        }
+      },
+      "description": "one embedded diagram, a fold under the key; optional"
     },
     "sources": { "$ref": "#/$defs/text" }
   },

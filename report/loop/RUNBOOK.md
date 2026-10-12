@@ -14,6 +14,7 @@
 - 6. Prove it
 - Changing the page
 - When it goes wrong
+- The blueprint view and its tiers
 - Graph
 
 ## Rules that bind
@@ -116,7 +117,7 @@ Any other server works if it serves `index.html` at a path `P` and `data.json` a
 ## 6. Prove it
 
 ```sh
-make -C report/loop test           # 7 cases, Podman, no network: schema, render, parity, derive, by-hand, board, watch
+make -C report/loop test           # every case in tests/cases, Podman, no network; it ends "tests: N passed, M failed" (16 cases when this was written)
 make -C report/loop test-browser   # a real browser against the real bearings server: pixel parity with the design, redraw in place
 make -C report/loop lint
 ```
@@ -145,6 +146,68 @@ After any template change run `loop.sh render` (or restart the watcher after del
 | "HERDR PANES UNAVAILABLE"                                    | herdr did not answer                      | start herdr; seats are trusted from their records meanwhile |
 | `loop: ...: poll_seconds + watch_seconds must be 30 or less` | the config breaks the 30 second promise   | lower one of them                                           |
 | the watcher prints `pass N failed`                           | a ticket or record could not be read      | read the line under it, fix the file                        |
+
+## The blueprint view and its tiers
+
+The same tool draws a second page, the system blueprint (WO-20261011-ceea), from `graph/nodes` and `work-orders/` instead of from records.
+It reuses the board's template, station and legend components; `config/blueprint.json` is its view config and `config/blueprint.schema.json` its schema.
+Nothing on it is typed in.
+
+GOOD: `make -C report/loop promote-uat`, then `promote-stable`, so the build number on stable is a build uat held.
+GOOD: name `CMP-<slug>` in a ticket's title, Problem or Scope, so the page can say the ticket builds it.
+GOOD: each tier's server in its labelled monitors pane (slots 3.3.1 to 3.3.3), and `make -C report/loop test` before a promotion.
+NEVER: copy or `rsync` a page between tier directories by hand; the build number on stable stops being a promise.
+NEVER: type a state, a count or a build number into a tier's `data.json` or `index.html`; fix the graph node or the ticket it comes from.
+NEVER: `serve-dev`, `serve-uat` or `serve-stable` with `&`, `nohup` or `setsid`; a hidden server reads as a dead page.
+NEVER: hard-code a number the config already holds (`watch_seconds`, `refresh_timeout_seconds`, a tier's port).
+
+### How a state is derived
+
+Each Component node (a superseded one is left out) lands in exactly one state, by this rule and no other:
+
+| State       | When                                                                                                                   |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- |
+| in flight   | a ticket that names the Component is `in-progress` or `in-review`. Work wins: a built Component being changed again.   |
+| done        | not in flight, and the Component node is `locked`, or a ticket that names it is `done`.                                |
+| coming up   | everything else: proposed or draft, with no finished ticket.                                                           |
+
+A cancelled ticket counts for nothing.
+A draft or ready ticket does not make a locked Component less done.
+A Component with no Runbook node joined to it by a `defined_in` edge, in either direction, shows "missing runbook".
+A decision it names through a `decided_by` edge that is not `locked`, or that the graph has no node for, blocks it.
+
+### How a ticket names a Component
+
+A ticket belongs to a Component when the Component's id (`CMP-` and its slug) appears in the ticket's title, its Problem section or its Scope section.
+An id in Notes, an acceptance criterion or the Outcome is a reference and is not counted.
+If the page shows 0 components in flight while tickets are open, the tickets do not name what they build; name it there, not in the collector.
+
+### Run it
+
+```sh
+make -C report/loop render-blueprint     # one collect and render into the dev tier's out_dir
+make -C report/loop serve-dev            # dev: serves and refreshes its own page every watch_seconds
+make -C report/loop promote-uat          # uat takes dev's current build, tagged by its build number
+make -C report/loop promote-stable       # stable takes uat's build
+```
+
+Three tiers, each a file in `report/blueprint/config/` (`dev.json`, `uat.json`, `stable.json`, checked by `tier.schema.json`) with its own `port`, `out_dir`, `pane_label` and `probe_timeout_seconds` (how long `serve.sh --check` waits for `/healthz`).
+Dev rebuilds its own page every `watch_seconds`, and gives one pass `refresh_timeout_seconds` (both in `config/blueprint.json`) before it keeps the last page and says so.
+Uat and stable serve only what a promotion put in `out_dir/releases/<build>`, behind a `current` link, so the build number on stable is the build uat held.
+`promote.sh` is the only way a page moves forward; a hand copy breaks that promise.
+`GET /blueprint` is the page, `GET /blueprint/data.json` its data and `GET /healthz` the tier's build, for the pane check.
+`herdr/bin/bringup.sh` plugs the three servers into slots 3.3.1, 3.3.2 and 3.3.3 of the monitors grid (the bottom row of the shells tab; the free row of tab 2 belongs to the owner's watches), and `herdr/bin/recover.sh` restarts one that was killed.
+`monitors.sh health` tells a killed server (the pane is a bare shell again) from a live one, and `bringup.sh` and `recover.sh --apply` plug it back in.
+`report/blueprint/serve.sh --check <tier>` is the probe for a server that is alive but not answering, which health does not see; run it by hand or from the supervisor.
+
+### Add a view or a tier to another repository, by config only
+
+1. Copy `report/loop/` and `report/blueprint/`, or point `LOOP_ROOT` and `BLUEPRINT_ROOT` at the other tree.
+2. Edit `inputs.graph_nodes_dir`, `inputs.graph_mermaid` and `inputs.work_orders_dir` in `config/blueprint.json`, and its `links`, `title` and `key`.
+3. A new tier is a new file in `report/blueprint/config/` that validates against `tier.schema.json`, with `promotes_from` naming the tier before it; add its Make target pair and one reserved slot with `command` and `check` in `herdr/config/monitors.json`.
+4. A second view is a second `config/<view>.json` and `loop.sh --view <view>`; `loop.sh` renders any view the config names into its own `out_dir` with the one template.
+
+CI runs this directory's suite and lint when its files change: `Jenkinsfile` stage `Blueprint`, whose `when` is a `changeset` on `report/**`, `graph/**` and `work-orders/**`.
 
 ## Graph
 
