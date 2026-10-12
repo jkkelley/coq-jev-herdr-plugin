@@ -77,6 +77,12 @@
           "command": "while :; do ${repo}/herdr/bin/seat.sh --break-glass-sweep; sleep 15; done"
         },
         {
+          "pos": "2.3.2",
+          "name": "policy",
+          "what": "policy watch",
+          "command": "${repo}/factory/bin/policy.sh run"
+        },
+        {
           "pos": "2.3.3",
           "name": "bus",
           "what": "record bus",

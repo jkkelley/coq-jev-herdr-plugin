@@ -67,6 +67,31 @@ The cut-over (stop slot 2.3.3, delete the interim script, start the repo bus) is
 ### Hydration prompt
 Hold; wake on record.review_changes_requested for WO-20261012-da52.
 
+## Checkpoint 2026-10-12 15:41 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-9b2c on WO-20261012-9b2c - Standing policies: an escalation carries a deadline and a default drawn from the owner's locked decisions, so the line takes the default when nobody answers instead of waiting. Treehouse slot 8 (lease holder is this ticket), branch feat/standing-policies-an-escalation-carries-a-deadli, no PR yet. Test pane wD3:p8N, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Built: events/bin/event.sh and event.schema.json gain kind policy.applied with --policy and --answer; factory/config/policies.json and policies.schema.json (one row, POL-blocked-land-it, blocked 423, 1800 s, cites DEC-local-fast-ci-full); factory/bin/policy.sh (once, run, status); routes.json row for policy.applied 200 (do none, to monitor); monitors.json slot 2.3.2 policy; factory Makefile policy-once and policy-status; factory case 12 and policy helpers in tests/lib/world.sh; herdr cases 04 and 05 counts raised to eleven nodes and herdr tests/lib/world.sh stubs the policy slot; factory/RUNBOOK.md section Standing policies.
+- Verified in the test pane: make lint all ok, factory suite 16 passed 0 failed, herdr cases 04, 05 and 13 passed.
+
+#### Active Tasks
+
+- Close out: evidence per criterion with --observed, retro note, push, one PR carrying the code and the finished ticket, work-order.sh submit and done, post pr.opened 100 with sha and pr, then hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-9b2c as worker-wo-20261012-9b2c in slot 8. Read playbooks/worker.md and this checkpoint. The code is committed; do the close-out in Active Tasks, then hold.
+
 ## Checkpoint 2026-10-12 15:32 UTC
 
 ### Current state

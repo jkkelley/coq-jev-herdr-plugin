@@ -12,6 +12,7 @@
 - What it never does
 - GOOD and NEVER
 - Flow watch
+- Standing policies
 - Record bus
 
 Graph: `RUN-route-runner` is this runbook, `CMP-route-runner` is the component, and `CMP-route-runner` carries `defined_in RUN-route-runner`.
@@ -82,6 +83,7 @@ Behaviour lives in the table; this section explains it and `make lint` checks th
 | 18 | `record.routed` 300 | `ignore` |  | Housekeeping: a receipt. The runner skips its own, this covers a receipt another seat name wrote. |
 | 19 | `seat.down` 500 | `wake` monitor (with record) |  | A seat went down badly. The monitor is woken with the record. |
 | 20 | code >= 500 | `wake` monitor (with record) |  | Any other 5xx. The monitor is woken with the record. |
+| - | `policy.applied` 200 | `none` monitor |  | The policy watch took a default (see Standing policies). Seen and receipted, so it is not a no-route 500. In `routes.json` it sits before the 5xx rows, with the break glass rows this table does not list. |
 
 Why a record can need a `seat` and a `down` at once: it is one record and one row, and a second row would never get its turn.
 The merger is one shared seat named `merger`, so the `down` on `merged` and `merge.conflict` is safe only while one ticket is merging at a time.
@@ -263,6 +265,87 @@ GOOD: a new record the line must pick up is one `gates` row in `flow.json`, `mak
 GOOD: the runner dies at 18:01Z, the belt note lands by 18:03Z, `recover.sh --apply` restarts it, and the next tick is silent.
 NEVER: a second threshold for a stale belt in `flow.json`, because `route.sh status` and `runner.json` are the one definition.
 NEVER: `flow.sh run &`, `nohup` or `setsid`, because a background watcher is invisible and invisible work reads as nothing happening.
+
+## Standing policies
+
+Ticket: WO-20261012-9b2c - Standing policies: an escalation carries a deadline and a default drawn from the owner's locked decisions, so the line takes the default when nobody answers instead of waiting.
+Under epic WO-20261012-187e - The line runs without the architect: every station is a seat or a rule, so a dead architect or an absent owner never stops a ticket moving.
+The runner above sends some records to the architect or the owner and then has no clock: a record sent stays sent until a person acts.
+`factory/bin/policy.sh` is the clock.
+It reads the event log and `factory/config/policies.json`, and when an escalation that a policy row covers has no answer by its deadline, it takes that row's default.
+
+An escalation here is a record that `routes.json` sends on with an `escalate` row or a `notify_owner` decision line, for example a `blocked` 423.
+A row of `policies.json` covers one kind of it.
+
+| Field              | Meaning                                                                                                                              |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`               | `POL-<words>`, named on the record the watch writes and counted by `limit_per_ticket`                                                |
+| `match`            | `kind` and `code` of the escalation, and `attempt` when the row is only for one attempt; never `break.glass`                         |
+| `deadline_seconds` | how old the escalation, by its own `at`, may get before the default is taken                                                         |
+| `answered_by`      | record kinds that, landing on the same ticket after the escalation, mean someone answered it; the router's records are not among them |
+| `limit_per_ticket` | defaults this row may apply to one ticket; the next repeat waits for the owner                                                       |
+| `decision`         | the locked decision (`graph/nodes/DEC-*.json`) the default is drawn from; case 12 checks that the node exists                        |
+| `default`          | `do: wake`, `to: source` (the seat that wrote the escalation) or a role, and `answer`, the default in at most 160 characters         |
+
+The default is two steps, in this order.
+First a `policy.applied` 200 record, seat `policy-watch`, with `--policy <row id>`, `--answer <the escalation's id>` and the answer in the note.
+Then `herdr agent prompt <seat> "record <id> playbook <path>"`, the same line `route.sh` sends, so the seat reads its answer from the record.
+A wake that fails is a 500 note to the monitor and the record stands.
+
+An escalation with no row is never touched: it waits for the architect or the owner, however old it is.
+`break.glass` never has a row.
+`policy.sh` exits 3 at start if the table gives it one, and the schema refuses it too.
+
+### Run it here
+
+Bring-up starts the watch in `2.3.2 policy watch - policy` (`herdr/config/monitors.json`).
+Never start it from a shell of your own.
+
+```sh
+herdr/bin/bringup.sh --check     # lists pane-policy ok
+make -C factory policy-status    # escalations a policy covers that still wait; exit 1 when one is past its deadline
+make -C factory policy-once      # one tick, applies any default now due
+```
+
+`status` exiting 1 means the watch is not running: a default is due and nothing took it.
+
+### Add a policy
+
+1. Find the escalation in `routes.json`: the row with `escalate` or `notify_owner` and `line: decision`.
+2. Find the locked decision that answers it in `graph/nodes/`. If there is none, the escalation has no policy: the owner decides.
+3. Add a row to `policies.json` with the kind and code of that escalation, a deadline, the `answered_by` kinds, a limit and the decision's id.
+4. `make -C factory lint` and `make -C factory test`. Case 12 checks that every row matches an escalating row of `routes.json` and cites a node that exists.
+
+The script is not touched.
+
+### Tune it
+
+- `deadline_seconds` is per row.
+  A default lands at most `poll_seconds` after it.
+- The first start judges only records written after it (`factory/state/policy/since`).
+  Pass `--from-start` on that first start to judge the log already there.
+- To apply a default again on purpose, delete its latch file under `factory/state/policy/<escalation id>` and raise `limit_per_ticket`, or write the escalation again.
+
+### When something goes wrong
+
+| Symptom                                                    | Cause and fix                                                                                                                 |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| A 500: `policy <id> on record <id>: herdr agent prompt ... failed` | The seat is gone. The `policy.applied` record stands for the seat that is brought back; the supervisor re-seats it.   |
+| A 500: `... no seat or role for ...`                       | The escalation's seat name matches no `roles/*.json` label, so the record has no addressee. Nothing was woken.                |
+| `policy.sh` exits 3 at start                               | A row matches `break.glass`, two rows share an id, or the config is not JSON.                                                 |
+| No default for a blocked seat                              | No row covers it, it was written before the first start, a record in `answered_by` landed after it, or the limit was reached. |
+
+### What it never does
+
+- It never decides an answer: the text is in the row, drawn from a locked decision.
+- It never touches an escalation no row covers, and never a `break.glass`.
+- It never reads a prose field to decide; it matches kinds, codes, tickets and ids.
+- It never runs as a background job; it lives in its labelled monitors pane.
+
+GOOD: a worker blocks at 12:00Z, nobody answers, and at 12:30Z a `policy.applied` record carries the owner's default and the worker is prompted with it.
+GOOD: a `test.failed` attempt 3 is escalated to the architect and waits, because no row covers it.
+NEVER: a `policies.json` row for `break.glass`, because the owner authorises each one by hand.
+NEVER: a default written into `policy.sh`, because a new default is a row and `make lint`.
 
 ## Record bus
 

@@ -29,7 +29,12 @@ world_up() {
   #   copy records between trees the case counts. factory/tests/cases/12-bus.test.sh exercises bus.sh against a stub treehouse.
   #   Cost: cases 01-12 do not exercise route.sh or flow.sh through a pane; the factory suite and case 13 do. The same goes
 #   for recover.sh's belt node: .belt.status is `true` in the world's config, so the node reads ok; case 13 sets the real one.
-  jq '(.tabs[].reserved[] | select(.name == "runner" or .name == "flow" or .name == "bus") | .command) = "while :; do sleep 30; done"' \
+  # BREADCRUMB 2026-10-12 - WO-20261012-9b2c. What would break: the policy watch (2.3.2, factory/bin/policy.sh run) is a third slot
+  #   whose live command writes records (policy.applied, and a 500 note when a wake fails), and the cases that count or compare
+  #   events would see ones they did not make. Why this fix: it joins the runner and the flow watch in the filter above, keeping
+  #   its name, label and place. Rejected: leaving it live and loosening counts. Cost: no herdr case runs policy.sh through a pane;
+  #   factory case 12 proves the script and case 04 proves the slot is drawn, labelled and in use.
+  jq '(.tabs[].reserved[] | select(.name == "runner" or .name == "flow" or .name == "policy" or .name == "bus") | .command) = "while :; do sleep 30; done"' \
     "$REPO/herdr/config/monitors.json" > "$REPO/herdr/config/monitors.json.new" && mv "$REPO/herdr/config/monitors.json.new" "$REPO/herdr/config/monitors.json"
   find "$REPO/work-orders/archive" -name 'WO-*.md' -exec cp -n {} "$REPO/work-orders/" \; 2>/dev/null
   rm -rf "$REPO"/events/20*

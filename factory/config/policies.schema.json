@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/factory/config/policies.schema.json",
+  "title": "standing policies",
+  "description": "Tunables of factory/bin/policy.sh and its policy table. ${repo} is the directory above factory/ (or the --repo flag). No tunable lives in the script. A row never matches break.glass: the owner authorises each one by hand, every time.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "description",
+    "poll_seconds",
+    "watcher_seat",
+    "events_dir",
+    "event_bin",
+    "state_dir",
+    "runner_config",
+    "policies"
+  ],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "description": { "type": "string" },
+    "poll_seconds": {
+      "type": "integer",
+      "minimum": 5,
+      "maximum": 60,
+      "description": "seconds between ticks; a default lands at most this long after its deadline"
+    },
+    "watcher_seat": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+      "description": "the seat name on every record the watcher writes"
+    },
+    "events_dir": { "type": "string" },
+    "event_bin": { "type": "string" },
+    "state_dir": {
+      "type": "string",
+      "description": "one latch file per escalation already handled, and the first-start boundary"
+    },
+    "runner_config": {
+      "type": "string",
+      "description": "the runner.json that names the herdr session, the roles directory and the playbooks directory; there is one definition of each"
+    },
+    "policies": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "match",
+          "deadline_seconds",
+          "answered_by",
+          "limit_per_ticket",
+          "decision",
+          "default"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^POL-[a-z0-9][a-z0-9-]{0,47}$",
+            "description": "named on the policy.applied record; unique in the table"
+          },
+          "match": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "code"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1,
+                "not": { "const": "break.glass" }
+              },
+              "code": { "type": "integer", "minimum": 100, "maximum": 599 },
+              "attempt": { "type": "integer", "minimum": 1, "maximum": 3 }
+            }
+          },
+          "deadline_seconds": {
+            "type": "integer",
+            "minimum": 60,
+            "description": "age of the escalation, by its own at, after which nobody having answered the default is taken"
+          },
+          "answered_by": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "not": { "const": "policy.applied" }
+            },
+            "description": "record kinds on the same ticket, written after the escalation, that mean someone answered it; the router's own records and the watcher's notes are not among them"
+          },
+          "limit_per_ticket": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "defaults this row may apply to one ticket; a repeat escalation past it waits for the owner"
+          },
+          "decision": {
+            "type": "string",
+            "pattern": "^DEC-[a-z0-9-]+$",
+            "description": "the locked decision (a graph/nodes/DEC-*.json id) the default is drawn from"
+          },
+          "default": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["do", "to", "answer"],
+            "properties": {
+              "do": {
+                "enum": ["wake"],
+                "description": "write the policy.applied record, then prompt the seat with it"
+              },
+              "to": {
+                "enum": [
+                  "source",
+                  "interface-agent",
+                  "orchestrator",
+                  "architect",
+                  "worker",
+                  "tester",
+                  "reviewer",
+                  "merger",
+                  "player",
+                  "monitor"
+                ],
+                "description": "source: the seat that wrote the escalation; a role: that role's seat for the ticket"
+              },
+              "answer": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160,
+                "description": "the default itself, in the policy.applied note, so the seat reads its answer from the record"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

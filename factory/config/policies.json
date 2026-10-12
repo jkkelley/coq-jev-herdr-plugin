@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Standing policies (WO-20261012-9b2c). An escalation is a record the routes table sends to the architect or the owner. A row here gives one kind of escalation a deadline and a default: if no record in answered_by lands on the ticket within deadline_seconds of the escalation, factory/bin/policy.sh writes a policy.applied record naming the row and wakes the seat. A kind with no row here waits for its answer without end. break.glass never has a row and policy.sh refuses a table that gives it one.",
+  "poll_seconds": 15,
+  "watcher_seat": "policy-watch",
+  "events_dir": "${repo}/events",
+  "event_bin": "${repo}/events/bin/event.sh",
+  "state_dir": "${repo}/factory/state/policy",
+  "runner_config": "${repo}/factory/config/runner.json",
+  "policies": [
+    {
+      "id": "POL-blocked-land-it",
+      "match": { "kind": "blocked", "code": 423 },
+      "deadline_seconds": 1800,
+      "answered_by": [
+        "ticket.cut",
+        "request.forwarded",
+        "work.started",
+        "pr.opened",
+        "test.passed",
+        "review.passed",
+        "merged",
+        "verified",
+        "rejected"
+      ],
+      "limit_per_ticket": 1,
+      "decision": "DEC-local-fast-ci-full",
+      "default": {
+        "do": "wake",
+        "to": "source",
+        "answer": "Owner default: land the PR on its criteria as written. Prove only the change locally, leave the full suite to CI, add nothing the criteria do not name."
+      }
+    }
+  ]
+}

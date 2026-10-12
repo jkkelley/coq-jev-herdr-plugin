@@ -6,15 +6,17 @@
 #   make -C factory status    the belt age (bin/route.sh status); exit 1 when stale
 #   make -C factory flow-once   one tick of the flow watch (bin/flow.sh once)
 #   make -C factory flow-status the stalls now present (bin/flow.sh status); exit 1 when there is one
+#   make -C factory policy-once   one tick of the policy watch (bin/policy.sh once)
+#   make -C factory policy-status the escalations a policy covers that still wait (bin/policy.sh status); exit 1 when one is past its deadline
 #   make -C factory bus-once    one tick of the record bus (bin/bus.sh once): every slot's new records into this checkout's events/
 # The long-running form is bin/route.sh run, started in a labelled herdr pane by herdr/bin/bringup.sh, never from here.
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -euo pipefail -c
 .DEFAULT_GOAL := help
 HERE := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-.PHONY: help test image lint once status flow-once flow-status bus-once
+.PHONY: help test image lint once status flow-once flow-status policy-once policy-status bus-once
 help:
-	@sed -n '1,10p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
+	@sed -n '1,12p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
 test:
 	bash $(HERE)tests/run.sh
 image:
@@ -23,6 +25,7 @@ lint:
 	python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" $(HERE)config/runner.json $(HERE)config/runner.schema.json
 	python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" $(HERE)config/routes.json $(HERE)config/routes.schema.json
 	python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" $(HERE)config/flow.json $(HERE)config/flow.schema.json
+	python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" $(HERE)config/policies.json $(HERE)config/policies.schema.json
 	python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" $(HERE)config/bus.json $(HERE)config/bus.schema.json
 	shellcheck -S warning $(HERE)bin/*.sh $(HERE)tests/run.sh $(HERE)tests/lib/*.sh $(HERE)tests/cases/*.sh
 once:
@@ -33,5 +36,9 @@ flow-once:
 	$(HERE)bin/flow.sh once
 flow-status:
 	$(HERE)bin/flow.sh status
+policy-once:
+	$(HERE)bin/policy.sh once
+policy-status:
+	$(HERE)bin/policy.sh status
 bus-once:
 	$(HERE)bin/bus.sh once
