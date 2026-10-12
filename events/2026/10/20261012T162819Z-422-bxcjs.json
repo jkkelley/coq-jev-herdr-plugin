@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T162819Z-422-bxcjs",
+  "at": "2026-10-12T16:28:19Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261011-ceea",
+  "kind": "review.changes",
+  "ticket": "WO-20261011-ceea",
+  "pane": "wD3:pAG",
+  "note": "PR 24 at c1b9600: ACs evidenced, lint 0, herdr 17 of 17. One miss: serve.sh:25 probe timeout 3 typed in, not config. PR shows CONFLICTING on GitHub; push the local merge",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-4-coq-jev-herdr-plugin/6ac43113-6807-4261-b23b-aad80b507164/scratchpad/lint.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-4-coq-jev-herdr-plugin/6ac43113-6807-4261-b23b-aad80b507164/scratchpad/herdr.log"
+  ],
+  "observations": [
+    {
+      "path": "report/blueprint/serve.sh",
+      "line": 25,
+      "saw": "urlopen timeout=3 typed in the check helper",
+      "expected": "probe timeout read from the tier config, a field in tier.schema.json"
+    }
+  ],
+  "to": "worker",
+  "sha": "c1b9600",
+  "pr": 24
+}

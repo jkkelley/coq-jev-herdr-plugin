@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T162928Z-100-ywt2m",
+  "at": "2026-10-12T16:29:28Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-da52",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:p8A",
+  "note": "PR 25 updated for test.failed 3h504",
+  "evidence": [],
+  "observations": [],
+  "sha": "1d1758a",
+  "pr": 25
+}

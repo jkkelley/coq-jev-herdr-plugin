@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T163437Z-409-wccwn",
+  "at": "2026-10-12T16:34:37Z",
+  "code": 409,
+  "seat": "merger",
+  "kind": "merge.conflict",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:pAC",
+  "note": "PR 26 conflicts with main, not merged. Files: CHANGELOG.md, CONTEXT_STATE.md, herdr/tests/cases/04-bringup-monitors.test.sh, 05-recover.test.sh, work-orders/INDEX.md, WO-20261012-187e README and 3bb0 file (add/add).",
+  "evidence": [],
+  "observations": [],
+  "to": "architect",
+  "sha": "21f8324ddc14a85f1c76b88b81815680ce5988b9",
+  "pr": 26
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T163228Z-201-9j60m",
+  "at": "2026-10-12T16:32:28Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-da52",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-da52",
+  "pane": null,
+  "note": "make -C factory test on PR 25 head 1d1758a: tests: 17 passed, 0 failed (exit 0).",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/0725734e-9b00-4300-bb97-7e03a3d588c7/scratchpad/da52-test.log"
+  ],
+  "observations": [],
+  "to": "architect",
+  "sha": "1d1758a",
+  "pr": 25
+}

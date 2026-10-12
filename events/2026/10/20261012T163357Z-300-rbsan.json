@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T163357Z-300-rbsan",
+  "at": "2026-10-12T16:33:57Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261012-b800",
+  "pane": null,
+  "note": "routed review.passed 201 (20261012T163340Z-201-iyg4z): seat merger, down reviewer",
+  "evidence": [
+    "events/2026/10/20261012T163340Z-201-iyg4z.json"
+  ],
+  "observations": [],
+  "to": "merger"
+}

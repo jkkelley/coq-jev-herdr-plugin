@@ -737,6 +737,14 @@ run_pre_start() {
 #   scrollback by an earlier agent would match, and then the idle poll still decides. The nudge text comes from
 #   roles/bin/nudge.sh (--role, --ticket, --project; one line) so render-playbook's directory owns the wording next to the
 #   brief; that file is outside the worker fence, so until it exists the inline text below is used. Record: WO-20261011-dc0d.
+# BREADCRUMB 2026-10-12 - nudge_wait_seconds 180 to 20 in herdr/config/herdr.json (JSON has no comments, so it lives here).
+#   What broke: since PR 21 route.sh seats a role before each wake and waits on this script, so this ack wait held the whole
+#   belt 180 s per seat-up; the guard sends its GOV-100 memo only from `compaction-guard watch` (monitor slot 1.1.2), which is
+#   off since 2026-10-12T02:17Z over the memo flood (backlog lh51y), so no ack can come and every wait ran to its timeout
+#   (PR 25 pr.opened ibm6d held the belt 15:33Z to 15:36Z; records queued 5 minutes behind). Why 20 and not 0: a guard that
+#   does memo acks within seconds, so 20 still catches it. Rejected: removing the wait (the dc0d idle-ack case returns when
+#   the scoped watch of research A1 comes back). Cost: a slow ack after 20 s is missed and that seat may idle on it. Durable
+#   fix: backlog kiupi (seat-ups stop blocking routing).
 nudged_set() { jq --arg at "$1" '.nudged_at = (if $at == "" then null else $at end)' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }
 agent_status() {
   sl_h pane list ${ws:+--workspace "$ws"} 2>/dev/null | jq -r --arg p "$a" 'first((.result.panes // [])[] | select(.pane_id == $p) | .agent_status) // empty'

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T163617Z-100-rlu8n",
+  "at": "2026-10-12T16:36:17Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-72a0",
+  "pane": null,
+  "note": "correction to owner notice for 500 qfojd: merger seat not live (agent_not_found); review.passed nc0yo has no merger record; no merger to wake",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T162954Z-500-oprpc",
+  "at": "2026-10-12T16:29:54Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261011-ceea",
+  "pane": null,
+  "note": "stall: review.changes 422 20261012T162819Z-422-bxcjs has no worker record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

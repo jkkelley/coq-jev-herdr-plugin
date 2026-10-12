@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T163133Z-100-l7hc3",
+  "at": "2026-10-12T16:31:33Z",
+  "code": 100,
+  "seat": "reviewer-72a0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:pAZ",
+  "note": "reviewer started on WO-20261012-72a0 - Verifier seat: a merged record wakes a verifier that checks the merge on main against the ticket's criteria and posts verified or rejected, so no merge waits on the architect",
+  "evidence": [],
+  "observations": [],
+  "to": "architect",
+  "sha": "4d5dbac6e7b398f9b3851655dee07f9fbbbd38f7",
+  "pr": 29
+}

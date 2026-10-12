@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T163340Z-201-iyg4z",
+  "at": "2026-10-12T16:33:40Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261012-b800",
+  "kind": "review.passed",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:pAS",
+  "note": "review passed PR 26 head 21f8324 (tested 6a2ee40, later commit adds one record): 9 timeouts now supervisor.timeouts.* keys, lint ok on clean export, em dash, UTC, contents, GOOD and NEVER ok; 4 non-blocking notes",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/0059fa18-017c-4a56-acd6-5a1f2f74f1bc/scratchpad/lint.out",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/0059fa18-017c-4a56-acd6-5a1f2f74f1bc/scratchpad/lint2.out"
+  ],
+  "observations": [
+    {
+      "path": "work-orders/archive/2026/WO-20261012-b800-supervisor-at-boot-and-every-minute-a-process-br.md",
+      "line": 64,
+      "saw": "AC-H1 to AC-H3 ticked on suite equivalents, Not run live",
+      "expected": "architect or owner runs make -C herdr supervisor-install and the SOP-0003 recipe; I did not count them open"
+    },
+    {
+      "path": "events/2026/10/20261012T160316Z-422-19hjw.json",
+      "line": 1,
+      "saw": "untracked round-1 record has 6 observations, schema maxItems 5, so make lint FAILs in the checkout",
+      "expected": "architect deletes or reposts it; not in the PR, clean export lints all ok"
+    },
+    {
+      "path": "herdr/bin/supervisor.sh",
+      "line": 83,
+      "saw": "sleep 1 poll step, same at belt.sh",
+      "expected": "59; not a timeout bound"
+    },
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261012-187e/README.md",
+      "line": 1,
+      "saw": "epic cut and 5 sibling ticket files still ride this PR",
+      "expected": "architect decides how the epic lands once; no ticket path is named so not a block"
+    }
+  ],
+  "attempt": 2,
+  "to": "architect",
+  "sha": "21f8324",
+  "pr": 26
+}

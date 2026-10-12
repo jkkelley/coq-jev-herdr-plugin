@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T163536Z-422-3hdaj",
+  "at": "2026-10-12T16:35:36Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261012-da52",
+  "kind": "review.changes",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:pB2",
+  "note": "PR 25 changes requested at 1d1758a: stale ready copies of WO-20261012-9b2c and WO-20261012-da52 sit in the epic dir beside their archived done copies. AC-H1 met, make lint ok, tester 17/17 (9j60m), em dash/UTC/config clean.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/6c276451-55b0-4300-9a72-29dce9031c1d/scratchpad/lint.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/6c276451-55b0-4300-9a72-29dce9031c1d/scratchpad/dups.log"
+  ],
+  "observations": [
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261012-187e/WO-20261012-9b2c-standing-policies-an-escalation-carries-a-deadli.md",
+      "line": 7,
+      "saw": "status ready, file added vs main and a done copy is in work-orders/archive/2026 (main has only the archive copy)",
+      "expected": "file deleted, 9b2c exists once, as done in archive"
+    },
+    {
+      "path": "work-orders/WO-20261010-329d/WO-20261012-187e/WO-20261012-da52-record-bus-every-slot-s-new-records-reach-the-ch.md",
+      "line": 7,
+      "saw": "status ready beside the done copy in work-orders/archive/2026; a reindex lists the id twice",
+      "expected": "file removed by the done step, da52 exists once in archive; no duplicate WO id at origin/main or at 3e00b1a"
+    }
+  ],
+  "attempt": 3,
+  "to": "worker",
+  "sha": "1d1758a",
+  "pr": 25
+}

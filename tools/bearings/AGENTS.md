@@ -64,6 +64,8 @@ make ask TIER=stable Q=/path/questions.json      # replaces the cards; ids never
 ```
 
 `questions.json` is `{ "title": "...", "items": [ { "id", "about", "decide", "options": [ { "label", "then" } ], "rec" } ] }`.
+`rec` is the 0-based index of the recommended option.
+An optional `solves` array of short strings renders one line each under a Solves label, for a card that bundles several items.
 
 The wait pane prints one line per event and loops until the server stops:
 
