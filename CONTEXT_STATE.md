@@ -51,6 +51,32 @@
 
 
 
+
+## Checkpoint 2026-10-12 16:49 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-8fb2 on WO-20261012-8fb2 - Own checkpoint after compaction: a SessionStart compact hook puts the seat's newest CONTEXT_STATE.md checkpoint in front of it. Treehouse slot 9 (lease holder is this ticket), branch feat/own-checkpoint-after-compaction-a-sessionstart-c, no PR yet. Test pane wD3:pBA, run only through herdr/bin/testpane.sh, and always with make -C $COQ_WORKTREE/herdr, because the pane's cwd is the main checkout.
+
+#### Toolchain
+
+- Built: herdr/bin/resume-checkpoint.sh (finds the live seat record by HERDR_PANE_ID, prints checkpoint.sh read --top 1 for its worktree, always exits 0, one line when anything is missing); the SessionStart matcher compact entry in .claude/settings.json and in seat.sh render_settings with the identical command string; break-glass-lib.sh now merges into hooks with += so the entry survives a break glass; herdr case 17 and one assertion in case 13.
+- Verified in the test pane against the slot: make -C herdr lint rc 0, herdr cases 01, 13 and 17 passed, 4 passed 0 failed. Not provable without a real compact: that Claude Code adds the hook output to context and folds the two identical commands into one run.
+
+#### Active Tasks
+
+- Close out: gh pr create with the criteria as body, work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened 100 with sha and pr, then hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-8fb2 as worker-wo-20261012-8fb2 in slot 9. Read playbooks/worker.md and this checkpoint. The code is committed and pushed; do the close-out in Active Tasks, then hold.
+
 ## Checkpoint 2026-10-12 15:41 UTC
 
 ### Current state
