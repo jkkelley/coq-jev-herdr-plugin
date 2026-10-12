@@ -36,7 +36,9 @@ if (!asked) {
   console.error(`no message ${replyTo} on page ${T.page}`);
   process.exit(6);
 }
+// max_reply_chars, not max_message_chars: a SITREP payload with full ticket titles runs past the 8000 the owner's typed
+// messages are capped at (WO-20261012-668a). Rejected: raising the shared cap, which would loosen the owner input limit too.
 const at = new Date().toISOString();
-const line = { id: `m-c${at.replace(/[^0-9]/g, "")}`, from: "claude", reply_to: replyTo, text: text.slice(0, cfg.max_message_chars), at };
+const line = { id: `m-c${at.replace(/[^0-9]/g, "")}`, from: "claude", reply_to: replyTo, text: text.slice(0, cfg.max_reply_chars), at };
 fs.appendFileSync(file, `${JSON.stringify(line)}\n`);
 console.log(`replied to ${replyTo} on ${T.page}`);

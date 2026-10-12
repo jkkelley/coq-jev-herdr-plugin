@@ -76,6 +76,47 @@
 
 Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The 06-belt boundary fix is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
 
+## Checkpoint 2026-10-12 13:55 UTC
+
+### Current state
+
+#### Infrastructure
+- Worker seat worker-wo-20261012-668a on WO-20261012-668a, PR 23, slot 1, test pane wD3:p7B. Review record 20261012T132207Z-422-ucd33 (attempt 1): remove the tracked .claude/skills symlink, add GOOD and NEVER to tools/bearings/RUNBOOK.md and standards/SITREP-PAYLOAD.md.
+- Done in this step: git rm --cached .claude/skills (kept on disk, excluded in the worktree's info/exclude), both docs have a GOOD and NEVER section and a contents entry.
+
+#### Toolchain
+- make lint runs inside make step. No code changed, so the bearings suite (113 passed) is not rerun.
+
+#### Active Tasks
+- After the step lands: post pr.opened 100 with the new head sha and PR 23, then stop.
+
+#### Blockers
+- None.
+
+### Hydration prompt
+Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/worker.md and this checkpoint. The review fixes are committed; post pr.opened 100 with the new head and PR 23 if the record is missing, then stop.
+
+## Checkpoint 2026-10-12 13:15 UTC
+
+### Current state
+
+#### Infrastructure
+- Worker seat worker-wo-20261012-668a on WO-20261012-668a - SITREP panel in this project's bearings: a #SITREP/v1# reply renders as the colored status card, built from records by a script and checked against the owner standard before it is sent. Slot 1, branch feat/sitrep-panel-in-this-project-s-bearings-a-sitrep, test pane wD3:p7B.
+- Landed in tools/bearings: panel renderer and styles ported from the handoff (page.html hunk 3 hand-ported, announcer says SITREP received), build stamp in server.mjs, max_reply_chars 32000 in config, schema and reply.mjs, standards/ (two generic standards and SITREP-PAYLOAD.md), config/sitrep.json, config/sitrep.template.json, scripts/sitrep-check.mjs, scripts/sitrep-build.mjs, bearings.sh sitrep verb, Makefile targets, RUNBOOK.md, AGENTS.md section, tests/sitrep.sh with fixtures.
+
+#### Toolchain
+- make -C tools/bearings test: 113 passed, 0 failed, run in the test pane. make lint run by make step.
+- Screenshots of the rendered panel are in /tmp/claude-1000/shots when BEARINGS_SHOT_DIR is set on the test run.
+
+#### Active Tasks
+- Next: open PR work is not started. Remaining: AC evidence with --observed, retro note, then send the real SITREP for this repo to the owner with bearings.sh stable sitrep (needs the stable page running; check make bearings-status), then work-order submit, done, PR, pr.opened 100.
+
+#### Blockers
+- None.
+
+### Hydration prompt
+Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/worker.md and this checkpoint. The code and tests are done and green; what is left is the evidence per acceptance criterion, the live send of a SITREP on the stable page (AC-H4), the close-out flow in AGENTS.md, and the pr.opened 100 record.
+
 ## Checkpoint 2026-10-12 12:50 UTC
 
 ### Current state
@@ -101,6 +142,40 @@ Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/wor
 ### Hydration prompt
 
 Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The merge of origin/main is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
+
+## Checkpoint 2026-10-12 12:40 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4562 on WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day.
+  Branch feat/break-glass-one-owner-authorised-action-at-a-tim, treehouse slot 2, test pane wD3:p1V through herdr/bin/testpane.sh only.
+  PR 22 is open; this step answers the architect record 20261012T121854Z-200-uqz6z (owner decision of 2026-10-12).
+
+#### Toolchain
+
+- Obs 1 reverted by owner order: break-glass-lib.sh sets defaultMode bypassPermissions on every flip, dontAsk seats included; breadcrumb 4 cites the record; RUNBOOK and seat.sh header say bypass again; case 13 asserts bypass on an orchestrator seat.
+- Kept: hook timeouts from break_glass.hook_pre_timeout_seconds and hook_post_timeout_seconds in herdr.json and its schema.
+- Obs 3 and 4: work-order note on WO-20261011-4562 re-homes the AC-H1 and AC-H3 live halves to WO-20261012-2a12 - Break glass live proof: the owner's first real grant through the interface card flips a live seat to bypass permissions, runs one action, and restores it.
+- Verified in the test pane: make lint, make -C herdr lint, CASES=13-break make -C herdr test (1 passed).
+
+#### Active Tasks
+
+- Merge origin/main (PR 20 test pane per seat, conflicts in case 04 and CONTEXT_STATE.md), re-run the herdr suite, push, post pr.opened 100 with the new head sha and PR 22, then stop.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Lesson: the test pane queues commands from every seat; wait on my own done file in a bounded foreground loop, never a Monitor or background shell (owner rule 2026-10-12).
+
+### Hydration prompt
+
+Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 2. Read playbooks/worker.md and this checkpoint.
+The code, the note and the push are done; the only step left is pr.opened 100 with the head sha, then stop and wait for the reviewer.
 
 ## Checkpoint 2026-10-12 12:19 UTC
 

@@ -15,7 +15,7 @@
     "state_dir": { "type": "string" },
     "event_bin": { "type": "string" },
     "queue_bin": { "type": "string" },
-    "seat_bin": { "type": "string", "description": "herdr/bin/seat.sh: the one way a seat comes up or goes down; the seat and down parts of a row call it, nothing else does" },
+    "seat_bin": { "type": "string", "description": "herdr/bin/seat.sh: the one way a seat comes up or goes down; the seat and down parts of a row call it, and a break-glass route runs it as seat.sh --break-glass SEAT --record ID; nothing else does" },
     "roles_dir": { "type": "string" },
     "playbooks_dir": { "type": "string" },
     "stale_seconds": { "type": "integer", "minimum": 30, "maximum": 120, "description": "age of the belt file past which route.sh status reports the belt stopped" }

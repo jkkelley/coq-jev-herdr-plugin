@@ -1,0 +1,14 @@
+[
+  {
+    "number": 7,
+    "title": "WO-20261001-bb01 - Synthetic in progress ticket one",
+    "url": "https://github.com/example/synthetic/pull/7",
+    "headRefName": "feat/one"
+  },
+  {
+    "number": 8,
+    "title": "Synthetic pull request without a ticket prefix",
+    "url": "https://github.com/example/synthetic/pull/8",
+    "headRefName": "feat/two"
+  }
+]

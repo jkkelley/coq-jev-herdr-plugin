@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T090000Z-423-aaaaa",
+  "at": "2026-10-12T09:00:00Z",
+  "code": 423,
+  "seat": "worker-x",
+  "kind": "blocked",
+  "ticket": "WO-20261001-bb01",
+  "pane": null,
+  "note": "synthetic blocked record",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T141851Z-201-8r1vl",
+  "at": "2026-10-12T14:18:51Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-4db1",
+  "kind": "test.passed",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p1V",
+  "note": "passed 2d3f8b8: factory 14/14, herdr 15/15, exit 0 both",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-3-coq-jev-herdr-plugin/6d422f8b-3401-4ad2-aa70-37241e60182a/scratchpad/rerun-2d3f8b8.log"
+  ],
+  "observations": [],
+  "attempt": 1,
+  "to": "reviewer",
+  "sha": "2d3f8b8",
+  "pr": 21
+}

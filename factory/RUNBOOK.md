@@ -22,14 +22,16 @@ Ticket: WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.jso
 That is all it does.
 No line in the script reads a kind, a code or a note except to match a row.
 
-| Row `do`       | What the runner performs                                                                                                                  |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `wake`         | `herdr agent prompt <seat> "record <id> playbook <path>"`, the seat named by `roles/<to>.json`                                            |
-| `seat`         | `herdr/bin/seat.sh --ticket <ticket> --role <to>`, then the same prompt as `wake`; a seat that is already up is left as it is             |
-| `notify_owner` | the same prompt to the interface agent, with `line <done or decision>` between the id and the playbook                                    |
-| `enqueue`      | `queue/bin/queue.sh enqueue --ticket <ticket> --from <id>`, with `--priority` when the record carries one                                 |
-| `escalate`     | `events/bin/event.sh add --kind escalated --code <row code> --to <role>` for the ticket                                                   |
-| `ignore`       | nothing but the ledger entry `ignored`; no receipt, no 500, no herdr call                                                                 |
+| Row `do`       | What the runner performs                                                                                                                                 |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `wake`         | `herdr agent prompt <seat> "record <id> playbook <path>"`, the seat named by `roles/<to>.json`                                                           |
+| `seat`         | `herdr/bin/seat.sh --ticket <ticket> --role <to>`, then the same prompt as `wake`; a seat that is already up is left as it is                            |
+| `notify_owner` | the same prompt to the interface agent, with `line <done or decision>` between the id and the playbook                                                   |
+| `enqueue`      | `queue/bin/queue.sh enqueue --ticket <ticket> --from <id>`, with `--priority` when the record carries one                                                |
+| `escalate`     | `events/bin/event.sh add --kind escalated --code <row code> --to <role>` for the ticket                                                                  |
+| `ignore`       | nothing but the ledger entry `ignored`; no receipt, no 500, no herdr call                                                                                |
+| `break-glass`  | `herdr/bin/seat.sh --break-glass <record's seat> --record <id>`; exit 3 is a refusal seat.sh already recorded as a 423, not a failure (herdr/RUNBOOK.md) |
+| `none`         | nothing: the record is seen and receipted (the break glass lifecycle records 100, 201 and 204)                                                           |
 
 Two optional fields on a row change what the action carries.
 

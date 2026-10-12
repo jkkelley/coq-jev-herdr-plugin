@@ -10,8 +10,9 @@
 # Flags: --config FILE (default factory/config/runner.json)   --repo DIR (what ${repo} means)   --routes FILE   --state DIR
 #        --from-start   on the first start only, route the records already in the log (default: only records written after it)
 # Actions: wake and notify_owner = herdr agent prompt <seat> "record <id> playbook <path>"; enqueue = queue.sh enqueue;
-#          escalate = event.sh add --kind escalated --to <role>; ignore = the ledger entry and nothing else (no receipt, no 500).
-#          A record no row matches, or an action that fails, becomes a 500 note addressed to the monitor.
+#          escalate = event.sh add --kind escalated --to <role>; break-glass = seat.sh --break-glass <record's seat> --record <id>;
+#          seat = seat.sh --ticket T --role R, then the wake; ignore = the ledger entry and nothing else (no receipt, no 500);
+#          none = the receipt only. A record no row matches, or an action that fails, becomes a 500 note addressed to the monitor.
 # Exit: 0 ok, 1 belt stale (status only), 2 usage, 3 validation, 4 io.
 #
 # BREADCRUMB 2026-10-11 - WO-20261011-38c7. Three choices that look arbitrary:
@@ -27,6 +28,15 @@
 #      record under factory/state/, gitignored.
 #   3. The first start routes nothing already in the log (state/since holds the boundary) unless --from-start is given.
 #      What would break: starting on a log of hundreds of old records would wake every seat that ever existed.
+#   4. Two actions that are not a queue or a wake, break-glass and none (WO-20261011-4562, DEC-break-glass-one-time). What broke
+#      without them: the ticket asks for a route row "do:break-glass", and the lifecycle records of one break glass (100 in effect,
+#      201 action done, 204 restored) matched no row, so each became a "no route" 500 to the monitor, the same noise seat.up 100
+#      already makes. Why this fix: break-glass runs seat.sh with the 200 record's id and nothing else; seat.sh reads the owner's
+#      answer itself and writes its own 423 when it refuses, so exit 3 is a handled refusal here, not a runner failure (a second
+#      500 for the same refusal would bury it). none is the generic "seen, nothing to do" row, with no branch on any kind.
+#      Rejected: a break-glass branch that reads the record's action or answer (the verdict must stay in seat.sh, where the page
+#      is) and routing the three lifecycle records to the monitor (three agent wakes per grant for no decision). Cost: the
+#      runner blocks for the length of one seat.sh call, a few file writes and one herdr prompt.
 # BREADCRUMB 2026-10-11 - WO-20261011-4db1, the ignore action. What broke: the table had no row for seat.up 100, seat.down 100,
 #   note 100 or work.started 100, so each one became a 500 "no route for ..." addressed to the monitor (nine in six minutes at
 #   18:32Z, and `grep "no route for" events/2026/10/*` still shows work.started 100 four times), and the monitor could not tell
@@ -156,6 +166,10 @@ act_primary() {
     escalate)
       local args=(--code "$(jq -r .code <<<"$row")" --kind escalated --to "$to" --note "escalated record $id"); [ "$ticket" = - ] || args+=(--ticket "$ticket")
       emit "${args[@]}" || { echo "event.sh escalated record failed"; return 1; } ;;
+    break-glass)
+      "$SEAT_BIN" --break-glass "$(jq -r .seat <<<"$rec")" --record "$id" >/dev/null 2>&1; rc=$?
+      case $rc in 0|3) ;; *) echo "seat.sh --break-glass exited $rc"; return 1;; esac ;;
+    none) ;;
     *) echo "unknown action $act"; return 1;;
   esac
 }
@@ -189,7 +203,7 @@ route_file() {
   esc=$(escalations_before "$ticket" "$id"); row=$(match_route "$rec" "${esc:-0}")
   if [ -z "$row" ]; then trouble "$id" "$ticket" "no route for $kind $code, record $id"; echo unrouted > "$LEDGER/$id"; return; fi
   # ignore: the table says this record is housekeeping. Its ledger entry is all it leaves; no receipt, so a seat coming up or
-  #   going down does not write a second record for every first one (see the breadcrumb at the top, item 4).
+  #   going down does not write a second record for every first one (see the ignore breadcrumb at the top).
   if [ "$(jq -r .do <<<"$row")" = ignore ]; then echo ignored > "$LEDGER/$id"; return; fi
   if why=$(perform "$row" "$id" "$ticket" "$rec"); then
     to=$(jq -r .to <<<"$row"); act=$(jq -r .do <<<"$row"); down=$(jq -r '.down // empty' <<<"$row")

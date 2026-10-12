@@ -1,0 +1,44 @@
+{
+  "schema_version": "1.0.0",
+  "tag": "#SITREP/v1#",
+  "rules": {
+    "max_words_per_item": 15,
+    "max_items_per_block": 2,
+    "max_prose_words": 120,
+    "max_queue_next": 5,
+    "max_stats": 4,
+    "max_links_per_item": 3,
+    "block_names": [
+      "EXECUTIVE GROUND TRUTH",
+      "DELTA",
+      "ACTIVE OPERATIONS",
+      "QUEUE MATRIX",
+      "TACTICAL NEXT STEPS"
+    ],
+    "ticket_id_patterns": [
+      "\\bWO-\\d{8}-[0-9a-f]{4}\\b",
+      "\\b(DQS|DQU|BS|LQ|BQ|DS|EP)-\\d"
+    ]
+  },
+  "build": {
+    "template": "config/sitrep.template.json",
+    "work_orders_dir": "work-orders",
+    "events_dir": "events",
+    "main_ref": "origin/main",
+    "prs_command": [
+      "gh",
+      "pr",
+      "list",
+      "--state",
+      "open",
+      "--json",
+      "number,title,url,headRefName",
+      "--limit",
+      "20"
+    ],
+    "friction_min_code": 400,
+    "recent_done_days": 7,
+    "counts_file": "sitrep-counts.json",
+    "friction_window_hours": 24
+  }
+}
