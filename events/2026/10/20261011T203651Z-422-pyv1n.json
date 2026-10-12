@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T203651Z-422-pyv1n",
+  "at": "2026-10-11T20:36:51Z",
+  "code": 422,
+  "seat": "architect",
+  "kind": "blocked",
+  "ticket": "WO-20261011-ceea",
+  "pane": "wD3:p2",
+  "note": "wrong base: branch cut from the records branch, not main; PR carries other tickets' files. Rebuild: git checkout -B <branch> origin/main; cherry-pick own commits (log origin/chore/architect-records-20261011..<old>); push --force-with-lease",
+  "evidence": [],
+  "observations": [],
+  "to": "worker"
+}

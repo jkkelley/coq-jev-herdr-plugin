@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# stubs/systemctl - stands in for `systemctl --user` inside the suite (WO-20261012-b800). Only `--user start UNIT` exists: it logs the
+# call to $SYSTEMCTL_STUB_LOG and starts the world's headless herdr server again, which is what herdr-stable.service does on the
+# host. Any other verb is refused so a case never believes in a unit it did not start.
+[ -z "${SYSTEMCTL_STUB_LOG:-}" ] || printf '%s\n' "$*" >> "$SYSTEMCTL_STUB_LOG"
+[ "${1:-}" = --user ] && [ "${2:-}" = start ] || { echo "stub systemctl: only --user start UNIT exists, got: $*" >&2; exit 2; }
+(herdr --session "${COQ_HERDR_SESSION:?}" server >> "$HOME/stub-herdr.log" 2>&1 &)
+exit 0

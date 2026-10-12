@@ -21,10 +21,7 @@ fixedln() { printf 'fixed %s (%s)\n' "$1" "$2"; fixed=$((fixed + 1)); sl_record 
 # The first failure ends the run: every later node needs this one (the DAG is a chain).
 failln() {
   printf 'FAILED %s (%s)\n' "$1" "$2"
-  if [ "$mode" = apply ]; then
-    sl_record note 500 bringup --note "bringup: $1 failed: $2"
-    sl_h notification show "500 bringup: $1 failed: $2" >/dev/null 2>&1 || true
-  fi
+  [ "$mode" != apply ] || sl_report_500 "$1" "bringup: $1 failed: $2"
   exit 1
 }
 
@@ -88,15 +85,32 @@ fi
 #   runner (WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a
 #   seat while the belt is stopped still owns the refusal of a seat while the belt is stopped). Cost: bringup now fails (500)
 #   when either pane cannot be plugged in, and both need jq and herdr on PATH where herdr was started.
+# BREADCRUMB 2026-10-12 - WO-20261012-b800, backlog m2jhs. What broke: this loop grepped the slot label out of `monitors.sh
+#   status` (" $what - $name  ["), so after the 2026-10-12 WSL reboot six panes that were bare shells under a correct label
+#   passed --check for 40 minutes. Why this fix: the verdict is `monitors.sh health`, which asks herdr for the pane's
+#   foreground process (BREADCRUMB in monitors.sh), and the repair is still `monitors.sh take`, which hands a running job
+#   back clean first. A pane that fails and cannot be repaired no longer ends the run: the panes are leaves of the DAG,
+#   not links of its chain, and one stuck pane (a human typed into an open slot: `left alone`) used to leave every pane
+#   after it down. Cost: the run exits 1 after trying them all, and a stuck pane is a 500 on every run until it is freed.
 MC="${COQ_MONITORS_CONFIG:-$SL_HERDR/config/monitors.json}"
+# BREADCRUMB 2026-10-12 - WO-20261011-ceea, slots. The three blueprint servers (blueprint-dev, -uat, -stable, report/blueprint/serve.sh)
+#   sit at 3.3.1 to 3.3.3, the bottom row of the shells tab, not in the free row of tab 2: the owner's turn and record watches
+#   ran at 2.3.1 and 2.3.2, then broke glass and the policy watch took 2.3.1 and 2.3.2, and a server reserved there would have been
+#   "restarted" over a watch. monitors.json is JSON and cannot carry this comment. A killed server is a bare shell, which
+#   `monitors.sh health` reads as FAILED and the loop below plugs back in; serve.sh --check is the probe for a server that is alive but
+#   not answering, which health does not see.
+health="$("$MON" health 2>/dev/null)"; pane_bad=0
 while IFS=$'\t' read -r name what cmd; do
   cmd="${cmd//\$\{repo\}/$SL_REPO}"
-  st="$("$MON" status 2>/dev/null)"
-  if grep -qF " $what - $name  [" <<<"$st"; then okln "pane-$name"
-  elif [ "$mode" = check ]; then failln "pane-$name" "slot $name is not running $what"
-  elif "$MON" take "$name" "$name" -- "$cmd" >/dev/null 2>&1; then fixedln "pane-$name" "$what plugged in"
-  else failln "pane-$name" "monitors.sh take $name failed"; fi
+  hline="$(grep -m1 -E "^(ok|FAILED) $name( |\$)" <<<"$health")"; why="${hline#FAILED $name }"; why="${why#(}"; why="${why%)}"
+  if [ "$hline" = "ok $name" ]; then okln "pane-$name"; continue; fi
+  [ -n "$hline" ] || why="monitors.sh health said nothing about slot $name"
+  if [ "$mode" = check ] || [[ "$why" == *"left alone"* ]]; then
+    printf 'FAILED pane-%s (%s)\n' "$name" "$why"; pane_bad=1
+    [ "$mode" = check ] || sl_report_500 "pane-$name" "bringup: pane-$name failed: $why"
+  elif "$MON" take "$name" "$name" -- "$cmd" >/dev/null 2>&1; then fixedln "pane-$name" "$what plugged in: $why"
+  else printf 'FAILED pane-%s (monitors.sh take %s failed: %s)\n' "$name" "$name" "$why"; pane_bad=1; sl_report_500 "pane-$name" "bringup: pane-$name take failed: $why"; fi
 done < <(jq -r '.tabs[].reserved[] | select(.command != null) | [.name, .what, .command] | @tsv' "$MC")
 
-[ "$mode" = check ] || [ "$fixed" = 0 ] || sl_h notification show "bringup: $fixed node(s) repaired, system up" >/dev/null 2>&1 || true
-exit 0
+[ "$mode" = check ] || [ "$fixed" = 0 ] || [ "$pane_bad" = 1 ] || sl_h notification show "bringup: $fixed node(s) repaired, system up" >/dev/null 2>&1 || true
+exit "$pane_bad"

@@ -5,7 +5,7 @@
   ],
   "state_default": { "state": "nominal", "label": "NOMINAL" },
   "stats": [
-    { "label": "IN FLIGHT", "value": "{{in_progress.count}}", "note": "tickets in progress", "tone": "good" },
+    { "label": "IN FLIGHT", "value": "{{in_flight.count}}", "note": "{{in_flight_source}}", "tone": "good" },
     { "label": "MAIN", "value": "{{main_sha}}", "note": "{{main_ref}}", "tone": "mute" },
     { "label": "STARTABLE", "value": "{{startable.count}}", "note": "{{startable.p0}} P0", "tone": "mute" },
     { "label": "OPEN PRS", "value": "{{prs.count}}", "note": "awaiting merge", "tone": "mute" }
@@ -15,7 +15,7 @@
       "n": "01",
       "name": "EXECUTIVE GROUND TRUTH",
       "items": [
-        { "label": "OBJECTIVE", "text": "Tickets in flight: {{in_progress.count}}, ready to start: {{startable.count}}.", "when": "in_progress.count" },
+        { "label": "OBJECTIVE", "text": "Tickets in flight: {{in_flight.count}}, ready to start: {{startable.count}}.", "when": "in_flight.count" },
         { "label": "FRICTION", "tone": "bad", "text": "The newest unresolved failure record is code {{friction.code}}, filed {{friction.ago}}.", "when": "friction", "ref_from": "friction.ticket" }
       ]
     },

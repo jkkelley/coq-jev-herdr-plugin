@@ -11,6 +11,71 @@
 > Never edit a checkpoint. A new one is prepended above the last; the ones below
 > are history and are immutable. Written by `checkpoint.sh`, never by hand.
 
+## Checkpoint 2026-10-12 17:33 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-8f4f on WO-20261012-8f4f - SITREP IN FLIGHT counts the work the line is actually doing: open PRs and in-progress tickets on their branches, not only ticket status on main.
+  Branch feat/sitrep-in-flight-counts-the-work-the-line-is-act, treehouse slot 2, test pane wD3:pC0 through herdr/bin/testpane.sh only.
+
+#### Toolchain
+
+- Built: tools/bearings/scripts/sitrep-build.mjs gains the facts in_flight (tickets an open PR title names, plus in-progress or in-review tickets, once per ticket id) and in_flight_source (for example 3 open PRs, 1 without a PR).
+  config/sitrep.template.json points the IN FLIGHT card and the OBJECTIVE sentence at them; RUNBOOK.md names the new facts; tests/sitrep.sh has 7 new cases over tests/fixtures/prs-inflight.json.
+- Verified in the test pane: make -C tools/bearings lint ok, make -C tools/bearings test 120 passed, 0 failed.
+- A post-edit formatter hook reformats whole .mjs files at 80 columns; edit those through a script, not the Edit tool.
+
+#### Active Tasks
+
+- Open the pull request, work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened with the sha and pr, then idle for the belt.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: the OBJECTIVE sentence also reads in_flight.count, so one card never carries two figures under the name in flight.
+
+### Hydration prompt
+
+You are worker-wo-20261012-8f4f on WO-20261012-8f4f. Read this checkpoint and playbooks/worker.md. Next: gh pr create, work-order.sh submit and done, push, post pr.opened, then idle.
+
+## Checkpoint 2026-10-12 16:44 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
+  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, PR 26, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
+
+#### Toolchain
+
+- Merge conflict 409 (record 20261012T163437Z-409-wccwn): origin/main 1f6e819 (PR 27) merged into the branch as 5312774.
+  CHANGELOG.md re-rendered with bin/changelog.sh render, work-orders/INDEX.md and epic READMEs by work-order.sh reindex, CONTEXT_STATE.md took main's file with this checkpoint on top, epic 187e README and 3bb0 ticket took main's.
+  Cases 04 and 05 re-counted by hand: main added the policy watch pane (slot 2.3.2), so twelve reserved panes, fourteen note 100 records, 39 panes.
+  SOP-0003 step 8 updated: slot 2.3.2 now belongs to the policy watch, so the interim record-watch pane must be released.
+- Full make -C herdr test after the merge: 21 passed, 0 failed.
+
+#### Active Tasks
+
+- Post pr.opened with --pr 26 --sha of the pushed head, then idle for the belt.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: generated files are never merged by hand; they are re-rendered with their scripts.
+
+### Hydration prompt
+
+You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint and playbooks/worker.md. Next: post pr.opened for PR 26 with the pushed sha, then idle.
+
 ## Checkpoint 2026-10-12 15:41 UTC
 
 ### Current state

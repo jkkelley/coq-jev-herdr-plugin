@@ -1,0 +1,13 @@
+# coq-supervisor.timer - the supervisor starts 20 seconds after the user manager comes up (WSL boot, with lingering on), then 30 seconds
+# after each tick ends. A tick that ran long therefore delays the next one, and two never overlap (the script also takes a lock).
+[Unit]
+Description=coq supervisor, at boot and between ticks
+
+[Timer]
+OnBootSec=20s
+OnUnitInactiveSec=30s
+AccuracySec=1s
+Unit=coq-supervisor.service
+
+[Install]
+WantedBy=timers.target

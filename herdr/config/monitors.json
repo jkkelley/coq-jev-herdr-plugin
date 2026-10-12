@@ -89,7 +89,52 @@
       "label": "monitors 3 - shells",
       "kind": "shell",
       "noun": "shell",
-      "reserved": []
+      "reserved": [
+        {
+          "pos": "3.3.1",
+          "name": "blueprint-dev",
+          "what": "blueprint dev server",
+          "command": "${repo}/report/blueprint/serve.sh dev"
+        },
+        {
+          "pos": "3.3.2",
+          "name": "blueprint-uat",
+          "what": "blueprint uat server",
+          "command": "${repo}/report/blueprint/serve.sh uat"
+        },
+        {
+          "pos": "3.3.3",
+          "name": "blueprint-stable",
+          "what": "blueprint stable server",
+          "command": "${repo}/report/blueprint/serve.sh stable"
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "label": "monitors 4 - watches",
+      "kind": "watch",
+      "noun": "watch",
+      "reserved": [
+        {
+          "pos": "4.1.1",
+          "name": "turnwatch",
+          "what": "seat turn watch",
+          "command": "${repo}/herdr/bin/turnwatch.sh"
+        },
+        {
+          "pos": "4.1.2",
+          "name": "recwatch",
+          "what": "gate record watch",
+          "command": "${repo}/herdr/bin/recwatch.sh"
+        },
+        {
+          "pos": "4.1.3",
+          "name": "supervisor",
+          "what": "supervisor log",
+          "command": "while :; do clear; ${repo}/herdr/bin/supervisor.sh log; sleep 10; done"
+        }
+      ]
     }
   ]
 }
