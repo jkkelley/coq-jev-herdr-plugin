@@ -30,7 +30,9 @@
     "belt",
     "break_glass",
     "halt_flag",
-    "monitor_task"
+    "monitor_task",
+    "watches",
+    "supervisor"
   ],
   "properties": {
     "schema_version": {
@@ -238,6 +240,200 @@
       "type": "string",
       "minLength": 1,
       "description": "the task text bringup.sh hands the monitor seat (door 2 of seat.sh)"
+    },
+    "watches": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "architect_agent",
+        "turn_poll_seconds",
+        "record_poll_seconds",
+        "record_kinds"
+      ],
+      "description": "turnwatch.sh and recwatch.sh (WO-20261012-b800): the agent they prompt and how often they look",
+      "properties": {
+        "architect_agent": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+          "description": "herdr agent name that receives a TURN or REC prompt"
+        },
+        "turn_poll_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "record_poll_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "record_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "record kinds recwatch.sh prompts for"
+        }
+      }
+    },
+    "supervisor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_timeout_seconds",
+        "herdr_unit",
+        "herdr_wait_seconds",
+        "podman",
+        "bearings",
+        "reseat",
+        "timeouts"
+      ],
+      "description": "supervisor.sh (WO-20261012-b800): one tick brings herdr, podman, the panes, the belt, bearings and the seats back",
+      "properties": {
+        "step_timeout_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "description": "every step of a tick is killed after this long, so a hung command never holds the next tick"
+        },
+        "herdr_unit": {
+          "type": "string",
+          "description": "systemd user unit that owns the herdr server; empty means the supervisor never starts herdr (the suite, where the world owns it)"
+        },
+        "herdr_wait_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "podman": {
+          "type": "boolean",
+          "description": "check podman ps and run podman system migrate when its pause process is gone (backlog 60l24)"
+        },
+        "bearings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "tier",
+            "script"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "tier": {
+              "type": "string",
+              "pattern": "^[a-z]+$"
+            },
+            "script": {
+              "type": "string",
+              "minLength": 1,
+              "description": "${repo} is the checkout"
+            }
+          }
+        },
+        "reseat": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "grace_seconds",
+            "max_per_window",
+            "window_seconds",
+            "down_lock_seconds",
+            "up_seconds"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "grace_seconds": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "a seat's claude must have been gone this long, on two ticks, before it is re-seated"
+            },
+            "max_per_window": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "re-seats of one seat inside window_seconds before the supervisor stops and says so"
+            },
+            "window_seconds": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "down_lock_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "a seat.sh --down younger than this is still in progress and its seat is left alone"
+            },
+            "up_seconds": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "a seat record younger than this is still being brought up by seat.sh and is not judged"
+            }
+          }
+        },
+        "timeouts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "herdr_kill_after_seconds",
+            "step_kill_after_seconds",
+            "herdr_list_seconds",
+            "herdr_probe_seconds",
+            "herdr_query_seconds",
+            "systemctl_seconds",
+            "podman_seconds",
+            "podman_migrate_seconds",
+            "bearings_status_seconds"
+          ],
+          "description": "every bound supervisor.sh puts on a command it runs (WO-20261012-b800 review fix, record 20261012T160316Z-422-19hjw)",
+          "properties": {
+            "herdr_kill_after_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "after a herdr call's timeout, how long before it is killed outright"
+            },
+            "step_kill_after_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "after a step's timeout, how long before it is killed outright"
+            },
+            "herdr_list_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "herdr workspace list and pane list"
+            },
+            "herdr_probe_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "each probe while waiting for the herdr unit to answer"
+            },
+            "herdr_query_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "herdr agent get and pane process-info"
+            },
+            "systemctl_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "systemctl --user start of the herdr unit"
+            },
+            "podman_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "podman ps"
+            },
+            "podman_migrate_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "podman system migrate"
+            },
+            "bearings_status_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "bearings.sh status"
+            }
+          }
+        }
+      }
     }
   }
 }

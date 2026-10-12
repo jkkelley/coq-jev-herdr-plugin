@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T155057Z-201-6fi39",
+  "at": "2026-10-12T15:50:57Z",
+  "code": 201,
+  "seat": "tester",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:p92",
+  "note": "make -C herdr test: 21 passed, 0 failed, exit 0 (PR 26)",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/7070fb24-532e-47c9-9964-465ca3d189a5/scratchpad/b800-herdr-test.log"
+  ],
+  "observations": [],
+  "to": "orchestrator",
+  "pr": 26
+}

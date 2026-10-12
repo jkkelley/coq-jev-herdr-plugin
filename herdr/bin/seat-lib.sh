@@ -14,6 +14,7 @@
 #   sl_record KIND CODE SEAT [--ticket T] [--pane P] [--note N]   one event through events/bin/event.sh
 #   sl_role_file ROLE           roles/<role>.json or die
 #   sl_seat_dir NAME            <state_dir>/seats/<name>, created
+#   sl_report_500 KEY TEXT      one 500 note and one herdr notification per distinct failure per 15 minutes
 #   sl_exempt RULE SEAT PANE    exit 0 when herdr/config/exemptions.json lifts RULE for that seat or pane, now
 #   sl_pane_claude_pid PANE     pid of the claude process in that pane's foreground, empty when none
 #   sl_pane_session PANE        the Claude session id running in that pane right now, empty when none (WO-20261012-ee9c)
@@ -143,4 +144,21 @@ sl_guard_targets() {
     #   (Moved here from unfreeze.sh pass() by WO-20261012-ee9c so guardwatch.sh and unfreeze.sh list the same panes.)
     jq -r --arg now_iso "$(sl_now)" '.exemptions[] | select(.pane? and .until > $now_iso) | [.pane, (.seat // .pane)] | @tsv' "$SL_HERDR/config/exemptions.json" 2>/dev/null | sort -u
   } | awk -F'\t' '!seen[$1]++'
+}
+
+# sl_report_500 KEY TEXT: one 500 record and one notification per distinct failure per 15 minutes.
+# BREADCRUMB 2026-10-12 - WO-20261012-b800. What broke (would break): the supervisor runs bringup.sh every 30 seconds, and a
+#   node that stays down (a pane a human is typing in, a guard that is not installed) wrote a 500 record and a herdr
+#   notification on every run, 120 an hour, which buries the one record that says something changed. Why this fix: the last
+#   text per key is kept in <state_dir>/bringup/last-KEY and a repeat inside 900 seconds says nothing; a new text, or the
+#   same one after 15 minutes, is said again. Rejected: a counter in the record (a record is never edited) and silencing
+#   after the first (a failure that outlives a day should still be heard). Cost: the failure is on screen every run but
+#   on the log once a quarter hour.
+sl_report_500() {
+  local f="$STATE/bringup/last-$1" now; now="$(date +%s)"
+  mkdir -p "$STATE/bringup"
+  if [ -f "$f" ] && [ "$(cat "$f")" = "$2" ] && [ $((now - $(stat -c %Y "$f"))) -lt 900 ]; then return 0; fi
+  printf '%s' "$2" > "$f"
+  sl_record note 500 "${SL_REPORT_SEAT:-bringup}" --note "$(cut -c1-230 <<<"$2")"
+  sl_h notification show "500 $2" >/dev/null 2>&1 || true
 }

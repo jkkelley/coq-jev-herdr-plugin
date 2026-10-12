@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T153647Z-100-jr8t9",
+  "at": "2026-10-12T15:36:47Z",
+  "code": 100,
+  "seat": "tester",
+  "kind": "note",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:p92",
+  "note": "tester seat up on WO-20261012-b800; reading the ticket test plan, no run yet",
+  "evidence": [],
+  "observations": []
+}
