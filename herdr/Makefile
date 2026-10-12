@@ -25,7 +25,7 @@ image:
 lint:
 	for c in $(HERE)config/*.json; do case $$c in *.schema.json) continue;; esac; s=$${c%.json}.schema.json; python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" "$$c" "$$s"; done
 	for l in $(HERE)layouts/*.json; do case $$l in *.schema.json) continue;; esac; python3 -c "import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))" "$$l" $(HERE)layouts/layout.schema.json; done
-	shellcheck -S warning $(HERE)bin/*.sh $(HERE)tests/run.sh $(HERE)tests/lib/*.sh $(HERE)tests/cases/*.sh $(HERE)tests/stubs/*
+	shellcheck -S warning $(HERE)bin/*.sh $(HERE)tests/run.sh $(HERE)tests/lib/*.sh $(HERE)tests/cases/*.sh $(HERE)tests/stubs/* $(HERE)tests/fixtures/*
 up:
 	@test -n "$(TICKET)" && test -n "$(ROLE)" || { echo "make up TICKET=WO-.. ROLE=.. [WORKTREE=dir]" >&2; exit 2; }
 	$(HERE)bin/seat.sh --ticket $(TICKET) --role $(ROLE) --worktree $(WORKTREE)

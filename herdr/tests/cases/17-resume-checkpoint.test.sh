@@ -11,6 +11,9 @@ world_up resumecp || exit 1
 T=WO-20261010-8777; N=worker-wo-20261010-8777
 HOOK="$REPO/herdr/bin/resume-checkpoint.sh"
 CPSH="$REPO/.claude/skills/context-compaction/scripts/checkpoint.sh"
+# WO-20261012-e36e: .claude/skills/ is gitignored (skill-sync installs it), so a clean checkout has no checkpoint.sh. The world
+# gets the tracked fixture at the path the hook falls back to, whatever the copy held; the real hook then runs unmodified.
+mkdir -p "$(dirname "$CPSH")"; cp "$REPO/herdr/tests/fixtures/checkpoint.sh" "$CPSH"
 WT="$WORLD/wt"; mkdir -p "$WT"
 
 # run_hook PANE: the hook's stdout and exit code with a private HOME, so only COQ_CHECKPOINT_SH or the repo copy can answer.
@@ -78,9 +81,9 @@ run_hook w9:p3; one_line "a worktree that is gone" "worktree $WORLD/does-not-exi
 run_hook w9:p9; one_line "a pane no live seat holds" "no live seat record names pane w9:p9"
 out="$(env -u HERDR_PANE_ID "$HOOK" 2>/dev/null)"; rc=$?; one_line "no HERDR_PANE_ID" "HERDR_PANE_ID is unset"
 out="$(COQ_STATE="$WORLD/nostate" HERDR_PANE_ID=w9:p1 "$HOOK" 2>/dev/null)"; rc=$?; one_line "no seat records at all" "no seat records under $WORLD/nostate"
-mv "$REPO/.claude/skills/context-compaction/scripts/checkpoint.sh" "$WORLD/checkpoint.sh.away"
+mv "$CPSH" "$WORLD/checkpoint.sh.away"
 run_hook w9:p1; one_line "no checkpoint.sh anywhere" "checkpoint.sh was not found"
-mv "$WORLD/checkpoint.sh.away" "$REPO/.claude/skills/context-compaction/scripts/checkpoint.sh"
+mv "$WORLD/checkpoint.sh.away" "$CPSH"
 out="$(COQ_CHECKPOINT_SH="$WORLD/nope.sh" HERDR_PANE_ID=w9:p1 "$HOOK" 2>/dev/null)"; rc=$?
 assert_eq "an override that does not exist falls through to the repo copy" "$rc" 0
 assert_match "and the checkpoint still shows" "$out" "new seat resume line"
