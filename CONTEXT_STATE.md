@@ -47,6 +47,33 @@
 
 
 
+
+## Checkpoint 2026-10-12 12:50 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p72, run only through herdr/bin/testpane.sh with output sent to a file in the scratchpad.
+- The reviewer passed head 2c5f807 (record 20261012T123900Z-201-lay41), but PR 21 then conflicted with main after PR 20 (WO-20261011-f896 - Test pane per seat) merged as 05ef0d2.
+
+#### Toolchain
+
+- origin/main was merged into the branch. The only conflict was CONTEXT_STATE.md: both sides kept, this branch's checkpoints plus main's 2026-10-11 23:09 UTC block (the other ticket's) below the newest. CHANGELOG.md was re-rendered from its entries, never edited.
+- make lint (all ok) and make -C factory test (14 passed, 0 failed) ran in the test pane on the merged tree before the commit.
+
+#### Active Tasks
+
+- Push, then post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester again. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The merge of origin/main is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
+
 ## Checkpoint 2026-10-12 12:19 UTC
 
 ### Current state
