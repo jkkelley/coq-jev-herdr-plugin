@@ -8,7 +8,11 @@ T=WO-20261011-aaaa
 world_up restart
 start_runner() { "$ROUTE" run --from-start --repo "$R" --state "$STATE" > "$W/run.log" 2>&1 & RUNNER=$!; }
 stop_runner() { local t0=$SECONDS; kill -TERM "$RUNNER"; wait "$RUNNER" 2>/dev/null; assert_eq "TERM stops the runner within 3s, not after the 10s poll" "$(( SECONDS - t0 < 3 ))" 1; }
-wait_for() { for _ in $(seq 1 40); do [ "$(hcalls)" -ge "$1" ] && return 0; read -r -t 0.25 <> <(:) || true; done; return 1; }
+# wait_for N: until the runner has written N receipts, not until herdr was called N times. The prompt goes out a few milliseconds before
+# its receipt, and a TERM that lands in between leaves the record "claimed", so the next start reports it as interrupted (a 500 and a
+# missing receipt, seen on 2026-10-12 in WO-20261012-3bb0 when the poll happened to land in that window). The cost is that this case
+# now waits for the whole route, which is what it means by "the runner woke the tester".
+wait_for() { for _ in $(seq 1 40); do [ "$(ids_of record.routed | grep -c .)" -ge "$1" ] && return 0; read -r -t 0.25 <> <(:) || true; done; return 1; }
 
 echo "-- AC-H4: stop and restart over the same events dir"
 rec pr.opened 100 worker-wo-20261011-aaaa $T >/dev/null

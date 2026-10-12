@@ -13,7 +13,23 @@
 #          escalate = event.sh add --kind escalated --to <role>; break-glass = seat.sh --break-glass <record's seat> --record <id>;
 #          seat = seat.sh --ticket T --role R, then the wake; ignore = the ledger entry and nothing else (no receipt, no 500);
 #          none = the receipt only. A record no row matches, or an action that fails, becomes a 500 note addressed to the monitor.
+# Row fields besides match/do/to: with (ticket|pr|record|verify|merge-main), down (a role), when (a gate.sh predicate: head_current,
+#          heads_match; a row whose predicate holds is receipted "held" and does nothing else), supersede (true: the wake line names the
+#          older head gate.sh says this record replaces).
 # Exit: 0 ok, 1 belt stale (status only), 2 usage, 3 validation, 4 io.
+#
+# BREADCRUMB 2026-10-12 - WO-20261012-3bb0, the when guard, supersede and with merge-main. What broke: three gate rules lived in the
+#   architect's head (a test on a head that differs from the reviewed one only by record files counts; a head that moves re-wakes
+#   the tester and drops the old run; a PR that conflicts with main goes back to its worker to merge main), so the line stopped when
+#   the architect did (epic WO-20261012-187e, 13:16Z to 13:53Z on 2026-10-12). Why this shape: the rules are rows plus ONE call into
+#   factory/bin/gate.sh, which owns the git and event-log reasoning (its header has the breadcrumb for the rules themselves). This
+#   file still reads no kind, code or note outside matching a row: `when` and `supersede` are fields of the row, and the three
+#   outcomes of gate.sh are generic (0 proceed, 1 held, other = a failure that becomes a 500). A held record writes its receipt
+#   and nothing else, not even the row's `down`: a stale test.passed must not take down the tester seat, which is named per ticket and
+#   is by then running the newer head. Rejected: a hold as a 500 (a stale result is expected, not trouble), a hold that still wakes
+#   the merger with a "hold" word in the line (an LLM seat would have to compute what this refuses to), and gate code in this script
+#   (the 38c7 cap). Cost: gate.sh is spawned for each record whose row names it, a jq pass over the event log each time, and a held
+#   review.passed has no consumer record, so flow.sh notes it as a stall after stall_seconds, which is the right alarm.
 #
 # BREADCRUMB 2026-10-11 - WO-20261011-38c7. Three choices that look arbitrary:
 #   1. Records whose seat is runner_seat are never routed. What would break: record.routed 300 matches no row, so it would
@@ -97,7 +113,7 @@ case $VERB in once|run|status) ;; *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' 
 cfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$CONFIG") || die 3 "config $CONFIG is not JSON"; [ -n "$v" ] || die 3 "config key $1 missing"; printf '%s' "${v//\$\{repo\}/$REPO}"; }
 POLL=$(cfg poll_seconds); SEAT=$(cfg runner_seat); SESSION=${COQ_HERDR_SESSION:-$(cfg herdr_session)}
 EVENTS=$(cfg events_dir); EVENT_BIN=$(cfg event_bin); QUEUE_BIN=$(cfg queue_bin)
-SEAT_BIN=$(cfg seat_bin); ROLES=$(cfg roles_dir); PLAYBOOKS=$(cfg playbooks_dir); STALE=$(cfg stale_seconds)
+SEAT_BIN=$(cfg seat_bin); ROLES=$(cfg roles_dir); PLAYBOOKS=$(cfg playbooks_dir); STALE=$(cfg stale_seconds); GATE_BIN=$HERE/gate.sh
 [ -n "$ROUTES" ] || ROUTES=$(cfg routes_file); [ -n "$STATE" ] || STATE=$(cfg state_dir)
 LEDGER=$STATE/routed; BELT=$STATE/belt; SINCE=$STATE/since
 
@@ -131,14 +147,22 @@ trouble() {
   local args=(--code 500 --kind note --to monitor --note "$(printf '%s' "$3" | cut -c1-240)")
   [ "$2" = - ] || args+=(--ticket "$2"); emit "${args[@]}" || log "could not write the 500 for $1"
 }
-# wake_extras ROW ID REC: for a row that says `with pr`, " pr N" and " sha S" from the record, whichever it carries; prints a reason
-# and returns 1 when one is malformed. Both reach a seat's prompt as typed text, so neither is passed on unless it is a PR number or hex.
+# wake_extras ROW ID REC: for a row that says `with pr` or `with merge-main`, " pr N" and " sha S" from the record, whichever it carries,
+# then " merge main" for merge-main, then " supersedes ID" for a row with `supersede` when gate.sh names an older head; prints a reason
+# and returns 1 when one is malformed or gate.sh fails. All of it reaches a seat's prompt as typed text, so none is passed on unless it
+# is a PR number, hex, or a record id.
 wake_extras() {
-  local pr sha out=""; [ "$(jq -r '.with // empty' <<<"$1")" = pr ] || return 0
+  local with pr sha sup out=""; with=$(jq -r '.with // empty' <<<"$1"); case $with in pr|merge-main) ;; *) return 0;; esac
   pr=$(jq -r '.pr // empty' <<<"$3"); sha=$(jq -r '.sha // empty' <<<"$3")
   [ -z "$pr" ] || [[ $pr =~ ^[1-9][0-9]*$ ]] || { echo "record $2 has a malformed pr"; return 1; }
   [ -z "$sha" ] || [[ $sha =~ ^[0-9a-f]{7,40}$ ]] || { echo "record $2 has a malformed sha"; return 1; }
-  [ -z "$pr" ] || out+=" pr $pr"; [ -z "$sha" ] || out+=" sha $sha"; printf '%s' "$out"
+  [ -z "$pr" ] || out+=" pr $pr"; [ -z "$sha" ] || out+=" sha $sha"; [ "$with" != merge-main ] || out+=" merge main"
+  if [ "$(jq -r '.supersede // empty' <<<"$1")" = true ]; then
+    sup=$("$GATE_BIN" supersedes --id "$2" --repo "$REPO" --events "$EVENTS" 2>&1) || { echo "gate.sh supersedes failed: $(tail -n 1 <<<"$sup" | cut -c1-120)"; return 1; }
+    [ -z "$sup" ] || [[ $sup =~ ^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]+$ ]] || { echo "gate.sh supersedes gave a malformed id"; return 1; }
+    [ -z "$sup" ] || out+=" supersedes $sup"
+  fi
+  printf '%s' "$out"
 }
 herdr_prompt() { env -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_SOCKET_PATH herdr --session "$SESSION" agent prompt "$1" "$2" >/dev/null 2>&1; }
 
@@ -194,7 +218,7 @@ perform() {
 
 # route_file FILE: claim, match, perform, receipt. At most once per record id.
 route_file() {
-  local f=$1 line id rseat ticket kind code rec row esc why to act down
+  local f=$1 line id rseat ticket kind code rec row esc why to act down when grc r
   rec=$(jq -c . "$f" 2>/dev/null) || { id=$(basename "$f" .json); ( set -C; echo unreadable > "$LEDGER/$id" ) 2>/dev/null && trouble "$id" - "unreadable record $id"; return; }
   line=$(jq -r '[.id, .seat, (.ticket // "-"), .kind, (.code | tostring)] | @tsv' <<<"$rec") || return
   IFS=$'\t' read -r id rseat ticket kind code <<<"$line"
@@ -205,6 +229,17 @@ route_file() {
   # ignore: the table says this record is housekeeping. Its ledger entry is all it leaves; no receipt, so a seat coming up or
   #   going down does not write a second record for every first one (see the ignore breadcrumb at the top).
   if [ "$(jq -r .do <<<"$row")" = ignore ]; then echo ignored > "$LEDGER/$id"; return; fi
+  # when: a gate.sh predicate. 0 proceeds; 1 holds this record (a receipt that says why, no action, no down, no 500); anything else is a failure.
+  when=$(jq -r '.when // empty' <<<"$row")
+  if [ -n "$when" ]; then
+    why=$("$GATE_BIN" when "$when" --id "$id" --repo "$REPO" --events "$EVENTS" 2>&1); grc=$?
+    case $grc in
+      0) ;;
+      1) to=$(jq -r .to <<<"$row"); r=(--code 300 --kind record.routed --to "$to" --note "$(printf 'held %s %s (%s): %s' "$kind" "$code" "$id" "$why" | cut -c1-240)" --evidence "${f#"$REPO"/}")
+         [ "$ticket" = - ] || r+=(--ticket "$ticket"); emit "${r[@]}" || log "could not write the receipt for $id"; echo "held $when" > "$LEDGER/$id"; return ;;
+      *) trouble "$id" "$ticket" "route failed for $kind $code, record $id: gate.sh when $when failed (exit $grc): $(tail -n 1 <<<"$why" | cut -c1-100)"; echo failed > "$LEDGER/$id"; return ;;
+    esac
+  fi
   if why=$(perform "$row" "$id" "$ticket" "$rec"); then
     to=$(jq -r .to <<<"$row"); act=$(jq -r .do <<<"$row"); down=$(jq -r '.down // empty' <<<"$row")
     local r=(--code 300 --kind record.routed --to "$to" --note "routed $kind $code ($id): $act $to${down:+, down $down}" --evidence "${f#"$REPO"/}"); [ "$ticket" = - ] || r+=(--ticket "$ticket")

@@ -9,7 +9,9 @@
 #   $W/seat.fail          its text is the refusal: stderr, exit 3, nothing written   $W/seat.fail.down  the same, for --down only
 #   $W/seat.slow  writes the belt's mtime (ns) to $W/seat.belt, then sleeps a second
 #   world_up <name>          sets W (case root), R (repo copy), ROUTE (the runner), STATE (runner state dir), HLOG (herdr log)
-#   rec KIND CODE SEAT [TICKET] [ATTEMPT]   one record through the copy's event.sh; prints its id
+#   rec KIND CODE SEAT [TICKET] [ATTEMPT]   one record through the copy's event.sh; prints its id; REC_SHA=<hex> and REC_PR=<n> in the
+#                            environment add --sha and --pr (a review.passed is held by gate.sh unless a test.passed names the same head)
+#   evo ARGS                 event.sh add, strictly after the last evo record; prints its id
 #   run_once [flags]         route.sh once --from-start --repo $R --state $STATE
 #   rec_json ID              the record's JSON
 #   hcalls                   how many times the runner called herdr
@@ -46,7 +48,21 @@ STUB
 }
 rec() {
   local args=(--code "$2" --seat "$3" --kind "$1"); [ -z "${4:-}" ] || args+=(--ticket "$4"); [ -z "${5:-}" ] || args+=(--attempt "$5")
+  [ -z "${REC_SHA:-}" ] || args+=(--sha "$REC_SHA"); [ -z "${REC_PR:-}" ] || args+=(--pr "$REC_PR")
   "$R/events/bin/event.sh" add "${args[@]}"
+}
+# evo EVENT.SH-ARGS: one record a second after the last, and never one that sorts before the last. Ids sort by UTC second, and the host
+# clock has stepped back a second mid-run before (06-belt breadcrumb); a record that landed before its predecessor changed which head was
+# "older". Prints the id. For the cases that compare records of one ticket by order (12-gate, 13-gate-route).
+evo() {
+  local id last
+  for _ in 1 2 3; do
+    sleep 1; id=$("$R/events/bin/event.sh" add "$@") || return 1
+    last=$(cat "$W/evo.last" 2>/dev/null || true)
+    if [[ -z "$last" || "$id" > "$last" ]]; then printf '%s' "$id" > "$W/evo.last"; printf '%s\n' "$id"; return 0; fi
+    find "$R/events" -name "$id.json" -delete
+  done
+  return 1
 }
 run_once() { "$ROUTE" once --from-start --repo "$R" --state "$STATE" "$@"; }
 ids_of() { "$R/events/bin/event.sh" list --json | jq -r --arg k "$1" 'select(.kind == $k) | .id'; }

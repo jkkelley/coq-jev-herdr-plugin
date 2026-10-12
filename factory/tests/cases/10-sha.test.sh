@@ -12,6 +12,8 @@ world_up sha
 ev() { "$R/events/bin/event.sh" add "$@"; }
 
 echo "-- event.sh writes the sha and the pr, and refuses a malformed one"
+# a review.passed is held unless a test.passed names the same head (gate.sh heads_match, WO-20261012-3bb0), so the test comes first
+ev --code 201 --seat tester-wo-20261011-aaaa --kind test.passed --ticket $T --sha "$SHA" --pr 18 >/dev/null; sleep 1
 id=$(ev --code 201 --seat reviewer-wo-20261011-aaaa --kind review.passed --ticket $T --sha "$SHA" --pr 18)
 r=$(rec_json "$id")
 assert_eq "the record carries sha and pr as fields" "$(jq -r '[.sha, (.pr | tostring)] | join(" ")' <<<"$r")" "$SHA 18"
@@ -34,15 +36,15 @@ assert_match "the worker kickback is the plain line" "$(tail -1 "$HLOG")" "^--se
 
 echo "-- a sha only, and a pr only"
 sleep 1; ids=$(ev --code 201 --seat tester-wo-20261011-aaaa --kind test.passed --ticket $T --sha abcdef1)
-sleep 1; idp=$(ev --code 201 --seat reviewer-wo-20261011-aaaa --kind review.passed --ticket $T --pr 7)
+sleep 1; idp=$(ev --code 100 --seat worker-wo-20261011-aaaa --kind pr.opened --ticket $T --pr 7)
 run_once
 assert_match "sha only" "$(grep "record $ids " "$HLOG")" "record $ids sha abcdef1 playbook $R/playbooks/reviewer.md$"
-assert_match "pr only" "$(grep "record $idp " "$HLOG")" "record $idp pr 7 playbook $R/playbooks/merger.md$"
+assert_match "pr only" "$(grep "record $idp " "$HLOG")" "record $idp pr 7 playbook $R/playbooks/tester.md$"
 
 echo "-- a malformed sha in a record on disk is a 500 and nothing is sent"
-sleep 1; idb=$(ev --code 201 --seat reviewer-wo-20261011-aaaa --kind review.passed --ticket $T --sha "$SHA")
+sleep 1; idb=$(ev --code 100 --seat worker-wo-20261011-aaaa --kind pr.opened --ticket $T --sha "$SHA")
 f=$(find "$R/events" -name "$idb.json"); jq '.sha = "$(touch pwned)"' "$f" > "$f.t" && mv "$f.t" "$f"
 before=$(hcalls); run_once
 assert_eq "no herdr call for it" "$(hcalls)" "$before"
-assert_match "a 500 names the record and the sha" "$(cat "$R"/events/20*/*/*-500-*.json | jq -r .note)" "route failed for review.passed 201, record $idb: record $idb has a malformed sha"
+assert_match "a 500 names the record and the sha" "$(cat "$R"/events/20*/*/*-500-*.json | jq -r .note)" "route failed for pr.opened 100, record $idb: record $idb has a malformed sha"
 case_done
