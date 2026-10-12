@@ -33,12 +33,14 @@ MSGF=$(git -C "$REPO" rev-parse --path-format=absolute --git-path STEP_MSG)
 git -C "$REPO" commit -q -F "$MSGF" || die 4 "commit failed"
 sha=$(git -C "$REPO" rev-parse --short HEAD)
 [ "$push" = 0 ] || git -C "$REPO" push -q origin HEAD || die 4 "push failed at $sha"
+# BREADCRUMB 2026-10-12 - WO-20261012-0677, no file is ever touched by two open PRs. What broke: this block committed and pushed
+#   CONTEXT_STATE.md after every step, so every ticket branch carried a rewrite of the same file and each merge conflicted the next
+#   PR (PRs 25, 28, 29, 30, 31 on 2026-10-12). Why this fix: CONTEXT_STATE.md is now gitignored seat state (see .gitignore), so the
+#   checkpoint is written in place and nothing is committed; resume-checkpoint.sh and compaction-guard read it from the worktree.
+#   Rejected: keeping the commit on the records branch only (a branch test that one rename defeats) and an uncommitted tracked file
+#   (a later merge of main aborts on it). Cost: a checkpoint is no longer in git history; it lives as long as the slot does.
 at=""
-if [ -n "$cp" ]; then at=$(bash "$CP" new --project "$REPO" --body-file "$cp") || die 3 "checkpoint refused"
-  git -C "$REPO" add CONTEXT_STATE.md && git -C "$REPO" commit -q -m "chore: checkpoint $at
-
-Claude-Session: https://claude.ai/code/session_01694jMaqrg4CVo5zWF3jq6Z" && { [ "$push" = 0 ] || git -C "$REPO" push -q origin HEAD; }
-fi
+if [ -n "$cp" ]; then at=$(bash "$CP" new --project "$REPO" --body-file "$cp") || die 3 "checkpoint refused"; fi
 # BREADCRUMB 2026-10-10 21:5x UTC. What broke: this block ran after every step (compact=1 by default) and queued
 #   "/compact Keep: ..." into the architect pane with `herdr agent prompt`. Four steps landed back to back at 20:47-20:54
 #   UTC, four /compact prompts stacked in the pane, the second and later answered "Not enough messages to compact",
