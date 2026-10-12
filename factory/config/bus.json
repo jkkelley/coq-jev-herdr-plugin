@@ -1,0 +1,8 @@
+{
+  "schema_version": "1.0.0",
+  "poll_seconds": 5,
+  "lookback_seconds": 3600,
+  "events_dir": "${repo}/events",
+  "state_dir": "${repo}/factory/state/bus",
+  "slot_events_subdir": "events"
+}

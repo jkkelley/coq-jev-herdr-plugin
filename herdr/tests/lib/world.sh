@@ -25,9 +25,11 @@ world_up() {
   #   closing notes), so the cases that assert "no event was written" or count records would see events they did not make.
   #   Why this fix: both slots keep their name, label and place but run a sleep loop here; case 13 puts the real commands back
   #   with world_real_belt. Rejected: leaving them live and loosening every count, which hides the next real change.
+  #   WO-20261012-da52 adds the record bus (2.3.3) to the same sleep loop: the world has no treehouse pool, and a live bus would
+  #   copy records between trees the case counts. factory/tests/cases/12-bus.test.sh exercises bus.sh against a stub treehouse.
   #   Cost: cases 01-12 do not exercise route.sh or flow.sh through a pane; the factory suite and case 13 do. The same goes
 #   for recover.sh's belt node: .belt.status is `true` in the world's config, so the node reads ok; case 13 sets the real one.
-  jq '(.tabs[].reserved[] | select(.name == "runner" or .name == "flow") | .command) = "while :; do sleep 30; done"' \
+  jq '(.tabs[].reserved[] | select(.name == "runner" or .name == "flow" or .name == "bus") | .command) = "while :; do sleep 30; done"' \
     "$REPO/herdr/config/monitors.json" > "$REPO/herdr/config/monitors.json.new" && mv "$REPO/herdr/config/monitors.json.new" "$REPO/herdr/config/monitors.json"
   find "$REPO/work-orders/archive" -name 'WO-*.md' -exec cp -n {} "$REPO/work-orders/" \; 2>/dev/null
   rm -rf "$REPO"/events/20*

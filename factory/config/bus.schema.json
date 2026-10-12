@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/factory/config/bus.schema.json",
+  "title": "record bus configuration",
+  "description": "Tunables of factory/bin/bus.sh. ${repo} is the directory above factory/ (or the --repo flag). The slots themselves are never listed here: bus.sh reads them from `treehouse status --json`.",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "poll_seconds", "lookback_seconds", "events_dir", "state_dir", "slot_events_subdir"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "poll_seconds": { "type": "integer", "minimum": 1, "maximum": 5, "description": "seconds between ticks; the ticket promises a record in the checkout within 10 seconds, so a tick plus a copy must fit twice in it" },
+    "lookback_seconds": { "type": "integer", "minimum": 60, "maximum": 86400, "description": "on the first start only, the age of the oldest slot record the bus will copy; older records are history the checkout already has or never needed" },
+    "events_dir": { "type": "string", "description": "the checkout's event log, where the route runner reads" },
+    "state_dir": { "type": "string", "description": "the since boundary and the copied ledger; runtime state, gitignored" },
+    "slot_events_subdir": { "type": "string", "description": "the event log's path inside a treehouse slot" }
+  }
+}

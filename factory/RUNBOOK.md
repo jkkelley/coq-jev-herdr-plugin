@@ -12,6 +12,7 @@
 - What it never does
 - GOOD and NEVER
 - Flow watch
+- Record bus
 
 Graph: `RUN-route-runner` is this runbook, `CMP-route-runner` is the component, and `CMP-route-runner` carries `defined_in RUN-route-runner`.
 Ticket: WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else.
@@ -262,3 +263,30 @@ GOOD: a new record the line must pick up is one `gates` row in `flow.json`, `mak
 GOOD: the runner dies at 18:01Z, the belt note lands by 18:03Z, `recover.sh --apply` restarts it, and the next tick is silent.
 NEVER: a second threshold for a stale belt in `flow.json`, because `route.sh status` and `runner.json` are the one definition.
 NEVER: `flow.sh run &`, `nohup` or `setsid`, because a background watcher is invisible and invisible work reads as nothing happening.
+
+## Record bus
+
+Ticket: WO-20261012-da52 - Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand.
+A seat writes its records into the `events/` of its own treehouse slot, because `event.sh` writes into the tree it lives in.
+The route runner reads only the checkout's `events/`.
+`factory/bin/bus.sh` closes that gap: it copies every new slot record into the checkout, byte for byte, once.
+
+How it works:
+
+- The slots are read from `treehouse status --json`, run in the checkout, every tick. No slot path is typed anywhere, so a pool that grows needs no edit.
+- A record is copied when its file name sorts after the `since` boundary, it parses as JSON, and `factory/state/bus/copied/<id>` does not exist yet. The copy goes to `<name>.tmp` and is renamed, so the runner never reads half a record.
+- The ledger is what makes "once" true. A record the architect removes from the checkout on purpose does not come back.
+- A same-named file in the checkout that differs is never overwritten. It is logged and claimed.
+- The first start copies nothing older than `lookback_seconds` of `factory/config/bus.json`. Later starts keep the first boundary.
+- `poll_seconds` is at most 5, so a record lands inside ten seconds.
+
+Bring-up starts it in `2.3.3 record bus - bus` (`herdr/config/monitors.json`).
+Never start it from a shell of your own.
+
+```sh
+herdr/bin/bringup.sh --check     # lists pane-bus ok
+make -C factory bus-once         # one tick, copies any new record, prints each copy
+factory/bin/bus.sh slots         # the slot paths treehouse lists
+```
+
+Verify with `make -C factory test` (case 12-bus) from the labelled test pane.
