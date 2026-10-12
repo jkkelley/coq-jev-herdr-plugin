@@ -84,6 +84,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Review az7ec passed but its merge wake was lost and PR 28 conflicted with main f329478. Merged origin/main; the delta since the reviewed head is the main merge only. Generated files by their scripts.
 - `2026-10-12` Review changes lqevs: make lint failed on a bad changelog entry name. Cause was bin/changelog.sh building its collision suffix from 16 random bytes filtered to a-z0-9 (often 2 chars, check wants 5). Removed the duplicate entry, re-rendered CHANGELOG.md, and made the suffix read 256 bytes with a breadcrumb.
 - `2026-10-12` Review changes bahk9: merged origin/main (generated files re-rendered, CONTEXT_STATE union of both sides). Playbooks cannot be edited by a worker, so the wake line now carries the instruction for supersedes (drop that run, post nothing for it) and merge main (fetch, merge origin/main, fix conflicts, push, post pr.opened); case 13 pins both. Still open for the architect: put the same steps into roles/tester.json and roles/worker.json so the playbooks say it.
 - `2026-10-12` Review changes bahk9: merged origin/main (generated files re-rendered, CONTEXT_STATE union of both sides). Playbooks cannot be edited by a worker, so the wake line now carries the instruction for supersedes (drop that run, post nothing for it) and merge main (fetch, merge origin/main, fix conflicts, push, post pr.opened); case 13 pins both. Still open for the architect: put the same steps into roles/tester.json and roles/worker.json so the playbooks say it.

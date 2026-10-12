@@ -89,7 +89,26 @@
       "label": "monitors 3 - shells",
       "kind": "shell",
       "noun": "shell",
-      "reserved": []
+      "reserved": [
+        {
+          "pos": "3.3.1",
+          "name": "blueprint-dev",
+          "what": "blueprint dev server",
+          "command": "${repo}/report/blueprint/serve.sh dev"
+        },
+        {
+          "pos": "3.3.2",
+          "name": "blueprint-uat",
+          "what": "blueprint uat server",
+          "command": "${repo}/report/blueprint/serve.sh uat"
+        },
+        {
+          "pos": "3.3.3",
+          "name": "blueprint-stable",
+          "what": "blueprint stable server",
+          "command": "${repo}/report/blueprint/serve.sh stable"
+        }
+      ]
     },
     {
       "n": 4,

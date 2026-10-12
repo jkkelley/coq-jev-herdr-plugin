@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "tier": "stable",
+  "host": "127.0.0.1",
+  "port": 44912,
+  "out_dir": "report/blueprint/out/stable",
+  "pane_label": "blueprint-stable",
+  "probe_timeout_seconds": 3,
+  "mode": "released",
+  "promotes_from": "uat"
+}

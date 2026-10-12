@@ -53,10 +53,6 @@
 
 
 
-
-
-
-
 ## Checkpoint 2026-10-12 17:47 UTC
 
 ### Current state
@@ -82,6 +78,38 @@
 ### Hydration prompt
 
 Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
+
+## Checkpoint 2026-10-12 17:33 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-8f4f on WO-20261012-8f4f - SITREP IN FLIGHT counts the work the line is actually doing: open PRs and in-progress tickets on their branches, not only ticket status on main.
+  Branch feat/sitrep-in-flight-counts-the-work-the-line-is-act, treehouse slot 2, test pane wD3:pC0 through herdr/bin/testpane.sh only.
+
+#### Toolchain
+
+- Built: tools/bearings/scripts/sitrep-build.mjs gains the facts in_flight (tickets an open PR title names, plus in-progress or in-review tickets, once per ticket id) and in_flight_source (for example 3 open PRs, 1 without a PR).
+  config/sitrep.template.json points the IN FLIGHT card and the OBJECTIVE sentence at them; RUNBOOK.md names the new facts; tests/sitrep.sh has 7 new cases over tests/fixtures/prs-inflight.json.
+- Verified in the test pane: make -C tools/bearings lint ok, make -C tools/bearings test 120 passed, 0 failed.
+- A post-edit formatter hook reformats whole .mjs files at 80 columns; edit those through a script, not the Edit tool.
+
+#### Active Tasks
+
+- Open the pull request, work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened with the sha and pr, then idle for the belt.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: the OBJECTIVE sentence also reads in_flight.count, so one card never carries two figures under the name in flight.
+
+### Hydration prompt
+
+You are worker-wo-20261012-8f4f on WO-20261012-8f4f. Read this checkpoint and playbooks/worker.md. Next: gh pr create, work-order.sh submit and done, push, post pr.opened, then idle.
 
 ## Checkpoint 2026-10-12 17:29 UTC
 
