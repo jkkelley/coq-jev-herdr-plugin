@@ -4,15 +4,15 @@
   "slug": "own-checkpoint-after-compaction-a-sessionstart-c",
   "title": "Own checkpoint after compaction: a SessionStart compact hook puts the seat's newest CONTEXT_STATE.md checkpoint in front of it",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-12",
   "updated": "2026-10-12",
   "created_at": "2026-10-12T16:32:52+00:00",
   "parent": "WO-20261012-265d",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/own-checkpoint-after-compaction-a-sessionstart-c",
+  "pr": 30,
+  "closed": "2026-10-12",
   "approval": {
     "via": "override",
     "reason": "lavish is prohibited for Claude seats; owner answered card C4 on the bearings page 2026-10-12 16:32Z: cut all four",
@@ -61,9 +61,12 @@ After a compaction the guard injects only its own checkpoint (git status, last p
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* after a compact, the seat's context holds its own newest checkpoint text
-- [ ] `AC-H2` *(human)* the hook exits 0 when the worktree or checkpoint is missing and prints one line saying so
-- [ ] `AC-H3` *(human)* the hook runs only on compact, not on startup or resume
+- [x] `AC-H1` *(human)* after a compact, the seat's context holds its own newest checkpoint text
+  - observed `2026-10-12` herdr case 17 passed in the test pane: seat.sh brings up a worker, the hook run with that seat's HERDR_PANE_ID printed 'your own newest checkpoint from <worktree>/CONTEXT_STATE.md' plus the top checkpoint verbatim (checkpoint.sh read --top 1), and not the second. A live run of herdr/bin/resume-checkpoint.sh in the test pane for this seat printed the same. Still to see on a real compact: that Claude Code adds the SessionStart stdout to the context after /compact.
+- [x] `AC-H2` *(human)* the hook exits 0 when the worktree or checkpoint is missing and prints one line saying so
+  - observed `2026-10-12` herdr case 17: a worktree with no CONTEXT_STATE.md, a file with no checkpoint, a gone worktree, a pane no live seat holds, an unset HERDR_PANE_ID, no seat records, and no checkpoint.sh each exit 0 with exactly one stdout line naming what was missing.
+- [x] `AC-H3` *(human)* the hook runs only on compact, not on startup or resume
+  - observed `2026-10-12` Both .claude/settings.json and the render_settings output carry one SessionStart entry with matcher compact and the identical command, asserted in case 17; no entry names startup, resume or clear, and the guard's unmatched entry stays first. Break glass keeps the entry (case 13 assertion added).
 
 ## Test plan
 
@@ -82,6 +85,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Retro: the test pane's cwd is the main checkout, so 'make -C herdr test' there ran the main tree, not the slot; cases must be run with make -C $COQ_WORKTREE/herdr. Break glass used '.hooks =' and would have dropped the entry; changed to '.hooks +=' with a case 13 assertion. Live seats' settings.json now differ from the render until the next restart, so seat.sh --check names drift once. Not proved without a real compact: that Claude Code folds two identical hook commands into one run.
 
 ## Outcome
 

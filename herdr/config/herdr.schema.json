@@ -29,6 +29,7 @@
     "control_plane",
     "belt",
     "break_glass",
+    "resume_checkpoint",
     "halt_flag",
     "monitor_task",
     "watches",
@@ -228,6 +229,22 @@
           "type": "string",
           "minLength": 1,
           "description": "the bearings tier whose answers.jsonl holds the owner answer"
+        }
+      }
+    },
+    "resume_checkpoint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hook_timeout_seconds"
+      ],
+      "description": "WO-20261012-8fb2: the compact-only SessionStart hook that shows a seat its own newest CONTEXT_STATE.md checkpoint (herdr/bin/resume-checkpoint.sh)",
+      "properties": {
+        "hook_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "description": "timeout Claude Code gives that hook as seat.sh renders it; it reads one seat record and runs checkpoint.sh read. .claude/settings.json is plain JSON and cannot read this key, so its entry carries the same number by hand"
         }
       }
     },

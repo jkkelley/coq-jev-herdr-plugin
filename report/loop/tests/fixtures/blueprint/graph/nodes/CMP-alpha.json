@@ -1,0 +1,20 @@
+{
+  "id": "CMP-alpha",
+  "type": "Component",
+  "title": "Alpha: built and documented",
+  "status": "locked",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "defined_in",
+      "to": "RUN-alpha"
+    },
+    {
+      "kind": "decided_by",
+      "to": "DEC-one"
+    }
+  ],
+  "created": "2026-01-01T00:00Z",
+  "updated": "2026-01-01T00:00Z"
+}

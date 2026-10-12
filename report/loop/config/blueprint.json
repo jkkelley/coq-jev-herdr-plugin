@@ -1,0 +1,92 @@
+{
+  "schema_version": "1.0.0",
+  "view": "blueprint",
+  "poll_seconds": 10,
+  "watch_seconds": 10,
+  "refresh_timeout_seconds": 60,
+  "out_dir": "report/blueprint/out/dev",
+  "actor": "loop.sh",
+  "title": "System blueprint",
+  "label": "BLUEPRINT",
+  "inputs": {
+    "graph_nodes_dir": "graph/nodes",
+    "graph_mermaid": "graph/GRAPH.mmd",
+    "work_orders_dir": "work-orders"
+  },
+  "stations": [
+    {
+      "id": "node",
+      "role": "Component",
+      "model": "graph node",
+      "does": "named in the graph",
+      "out": { "kind": "designed", "code": 100 }
+    },
+    {
+      "id": "decision",
+      "role": "Decision",
+      "model": "decided_by edges",
+      "does": "locked by the owner",
+      "out": { "kind": "decided", "code": 100 }
+    },
+    {
+      "id": "runbook",
+      "role": "Runbook",
+      "model": "RUN node",
+      "does": "how it is run",
+      "out": { "kind": "documented", "code": 100 }
+    },
+    {
+      "id": "work",
+      "role": "Work",
+      "model": "tickets",
+      "does": "built under a ticket",
+      "out": null
+    }
+  ],
+  "board_title": "Tickets · in flight, coming up, done",
+  "board_done_max": 12,
+  "diagram_title": "System graph · GRAPH.mmd",
+  "legend_title": "Locked decisions",
+  "legend_notes": [
+    [
+      "100",
+      "a component passed the gate on its left"
+    ],
+    [
+      "state",
+      "done: node locked or a ticket naming it is done. in flight: a ticket naming it is in progress or in review. coming up: the rest"
+    ]
+  ],
+  "links": {
+    "node": "https://github.com/jkkelley/coq-jev-herdr-plugin/blob/main/graph/nodes/{id}.json"
+  },
+  "key": [
+    {
+      "eyebrow": "Components",
+      "items": [
+        ["pill:live", "done", "the node is locked, or a ticket that names it is done"],
+        ["pill:building", "in flight", "a ticket that names it is in progress or in review"],
+        ["pill:queued", "coming up", "proposed or draft, nothing finished yet"],
+        ["pill:blocked", "blocked", "a decision it rests on is not locked"],
+        ["ks:here-sw", "", "the gate that needs work next"]
+      ]
+    },
+    {
+      "eyebrow": "Gates, left to right",
+      "items": [
+        ["pill:queued", "node", "the Component node is locked in the graph"],
+        ["pill:queued", "decision", "every decision it names is locked"],
+        ["pill:queued", "runbook", "a RUN node says how it is run"],
+        ["pill:queued", "work", "tickets that name it: done, open or none"]
+      ]
+    },
+    {
+      "eyebrow": "Parts of a gate",
+      "items": [
+        ["dot:ok", "", "present, locked or done"],
+        ["dot:todo", "", "still to do"],
+        ["dot:bad", "", "missing or not locked"]
+      ]
+    }
+  ]
+}

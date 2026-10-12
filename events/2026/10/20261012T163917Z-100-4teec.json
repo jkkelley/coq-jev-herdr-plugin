@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T163917Z-100-4teec",
+  "at": "2026-10-12T16:39:17Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-8fb2",
+  "kind": "work.started",
+  "ticket": "WO-20261012-8fb2",
+  "pane": null,
+  "note": "worker started WO-20261012-8fb2 in slot 9",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

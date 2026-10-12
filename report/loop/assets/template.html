@@ -254,6 +254,45 @@
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const pill = (k, t) => `<span class="pill ${k}">${esc(t)}</span>`;
 const STEP = 348; // one station plus one belt
+// WO-20261011-ceea. The blueprint view reuses this page with a few optional fields in the entry (title, label, key, legend_title,
+// legend_open, links, diagram). Each is drawn only when present, so an entry without them, the factory board's, draws as it did.
+// A station part that starts with a graph node id (CMP-, RUN-, DEC- ...) links the id to the node when the entry names where nodes live.
+const NODE_ID = /^((?:CMP|RUN|DEC|REQ|IFC|SCH|WFL|ROL|SPK|RSK|STC)-[A-Za-z0-9-]*[A-Za-z0-9])(?=$|[\s:,.;])/;
+function partText(t, d) {
+  const m = d.links && NODE_ID.exec(t);
+  if (!m) return esc(t);
+  return `<a href="${esc(d.links.node.replace("{id}", m[1]))}" target="_blank" rel="noopener">${esc(m[1])}</a>${esc(t.slice(m[1].length))}`;
+}
+function keyHTML(groups) {
+  return groups.map(g => `<div class="kg"><div class="eyebrow">${esc(g.eyebrow)}</div>${g.items.map(([mark, label, text]) => {
+    const [kind, name] = mark.split(":");
+    const lead = kind === "pill" ? `<span class="pill ${esc(name)}">${esc(label)}</span>` : `<i class="${kind === "dot" ? "dot" : "ks"} ${esc(name)}"></i>`;
+    return `<div class="ki">${lead}<span>${esc(text)}</span></div>`;
+  }).join("")}</div>`).join("");
+}
+// The diagram is one fold before the legend. It is built once and redrawn only when its source changes, so a poll that finds
+// nothing new never closes it or redraws the svg. Mermaid is loaded on first need; offline, the source stays as text.
+let diagramSource = null, legendOpened = false;
+async function drawDiagram(dg) {
+  let el = document.getElementById("diagram");
+  if (!dg) { if (el) el.remove(); diagramSource = null; return; }
+  if (!el) {
+    el = document.createElement("details"); el.className = "legend"; el.id = "diagram";
+    el.innerHTML = '<summary></summary><div class="svg" style="overflow:auto;margin-top:8px"></div><pre style="overflow:auto;margin-top:8px;font:0.74rem/1.5 var(--font-mono);color:var(--ink-2)"></pre>';
+    document.querySelector("details.legend").before(el);
+  }
+  el.querySelector("summary").textContent = dg.title;
+  if (dg.source === diagramSource) return;
+  diagramSource = dg.source;
+  const pre = el.querySelector("pre"), box = el.querySelector(".svg");
+  pre.textContent = dg.source; pre.hidden = false; box.innerHTML = "";
+  try {
+    const mod = await import("https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs");
+    mod.default.initialize({ startOnLoad: false, theme: "dark", maxTextSize: 400000, securityLevel: "strict" });
+    const { svg } = await mod.default.render("diagram-svg", dg.source);
+    if (dg.source === diagramSource) { box.innerHTML = svg; pre.hidden = true; }
+  } catch { /* offline or a graph mermaid cannot draw: the source text above stays */ }
+}
 let conn = location.protocol === "file:" ? "static" : "live"; // static: opened as a file, live: the last ask worked, offline: it did not
 
 function lineHTML(L, d) {
@@ -267,7 +306,7 @@ function lineHTML(L, d) {
         <div class="who"><span class="role">${esc(s.role)}</span>${pill(s.hand ? "hand" : s.status, s.hand ? "by hand" : s.status)}</div>
         <div class="model">${esc(s.model)}</div>
         <div class="does">${esc(s.does)}</div>
-        <ul class="parts">${s.parts.map(([k, t]) => `<li class="dot ${k}"></li><li class="n">${esc(t)}</li>`).join("")}</ul>
+        <ul class="parts">${s.parts.map(([k, t]) => `<li class="dot ${k}"></li><li class="n">${partText(t, d)}</li>`).join("")}</ul>
       </div></div>`);
     if (s.out) {
       const waiting = L.waiting === s.id;
@@ -332,7 +371,8 @@ function floorHTML(d) {
 
 function render(d) {
   const at = d.at.slice(0, 16).replace("T", " ") + " UTC"; // the design draws the minute; the entry keeps the second
-  document.getElementById("eyebrow").textContent = `LOOP ${String(d.number).padStart(3,"0")} · ${at} · ${d.actor} · ${d.state}`;
+  if (d.title) document.title = d.title;
+  document.getElementById("eyebrow").textContent = `${d.label || "LOOP"} ${String(d.number).padStart(3,"0")} · ${at} · ${d.actor} · ${d.state}`;
   document.getElementById("headline").textContent = d.headline;
   const count = s => d.lines.filter(L => L.status === s).length;
   document.getElementById("strip").innerHTML =
@@ -347,6 +387,11 @@ function render(d) {
      <span class="steps">${[0,1,2,3,4].map(i => `<i class="${i < b.step ? "on" : i === b.step && b.step > 0 ? "now" : ""}"></i>`).join("")}</span>`).join("");
   // The locked markup says "what makes line 1 real", true of the design's one real line and no one else's; the entry may say better.
   if (d.board_title) document.getElementById("board").parentElement.querySelector("h2").textContent = d.board_title;
+  if (d.key) document.querySelector("#keyblk .key").innerHTML = keyHTML(d.key);
+  const fold = document.querySelector("details.legend:not(#diagram)");
+  if (d.legend_title) fold.querySelector("summary").textContent = d.legend_title;
+  if (d.legend_open && !legendOpened) { fold.open = true; legendOpened = true; } // once: a reader who folds it keeps it folded
+  drawDiagram(d.diagram);
   document.getElementById("legend").innerHTML = d.legend.map(([k, v]) => `<tr><td class="id">${esc(k)}</td><td>${esc(v)}</td></tr>`).join("");
   document.getElementById("sources").textContent = `${d.sources} · built ${at}`;
   wire();

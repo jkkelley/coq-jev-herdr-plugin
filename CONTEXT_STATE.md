@@ -53,6 +53,7 @@
 
 
 
+
 ## Checkpoint 2026-10-12 18:13 UTC
 
 ### Current state
@@ -88,6 +89,64 @@
 ### Hydration prompt
 
 WO-20261012-ee9c is done and PR 31 is open at the renumbered head. Hold until the belt or the merger posts a record that wakes this seat.
+
+## Checkpoint 2026-10-12 18:03 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-8fb2 on WO-20261012-8fb2 - Own checkpoint after compaction: a SessionStart compact hook puts the seat's newest CONTEXT_STATE.md checkpoint in front of it. Treehouse slot 9, branch feat/own-checkpoint-after-compaction-a-sessionstart-c, PR 30. Test pane wD3:pBA, run only through herdr/bin/testpane.sh with make -C $COQ_WORKTREE/herdr.
+
+#### Toolchain
+
+- Review 20261012T170103Z-422-8inhl fixed in a12aa56: the hook timeout is resume_checkpoint.hook_timeout_seconds in herdr/config/herdr.json.
+- Merge conflicts 409 (records 20261012T172438Z-409-bwdwm and 20261012T180251Z-409-xvyzw, main moved twice): origin/main merged into the branch. CHANGELOG.md re-rendered with bin/changelog.sh render, work-orders/INDEX.md and epic READMEs by work-order.sh reindex, CONTEXT_STATE.md taken from main with this checkpoint added on top; none merged by hand.
+- Cases 01, 04, 13 and 17 re-run after the second merge, result in the pr.opened note.
+
+#### Active Tasks
+
+- Push the merge, post pr.opened 100 with the new head sha and --pr 30, then hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-8fb2 as worker-wo-20261012-8fb2 in slot 9. Read playbooks/worker.md and this checkpoint. The merge with main is committed; post pr.opened for PR 30 with the pushed head, then hold.
+
+## Checkpoint 2026-10-12 17:33 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-8f4f on WO-20261012-8f4f - SITREP IN FLIGHT counts the work the line is actually doing: open PRs and in-progress tickets on their branches, not only ticket status on main.
+  Branch feat/sitrep-in-flight-counts-the-work-the-line-is-act, treehouse slot 2, test pane wD3:pC0 through herdr/bin/testpane.sh only.
+
+#### Toolchain
+
+- Built: tools/bearings/scripts/sitrep-build.mjs gains the facts in_flight (tickets an open PR title names, plus in-progress or in-review tickets, once per ticket id) and in_flight_source (for example 3 open PRs, 1 without a PR).
+  config/sitrep.template.json points the IN FLIGHT card and the OBJECTIVE sentence at them; RUNBOOK.md names the new facts; tests/sitrep.sh has 7 new cases over tests/fixtures/prs-inflight.json.
+- Verified in the test pane: make -C tools/bearings lint ok, make -C tools/bearings test 120 passed, 0 failed.
+- A post-edit formatter hook reformats whole .mjs files at 80 columns; edit those through a script, not the Edit tool.
+
+#### Active Tasks
+
+- Open the pull request, work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened with the sha and pr, then idle for the belt.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: the OBJECTIVE sentence also reads in_flight.count, so one card never carries two figures under the name in flight.
+
+### Hydration prompt
+
+You are worker-wo-20261012-8f4f on WO-20261012-8f4f. Read this checkpoint and playbooks/worker.md. Next: gh pr create, work-order.sh submit and done, push, post pr.opened, then idle.
 
 ## Checkpoint 2026-10-12 16:59 UTC
 
