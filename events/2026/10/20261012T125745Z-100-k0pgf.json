@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T125745Z-100-k0pgf",
+  "at": "2026-10-12T12:57:45Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4562",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p6R",
+  "note": "WO-20261011-4562 - Break glass: PR 22 head efc1cd2, owner order applied (bypass on every flip), live halves re-homed to WO-20261012-2a12, merged main, lint and herdr suite 16 passed",
+  "evidence": [
+    "events/2026/10/20261012T015741Z-100-cj52r.json"
+  ],
+  "observations": [],
+  "attempt": 2,
+  "to": "reviewer"
+}
