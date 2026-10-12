@@ -10,6 +10,7 @@ One level down only. A child of a child is listed in its own directory, not here
 |---|---|---|---|---|
 | `WO-20261011-5355` | draft | p0 | WO-20261011-38c7 WO-20261011-23df | [Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a seat while the belt is stopped](WO-20261011-5355-belt-on-bringup-sh-starts-the-route-runner-in-it.md) |
 | `WO-20261010-d354` | ready | p0 | - | [Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per tree](WO-20261010-d354-dated-entry-files-yyyy-mm-yyyymmdd-name-ext-fron.md) |
+| `WO-20261012-fd87` | ready | p0 | - | [Factory design spec v2.0: every agent, workflow, runbook, SOP, schema and status code of the small loop and the software factory, generic and portable](WO-20261012-fd87-factory-design-spec-v2-0-every-agent-workflow-ru.md) |
 | `WO-20261011-fa78` | draft | p0 | WO-20261011-23df | [First ticket through the line: PR 11 closes with a seat at every station and no by-hand record](WO-20261011-fa78-first-ticket-through-the-line-pr-11-closes-with-.md) |
 | `WO-20261011-e618` | draft | p0 | - | [Interface agent seat owns the bearings page: owner requests become records and the done line comes from it](WO-20261011-e618-interface-agent-seat-owns-the-bearings-page-owne.md) |
 | `WO-20261010-fbad` | ready | p0 | - | [Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, queue, roles](WO-20261010-fbad-land-the-p0-foundation-branch-spec-00-01-03-04-0.md) |
