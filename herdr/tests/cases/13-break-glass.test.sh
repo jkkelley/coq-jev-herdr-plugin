@@ -4,7 +4,7 @@
 # several commands); a flip that lifts more than the rule covering the action or leaves the action blocked; a second command
 # that still runs (the hook must block it); a second use of one answer (AC-H3); a restore that does not verify with --check
 # (AC-H1); an expired break glass that is not restored or not called out by --audit; a follow-up 201 that does not restore;
-# a dontAsk seat (orchestrator) flipped into bypassPermissions, which would open every command and tool its role does not name;
+# a dontAsk seat (orchestrator) that is not flipped to bypassPermissions (owner order of 2026-10-12, record 20261012T121854Z-200-uqz6z);
 # hook timeouts that are literals in the script instead of break_glass.hook_*_timeout_seconds in herdr.json.
 # Real headless herdr and a stub claude; the bearings page is a stub script (BEARINGS) over a directory holding answers.jsonl.
 set -uo pipefail
@@ -58,8 +58,7 @@ r6=$(req "$ACTION"); answer "$r6" Grant "$ACTION"; g6=$(grant200 "$ACTION" "$r6"
 res=$(glass "$g6"); rc=$?
 assert_eq "break glass exits 0" "$rc" 0
 assert_eq "it names the request" "$(jq -r .break_glass <<<"$res")" "$r6"
-assert_eq "the worker role's mode is kept, and it is bypassPermissions" "$(jq -r .permissions.defaultMode "$S")" "$(jq -r .permissions.defaultMode "$WORLD/settings.role.json")"
-assert_eq "which is bypassPermissions" "$(jq -r .permissions.defaultMode "$S")" bypassPermissions
+assert_eq "default mode is bypassPermissions" "$(jq -r .permissions.defaultMode "$S")" bypassPermissions
 assert_eq "the deny rule that covers the action is lifted" "$(jq -r '.permissions.deny | any(. == "Bash(gh pr merge *)")' "$S")" false
 assert_eq "the action is allowed, exactly" "$(jq -r --arg a "Bash($ACTION)" '.permissions.allow | index($a) != null' "$S")" true
 assert_eq "an unrelated deny rule stays" "$(jq -r '.permissions.deny | index("Bash(treehouse destroy *)") != null' "$S")" true
@@ -126,20 +125,19 @@ r8=$(req "$ACTION"); answer "$r8" Grant "$ACTION"; g8=$(grant200 "$ACTION" "$r8"
 assert_eq "the sweep left an active break glass alone when nothing was due" "$(r9=$(req "$ACTION"); answer "$r9" Grant "$ACTION"; glass "$(grant200 "$ACTION" "$r9")" >/dev/null; "$SEAT" --break-glass-sweep >/dev/null; jq -r .status "$STATE/break-glass/$r9.json")" active
 "$SEAT" --break-glass-restore "$N" --why manual >/dev/null; assert_eq "a manual restore works" "$(same_as_role)" 1
 
-echo "-- a dontAsk seat: the flip opens the one command and nothing else (review of WO-20261011-4562, observation 2)"
+echo "-- a dontAsk seat is flipped to bypassPermissions too (owner order, record 20261012T121854Z-200-uqz6z, overruling review observation 1)"
 OACT='git push origin main'
 out=$("$SEAT" --role orchestrator --task "route the line" --worktree "$REPO"); assert_eq "the orchestrator seat is up" "$?" 0
 O=$(jq -r .name <<<"$out"); OS="$STATE/seats/$O/settings.json"; cp "$OS" "$WORLD/settings.orch.json"
 assert_eq "its role is dontAsk" "$(jq -r .permissions.defaultMode "$OS")" dontAsk
-assert_eq "its role allows no bare Bash, so an unrelated command is refused by dontAsk" "$(jq -r '.permissions.allow | index("Bash") == null' "$OS")" true
 ro=$(N=$O; req "$OACT"); answer "$ro" Grant "$OACT" "Break glass for $O: run exactly $OACT - once"
 go=$("$EV" add --kind break.glass --code 200 --seat "$O" --action "$OACT" --answer "$ro")
 "$SEAT" --break-glass "$O" --record "$go" >/dev/null 2>"$WORLD/err"; assert_eq "break glass on a dontAsk seat exits 0" "$?" 0
-assert_eq "it stays dontAsk, never bypassPermissions" "$(jq -r .permissions.defaultMode "$OS")" dontAsk
+assert_eq "it is bypassPermissions for the action" "$(jq -r .permissions.defaultMode "$OS")" bypassPermissions
 assert_eq "the only new allow rule is the action" "$(jq -c --slurpfile r "$WORLD/settings.orch.json" '.permissions.allow - $r[0].permissions.allow' "$OS")" "[\"Bash($OACT)\"]"
 assert_eq "no allow rule was removed" "$(jq -c --slurpfile r "$WORLD/settings.orch.json" '$r[0].permissions.allow - .permissions.allow' "$OS")" "[]"
 assert_eq "the deny rules that cover the action are lifted, and only those" "$(jq -c --slurpfile r "$WORLD/settings.orch.json" '$r[0].permissions.deny - .permissions.deny | sort' "$OS")" '["Bash(git * *)","Bash(git *)"]'
-assert_eq "an Edit and a Write outside the action are still denied" "$(jq -r '[.permissions.deny | index("Edit") != null, index("Write") != null] | join(" ")' "$OS")" "true true"
+assert_eq "the role's Edit and Write deny rules still hold under bypass" "$(jq -r '[.permissions.deny | index("Edit") != null, index("Write") != null] | join(" ")' "$OS")" "true true"
 assert_eq "an unrelated command family is still denied" "$(jq -r '.permissions.deny | any(startswith("Bash(podman"))' "$OS")" true
 SFO="$STATE/break-glass/$ro.json"
 hookO() { jq -nc --arg t "$1" --arg c "${2:-}" '{tool_name:$t, tool_input:{command:$c}}' | "$GUARD" pre "$SFO" 2>/dev/null; }

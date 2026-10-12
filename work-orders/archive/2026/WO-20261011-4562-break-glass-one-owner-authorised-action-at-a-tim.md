@@ -7,7 +7,7 @@
   "status": "done",
   "priority": "p0",
   "created": "2026-10-11",
-  "updated": "2026-10-11",
+  "updated": "2026-10-12",
   "created_at": "2026-10-11T18:42:53+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/break-glass-one-owner-authorised-action-at-a-tim",
@@ -91,6 +91,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Owner decision 2026-10-12 (architect record 20261012T121854Z-200-uqz6z): the live halves of AC-H1 (a real Claude Code seat re-reading --settings and the hook on change, with an owner answer) and AC-H3 (the owner's Grant or Refuse card and the answer-to-200/423 step, needing PR 17) are re-homed to WO-20261012-2a12 - Break glass live proof: the owner's first real grant through the interface card flips a live seat to bypass permissions, runs one action, and restores it. Their ticks here cover the file and record level only, observed in herdr case 13 and report/loop case 08-glass. Review obs 1 is overruled by the owner: break glass flips every seat, dontAsk included, to bypassPermissions; case 13 asserts it on an orchestrator seat.
 - `2026-10-11` Retro 2026-10-11: code, runbook and suites landed; two things are owed. (1) The interface card and verdict (interface.sh line/forward, interface/tests cases 6/6b) wait on PR 17 (WO-20261011-e618); patch at origin/backup/4562-before-rebuild commit 9907813. (2) AC-H1 live proof on a real Claude Code seat with an owner answer. Lessons: make step runs git add -A and swept foreign event records into two commits; cases 04/05 and monitors.json/herdr.json are merge hot spots for reserved watcher slots.
 
 ## Outcome

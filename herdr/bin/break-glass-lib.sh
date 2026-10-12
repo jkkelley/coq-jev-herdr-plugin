@@ -12,8 +12,8 @@
 #                  whose card text names this seat and this action. Read here from the page, never taken from a 200 record.
 #   One use        <state>/break-glass/<request id>.json is created with noclobber and is never deleted, so a second 200
 #                  for the same answer finds it and is refused 423 (AC-H3).
-#   The flip       the seat's settings.json becomes the role's render with the deny rules that cover the action removed,
-#                  Bash(<action>) allowed, the role's own defaultMode kept, and a PreToolUse and a PostToolUse hook on Bash
+#   The flip       the seat's settings.json becomes the role's render with defaultMode bypassPermissions, the deny rules
+#                  that cover the action removed, Bash(<action>) allowed, and a PreToolUse and a PostToolUse hook on Bash
 #                  (break-glass-guard.sh) that allow exactly that command once and deny any other command that holds a lifted
 #                  rule's head, so a second command is still denied. Then the seat is prompted with the record id.
 #   The restore    the role's render is written back and compared with cmp, the same check --check makes; break.glass 204.
@@ -35,17 +35,18 @@
 #      Rejected: leaving the deny and allowing the action (it never runs) and dropping the whole deny list (a second command
 #      would run). Cost: the hook is the fence for the lifted territory; a seat that rewrites its own settings.json defeats
 #      it, as it defeats every other rule, and --audit then calls the drift out. Only a Bash command is an action.
-#   4. The role's defaultMode is kept, never forced to bypassPermissions (review of 2026-10-12, attempts 1 and 2, on 57dacf2:
-#      herdr/bin/break-glass-lib.sh line 122). What broke: the first cut set defaultMode bypassPermissions for every role, but
-#      the monitor, orchestrator and interface-agent roles are dontAsk and allow almost nothing, so for up to ttl_seconds any
-#      Bash command or tool call their allow list did not name (rm, curl, an Edit outside a deny rule) would have run, not
-#      only the one action. Why this fix: the action is opened by the deny lift plus Bash(<action>) in allow, which works
-#      under dontAsk and under bypassPermissions alike, so the mode adds nothing for the action and everything for the rest.
-#      A bypassPermissions role (the worker, which is where the hotfix need arose) already runs in bypass, so for it the
-#      flip is the lift and the hook, as it always was. Rejected: a PreToolUse hook on every tool that refuses all but the
-#      action on a dontAsk seat (a second allow list to drift from the role, and a hook that fails open when it errors).
-#      Cost: the ticket title says "flips to bypass permissions"; on a dontAsk seat what flips is the one allowed command,
-#      and the seat is never in bypass, so --audit has nothing to call out for it. Case 13 proves the dontAsk seat.
+#   4. defaultMode is bypassPermissions on every flip, dontAsk seats included (owner order, relayed by the architect in record
+#      20261012T121854Z-200-uqz6z, 2026-10-12: "bypass permissions when break glass happens"). This overrules review
+#      observation 1 of 2026-10-12 (attempts 1 and 2, on 57dacf2, line 122 of this file), which asked to keep a dontAsk
+#      role's mode. What the reviewer saw is real: the monitor, orchestrator and interface-agent roles are dontAsk, so for up
+#      to ttl_seconds any command or tool call their allow list does not name runs, not only the one action. The owner chose
+#      that: a break glass is an emergency elevation, bounded by the ttl, the one-use state file, the 201 restore and
+#      --audit's 500 for a seat that kept bypass, and not by a second allow list. Rejected: keeping the role's mode (the
+#      review's fix; the allow rule alone opens the action) and a hook on every tool that refuses all but the action (a second
+#      allow list to drift from the role). Cost: on a dontAsk seat the guard hook fences only the lifted territory, so every
+#      other command and every Edit or Write the role's deny list does not name is open until the restore; the deny rules
+#      the flip leaves in place still hold under bypass. The hook timeouts are not literals: break_glass.hook_pre_timeout_seconds
+#      and hook_post_timeout_seconds in herdr/config/herdr.json (review observation 5).
 #   Not proved here: that a running Claude Code re-reads --settings on change. The suite proves the file, the hook and the
 #   records; the live check is the owner's AC-H1 run, and the runbook says how to read the seat's own deny result.
 
@@ -131,7 +132,8 @@ bg_grant() {
   cp "$settings" "$sd/settings.pre-break-glass.json"
   tpre=$(sl_cfg .break_glass.hook_pre_timeout_seconds); tpost=$(sl_cfg .break_glass.hook_post_timeout_seconds)
   jq --arg a "$action" --argjson lifted "$ls" --argjson tpre "$tpre" --argjson tpost "$tpost" --arg pre "$(printf '%q pre %q' "$SL_HERE/break-glass-guard.sh" "$sf")" --arg post "$(printf '%q post %q' "$SL_HERE/break-glass-guard.sh" "$sf")" '
-      .permissions.deny -= $lifted
+      .permissions.defaultMode = "bypassPermissions"
+      | .permissions.deny -= $lifted
       | .permissions.allow += ["Bash(\($a))"]
       | .hooks = {PreToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $pre, timeout: $tpre}]}],
                   PostToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $post, timeout: $tpost}]}]}' <<<"$base" > "$sd/settings.break-glass.json"

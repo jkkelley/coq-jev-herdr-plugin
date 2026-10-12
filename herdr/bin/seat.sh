@@ -9,7 +9,7 @@
 #   seat.sh --down NAME         retire.sh, close the tab, return the slot this seat leased, record seat.down 100; a second --down records nothing
 #                               the log names each process in the slot (pid, name) first; a foreign one refuses the return, exit 3
 #   seat.sh --audit             every agent process on the host: COMPLIANT or OUT OF COMPLIANCE + seat.stalled 500; exit 1 if any
-#   seat.sh --break-glass SEAT --record ID      one owner-authorised command: that command allowed and nothing else, the role's mode kept (herdr/bin/break-glass-lib.sh); ID is the break.glass 200 record, or its 300 request
+#   seat.sh --break-glass SEAT --record ID      one owner-authorised command: bypass permissions for that command only (herdr/bin/break-glass-lib.sh); ID is the break.glass 200 record, or its 300 request
 #   seat.sh --break-glass-restore SEAT [--why done|ttl|manual]   the role's settings back, verified, break.glass 204
 #   seat.sh --break-glass-sweep                 restore every break glass whose follow-up 201 landed or whose ttl passed (the watcher pane runs this)
 # Reads roles/<role>.json and the layout it names (herdr/layouts/<pane_layout>.json). Workspace by label, tab by label,
