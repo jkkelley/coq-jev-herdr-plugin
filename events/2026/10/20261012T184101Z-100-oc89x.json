@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T184101Z-100-oc89x",
+  "at": "2026-10-12T18:41:01Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "note",
+  "ticket": "WO-20261012-277d",
+  "pane": "wD3:pGD",
+  "note": "merger holding PR 34 on WO-20261012-277d: review.passed 201 and test.passed 201 name sha 965ee97, head is e108aa4 (records-only diff); waiting on the owner's call before any merge",
+  "evidence": [],
+  "observations": []
+}

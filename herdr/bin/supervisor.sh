@@ -143,7 +143,8 @@ bearings_node() {
   wake="$(sl_cfg .watches.architect_agent)"
   ag="$(th "$T_QUERY" agent get "$wake" 2>/dev/null | jq -r '.result.agent.pane_id // empty')"; apane="$ag"
   tab="$(jq -r --arg a "${pp:-x}" --arg b "${wp:-x}" --arg c "${apane:-x}" 'first(.[] | select(.pane_id == $a or .pane_id == $b or .pane_id == $c) | .tab_id) // empty' <<<"$panes")"
-  pane_busy() { th "$T_QUERY" pane process-info --pane "$1" 2>/dev/null | jq -e '.result.process_info | .foreground_process_group_id != null and .shell_pid != null and .foreground_process_group_id != .shell_pid' >/dev/null 2>&1; }
+  # busy by the processes in the pane's foreground, not by the group id alone: sl_pane_busy (seat-lib.sh, WO-20261012-277d).
+  pane_busy() { th "$T_QUERY" pane process-info --pane "$1" 2>/dev/null | sl_pane_busy; }
   benv() { HERDR_ENV=1 HERDR_SESSION="$HS" HERDR_PANE_ID=supervisor HERDR_TAB_ID="$tab" timeout --kill-after="$T_KILL_STEP" "$STEP_T" env -u HERDR_SOCKET_PATH -u COQ_SEAT "$@"; }
   if [ "$alive" = true ]; then
     if [ -n "$wp" ] && pane_busy "$wp"; then okln bearings; return 0; fi
