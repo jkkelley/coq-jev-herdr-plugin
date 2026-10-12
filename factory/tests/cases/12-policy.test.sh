@@ -29,12 +29,22 @@ echo "-- the default is taken once: a second tick writes nothing and wakes nobod
 policy_once; policy_once
 assert_eq "still one record" "$(nrec)" 1; assert_eq "still one herdr call" "$(hcalls)" 1
 
+# BREADCRUMB 2026-10-12 - WO-20261012-da52 (a flake found on its PR, not caused by it). What broke: test.failed 422 3h504 (tester,
+#   PR 25 head 30b1c93): "an answer on the ticket after the escalation" gave WO-20261012-aaaa a default although a pr.opened followed
+#   its blocked, so the 12-policy line below this comment (the `sleep 1` before each answer) failed once in a run that passed on
+#   the same tree minutes earlier. The policy watch orders an answer after an escalation by record id, which is the UTC second
+#   plus a random suffix, so two records in one second sort by chance. The wall clock on this WSL2 host steps back about 1.05 s every
+#   ~35 s (factory/tests/cases/06-belt.test.sh breadcrumb), so a `sleep 1` between them can span less than one clock second and
+#   write both in the same second. Why this fix: every ordering sleep in this case is 3 s, so even with a 1.05 s step the two ids
+#   are at least 1.95 s apart on the wall clock, which always crosses a second boundary. Rejected: ordering by file time or a
+#   counter in the test (policy.sh orders by id, and the test must exercise that), and a clock stub (the script reads real ids).
+#   Cost: about eight more seconds of waiting per run.
 echo "-- limit_per_ticket: a repeat blocked on the same ticket waits for the owner"
-sleep 1; b2=$(rec blocked 423 "$SEAT_T" "$T"); backdate "$b2" 2000
+sleep 3; b2=$(rec blocked 423 "$SEAT_T" "$T"); backdate "$b2" 2000
 policy_once; assert_eq "no second default" "$(nrec)" 1
 echo "-- two escalations of one ticket in one tick: one default, not two"
 world_up policy2; policy_world
-b1=$(rec blocked 423 "worker-wo-20261012-bbbb" "$U"); sleep 1; b2=$(rec blocked 423 "worker-wo-20261012-bbbb" "$U"); backdate "$b1" 2000; backdate "$b2" 2000
+b1=$(rec blocked 423 "worker-wo-20261012-bbbb" "$U"); sleep 3; b2=$(rec blocked 423 "worker-wo-20261012-bbbb" "$U"); backdate "$b1" 2000; backdate "$b2" 2000
 policy_once; assert_eq "one record for two escalations" "$(nrec)" 1
 
 echo "-- before the deadline nothing happens, and status says when"
@@ -46,8 +56,8 @@ assert_match "status names the policy, the ticket and the record" "$out" "^waiti
 
 echo "-- an answer on the ticket after the escalation means no default; another ticket's answer does not"
 world_up policy4; policy_world
-b=$(rec blocked 423 "$SEAT_T" "$T"); backdate "$b" 2000; sleep 1; rec pr.opened 100 "$SEAT_T" "$T" >/dev/null
-c=$(rec blocked 423 "worker-wo-20261012-cccc" "$V"); backdate "$c" 2000; sleep 1; rec pr.opened 100 "worker-wo-20261012-bbbb" "$U" >/dev/null
+b=$(rec blocked 423 "$SEAT_T" "$T"); backdate "$b" 2000; sleep 3; rec pr.opened 100 "$SEAT_T" "$T" >/dev/null
+c=$(rec blocked 423 "worker-wo-20261012-cccc" "$V"); backdate "$c" 2000; sleep 3; rec pr.opened 100 "worker-wo-20261012-bbbb" "$U" >/dev/null
 policy_once; assert_eq "one default, for the ticket nobody answered" "$(jq -r .ticket <<<"$(policy_records)")" "$V"
 assert_eq "and only one" "$(nrec)" 1
 
@@ -93,7 +103,7 @@ assert_match "the 500 says the prompt failed" "$("$R/events/bin/event.sh" list -
 
 echo "-- the first start judges only records written after it"
 world_up policy9; policy_world
-b=$(rec blocked 423 "$SEAT_T" "$T"); backdate "$b" 2000; sleep 2
+b=$(rec blocked 423 "$SEAT_T" "$T"); backdate "$b" 2000; sleep 3
 "$POLICY" once --repo "$R" --state "$PSTATE"; assert_eq "exit 0" "$?" 0; assert_eq "no record for the old escalation" "$(nrec)" 0
 
 echo "-- a table that covers break.glass is refused at start"
