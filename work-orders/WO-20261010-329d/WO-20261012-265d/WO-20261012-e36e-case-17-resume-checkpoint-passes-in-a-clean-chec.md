@@ -1,0 +1,86 @@
+---
+{
+  "id": "WO-20261012-e36e",
+  "slug": "case-17-resume-checkpoint-passes-in-a-clean-chec",
+  "title": "Case 17-resume-checkpoint passes in a clean checkout: the test brings its own checkpoint.sh instead of needing the gitignored skill copy",
+  "type": "bug",
+  "status": "ready",
+  "priority": "p0",
+  "created": "2026-10-12",
+  "updated": "2026-10-12",
+  "created_at": "2026-10-12T19:47:42+00:00",
+  "parent": "WO-20261012-265d",
+  "branch": null,
+  "pr": null,
+  "closed": null,
+  "approval": {
+    "via": "override",
+    "reason": "architect cut on a failed verify of PR 30 on main; owner order 2026-10-12: architect and owner are not gates",
+    "at": "2026-10-12"
+  },
+  "evidence": null,
+  "surfaces": [],
+  "depends_on": [],
+  "blocks": []
+}
+---
+
+# WO-20261012-e36e - Case 17-resume-checkpoint passes in a clean checkout: the test brings its own checkpoint.sh instead of needing the gitignored skill copy
+
+## Contents
+
+- Problem
+- Scope
+- Degrees of freedom
+- Acceptance criteria
+- Test plan
+- Assumptions
+- Open questions
+- Notes
+- Outcome
+
+## Problem
+
+herdr case 17-resume-checkpoint calls $REPO/.claude/skills/context-compaction/scripts/checkpoint.sh, a gitignored copy that skill-sync installs. Seat slots have it, so PR 30 passed its gates; a clean worktree (verify on main, CI, any fresh clone) does not, so make -C herdr test fails 22/1 on main 372f9aa and on every PR's clean run since (PR 25, PR 34 verify).
+
+## Scope
+
+**In**
+
+- herdr/tests/cases/17-resume-checkpoint.test.sh supplies checkpoint.sh to its world (a fixture under herdr/tests/fixtures or COQ_CHECKPOINT_SH), so the case passes with no .claude/skills present
+
+**Out - non-goals**
+
+- changing herdr/bin/resume-checkpoint.sh behaviour
+- herdr/tests/lib/world.sh (open in PR 25)
+
+## Degrees of freedom
+
+- [free] how the case provides checkpoint.sh (a vendored fixture copy, or a minimal stub that implements read --top N), as long as it needs nothing outside the repo's tracked files
+
+## Acceptance criteria
+
+- [ ] `AC-H1` *(human)* make -C herdr test passes in a fresh git worktree of the branch with no .claude/skills directory
+- [ ] `AC-H2` *(human)* the case still proves AC-H1 to AC-H3 of WO-20261012-8fb2 against the real resume-checkpoint.sh
+
+## Test plan
+
+```sh
+git worktree add --detach /tmp/x HEAD && make -C /tmp/x/herdr test
+```
+
+## Assumptions
+
+_none_
+
+## Open questions
+
+_none_
+
+## Notes
+
+_Newest first. Appended only by `work-order note` - never by hand._
+
+## Outcome
+
+_Written by `work-order done`. Empty until then._

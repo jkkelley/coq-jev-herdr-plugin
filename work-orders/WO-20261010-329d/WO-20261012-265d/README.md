@@ -8,6 +8,7 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
+| `WO-20261012-e36e` | ready | p0 | - | [Case 17-resume-checkpoint passes in a clean checkout: the test brings its own checkpoint.sh instead of needing the gitignored skill copy](WO-20261012-e36e-case-17-resume-checkpoint-passes-in-a-clean-chec.md) |
 | `WO-20261012-ee9c` | ready | p0 | - | [Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick](WO-20261012-ee9c-scoped-guard-watch-monitor-slot-1-1-2-runs-the-g.md) |
 | `WO-20261012-898a` | ready | p1 | WO-20261012-ee9c | [Compact request: make step's last act raises the seat's compact request and the scoped guard watch sends one /compact when the seat is quiet and its checkpoint is fresh](WO-20261012-898a-compact-request-make-step-s-last-act-raises-the-.md) |
 | `WO-20261012-c41f` | ready | p1 | - | [Threshold per role: seat.sh renders a guard schema per seat from its role, so the guard compacts at the role's threshold and names the seat](WO-20261012-c41f-threshold-per-role-seat-sh-renders-a-guard-schem.md) |
