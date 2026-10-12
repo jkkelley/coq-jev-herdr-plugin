@@ -28,7 +28,7 @@ Setting up a host, after changing herdr/bin/supervisor.sh or herdr/config/herdr.
 2. What a tick does, every 30 seconds after the previous one ends and 20 seconds after boot: `herdr/bin/supervisor.sh`.
    The halt flag (`~/.local/state/coq/HALT`) stops it before anything else.
    Then, in order: herdr answers (when it does not, `systemctl --user start herdr-stable.service`; the supervisor never forks a server), `podman ps` answers (when it does not, `podman system migrate`), `bringup.sh` (control plane, guard doctor, the monitors grid, the monitor seat, every reserved pane judged by its process), `belt.sh --apply`, the owner page and its wait loop, then the seats.
-   Every step is killed after `supervisor.step_timeout_seconds` (120) and the tick as a whole after 420 seconds, so a hung command costs one tick and never a stuck supervisor.
+   Every step is killed after `supervisor.step_timeout_seconds` (120), every command a step runs after its own `supervisor.timeouts.*` key, and the tick as a whole after 420 seconds, so a hung command costs one tick and never a stuck supervisor.
 3. A reserved monitor pane (the slots of `herdr/config/monitors.json`, including the watches in tab 4) is healthy when its label is its owner's and herdr shows a process in the foreground that is not the shell.
    `herdr/bin/monitors.sh health` prints `ok NAME` or `FAILED NAME (why)` for each.
    A dead command is plugged in again by `monitors.sh take`; a slot labelled open under a job someone is running is left alone and reported (`left alone`), never typed into.

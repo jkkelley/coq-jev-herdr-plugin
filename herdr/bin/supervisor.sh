@@ -41,6 +41,14 @@ exec 9>"$SUP/lock"
 flock -n 9 || { echo "skipped supervisor (the previous tick is still running)"; exit 0; }
 
 STEP_T="$(sl_cfg .supervisor.step_timeout_seconds)"
+# Every bound below is a supervisor.timeouts.* key in herdr.json (reviewer finding on record 20261012T160316Z-422-19hjw: these were
+# literals at 14 sites in this file, and NEVER HARDCODE is a locked owner decision). Rejected: one shared number for all of them,
+# since a podman migrate and a herdr pane list have nothing in common. Cost: nine keys to read; a missing key fails loudly in sl_cfg.
+T_KILL_HERDR="$(sl_cfg .supervisor.timeouts.herdr_kill_after_seconds)"; T_KILL_STEP="$(sl_cfg .supervisor.timeouts.step_kill_after_seconds)"
+T_LIST="$(sl_cfg .supervisor.timeouts.herdr_list_seconds)"; T_PROBE="$(sl_cfg .supervisor.timeouts.herdr_probe_seconds)"
+T_QUERY="$(sl_cfg .supervisor.timeouts.herdr_query_seconds)"; T_SYSTEMCTL="$(sl_cfg .supervisor.timeouts.systemctl_seconds)"
+T_PODMAN="$(sl_cfg .supervisor.timeouts.podman_seconds)"; T_MIGRATE="$(sl_cfg .supervisor.timeouts.podman_migrate_seconds)"
+T_BSTATUS="$(sl_cfg .supervisor.timeouts.bearings_status_seconds)"
 LINES_OUT=(); bad=0; fixed_list=()
 say() { LINES_OUT+=("$1"); printf '%s\n' "$1"; }
 okln() { say "ok $1"; }
@@ -50,9 +58,9 @@ failln() { say "FAILED $1 ($2)"; bad=1; [ "$mode" != apply ] || SL_REPORT_SEAT=s
 # relay <prefix> <text>: the lines a called script printed, kept in the tick's log.
 relay() { local l; while IFS= read -r l; do [ -z "$l" ] || say "  $1: $l"; done <<<"$2"; }
 # th <seconds> <herdr args>: herdr on this session, killed after <seconds>; function-free so `timeout` can run it.
-th() { local t="$1"; shift; timeout --kill-after=5 "$t" env -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_SOCKET_PATH herdr --session "$HS" "$@"; }
+th() { local t="$1"; shift; timeout --kill-after="$T_KILL_HERDR" "$t" env -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_SOCKET_PATH herdr --session "$HS" "$@"; }
 # run <script> <args>: a repo script, killed after the step timeout; RUN_OUT and RUN_RC hold what it said and how it ended.
-run() { RUN_OUT="$(timeout --kill-after=10 "$STEP_T" "$@" 2>&1)"; RUN_RC=$?; }
+run() { RUN_OUT="$(timeout --kill-after="$T_KILL_STEP" "$STEP_T" "$@" 2>&1)"; RUN_RC=$?; }
 finish() {
   local summary
   if [ "${#fixed_list[@]}" -gt 0 ]; then summary="supervisor: fixed ${fixed_list[*]}"; [ "$bad" = 0 ] || summary+="; FAILED remain"
@@ -67,21 +75,21 @@ if [ -e "$halt" ]; then say "HALTED ($halt)"; finish; fi
 
 # 2. herdr. Started through systemd and nothing else: a server this script forked would be a process under no unit and under no pane.
 unit="$(sl_cfg .supervisor.herdr_unit)"
-if th 15 workspace list >/dev/null 2>&1; then okln herdr
+if th "$T_LIST" workspace list >/dev/null 2>&1; then okln herdr
 elif [ -z "$unit" ]; then failln herdr "session $HS is not running and supervisor.herdr_unit is empty"; finish
 elif [ "$mode" = check ]; then failln herdr "session $HS is not running; apply would start $unit"; finish
-elif ! timeout 30 systemctl --user start "$unit" >/dev/null 2>&1; then failln herdr "systemctl --user start $unit failed"; finish
+elif ! timeout "$T_SYSTEMCTL" systemctl --user start "$unit" >/dev/null 2>&1; then failln herdr "systemctl --user start $unit failed"; finish
 else
-  up=0; for ((i = 0; i < $(sl_cfg .supervisor.herdr_wait_seconds); i++)); do th 5 workspace list >/dev/null 2>&1 && { up=1; break; }; sleep 1; done
+  up=0; for ((i = 0; i < $(sl_cfg .supervisor.herdr_wait_seconds); i++)); do th "$T_PROBE" workspace list >/dev/null 2>&1 && { up=1; break; }; sleep 1; done
   if [ "$up" = 1 ]; then fixedln herdr "started $unit"; else failln herdr "$unit started but session $HS did not answer in $(sl_cfg .supervisor.herdr_wait_seconds)s"; finish; fi
 fi
 
 # 3. podman. The rootless pause process dies with every herdr restart and WSL reboot, and until `podman system migrate` every lint
 #    and test run fails with an error that names neither (backlog 60l24, seen 2026-10-12).
 if [ "$(sl_cfg .supervisor.podman)" = true ] && command -v podman >/dev/null 2>&1; then
-  if timeout 30 podman ps >/dev/null 2>&1; then okln podman
+  if timeout "$T_PODMAN" podman ps >/dev/null 2>&1; then okln podman
   elif [ "$mode" = check ]; then failln podman "podman ps fails; apply would run podman system migrate"
-  elif timeout 60 podman system migrate >/dev/null 2>&1 && timeout 30 podman ps >/dev/null 2>&1; then fixedln podman "podman system migrate"
+  elif timeout "$T_MIGRATE" podman system migrate >/dev/null 2>&1 && timeout "$T_PODMAN" podman ps >/dev/null 2>&1; then fixedln podman "podman system migrate"
   else failln podman "podman ps fails and podman system migrate did not fix it"; fi
 else skipln podman "supervisor.podman is false or podman is not on PATH"; fi
 
@@ -126,17 +134,17 @@ bearings_node() {
   cfg="$(cd "$(dirname "$script")/.." && pwd)/config/bearings.json"
   plabel="$(jq -r --arg t "$tier" '.tiers[$t].pane_label // empty' "$cfg" 2>/dev/null)"; wlabel="$(jq -r --arg t "$tier" '.tiers[$t].wait_pane_label // empty' "$cfg" 2>/dev/null)"
   case "$plabel$wlabel" in "" | *'${'*) failln bearings "tier $tier has no plain pane labels in $cfg"; return 0 ;; esac
-  st="$(timeout 30 "$script" "$tier" status --json 2>/dev/null)" || st=""
+  st="$(timeout "$T_BSTATUS" "$script" "$tier" status --json 2>/dev/null)" || st=""
   alive="$(jq -r '.alive // false' <<<"$st" 2>/dev/null)"; dir="$(jq -r '.dir // empty' <<<"$st" 2>/dev/null)"
   [ -n "$dir" ] || { failln bearings "$script $tier status --json said nothing"; return 0; }
-  panes="$(th 15 pane list 2>/dev/null | jq -c '[.result.panes[]? | {pane_id, tab_id, label: (.label // "")}]')" || panes="[]"
+  panes="$(th "$T_LIST" pane list 2>/dev/null | jq -c '[.result.panes[]? | {pane_id, tab_id, label: (.label // "")}]')" || panes="[]"
   pp="$(jq -r --arg l "$plabel" 'first(.[] | select(.label == $l) | .pane_id) // empty' <<<"$panes")"
   wp="$(jq -r --arg l "$wlabel" 'first(.[] | select(.label == $l) | .pane_id) // empty' <<<"$panes")"
   wake="$(sl_cfg .watches.architect_agent)"
-  ag="$(th 10 agent get "$wake" 2>/dev/null | jq -r '.result.agent.pane_id // empty')"; apane="$ag"
+  ag="$(th "$T_QUERY" agent get "$wake" 2>/dev/null | jq -r '.result.agent.pane_id // empty')"; apane="$ag"
   tab="$(jq -r --arg a "${pp:-x}" --arg b "${wp:-x}" --arg c "${apane:-x}" 'first(.[] | select(.pane_id == $a or .pane_id == $b or .pane_id == $c) | .tab_id) // empty' <<<"$panes")"
-  pane_busy() { th 10 pane process-info --pane "$1" 2>/dev/null | jq -e '.result.process_info | .foreground_process_group_id != null and .shell_pid != null and .foreground_process_group_id != .shell_pid' >/dev/null 2>&1; }
-  benv() { HERDR_ENV=1 HERDR_SESSION="$HS" HERDR_PANE_ID=supervisor HERDR_TAB_ID="$tab" timeout --kill-after=10 "$STEP_T" env -u HERDR_SOCKET_PATH -u COQ_SEAT "$@"; }
+  pane_busy() { th "$T_QUERY" pane process-info --pane "$1" 2>/dev/null | jq -e '.result.process_info | .foreground_process_group_id != null and .shell_pid != null and .foreground_process_group_id != .shell_pid' >/dev/null 2>&1; }
+  benv() { HERDR_ENV=1 HERDR_SESSION="$HS" HERDR_PANE_ID=supervisor HERDR_TAB_ID="$tab" timeout --kill-after="$T_KILL_STEP" "$STEP_T" env -u HERDR_SOCKET_PATH -u COQ_SEAT "$@"; }
   if [ "$alive" = true ]; then
     if [ -n "$wp" ] && pane_busy "$wp"; then okln bearings; return 0; fi
     [ "$mode" = apply ] || { failln bearings "the wait loop is not running"; return 0; }
@@ -190,7 +198,7 @@ reseat_node() {
   local grace up_s dl_s monitor checked=0
   grace="$(sl_cfg .supervisor.reseat.grace_seconds)"; up_s="$(sl_cfg .supervisor.reseat.up_seconds)"; dl_s="$(sl_cfg .supervisor.reseat.down_lock_seconds)"
   max="$(sl_cfg .supervisor.reseat.max_per_window)"; win="$(sl_cfg .supervisor.reseat.window_seconds)"; monitor="$(sl_cfg .monitor_seat)"
-  local panes; panes="$(th 15 pane list 2>/dev/null | jq -c '[.result.panes[]? | .pane_id]')" || panes=""
+  local panes; panes="$(th "$T_LIST" pane list 2>/dev/null | jq -c '[.result.panes[]? | .pane_id]')" || panes=""
   [ -n "$panes" ] || { failln seats "herdr pane list answered nothing"; return 0; }
   for f in "$STATE"/seats/*/seat.json; do
     [ -f "$f" ] || continue
@@ -208,7 +216,7 @@ reseat_node() {
     local alive=1
     if [ -z "$pane" ] || ! jq -e --arg p "$pane" 'index($p) != null' <<<"$panes" >/dev/null; then alive=0
     else
-      local pi; pi="$(th 10 pane process-info --pane "$pane" 2>/dev/null)" || pi=""
+      local pi; pi="$(th "$T_QUERY" pane process-info --pane "$pane" 2>/dev/null)" || pi=""
       if jq -e '.result.process_info.shell_pid != null' <<<"$pi" >/dev/null 2>&1; then
         jq -e '[.result.process_info.foreground_processes[]? | (.argv // [.name]) | map(split("/") | last) | .[0:2][] | select(. == "claude" or . == "codex")] | length > 0' <<<"$pi" >/dev/null 2>&1 || alive=0
       fi
