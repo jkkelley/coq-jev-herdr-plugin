@@ -91,7 +91,7 @@ The golden replay fixtures and their check.
   - expected: exit 0: every routes row, policies row and verb covered; every case valid
 - `TP-2`
   - intent: the acceptance criterion this command proves, as the ticket states it
-  - command: `rm -r /tmp/fx && cp -r scheduler/testdata /tmp/fx && rm -r /tmp/fx/replay/$(ls /tmp/fx/replay | head -1) && bash /tmp/fx/bin/check.sh; test $? -eq 3`
+  - command: `rm -rf /tmp/fx && cp -r scheduler/testdata /tmp/fx && rm -r /tmp/fx/replay/$(ls /tmp/fx/replay | head -1) && bash /tmp/fx/bin/check.sh; test $? -eq 3`
   - expected: exit 0: the check fails naming the uncovered row
 
 **Isolation**

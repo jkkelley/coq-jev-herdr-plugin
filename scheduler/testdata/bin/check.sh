@@ -11,9 +11,18 @@
 #
 # The fixtures checked are the ones beside this script (../replay), so a copy of scheduler/testdata checks itself. The repo
 # (the tables, the event schema, roles, the check config) is --repo, else $REPO_ROOT, else the working directory when it
-# holds factory/config/routes.json, else /repo (the lint image's mount).
-# Needs bash, python3 with jsonschema (the lint image has both).
+# holds factory/config/routes.json, else the repo this directory sits in.
+# On the host it re-execs itself in the lint image (localhost/coq-lint:1, built from lint/Containerfile when missing), the
+# repo and this testdata directory mounted read-only, the network off; the host needs only podman and bash.
 # Exit codes: 0 ok, 2 usage, 3 validation (each problem named on stderr), 4 io.
+#
+# BREADCRUMB 2026-10-12 - WO-20261012-8d87. What broke: the tester runs every test-plan command literally on the host, where only
+#   podman, bash, jq and python exist (coq architect, record 20261012T201732Z-100-tfyo6, after a bare go command failed on PR 39),
+#   and this check needs python3-jsonschema, which the host does not promise. Why this fix: the re-exec of
+#   factory/tests/run.sh, so `bash scheduler/testdata/bin/check.sh` means the same thing on the host, in CI and inside the
+#   image. This directory is mounted on its own (/testdata) because the test plan checks a copy outside the repo.
+#   Rejected: asking the tester to wrap the command in podman run (a plan that names an image flag is a plan nobody re-runs
+#   by hand). Cost: one container start per run, and a first run builds the lint image.
 set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); TESTDATA=$(cd "$HERE/.." && pwd)
 REPO=""; JSON=0
@@ -23,9 +32,22 @@ while [ $# -gt 0 ]; do case $1 in
   -h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//'; exit 0;;
   *) die 2 "unknown flag $1";; esac; done
 if [ -z "$REPO" ]; then
-  if [ -n "${REPO_ROOT:-}" ]; then REPO=$REPO_ROOT; elif [ -f "$PWD/factory/config/routes.json" ]; then REPO=$PWD; else REPO=/repo; fi
+  if [ -n "${REPO_ROOT:-}" ]; then REPO=$REPO_ROOT; elif [ -f "$PWD/factory/config/routes.json" ]; then REPO=$PWD
+  elif [ -f "$TESTDATA/../../factory/config/routes.json" ]; then REPO=$(cd "$TESTDATA/../.." && pwd); else REPO=/repo; fi
 fi
 [ -d "$REPO" ] || die 4 "no such repo $REPO"
+if [ "${COQ_TEST_IN_CONTAINER:-0}" != 1 ]; then
+  IMAGE="localhost/coq-lint:1"; REPO=$(cd "$REPO" && pwd)
+  command -v podman >/dev/null || die 4 "podman is required on the host"
+  if ! podman image exists "$IMAGE" 2>/dev/null; then
+    [ -f "$REPO/lint/Containerfile" ] || die 4 "image $IMAGE missing and no $REPO/lint/Containerfile to build it"
+    podman build -q -t "$IMAGE" -f "$REPO/lint/Containerfile" "$REPO/lint" >/dev/null || die 4 "could not build $IMAGE"
+  fi
+  args=(--repo /repo); [ "$JSON" = 0 ] || args+=(--json)
+  exec podman run --rm --userns=keep-id --network=none \
+    -v "$REPO:/repo:ro,Z" -v "$TESTDATA:/testdata:ro,Z" -e COQ_TEST_IN_CONTAINER=1 -w /repo \
+    "$IMAGE" bash /testdata/bin/check.sh "${args[@]}"
+fi
 command -v python3 >/dev/null || die 4 "python3 is required"
 python3 -c 'import jsonschema' 2>/dev/null || die 4 "python3 jsonschema is required (the lint image has it)"
 [ -d "$TESTDATA/replay" ] || die 4 "no replay directory at $TESTDATA/replay"

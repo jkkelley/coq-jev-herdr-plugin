@@ -82,18 +82,15 @@ Entries are independent of each other.
 ## The check
 
 ```bash
-bash scheduler/testdata/bin/check.sh            # from the repo root, in the lint image
+bash scheduler/testdata/bin/check.sh            # from the repo root; runs in the lint image
 bash scheduler/testdata/bin/check.sh --json     # the same, as one JSON object
 ```
 
-Run it in the lint image with the repo read-only and the network off, as every check here runs:
-
-```bash
-podman run --rm --network=none --userns=keep-id -v "$PWD:/repo:ro,Z" -w /repo localhost/coq-lint:1 bash scheduler/testdata/bin/check.sh
-```
+On the host it re-execs itself in the lint image (`localhost/coq-lint:1`, built from `lint/Containerfile` when missing), with the repo and this directory mounted read-only and the network off.
+The host needs only podman and bash, so the tester runs the command above as written.
 
 It checks the cases beside it, so a copy of this directory checks itself.
-It reads the routes table, the policies table, the event schema and the roles from the repo: `--repo`, else `$REPO_ROOT`, else the working directory when it holds `factory/config/routes.json`, else `/repo`.
+It reads the routes table, the policies table, the event schema and the roles from the repo: `--repo`, else `$REPO_ROOT`, else the working directory when it holds `factory/config/routes.json`, else the repo this directory sits in.
 
 What it proves, each problem named on stderr with exit 3:
 
