@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# stubs/podman - stands in for podman inside the suite (WO-20261012-b800, backlog 60l24). `ps` fails while $HOME/podman-broken
+# exists, the way rootless podman fails once its pause process is gone; `system migrate` removes the file, the way the real one
+# starts a new pause process. Every call is logged to $PODMAN_STUB_LOG when set.
+[ -z "${PODMAN_STUB_LOG:-}" ] || printf '%s\n' "$*" >> "$PODMAN_STUB_LOG"
+case "${1:-} ${2:-}" in
+  "ps ") [ ! -f "$HOME/podman-broken" ] || { echo "Error: cannot re-exec process" >&2; exit 125; } ;;
+  "system migrate") rm -f "$HOME/podman-broken" ;;
+  *) echo "stub podman: only ps and system migrate exist, got: $*" >&2; exit 2 ;;
+esac
