@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T171517Z-100-encmz",
+  "at": "2026-10-12T17:15:17Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-3bb0",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:p8G",
+  "note": "PR 28 on f9b7d1d: flake fix for test.failed bs49j (backlog disva). 20 consecutive runs of make -C factory test: 18 passed 0 failed each.",
+  "evidence": [],
+  "observations": [],
+  "sha": "f9b7d1d",
+  "pr": 28
+}

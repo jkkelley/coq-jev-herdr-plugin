@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T172044Z-100-bfwcf",
+  "at": "2026-10-12T17:20:44Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261012-3bb0",
+  "kind": "seat.up",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:pCR",
+  "note": "Reviewer seat up on WO-20261012-3bb0 - Gate rules as code. Reviewing PR 28 at f9b7d1d.",
+  "evidence": [],
+  "observations": [],
+  "sha": "f9b7d1d",
+  "pr": 28
+}
