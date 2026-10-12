@@ -1,0 +1,11 @@
+{"scope":"TEST","state":"degraded","state_label":"DEGRADED","updated":"2026-10-12 13:00 UTC","stats":[],
+ "blocks":[
+  {"n":"01","name":"EXECUTIVE GROUND TRUTH","items":[
+    {"label":"LONG","text":"This single sentence runs on and on well past the fifteen word limit that the standard sets for every item."},
+    {"label":"SEMI","text":"One thing happened; then another."},
+    {"label":"THIRD","text":"A third item. In a block that may hold two."}]},
+  {"n":"02","name":"DELTA","items":[
+    {"label":"IDS","text":"WO-20261001-aa01 is done.","ref":"WO-20261001-aa01"}]},
+  {"n":"03","name":"ACTIVE OPERATIONS","items":[]},
+  {"n":"04","name":"QUEUE MATRIX","queues":[{"name":"Q","count":"1","delta":"0","tone":"good","urgency":"x","next_items":[{"id":"WO-20261001-aa01"}],"next":["WO-20261001-aa01"]}]},
+  {"n":"05","name":"TACTICAL NEXT STEPS","items":[]}]}

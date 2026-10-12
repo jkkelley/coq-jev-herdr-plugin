@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T020000Z-100-ddddd",
+  "at": "2026-10-11T02:00:00Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "pr.opened",
+  "ticket": "WO-20261001-dd01",
+  "pane": null,
+  "note": "synthetic answer",
+  "evidence": [],
+  "observations": []
+}
