@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T015435Z-100-mcx2p",
+  "at": "2026-10-12T01:54:35Z",
+  "code": 100,
+  "seat": "tester-f896",
+  "kind": "work.started",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p1V",
+  "note": "WO-20261011-f896 - Test pane per seat: seat.sh opens a labelled test pane in the seat's own tab and exports it as COQ_TEST_PANE. Session resumed on the branch, reading the ticket and the tester playbook before any test run.",
+  "evidence": [],
+  "observations": [],
+  "to": "orchestrator"
+}

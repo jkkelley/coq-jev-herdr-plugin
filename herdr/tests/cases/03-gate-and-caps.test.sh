@@ -12,6 +12,15 @@ world_up gate '.bringup_gate=true | .max_agents=3' || exit 1
 #   budget change never flips it. Rejected: lowering the role cap back (the budget is the owner's). Cost: none.
 jq '.max_seats = 2' "$REPO/roles/reviewer.json" > "$REPO/roles/reviewer.json.tmp" && mv "$REPO/roles/reviewer.json.tmp" "$REPO/roles/reviewer.json"
 T=WO-20261010-8777
+# BREADCRUMB 2026-10-11 - WO-20261011-f896, found running the suite. What broke: this case's "role cap" section expects the third
+#   reviewer to be refused by max_seats 2 ("2 reviewer seats already live"), but WO-20261010-329d (26f6daa) raised
+#   roles/reviewer.json max_seats from 2 to 4 for the 16-agent budget, so with max_agents 3 here the third reviewer was refused by
+#   the system cap instead and the "names the role cap" assertion failed on main. Why this fix: the world is a copy of the repo,
+#   so the case pins the cap it exercises in its own copy of the role (the role cap path is what it proves, not the production
+#   number). Rejected: editing the expected text to "4" (the case would then need four reviewers and a max_agents above the cap
+#   it wants to hit first) and reading max_seats from the role at run time (the section's counts are written for two). Cost:
+#   none; the next retune of roles/reviewer.json cannot break this case again.
+jq '.max_seats = 2' "$REPO/roles/reviewer.json" > "$REPO/roles/reviewer.json.tmp" && mv "$REPO/roles/reviewer.json.tmp" "$REPO/roles/reviewer.json"
 
 echo "-- gate: a worker is refused while the monitor seat is down"
 "$SEAT" --ticket "$T" --role worker --worktree "$REPO" >/dev/null 2>"$WORLD/err"; rc=$?

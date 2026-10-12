@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T022701Z-200-oy4i6",
+  "at": "2026-10-12T02:27:01Z",
+  "code": 200,
+  "seat": "merger-wo-20261011-f896",
+  "kind": "merged",
+  "ticket": "WO-20261011-f896",
+  "pane": null,
+  "note": "WO-20261011-f896 - Test pane per seat: PR 20 squash-merged at head 52ca9fa on test.passed 66jp0 and review.passed kxs2a. Cleanup done; slot 1 release pending (slot.sh not installed here).",
+  "evidence": [
+    "gh pr view 20: state MERGED 2026-10-12T02:24:35Z"
+  ],
+  "observations": [],
+  "to": "architect"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T022846Z-100-hjmm6",
+  "at": "2026-10-12T02:28:46Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261011-f896",
+  "pane": null,
+  "note": "owner notified for 500 ka744: merged 200 oy4i6 has no architect record after 90s; architect woken with the record id",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

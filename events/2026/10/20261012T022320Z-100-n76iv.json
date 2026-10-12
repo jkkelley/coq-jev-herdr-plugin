@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T022320Z-100-n76iv",
+  "at": "2026-10-12T02:23:20Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261010-329d",
+  "pane": null,
+  "note": "owner notified for 500 bi862: watches moved to herdr slots 2.3.1 turnwatch and 2.3.2 recwatch; background recover.sh killed after 45 min. Monitor took no action on the slots.",
+  "evidence": [],
+  "observations": []
+}

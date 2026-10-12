@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T021631Z-300-63ywf",
+  "at": "2026-10-12T02:16:31Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261011-4562",
+  "pane": null,
+  "note": "routed note 500 (20261012T021620Z-500-70xyz): wake monitor",
+  "evidence": [
+    "events/2026/10/20261012T021620Z-500-70xyz.json"
+  ],
+  "observations": [],
+  "to": "monitor"
+}

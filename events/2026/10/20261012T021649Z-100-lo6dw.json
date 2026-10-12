@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T021649Z-100-lo6dw",
+  "at": "2026-10-12T02:16:49Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261011-4562",
+  "pane": null,
+  "note": "owner notified for 500 s0dqs: review.changes 422 2g2pn has no worker record",
+  "evidence": [],
+  "observations": []
+}

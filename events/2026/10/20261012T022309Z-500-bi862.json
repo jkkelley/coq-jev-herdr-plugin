@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T022309Z-500-bi862",
+  "at": "2026-10-12T02:23:09Z",
+  "code": 500,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "Watches moved out of the architect session into herdr monitor slots 2.3.1 turnwatch and 2.3.2 recwatch; background recover.sh killed after 45 min running compaction-guard recover --apply. Owner: nothing under an agent.",
+  "evidence": [],
+  "observations": []
+}

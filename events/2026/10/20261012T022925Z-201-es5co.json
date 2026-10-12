@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T022925Z-201-es5co",
+  "at": "2026-10-12T02:29:25Z",
+  "code": 201,
+  "seat": "architect",
+  "kind": "verified",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p2",
+  "note": "verified PR 20 merge 05ef0d2 on main: WO-20261011-f896 archived with AC-H1 to H5 evidenced, seat.sh exports COQ_TEST_PANE, case 16-test-pane-per-seat present; test 66jp0 and review kxs2a on head 52ca9fa.",
+  "evidence": [
+    "events/2026/10/20261012T022701Z-200-oy4i6.json"
+  ],
+  "observations": []
+}

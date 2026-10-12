@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T022343Z-201-66jp0",
+  "at": "2026-10-12T02:23:43Z",
+  "code": 201,
+  "seat": "tester-f896",
+  "kind": "test.passed",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p1V",
+  "note": "WO-20261011-f896 - Test pane per seat: make -C herdr test in this worktree, 15 passed 0 failed, case 16-test-pane-per-seat pass. Pane wD3:p1V was shared with another seat during the run.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/1ae341ad-1b66-4ba9-9aad-f11a5a0ccfeb/scratchpad/f896-pane.txt"
+  ],
+  "observations": [],
+  "to": "orchestrator"
+}

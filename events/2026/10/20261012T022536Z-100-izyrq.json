@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T022536Z-100-izyrq",
+  "at": "2026-10-12T02:25:36Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261011-f896",
+  "pane": null,
+  "note": "owner notified for 500 2w6yp: test.passed 201 66jp0 has no reviewer record after 90s; no reviewer seat live for f896 (retired 01:20Z). Monitor did not seat one.",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}
