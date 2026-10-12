@@ -1,0 +1,169 @@
+{
+  "$id": "urn:coq:scheduler:config:executor",
+  "title": "scheduler executor configuration",
+  "description": "The host half of the scheduler (SPEC-16.G g-executor): its socket, host paths, the seat the record verb forces, and the verb table of SPEC-16.H h-verbs. Every key is required and no other key is allowed, because Go holds no default. The verbs object takes exactly the names the scheduler emits: a verb missing here blocks going active (g-val-verbs), and an extra name is surface nobody asked for (h-examples, no shell verb). argv is a token list, never a command line, so nothing is parsed by a shell. In a token, ${host_repo}, ${state_dir}, ${session} (herdr_session) and ${seat} come from this file at load; ${1} to ${9} bind the Run arguments by position and ${@} binds the remaining arguments, which only the record verb uses. final lists the exit codes that are handled results; it is required even when empty, because an absent list would be a default. No $schema keyword, for the reason scheduler.schema.json gives.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "socket",
+    "host_repo",
+    "state_dir",
+    "herdr_session",
+    "seat",
+    "tail_lines",
+    "verbs",
+    "unset_env"
+  ],
+  "$defs": {
+    "env": { "type": "string", "pattern": "^\\$\\{ENV:[A-Z][A-Z0-9_]*\\}$" },
+    "path": {
+      "type": "string",
+      "pattern": "^\\$\\{(host_repo|state_dir|HOME|ENV:[A-Z][A-Z0-9_]*)\\}(/[^\\s]*)?$",
+      "description": "a host path that starts with a variable, so the file lifts to another host unchanged"
+    },
+    "token": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^([^$]|\\$\\{(host_repo|state_dir|session|seat|[1-9]|@)\\})+$",
+      "description": "one argv token; a variable outside the set above is refused here rather than at the first run"
+    },
+    "verb": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "timeout_seconds", "final"],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/token" }
+        },
+        "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 600 },
+        "final": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1, "maximum": 255 }
+        }
+      }
+    },
+    "record_verb": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["argv", "timeout_seconds", "final", "flags"],
+      "properties": {
+        "argv": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/token" }
+        },
+        "timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 600 },
+        "final": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "integer", "minimum": 1, "maximum": 255 }
+        },
+        "flags": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "code",
+              "kind",
+              "ticket",
+              "to",
+              "note",
+              "evidence",
+              "observe",
+              "attempt",
+              "sha",
+              "pr",
+              "action",
+              "answer",
+              "policy"
+            ]
+          },
+          "description": "the writer flags the scheduler may pass (h-verbs-record-flags); seat is not in the enum, so the scheduler can never override the forced seat"
+        }
+      }
+    }
+  },
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "socket": {
+      "$ref": "#/$defs/path",
+      "description": "the unix socket the executor listens on with mode 0600, under the runtime directory variable (h-proto-sockets)"
+    },
+    "host_repo": {
+      "$ref": "#/$defs/env",
+      "description": "the repository on the host; COQ_REPO, as the host shell names it"
+    },
+    "state_dir": {
+      "$ref": "#/$defs/path",
+      "description": "herdr's state dir, where seats/<seat>/quiet.json and the inbox live (SPEC-05 s-quiet); the same place herdr/config/herdr.json state_dir names"
+    },
+    "herdr_session": {
+      "anyOf": [
+        { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$" },
+        { "$ref": "#/$defs/env" }
+      ],
+      "description": "the session every herdr verb addresses; same variable as scheduler.json herdr_session"
+    },
+    "seat": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+      "description": "forced on every record the record verb writes; must equal scheduler.json seat"
+    },
+    "tail_lines": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000,
+      "description": "lines of stdout and stderr returned in a verdict"
+    },
+    "unset_env": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$" },
+      "description": "removed before every verb so a herdr call never targets the executor's own pane; the four names factory/bin/route.sh herdr_prompt unsets today"
+    },
+    "verbs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "prompt",
+        "agent_list",
+        "pane_read",
+        "pane_process_info",
+        "notify",
+        "seat_up",
+        "seat_down",
+        "break_glass",
+        "glass_sweep",
+        "enqueue",
+        "enqueue_priority",
+        "queue_sweep",
+        "record",
+        "seat_quiet",
+        "inbox"
+      ],
+      "properties": {
+        "prompt": { "$ref": "#/$defs/verb" },
+        "agent_list": { "$ref": "#/$defs/verb" },
+        "pane_read": { "$ref": "#/$defs/verb" },
+        "pane_process_info": { "$ref": "#/$defs/verb" },
+        "notify": { "$ref": "#/$defs/verb" },
+        "seat_up": { "$ref": "#/$defs/verb" },
+        "seat_down": { "$ref": "#/$defs/verb" },
+        "break_glass": { "$ref": "#/$defs/verb" },
+        "glass_sweep": { "$ref": "#/$defs/verb" },
+        "enqueue": { "$ref": "#/$defs/verb" },
+        "enqueue_priority": { "$ref": "#/$defs/verb" },
+        "queue_sweep": { "$ref": "#/$defs/verb" },
+        "record": { "$ref": "#/$defs/record_verb" },
+        "seat_quiet": { "$ref": "#/$defs/verb" },
+        "inbox": { "$ref": "#/$defs/verb" }
+      }
+    }
+  }
+}

@@ -1,0 +1,181 @@
+{
+  "schema_version": "1.0.0",
+  "socket": "${ENV:XDG_RUNTIME_DIR}/coq-scheduler/executor.sock",
+  "host_repo": "${ENV:COQ_REPO}",
+  "state_dir": "${HOME}/.local/state/coq",
+  "herdr_session": "${ENV:COQ_HERDR_SESSION}",
+  "seat": "scheduler",
+  "tail_lines": 20,
+  "unset_env": [
+    "HERDR_PANE_ID",
+    "HERDR_TAB_ID",
+    "HERDR_WORKSPACE_ID",
+    "HERDR_SOCKET_PATH"
+  ],
+  "verbs": {
+    "prompt": {
+      "argv": [
+        "herdr",
+        "--session",
+        "${session}",
+        "agent",
+        "prompt",
+        "${1}",
+        "${2}"
+      ],
+      "timeout_seconds": 20,
+      "final": []
+    },
+    "agent_list": {
+      "argv": ["herdr", "--session", "${session}", "agent", "list"],
+      "timeout_seconds": 10,
+      "final": []
+    },
+    "pane_read": {
+      "argv": [
+        "herdr",
+        "--session",
+        "${session}",
+        "pane",
+        "read",
+        "${1}",
+        "--source",
+        "recent",
+        "--lines",
+        "${2}",
+        "--format",
+        "text"
+      ],
+      "timeout_seconds": 10,
+      "final": []
+    },
+    "pane_process_info": {
+      "argv": [
+        "herdr",
+        "--session",
+        "${session}",
+        "pane",
+        "process-info",
+        "--pane",
+        "${1}"
+      ],
+      "timeout_seconds": 10,
+      "final": []
+    },
+    "notify": {
+      "argv": [
+        "herdr",
+        "--session",
+        "${session}",
+        "notification",
+        "show",
+        "${1}"
+      ],
+      "timeout_seconds": 10,
+      "final": []
+    },
+    "seat_up": {
+      "argv": [
+        "${host_repo}/herdr/bin/seat.sh",
+        "--ticket",
+        "${1}",
+        "--role",
+        "${2}"
+      ],
+      "timeout_seconds": 240,
+      "final": []
+    },
+    "seat_down": {
+      "argv": ["${host_repo}/herdr/bin/seat.sh", "--down", "${1}"],
+      "timeout_seconds": 180,
+      "final": []
+    },
+    "break_glass": {
+      "argv": [
+        "${host_repo}/herdr/bin/seat.sh",
+        "--break-glass",
+        "${1}",
+        "--record",
+        "${2}"
+      ],
+      "timeout_seconds": 60,
+      "final": [3]
+    },
+    "glass_sweep": {
+      "argv": ["${host_repo}/herdr/bin/seat.sh", "--break-glass-sweep"],
+      "timeout_seconds": 60,
+      "final": []
+    },
+    "enqueue": {
+      "argv": [
+        "${host_repo}/queue/bin/queue.sh",
+        "enqueue",
+        "--ticket",
+        "${1}",
+        "--from",
+        "${2}"
+      ],
+      "timeout_seconds": 20,
+      "final": [3]
+    },
+    "enqueue_priority": {
+      "argv": [
+        "${host_repo}/queue/bin/queue.sh",
+        "enqueue",
+        "--ticket",
+        "${1}",
+        "--from",
+        "${2}",
+        "--priority",
+        "${3}"
+      ],
+      "timeout_seconds": 20,
+      "final": [3]
+    },
+    "queue_sweep": {
+      "argv": ["${host_repo}/queue/bin/queue.sh", "sweep"],
+      "timeout_seconds": 30,
+      "final": []
+    },
+    "record": {
+      "argv": [
+        "${host_repo}/events/bin/event.sh",
+        "add",
+        "--seat",
+        "${seat}",
+        "${@}"
+      ],
+      "timeout_seconds": 20,
+      "final": [],
+      "flags": [
+        "code",
+        "kind",
+        "ticket",
+        "to",
+        "note",
+        "evidence",
+        "observe",
+        "attempt",
+        "sha",
+        "pr",
+        "action",
+        "answer",
+        "policy"
+      ]
+    },
+    "seat_quiet": {
+      "argv": ["test", "-e", "${state_dir}/seats/${1}/quiet.json"],
+      "timeout_seconds": 5,
+      "final": [1]
+    },
+    "inbox": {
+      "argv": [
+        "${host_repo}/scheduler/host/bin/inbox.sh",
+        "${state_dir}/seats/${1}/inbox",
+        "${2}"
+      ],
+      "timeout_seconds": 10,
+      "final": []
+    }
+  }
+}
