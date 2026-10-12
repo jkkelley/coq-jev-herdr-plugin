@@ -51,6 +51,46 @@
 
 
 
+
+## Checkpoint 2026-10-12 16:43 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, no PR yet. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- herdr/bin/seat-lib.sh now has sl_pane_claude_pid, sl_pane_session and sl_guard_targets; herdr/bin/guardwatch.sh is new; herdr.json has session_wait_seconds, claude_sessions_dir, guard_watch_interval_seconds.
+- Suite subset run as: testpane.sh wD3:pB7 "<scratchpad>/runcase.sh '17 04' name", output file read from the scratchpad.
+
+#### Active Tasks
+
+- Step A (this commit): guardwatch.sh in slot 1.1.2, stub claude writes its session file, stub guard returns on --once, case 17 (AC-H1, AC-H2) and case 04 (AC-H5 slot) green.
+- Step B next: unfreeze.sh sessions_of resolves the pane to its live session (AC-H3), case 06 gets session files for its stub seats.
+- Step C after: seat.sh writes claude_session into seat.json at seat up (AC-H4), waits session_wait_seconds, world config shortens it.
+- Then docs (RUNBOOK), full suite, close-out per AGENTS.md.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- A claude process is matched by name claude or by an interpreter running a script whose path ends in /claude, because the suite stub runs as bash /repo/herdr/tests/stubs/claude. A false match only reads as no session file.
+- recover.sh is not changed: the ticket scope lists seat.sh writing the session so recover.sh can use it, not recover.sh itself.
+
+#### Lessons Learned
+
+- herdr pane process-info reports name bash for the stub, so the matching rule had to look at argv[1] as well.
+
+### Hydration prompt
+
+Resume WO-20261012-ee9c at step B: unfreeze.sh sessions_of must return only the live session of the pane, using sl_pane_session from herdr/bin/seat-lib.sh; update case 06 so its stub seats have session files (mk_session sids taken from the stub's own session file), and add the dead-session-into-live-pane assertion for AC-H3.
+
 ## Checkpoint 2026-10-12 15:41 UTC
 
 ### Current state
