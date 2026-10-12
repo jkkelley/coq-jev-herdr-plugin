@@ -50,6 +50,33 @@
 
 
 
+
+## Checkpoint 2026-10-12 15:39 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker. Treehouse slot 7 (lease holder is this ticket), branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, no PR yet. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Step 1 landed: factory/bin/gate.sh (same-head, when head_current|heads_match, supersedes) and the wiring in factory/bin/route.sh: a routes row may carry `when` (gate predicate; a hold writes a receipt and nothing else, not even the row's down) and `supersede`, and `with: merge-main` appends " merge main". routes.json: pr.opened supersede, test.passed and test.failed head_current, review.passed heads_match, merge.conflict with merge-main. Both routes schemas updated and made identical.
+- Tests: new cases 12-gate (git fixtures, gate.sh alone) and 13-gate-route (the runner end to end), world.sh gained evo and REC_SHA/REC_PR, cases 09-seat, 10-sha and 11-down give review.passed a test.passed on the same head first, case 04-restart now waits for receipts instead of herdr calls (it raced a TERM between the prompt and its receipt). Container image bumped to coq-factory-test:2 because gate.sh needs git. Factory suite 17 passed 0 failed, make -C factory lint ok.
+- Not done: the tester playbook cannot say what to do with "supersedes <id>" because playbooks are rendered from roles/tester.json, which a worker may not edit. The runner-side guard drops the older head's results, so nothing is posted downstream for it; the wording is a finding for the retro note.
+
+#### Active Tasks
+
+- Step 2: flow.sh stall rule - judge a stall by the consumer seat's state, not a fixed timer (ticket note, scope added at start). Step 3: factory/RUNBOOK.md rows for when, supersede, merge-main and gate.sh. Step 4: close out - evidence per criterion, retro note, push, PR, submit, done, pr.opened 100 with sha and pr.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Steps 2 to 4 above remain; run every command through herdr/bin/testpane.sh in pane wD3:p8J.
+
 ## Checkpoint 2026-10-12 14:58 UTC
 
 ### Current state
