@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261012-df2b` | in-progress | p0 | - | [Scheduler host files: the pane wrappers for the container and the executor, the inbox script, a test harness with a stub binary, and the operations runbook](WO-20261012-df2b-scheduler-host-files-the-pane-wrappers-for-the-c.md) |
+| `WO-20261012-df2b` | in-review | p0 | - | [Scheduler host files: the pane wrappers for the container and the executor, the inbox script, a test harness with a stub binary, and the operations runbook](WO-20261012-df2b-scheduler-host-files-the-pane-wrappers-for-the-c.md) |
