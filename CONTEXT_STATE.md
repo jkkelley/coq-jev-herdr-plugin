@@ -52,22 +52,24 @@
 
 
 
-## Checkpoint 2026-10-12 16:49 UTC
+
+## Checkpoint 2026-10-12 17:25 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Worker seat worker-wo-20261012-8fb2 on WO-20261012-8fb2 - Own checkpoint after compaction: a SessionStart compact hook puts the seat's newest CONTEXT_STATE.md checkpoint in front of it. Treehouse slot 9 (lease holder is this ticket), branch feat/own-checkpoint-after-compaction-a-sessionstart-c, no PR yet. Test pane wD3:pBA, run only through herdr/bin/testpane.sh, and always with make -C $COQ_WORKTREE/herdr, because the pane's cwd is the main checkout.
+- Worker seat worker-wo-20261012-8fb2 on WO-20261012-8fb2 - Own checkpoint after compaction: a SessionStart compact hook puts the seat's newest CONTEXT_STATE.md checkpoint in front of it. Treehouse slot 9, branch feat/own-checkpoint-after-compaction-a-sessionstart-c, PR 30. Test pane wD3:pBA, run only through herdr/bin/testpane.sh with make -C $COQ_WORKTREE/herdr.
 
 #### Toolchain
 
-- Built: herdr/bin/resume-checkpoint.sh (finds the live seat record by HERDR_PANE_ID, prints checkpoint.sh read --top 1 for its worktree, always exits 0, one line when anything is missing); the SessionStart matcher compact entry in .claude/settings.json and in seat.sh render_settings with the identical command string; break-glass-lib.sh now merges into hooks with += so the entry survives a break glass; herdr case 17 and one assertion in case 13.
-- Verified in the test pane against the slot: make -C herdr lint rc 0, herdr cases 01, 13 and 17 passed, 4 passed 0 failed. Not provable without a real compact: that Claude Code adds the hook output to context and folds the two identical commands into one run.
+- Review 20261012T170103Z-422-8inhl fixed in a12aa56: the hook timeout is resume_checkpoint.hook_timeout_seconds in herdr/config/herdr.json.
+- Merge conflict 409 (record 20261012T172438Z-409-bwdwm): origin/main merged into the branch. CHANGELOG.md re-rendered with bin/changelog.sh render, work-orders/INDEX.md and epic READMEs by work-order.sh reindex, CONTEXT_STATE.md taken from main with this checkpoint added on top; none merged by hand.
+- Case 17 re-run after the merge, result in the pr.opened note.
 
 #### Active Tasks
 
-- Close out: gh pr create with the criteria as body, work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened 100 with sha and pr, then hold.
+- Push the merge, post pr.opened 100 with the new head sha and --pr 30, then hold.
 
 #### Blockers
 
@@ -75,7 +77,40 @@
 
 ### Hydration prompt
 
-Resume WO-20261012-8fb2 as worker-wo-20261012-8fb2 in slot 9. Read playbooks/worker.md and this checkpoint. The code is committed and pushed; do the close-out in Active Tasks, then hold.
+Resume WO-20261012-8fb2 as worker-wo-20261012-8fb2 in slot 9. Read playbooks/worker.md and this checkpoint. The merge with main is committed; post pr.opened for PR 30 with the pushed head, then hold.
+
+## Checkpoint 2026-10-12 16:44 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
+  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, PR 26, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
+
+#### Toolchain
+
+- Merge conflict 409 (record 20261012T163437Z-409-wccwn): origin/main 1f6e819 (PR 27) merged into the branch as 5312774.
+  CHANGELOG.md re-rendered with bin/changelog.sh render, work-orders/INDEX.md and epic READMEs by work-order.sh reindex, CONTEXT_STATE.md took main's file with this checkpoint on top, epic 187e README and 3bb0 ticket took main's.
+  Cases 04 and 05 re-counted by hand: main added the policy watch pane (slot 2.3.2), so twelve reserved panes, fourteen note 100 records, 39 panes.
+  SOP-0003 step 8 updated: slot 2.3.2 now belongs to the policy watch, so the interim record-watch pane must be released.
+- Full make -C herdr test after the merge: 21 passed, 0 failed.
+
+#### Active Tasks
+
+- Post pr.opened with --pr 26 --sha of the pushed head, then idle for the belt.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: generated files are never merged by hand; they are re-rendered with their scripts.
+
+### Hydration prompt
+
+You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint and playbooks/worker.md. Next: post pr.opened for PR 26 with the pushed sha, then idle.
 
 ## Checkpoint 2026-10-12 15:41 UTC
 

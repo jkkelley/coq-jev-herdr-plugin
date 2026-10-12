@@ -353,6 +353,15 @@ if [ "$mode" = down ]; then
     [ "$DRY" = 1 ] || { jq --arg at "$(sl_now)" '.ended_at=$at' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }
     jq -nc --arg name "$name" '{name:$name,down:true,adopted:true}'; exit 0
   fi
+  # BREADCRUMB 2026-10-12 - WO-20261012-b800. What broke (would break): the supervisor re-seats a seat whose pane has no claude, and
+  #   this very sequence ends the claude first (retire.sh /exit) and only then closes the tab and writes ended_at, which
+  #   takes up to retire_poll_seconds plus down_wait_seconds plus a treehouse return, so a tick landing in that window would
+  #   see a "dead" seat that is being retired on purpose and start it again. Why this fix: a down.lock in the seat's state
+  #   directory for the length of the sequence (removed by the EXIT trap, so a failed --down does not leave one); the
+  #   supervisor leaves a seat alone while the lock is younger than supervisor.reseat.down_lock_seconds. Rejected: reading
+  #   `ps` for a running seat.sh (it cannot tell which seat) and a longer grace (every real crash would wait that long
+  #   too). Cost: a --down killed with SIGKILL leaves the lock, which the supervisor ignores after down_lock_seconds.
+  if [ "$DRY" != 1 ]; then date +%s > "$sd/down.lock"; trap 'rm -f "$sd/down.lock"' EXIT; fi
   [ "$lease_owned" != true ] || sl_require treehouse
   seat_own=""; [ "$lease_owned" != true ] || seat_own="$(seat_pids)"
   "$SL_HERE/retire.sh" "$name" --pane "$agent_pane" || sl_log "seat $name: retire did not finish cleanly; closing the tab anyway"
