@@ -47,6 +47,28 @@
 
 
 
+
+## Checkpoint 2026-10-12 13:15 UTC
+
+### Current state
+
+#### Infrastructure
+- Worker seat worker-wo-20261012-668a on WO-20261012-668a - SITREP panel in this project's bearings: a #SITREP/v1# reply renders as the colored status card, built from records by a script and checked against the owner standard before it is sent. Slot 1, branch feat/sitrep-panel-in-this-project-s-bearings-a-sitrep, test pane wD3:p7B.
+- Landed in tools/bearings: panel renderer and styles ported from the handoff (page.html hunk 3 hand-ported, announcer says SITREP received), build stamp in server.mjs, max_reply_chars 32000 in config, schema and reply.mjs, standards/ (two generic standards and SITREP-PAYLOAD.md), config/sitrep.json, config/sitrep.template.json, scripts/sitrep-check.mjs, scripts/sitrep-build.mjs, bearings.sh sitrep verb, Makefile targets, RUNBOOK.md, AGENTS.md section, tests/sitrep.sh with fixtures.
+
+#### Toolchain
+- make -C tools/bearings test: 113 passed, 0 failed, run in the test pane. make lint run by make step.
+- Screenshots of the rendered panel are in /tmp/claude-1000/shots when BEARINGS_SHOT_DIR is set on the test run.
+
+#### Active Tasks
+- Next: open PR work is not started. Remaining: AC evidence with --observed, retro note, then send the real SITREP for this repo to the owner with bearings.sh stable sitrep (needs the stable page running; check make bearings-status), then work-order submit, done, PR, pr.opened 100.
+
+#### Blockers
+- None.
+
+### Hydration prompt
+Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/worker.md and this checkpoint. The code and tests are done and green; what is left is the evidence per acceptance criterion, the live send of a SITREP on the stable page (AC-H4), the close-out flow in AGENTS.md, and the pr.opened 100 record.
+
 ## Checkpoint 2026-10-11 23:09 UTC
 
 ### Current state
