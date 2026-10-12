@@ -96,6 +96,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Correction to the AC-H3 evidence: the over-long sentence in tests/fixtures/sitrep-bad.json is reported as '01/LONG: 20 words, limit is 15', not 18. Full output on that fixture: 8 violations, exit 1.
 - `2026-10-12` Retro. Ported: page.html hunk 3 by hand (the vendored page has a files field the handoff base lacked), server.mjs and reply.mjs by hand (they diverged), theme.css clean. Decisions: reply cap is a new config key max_reply_chars (32000) so the owner's typed messages stay at 8000; checker is node with rules in scripts/lib/sitrep.mjs and limits in config/sitrep.json, a superset of sitrep-check.py (added: five blocks in order, link scheme, queue entry titles read from next_items, reply cap) and it still passes the real sent SITREP; the python checker read dicts in next where the payload has strings, so the title rule never fired there. Builder friction rule: newest failure record inside 24h with no later passing record on the same ticket or seat. Limit: a briefing is only as true as the records. Open for the interface agent: the live stable send (AC-H4 above) after merge and make upgrade; ticket-id regexes in config/sitrep.json cover WO- ids plus the handoff prefixes.
 
 ## Outcome
