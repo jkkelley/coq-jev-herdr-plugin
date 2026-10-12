@@ -57,6 +57,47 @@
 
 
 
+
+## Checkpoint 2026-10-12 20:10 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Seat sched-architect (Fable, architect of the Go scheduler team) in herdr workspace wD7 pane wD7:p1, worktree ~/.cache/wt-sched, branch feat/go-scheduler-design-one-xml-spec-per-domain-unde re-checked out for this amendment step; after it the branch is released again (git switch --detach) and pr.opened 100 is posted again with the new sha and --pr 37. Workers sched-worker-1..4 (Opus) in wD7:p2..p5, worktrees ~/.cache/wt-sched-w1..w4, all busy on wave 0.
+- Records go through $COQ_REPO/events/bin/event.sh (COQ_EVENTS_ROOT is the main checkout's events/); --to takes a role name (worker, tester, ...), never a seat name. The belt ignores note 100.
+- Open PRs that fence file choices: 32 (records branch, Jenkinsfile staged), 34 (herdr/config/herdr.json and herdr/bin), 35 (lint/lint.sh, specs/bin, specs/config), 37 (this design: specs/scheduler, graph nodes), 38 (sched-worker-2: scheduler/config, waiting for a tester seat under the cap).
+
+#### Toolchain
+
+- Spec check: podman run --rm --network=none --userns=keep-id -v "$PWD:/repo:ro,Z" localhost/coq-lint:1 bash /repo/specs/scheduler/bin/check.sh check --repo /repo. make lint does not scan specs/scheduler until WO-20261012-0113 - Scheduler lint and CI wiring: lint/lint.sh runs specs/scheduler/bin/check.sh and the Jenkinsfile runs make -C scheduler test when scheduler/ changes lands (it waits for PRs 35 and 32).
+- Tickets are cut in the main checkout ($COQ_REPO, records branch) with work-order.sh new --project $COQ_REPO --parent WO-20261012-ea33 then approve --no-lavish --reason; started with EPIC_DIR=work-orders/WO-20261010-329d/WO-20261012-ea33 bash ~/.cache/coq-watch/start-tickets.sh <id> in the foreground (600000 ms timeout, one id per call); routed with herdr agent prompt sched-worker-N '<id> - <title>. Branch <branch>. Playbook playbooks/worker.md.' and a work-order note. A file backup of the epic directory and the helpers is under ~/.cache/coq-watch/sched-backup/.
+
+#### Active Tasks
+
+- WO-20261012-5826 - Go scheduler design: one XML spec per domain under specs/scheduler, each at most 1000 lines, plus the build tickets cut for four Opus workers. Done and archived, PR 37 open. This step amends SPEC-16.G, SPEC-16.H and SPEC-16.I to 1.1.0 after sched-worker-4's blocked record on WO-20261012-df2b - Scheduler host files: the pane wrappers for the container and the executor, the inbox script, a test harness with a stub binary, and the operations runbook: scheduler.json gains the runtime group (runtime.image by name and tag with no digest, runtime.memory in the engine's unit form, runtime.container_name, and runtime.image_digest read from the environment name COQ_SCHED_IMAGE_DIGEST the wrapper sets after resolving the tag), plain strings the wrapper reads with jq and the loader knows and reports in Status (case g-t7); the environment names COQ_SCHED_MODE, COQ_SCHED_REPO, COQ_REPO, COQ_SCHED_STATE_DIR, COQ_HERDR_SESSION, XDG_RUNTIME_DIR and HOME passed through are the fixed contract in g-vars; SPEC-16.H h-run-keys and h-run-digest point at them, and SPEC-16.I Status gains the runtime field. Answer records note 100: 20261012T200406Z-100-xzrpm (df2b) and 20261012T200406Z-100-cot62 (e27e); notes on df2b, e27e and 9790.
+- Wave 0 routed: WO-20261012-48ab skeleton to sched-worker-1 (fb5776b), WO-20261012-e27e config files to sched-worker-2 (267a666, PR 38 open, must gain the runtime keys and re-post pr.opened), WO-20261012-8d87 replay fixtures to sched-worker-3 (121e40f), WO-20261012-df2b host files to sched-worker-4 (f305b41). Later waves start when work-order.sh next --project $COQ_REPO names them.
+
+#### Blockers
+
+- None for this seat. PR 38 waits for a tester seat (role cap 4 reached); the belt's queue holds it.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-12 UTC, sched-architect: the container run values (image by name and tag, memory limit, container name, and the digest the wrapper resolves at start) are keys of scheduler.json under runtime, not of executor.json, because a change to them restarts the scheduler process, which is the file's rule; they carry no variable so the host wrapper can read them with a JSON tool before any process runs.
+- 2026-10-12 UTC, sched-architect: the environment names the wrapper exports are fixed in SPEC-16.G g-vars so the config files, the loader and the wrapper agree without reading each other's branches.
+
+#### Lessons Learned
+
+- event.sh --to is a role, not a seat; a seat-named record is refused with exit 2 and a pipeline hides it unless the exit status is checked.
+- A worker can finish a wave 0 ticket in a quarter of an hour; a design amendment must reach it as a record and a re-posted pr.opened, not as a note it never sees.
+
+### Hydration prompt
+
+Run from ~/.cache/wt-sched as seat sched-architect (herdr wD7:p1). WO-20261012-5826 - Go scheduler design: one XML spec per domain under specs/scheduler, each at most 1000 lines, plus the build tickets cut for four Opus workers is done and archived; PR 37 is open and this step moved its head (SPEC-16.G and SPEC-16.H 1.1.0). After the step: git switch --detach, post pr.opened 100 with the new sha and --pr 37 through $COQ_REPO/events/bin/event.sh, tell the coq architect in one line. Then make sure sched-worker-2 adds the runtime keys to PR 38 and re-posts pr.opened. Wave 0 is routed to sched-worker-1..4; start wave 1 in the foreground when work-order.sh next names it. Design and route only, never Go; commits only via make step; no Monitor tool, no background shells.
+
 ## Checkpoint 2026-10-12 19:43 UTC
 
 ### Current state
