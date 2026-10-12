@@ -56,6 +56,46 @@
 
 
 
+
+## Checkpoint 2026-10-12 20:01 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Seat sched-worker-4 (Opus) in herdr wD7:p5, worktree ~/.cache/wt-sched-w4 on branch feat/scheduler-host-files-the-pane-wrappers-for-the-c. Records go through $COQ_REPO/events/bin/event.sh; design questions go to sched-architect (--to sched-architect).
+- No test pane is named for this seat; the suite runs in the foreground in Podman: bash scheduler/host/tests/run.sh (lint image localhost/coq-lint:1, network off).
+
+#### Toolchain
+
+- Host suite: scheduler/host/tests/run.sh, case 00 is shellcheck -S warning -x over scheduler/host, cases/*.test.sh build a world with lib/world.sh (stub dist/scheduler, stub podman, config fixtures rendered from SPEC-16.G).
+- Specs live on origin/feat/go-scheduler-design-one-xml-spec-per-domain-unde (PR 37); read with git show "${B}:specs/scheduler/<file>" (zsh: brace the variable, $B:s is a modifier).
+
+#### Active Tasks
+
+- WO-20261012-df2b - Scheduler host files: the pane wrappers for the container and the executor, the inbox script, a test harness with a stub binary, and the operations runbook. Step 1 landed with this checkpoint: inbox.sh, run-exec.sh, lib/config.sh (variable resolver), tests harness with cases 01 inbox, 02 run-exec, 03 config-lib; 4 of 4 pass in Podman.
+- Next: step 2 run.sh and its case 04 once sched-architect answers blocked 20261012T195358Z-423-8ffcd (where image digest, memory limit and container name come from); step 3 scheduler/RUNBOOK.md; step 4 evidence, retro, PR, detach, pr.opened.
+
+#### Blockers
+
+- run.sh: image by digest, memory limit and container name have no key in SPEC-16.G and AC-H3 bans literals; asked sched-architect in 20261012T195358Z-423-8ffcd.
+- The exec and run subcommands' config flag is assumed to be --config (WO-20261012-d7f4 and WO-20261012-1ccf own them); confirm with sched-architect.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-12 UTC, sched-worker-4: run.sh mounts every host path at the same path in the container, so repo equals host_repo inside and no container path is a literal; the repo ENV name is set to the host repo path.
+- 2026-10-12 UTC, sched-worker-4: inbox file names are UTC to the nanosecond plus a mktemp suffix, .txt, written under a dot name and renamed with mv -n.
+
+#### Lessons Learned
+
+- shellcheck source directives need source-path=SCRIPTDIR or they resolve against the cwd; a command substitution does not inherit errexit, so nested resolves end in || exit $?.
+
+### Hydration prompt
+
+Run from ~/.cache/wt-sched-w4 on branch feat/scheduler-host-files-the-pane-wrappers-for-the-c as seat sched-worker-4. WO-20261012-df2b - Scheduler host files: the pane wrappers for the container and the executor, the inbox script, a test harness with a stub binary, and the operations runbook: step 1 landed (inbox.sh, run-exec.sh, lib/config.sh, harness, cases 01-03). Read sched-architect's answer to 20261012T195358Z-423-8ffcd, then write scheduler/host/bin/run.sh and case 04, then scheduler/RUNBOOK.md; each step lands with make step TICKET=WO-20261012-df2b CP=<body>.
+
 ## Checkpoint 2026-10-12 19:06 UTC
 
 ### Current state
