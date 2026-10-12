@@ -18,7 +18,7 @@ fi
 tmp=$(mktemp)
 if grep -q '^## Contents' "$F"; then
   # Replace only the bullet list under "## Contents", not everything up to the next H2.
-  # Broke 2026-10-11 on docs/sops/SOP-0001: the old `skip&&/^## /` form dropped the
+  # Broke 2026-10-11 on docs/sops/SOP-0004 (numbered SOP-0001 when this broke, renumbered because main already held an SOP-0001): the old `skip&&/^## /` form dropped the
   # prose between the list and "## Purpose" ("Diataxis mode", "Last reviewed"), so a
   # --fix run silently deleted living-docs metadata. Skipping ends at the first line
   # that is neither a bullet nor blank; a second H2-bounded pass was rejected because

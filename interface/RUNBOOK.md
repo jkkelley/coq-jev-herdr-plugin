@@ -10,9 +10,10 @@
 - Repair and take back
 - Setting this up on another repository
 - Limits
+- GOOD and NEVER
 
 Diataxis mode: **how-to**.
-Last reviewed: 2026-10-11.
+Last reviewed: 2026-10-12.
 Ticket: WO-20261011-e618 - Interface agent seat owns the bearings page: owner requests become records and the done line comes from it.
 
 ## Purpose
@@ -33,7 +34,7 @@ Every one of those is a script verb (`interface/bin/interface.sh`), so the seat 
 - `roles/interface-agent.json` with `pane_layout` `interface-2x2` and `interface/bin/interface.sh forward|line|snapshot *` in `allow.commands`; then `roles/bin/render-playbook.sh roles playbooks` so the playbook agrees.
   The role file belongs to the architect.
 - The route rows that address the seat are in `factory/config/routes.json`: `verified` 201 goes to `interface-agent`, and so does a `blocked` 423 that has already been escalated once (the first one goes to the architect).
-  The route runner (WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else) applies them; until it is running, the architect wakes the seat by hand with a herdr prompt that carries the record id (SOP-0001 shows the prompt shape).
+  The route runner (WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else) applies them; until it is running, the architect wakes the seat by hand with a herdr prompt that carries the record id (SOP-0004 shows the prompt shape).
 
 ## Hand over
 
@@ -106,3 +107,14 @@ A repository with its own bearings tier name, project name or port changes `tool
   Serving the file from the page is a bearings change and belongs after the north star.
 - The seat's `must` lines in `roles/interface-agent.json` still describe it writing the request record itself; it runs `interface.sh forward` instead, as `interface/brief.txt` tells it.
   Aligning that wording is the architect's edit.
+
+## GOOD and NEVER
+
+GOOD: the architect tells the owner something by writing a record with `--to interface-agent` and waking the seat with its id, so the seat turns it into one page line naming the ticket and its full title.
+GOOD: a down seat or a dead wait loop is repaired with `make -C interface down` then `make -C interface up`, because `pre_start` runs only when the agent is started.
+GOOD: `make -C interface check` exits 0, and `bearings-stable` and `bearings-stable-wait` show in the tab labelled `interface`, before the channel is called handed over.
+GOOD: the suites `make -C interface test` and `make -C herdr test` run from the labelled test pane and end green before the page moves.
+NEVER: paste the output of `bearings.sh stable status --json`, because it carries the page URL with the key.
+NEVER: let the architect answer the owner in chat once the seat is up, because the owner's replies reach the architect only as `request.forwarded` records.
+NEVER: compose a record or a page line by judgement in the seat, because `interface.sh forward|line|snapshot` finds the existing record or reply first and a hand-written one posts twice.
+NEVER: edit `roles/interface-agent.json` from this runbook's seat, because the role file belongs to the architect.

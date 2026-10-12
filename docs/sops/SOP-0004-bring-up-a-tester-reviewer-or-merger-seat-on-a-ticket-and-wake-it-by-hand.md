@@ -1,4 +1,4 @@
-# SOP-0001: Bring up a tester, reviewer or merger seat on a ticket and wake it by hand
+# SOP-0004: Bring up a tester, reviewer or merger seat on a ticket and wake it by hand
 
 ## Contents
 
@@ -6,9 +6,10 @@
 - When to run this
 - Steps
 - Verification
+- GOOD and NEVER
 
 Diataxis mode: **how-to**.
-Last reviewed: 2026-10-11.
+Last reviewed: 2026-10-12.
 
 ## Purpose
 
@@ -35,3 +36,14 @@ A PR has pr.opened (tester), test.passed 201 (reviewer) or review.passed 201 (me
 
 A step that cannot be verified is a wish.
 Record what the successful run actually printed.
+
+## GOOD and NEVER
+
+GOOD: the seat is brought up on the ticket the PR belongs to, `herdr/bin/seat.sh --ticket <WO of the PR> --role tester|reviewer|merger`, so it shares that ticket's lease and worktree and reads the branch the PR carries.
+GOOD: the wake is one prompt that carries the record id and the playbook, `<record id>: <kind> <code> on PR <n>. Playbook playbooks/<role>.md. Post exactly one record and stop.`, because the record is the handoff.
+GOOD: a tester or reviewer is downed with `herdr/bin/seat.sh --down <role>-wo-<id>` as soon as its one record is posted and the next station has it, so the host's `max_agents` cap leaves room for the next PR's seat.
+GOOD: a hand step is written as an event record, and a step repeated by hand becomes a ticket or a `routes.json` row.
+NEVER: bring a seat up on the seat's own ticket, because the slot would be checked out on the wrong branch and the seat would test or review nothing.
+NEVER: send a seat anything beyond the record id and the playbook line, because prose to another agent is the handoff the records replace.
+NEVER: push a note commit onto a PR branch that already carries a test or review record, because it moves the head sha and voids the gate.
+NEVER: leave a finished tester or reviewer up, because it holds a live-agent slot and the next PR's seat is refused with 429.

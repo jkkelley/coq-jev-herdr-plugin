@@ -1,9 +1,9 @@
 {
   "id": "RUN-role-seats-on-a-pr",
   "type": "Runbook",
-  "title": "SOP-0001: bring up a tester, reviewer or merger seat on the PR's ticket through seat.sh door 1 and wake it by hand with the record id until the route runner owns the belt",
+  "title": "SOP-0004: bring up a tester, reviewer or merger seat on the PR's ticket through seat.sh door 1 and wake it by hand with the record id until the route runner owns the belt",
   "status": "draft",
-  "text": "docs/sops/SOP-0001-bring-up-a-tester-reviewer-or-merger-seat-on-a-ticket-and-wake-it-by-hand.md",
+  "text": "docs/sops/SOP-0004-bring-up-a-tester-reviewer-or-merger-seat-on-a-ticket-and-wake-it-by-hand.md",
   "sources": [],
   "edges": [
     {
