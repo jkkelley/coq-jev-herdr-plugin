@@ -54,6 +54,46 @@
 
 
 
+
+## Checkpoint 2026-10-12 18:35 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, PR 31 open. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Branch merged with origin/main (eb83819). Diff against main is now this ticket's own files only: guard watch code and tests, SOP-0005, ee9c ticket archive, its changelog entries, and the aggregates re-rendered by their scripts.
+- Sibling ticket files: epic 265d README taken from main; 8fb2 dropped (main has none). The 265d ticket, 898a and c41f already equal main.
+- make lint ok on the merged tree. The full herdr suite was started on it in wD3:pB7 (output full3.out in the scratchpad).
+
+#### Active Tasks
+
+- This step answers review.changes 422 (20261012T183132Z-422-5xfoz) per the architect ruling: merge main, drop sibling ticket files, aggregates by their scripts.
+- Confirm full3.out ends tests: N passed, 0 failed for this head; post blocked 423 or test.failed 422 if not.
+- Then hold.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- Architect ruling: PR 31 lands before PR 34 (shared files herdr.json, herdr.schema.json, seat-lib.sh); aggregates (CHANGELOG, INDEX, CONTEXT_STATE) leave PRs only when WO-20261012-0677 lands.
+- reindex would have written ee9c as done into the epic README; the ruling keeps main's README, so work-order reindex --check disagrees with it until the merge; lint does not run that check.
+
+#### Lessons Learned
+
+- A review.changes record is answered with pr.opened at the new head; the monitor alerts after 90 seconds without a worker record.
+
+### Hydration prompt
+
+WO-20261012-ee9c is done, PR 31 is open at the merged head. If the suite output full3.out shows a failure, post test.failed 422 with the case; otherwise hold until the belt or the merger wakes this seat.
+
 ## Checkpoint 2026-10-12 18:13 UTC
 
 ### Current state
