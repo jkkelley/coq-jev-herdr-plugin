@@ -66,7 +66,8 @@ Makefile:43 runs .claude/skills/work-order/scripts/work-order.sh reindex, a giti
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* in a git worktree add with no .claude directory, make aggregates exits 0 or exits 4 naming the missing tool and how to get it
+- [x] `AC-H1` *(human)* in a git worktree add with no .claude directory, make aggregates exits 0 or exits 4 naming the missing tool and how to get it
+  - observed `2026-10-12` Clean detached git worktree of HEAD (no .claude/skills), run in test pane wD3:pN8: before, make aggregates died 'work-order.sh: No such file or directory' (Error 127). After: make aggregates exit 0, 'rebuilt work-orders/INDEX.md and every child README' via the ~/.claude machine copy; with CLAUDE_HOME=/nonexistent, bin/aggregates.sh exit 4 and make prints 'Error 4', naming work-order.sh, the three paths looked at, jkkelley/dotfiles claude/skills/work-order, skill-sync and WORK_ORDER_SH; WORK_ORDER_SH override exit 0; bad arg exit 2. make lint exit 0; make -C factory test 21 passed 0 failed.
 
 ## Test plan
 
@@ -85,6 +86,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Retro: found work-order.sh in project then machine copy, exit 4 otherwise; make shows Error 4 but exits 2 (GNU make), recorded in the BREADCRUMB. make -C herdr test: 24 passed, 1 failed (17-resume-checkpoint), not caused by this ticket: the worktree has no CONTEXT_STATE.md (gitignored, .gitignore:113) and case 17 expects the world copy to hold a checkpoint; e36e (#40) fixed only checkpoint.sh. Needs its own ticket (herdr/tests/cases/17-resume-checkpoint.test.sh, outside this ticket's files).
 
 ## Outcome
 

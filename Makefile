@@ -39,8 +39,9 @@ event:
 changelog:
 	bash $(HERE)bin/changelog.sh render
 # CHANGELOG.md, work-orders/INDEX.md and the work-orders READMEs are gitignored renders, so no PR can carry them (.gitignore).
+# bin/aggregates.sh finds work-order.sh (project copy, then machine copy) or exits 4 naming what to install (WO-20261012-aac3).
 aggregates: changelog
-	bash $(HERE).claude/skills/work-order/scripts/work-order.sh reindex --project $(HERE)
+	bash $(HERE)bin/aggregates.sh --project $(patsubst %/,%,$(HERE))
 step:
 	bash $(HERE)bin/step.sh --msg "$(MSG)" --type "$(TYPE)" --title "$(TITLE)" $(if $(TICKET),--ticket $(TICKET)) $(if $(TEXT),--text "$(TEXT)") $(if $(CP),--cp-body $(CP))
 LINT_IMAGE ?= ghcr.io/jkkelley/coq-lint:1
