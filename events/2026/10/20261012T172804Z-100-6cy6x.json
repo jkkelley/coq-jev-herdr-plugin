@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T172804Z-100-6cy6x",
+  "at": "2026-10-12T17:28:04Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-8f4f",
+  "kind": "work.started",
+  "ticket": "WO-20261012-8f4f",
+  "pane": "wD3:pCY",
+  "note": "worker started on WO-20261012-8f4f: SITREP IN FLIGHT counts open PRs and in-progress tickets on their branches, not only ticket status on main",
+  "evidence": [],
+  "observations": []
+}
