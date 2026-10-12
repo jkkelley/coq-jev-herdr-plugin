@@ -27,6 +27,7 @@
     { "match": { "kind": "break.glass", "code": 423 }, "do": "wake", "to": "monitor", "with": "record" },
     { "match": { "kind": "break.glass", "code": 100 }, "do": "none", "to": "monitor" },
     { "match": { "kind": "break.glass", "code": 201 }, "do": "none", "to": "monitor" },
+    { "match": { "kind": "policy.applied", "code": 200 }, "do": "none", "to": "monitor" },
     { "match": { "kind": "break.glass", "code": 204 }, "do": "none", "to": "monitor" },
     { "match": { "kind": "seat.down", "code": 500 }, "do": "wake", "to": "monitor", "with": "record" },
     { "match": { "code_gte": 500 }, "do": "wake", "to": "monitor", "with": "record" }

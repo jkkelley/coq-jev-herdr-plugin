@@ -5,7 +5,7 @@
 # gate result, a merge, a compaction. Routine progress is not an event.
 #
 #   event.sh add --code NNN --seat NAME --kind KIND [--ticket WO-...] [--pane P] [--to ROLE] [--note "<=240 chars"]
-#                [--evidence PATH]... [--observe "path:line:saw:expected"]... [--attempt N] [--sha HEX7-40] [--pr N] [--action "<=240 chars"] [--answer ID] [--json]
+#                [--evidence PATH]... [--observe "path:line:saw:expected"]... [--attempt N] [--sha HEX7-40] [--pr N] [--action "<=240 chars"] [--answer ID] [--policy POL-id] [--json]
 #   event.sh list [--since YYYY-MM-DD] [--code NNN] [--seat NAME] [--ticket WO-...] [--json]
 #   event.sh check                      every file matches events/schema/event.schema.json; exit 3 names offenders
 #   event.sh tail                       newest 10, one line each (what the monitor pane shows)
@@ -31,16 +31,16 @@ command -v jq >/dev/null || die 4 "jq is required"
 #   as note text. Rejected: a second writer script for factory records (two formats in one log) and routing on the note prefix.
 #   Cost: the enum is now a superset of the event kinds, so a typo'd factory kind is no longer a validation error here; the
 #   routes file and make lint own the meaning of a kind.
-KINDS='seat.up|seat.down|seat.stalled|gate|test|review|merge|deploy|compaction|blocked|escalation|note|request\.forwarded|request\.accepted|request\.rejected|ticket\.cut|work\.started|pr\.opened|test\.passed|test\.failed|review\.passed|review\.changes|merged|merge\.conflict|verified|rejected|escalated|record\.routed|break\.glass'
+KINDS='seat.up|seat.down|seat.stalled|gate|test|review|merge|deploy|compaction|blocked|escalation|note|request\.forwarded|request\.accepted|request\.rejected|ticket\.cut|work\.started|pr\.opened|test\.passed|test\.failed|review\.passed|review\.changes|merged|merge\.conflict|verified|rejected|escalated|record\.routed|break\.glass|policy\.applied'
 ROLES='interface-agent|orchestrator|architect|worker|tester|reviewer|merger|verifier|player|monitor'
 line_of() { jq -r '"\(.at)\t\(.code)\t\(.kind)\t\(.seat)\t\(.ticket // "-")\t\(.note // "")"' "$1"; }
 VERB=${1:-}; shift || true
 case $VERB in
   add)
-    code=""; seat=""; kind=""; ticket=null; pane=null; to=null; note=""; attempt=null; sha=null; pr=null; action=null; answer=null; ev=(); obs=(); JSON=0
+    code=""; seat=""; kind=""; ticket=null; pane=null; to=null; note=""; attempt=null; sha=null; pr=null; action=null; answer=null; policy=null; ev=(); obs=(); JSON=0
     while [ $# -gt 0 ]; do case $1 in
       --code) code=$2; shift 2;; --seat) seat=$2; shift 2;; --kind) kind=$2; shift 2;; --ticket) ticket=$2; shift 2;; --pane) pane=$2; shift 2;; --to) to=$2; shift 2;;
-      --note) note=$2; shift 2;; --attempt) attempt=$2; shift 2;; --sha) sha=$2; shift 2;; --pr) pr=$2; shift 2;; --action) action=$2; shift 2;; --answer) answer=$2; shift 2;; --evidence) ev+=("$2"); shift 2;; --observe) obs+=("$2"); shift 2;; --json) JSON=1; shift;; *) die 2 "unknown flag $1";; esac; done
+      --note) note=$2; shift 2;; --attempt) attempt=$2; shift 2;; --sha) sha=$2; shift 2;; --pr) pr=$2; shift 2;; --action) action=$2; shift 2;; --answer) answer=$2; shift 2;; --policy) policy=$2; shift 2;; --evidence) ev+=("$2"); shift 2;; --observe) obs+=("$2"); shift 2;; --json) JSON=1; shift;; *) die 2 "unknown flag $1";; esac; done
     [[ $code =~ ^[1-5][0-9]{2}$ ]] || die 2 "--code must be 100..599"; [[ $seat =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || die 2 "--seat must match ^[a-z][a-z0-9_-]{0,31}$"
     [[ $kind =~ ^($KINDS)$ ]] || die 2 "--kind must be one of $KINDS"; [ ${#note} -le 240 ] || die 3 "--note over 240 chars"
     [ "$to" = null ] || [[ $to =~ ^($ROLES)$ ]] || die 2 "--to must be one of $ROLES"
@@ -55,7 +55,19 @@ case $VERB in
     #   every kind (a stray flag on a test record would pass silently) and a second writer script (two formats in one log).
     #   Cost: the two flags are refused on any other kind, so a future kind that wants them edits this line.
     [ "$kind" != break.glass ] || { [ "$action" != null ] && [ -n "$action" ]; } || die 2 "a break.glass record needs --action (the one command)"
-    [ "$kind" = break.glass ] || { [ "$action" = null ] && [ "$answer" = null ]; } || die 2 "--action and --answer belong to kind break.glass only"
+    [ "$kind" = break.glass ] || [ "$action" = null ] || die 2 "--action belongs to kind break.glass only"
+    # BREADCRUMB 2026-10-12 - WO-20261012-9b2c, kind policy.applied (factory/bin/policy.sh). What broke: nothing yet; an escalation
+    #   that nobody answers by its deadline now gets the default its policy row names, and the line needs a record that says which
+    #   policy fired and which record it answers as FIELDS, because the notes of other kinds are prose nothing may branch on (the
+    #   count of defaults already applied to a ticket, limit_per_ticket in factory/config/policies.json, is read from `policy`).
+    #   Why this fix: `answer` already means "the id of the request record this one answers" (break.glass), so policy.applied
+    #   reuses it; `policy` is one new field. Both are refused on any other kind, as --action is, so a stray flag cannot pass
+    #   silently, and policy.applied cannot be written without them. Rejected: a second writer script (two formats in one log) and
+    #   putting the policy id in the note (the limit would count prose). Cost: a future kind that wants either flag edits this line.
+    [ "$kind" = break.glass ] || [ "$kind" = policy.applied ] || [ "$answer" = null ] || die 2 "--answer belongs to kinds break.glass and policy.applied only"
+    [ "$kind" != policy.applied ] || { [ "$policy" != null ] && [ "$answer" != null ]; } || die 2 "a policy.applied record needs --policy and --answer (the record it answers)"
+    [ "$kind" = policy.applied ] || [ "$policy" = null ] || die 2 "--policy belongs to kind policy.applied only"
+    [ "$policy" = null ] || [[ $policy =~ ^POL-[a-z0-9][a-z0-9-]{0,47}$ ]] || die 3 "--policy must be POL-<lowercase words joined by ->"
     [ "$action" = null ] || [ ${#action} -le 240 ] || die 3 "--action over 240 chars"
     [ "$answer" = null ] || [[ $answer =~ ^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$ ]] || die 3 "--answer must be a record id"
     [ "$ticket" = null ] || [[ $ticket =~ ^WO-[0-9]{8}-[0-9a-f]{4}$ ]] || die 3 "--ticket must be WO-YYYYMMDD-xxxx"
@@ -66,8 +78,8 @@ case $VERB in
     evj=$(printf '%s\n' "${ev[@]:-}" | { grep -v '^$' || true; } | jq -R . | jq -s .)
     obj=$(printf '%s\n' "${obs[@]:-}" | { grep -v '^$' || true; } | jq -R 'split(":") | {path:.[0], line:(.[1]|tonumber? // 0), saw:.[2], expected:.[3]}' | jq -s .)
     tq() { if [ "$1" = null ]; then echo null; else jq -n --arg v "$1" '$v'; fi; }
-    jq -n --arg id "$id" --arg at "$now" --argjson code "$code" --arg seat "$seat" --arg kind "$kind" --argjson ticket "$(tq "$ticket")" --argjson pane "$(tq "$pane")" --argjson to "$(tq "$to")" --arg note "$note" --argjson evidence "$evj" --argjson observations "$obj" --argjson attempt "$attempt" --argjson sha "$(tq "$sha")" --argjson pr "$pr" --argjson action "$(tq "$action")" --argjson answer "$(tq "$answer")" \
-      '{schema_version:"1.0.0", id:$id, at:$at, code:$code, seat:$seat, kind:$kind, ticket:$ticket, pane:$pane, note:$note, evidence:$evidence, observations:$observations} + (if $attempt==null then {} else {attempt:$attempt} end) + (if $to==null then {} else {to:$to} end) + (if $sha==null then {} else {sha:$sha} end) + (if $pr==null then {} else {pr:$pr} end) + (if $action==null then {} else {action:$action} end) + (if $answer==null then {} else {answer:$answer} end)' > "$dir/$id.json.tmp"
+    jq -n --arg id "$id" --arg at "$now" --argjson code "$code" --arg seat "$seat" --arg kind "$kind" --argjson ticket "$(tq "$ticket")" --argjson pane "$(tq "$pane")" --argjson to "$(tq "$to")" --arg note "$note" --argjson evidence "$evj" --argjson observations "$obj" --argjson attempt "$attempt" --argjson sha "$(tq "$sha")" --argjson pr "$pr" --argjson action "$(tq "$action")" --argjson answer "$(tq "$answer")" --argjson policy "$(tq "$policy")" \
+      '{schema_version:"1.0.0", id:$id, at:$at, code:$code, seat:$seat, kind:$kind, ticket:$ticket, pane:$pane, note:$note, evidence:$evidence, observations:$observations} + (if $attempt==null then {} else {attempt:$attempt} end) + (if $to==null then {} else {to:$to} end) + (if $sha==null then {} else {sha:$sha} end) + (if $pr==null then {} else {pr:$pr} end) + (if $action==null then {} else {action:$action} end) + (if $answer==null then {} else {answer:$answer} end) + (if $policy==null then {} else {policy:$policy} end)' > "$dir/$id.json.tmp"
     mv "$dir/$id.json.tmp" "$dir/$id.json"
     if [ "$JSON" = 1 ]; then cat "$dir/$id.json"; else printf '%s\n' "$id"; fi ;;
   list)
