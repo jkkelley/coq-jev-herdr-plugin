@@ -50,6 +50,35 @@
 
 
 
+
+## Checkpoint 2026-10-12 15:49 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-72a0 on WO-20261012-72a0 - Verifier seat: a merged record wakes a verifier that checks the merge on main against the ticket's criteria and posts verified or rejected, so no merge waits on the architect, in slot 6, branch feat/verifier-seat-a-merged-record-wakes-a-verifier-t.
+- The blocked 423 (record 20261012T152225Z-423-s8cgf) is answered: the architect placed roles/verifier.json (per ticket, label verifier-${ticket}, haiku) and the verifier enum in roles/schema/role.schema.json.
+
+#### Toolchain
+
+- Done in this step: the verifier added to every role enum (event.sh ROLES, event, record, routes and flow schemas), playbooks/verifier.md rendered from the role, routes.json merged 200 now seats the verifier with pr and takes the merger down, verified 201 and a new rejected 422 row wake the monitor and take the verifier down, flow.json gate for merged names the verifier, board.json verify station is the verifier, RUNBOOK rows renumbered.
+- seat.sh: for role verifier only, door 1 finds the ticket in work-orders/archive/ and detaches the slot at origin/main, because a merged ticket is archived and its branch deleted. Breadcrumb at the ticket lookup. New herdr case 17-verifier-archived; factory case 11-down and 09-flow-gate updated.
+- Verified in the test pane: make lint all ok, loop suite 9 passed, herdr suite 17 passed, factory suite run before commit.
+
+#### Active Tasks
+
+- Next step: close out. work-order.sh evidence --observed for AC-H1 and AC-H2, retro note, push, gh pr create, submit, done, post pr.opened 100 with sha and pr.
+- Follow-ups for the architect, in the PR body: roles/bin/brief.sh and nudge.sh should fall back to the archive so the verifier brief in seat.sh can go; graph/ has no ROL-verifier node and WFL-integration still says merged routes to the architect; playbooks/verifier.md cannot carry a breadcrumb because lint renders it from the role, so the role's breadcrumb is at the seat.sh ticket lookup.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-72a0 as worker-wo-20261012-72a0 in slot 6. Read playbooks/worker.md and this checkpoint. The role, routes, seat.sh change and tests are committed; do the close-out in Active Tasks.
+
 ## Checkpoint 2026-10-12 14:58 UTC
 
 ### Current state
