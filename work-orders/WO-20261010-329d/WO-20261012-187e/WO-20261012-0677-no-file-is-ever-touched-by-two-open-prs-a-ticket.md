@@ -21,7 +21,24 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [],
+  "files": [
+    "AGENTS.md",
+    ".gitignore",
+    "Makefile",
+    "bin/changelog.sh",
+    "bin/step.sh",
+    "bin/mint-id.sh",
+    "bin/new-sop.sh",
+    "bin/wo-start.sh",
+    "factory/bin/claims.sh",
+    "factory/bin/gate.sh",
+    "factory/config/claims.json",
+    "factory/config/claims.schema.json",
+    "factory/tests/cases/15-claims.test.sh",
+    "factory/tests/cases/16-claims-tools.test.sh",
+    "docs/sops/SOP-0006-declare-a-ticket-s-files-start-it-without-a-clash-and-mint-doc-numbers.md"
+  ]
 }
 ---
 
