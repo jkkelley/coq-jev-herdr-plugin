@@ -51,6 +51,32 @@
 
 
 
+
+## Checkpoint 2026-10-12 15:44 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker. Treehouse slot 7 (lease holder is this ticket), branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, no PR yet. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Step 2 landed: the flow watch no longer notes a gate record while the consumer role's seat for the ticket reports herdr agent_status working (factory/bin/flow.sh seat_working, judged again every tick, so the note comes the moment the seat goes idle with no record). busy_grace_seconds 1800 in flow.json and flow.schema.json is the backstop for a seat stuck in working. Case 14-flow-busy, stub answer agent_state in world.sh. Factory suite 18 passed 0 failed, make -C factory lint ok.
+- Step 1 (earlier checkpoint): gate.sh and the route guards, cases 12-gate and 13-gate-route.
+
+#### Active Tasks
+
+- Step 3: factory/RUNBOOK.md rows for when, supersede, merge-main, gate.sh and the flow busy rule. Step 4: close out - evidence per criterion, retro note (include the finding that the tester and merger playbooks cannot name supersedes or the tree rule because roles/ is denied to a worker), push, PR, submit, done, pr.opened 100 with sha and pr.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Steps 3 and 4 above remain; run every command through herdr/bin/testpane.sh in pane wD3:p8J.
+
 ## Checkpoint 2026-10-12 15:39 UTC
 
 ### Current state
