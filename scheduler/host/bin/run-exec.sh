@@ -24,7 +24,7 @@ command -v jq >/dev/null || cfg_die 4 "jq is not on PATH"
 
 # The socket's directory is created here, private to the owner, because run.sh mounts that directory into the container
 # and podman refuses a mount of a path that does not exist; the executor creates the socket itself.
-sock=$(cfg_resolve "$CFG" "$(cfg_raw "$CFG" socket)"); sockdir=$(dirname "$sock")
+sock=$(cfg_raw "$CFG" socket); sock=$(cfg_resolve "$CFG" "$sock"); sockdir=$(dirname "$sock")
 mkdir -p "$sockdir" && chmod 0700 "$sockdir" || cfg_die 4 "cannot create $sockdir"
 
 exec "$BIN" exec --config "$CFG"
