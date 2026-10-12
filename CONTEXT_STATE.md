@@ -80,6 +80,32 @@
 
 Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
 
+## Checkpoint 2026-10-12 18:03 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-8fb2 on WO-20261012-8fb2 - Own checkpoint after compaction: a SessionStart compact hook puts the seat's newest CONTEXT_STATE.md checkpoint in front of it. Treehouse slot 9, branch feat/own-checkpoint-after-compaction-a-sessionstart-c, PR 30. Test pane wD3:pBA, run only through herdr/bin/testpane.sh with make -C $COQ_WORKTREE/herdr.
+
+#### Toolchain
+
+- Review 20261012T170103Z-422-8inhl fixed in a12aa56: the hook timeout is resume_checkpoint.hook_timeout_seconds in herdr/config/herdr.json.
+- Merge conflicts 409 (records 20261012T172438Z-409-bwdwm and 20261012T180251Z-409-xvyzw, main moved twice): origin/main merged into the branch. CHANGELOG.md re-rendered with bin/changelog.sh render, work-orders/INDEX.md and epic READMEs by work-order.sh reindex, CONTEXT_STATE.md taken from main with this checkpoint added on top; none merged by hand.
+- Cases 01, 04, 13 and 17 re-run after the second merge, result in the pr.opened note.
+
+#### Active Tasks
+
+- Push the merge, post pr.opened 100 with the new head sha and --pr 30, then hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-8fb2 as worker-wo-20261012-8fb2 in slot 9. Read playbooks/worker.md and this checkpoint. The merge with main is committed; post pr.opened for PR 30 with the pushed head, then hold.
+
 ## Checkpoint 2026-10-12 17:47 UTC
 
 ### Current state
