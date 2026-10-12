@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T161400Z-100-qv7rh",
+  "at": "2026-10-12T16:14:00Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-b800",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:p87",
+  "note": "PR 26 head 6a2ee40: review 422 fixed, supervisor.sh timeouts are nine supervisor.timeouts.* keys in herdr.json and schema; cases 19 20 and herdr lint green",
+  "evidence": [],
+  "observations": [],
+  "to": "reviewer",
+  "sha": "6a2ee40",
+  "pr": 26
+}
