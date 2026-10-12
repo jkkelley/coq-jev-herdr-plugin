@@ -63,9 +63,12 @@ specs/exports/factory-spec.xml v1.1.0 (303 rules, sections S1 to S6) predates th
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* factory-spec.xml version 2.0.0 parses with xmllint and has sections S1 to S10
-- [ ] `AC-H2` *(human)* every file under roles/*.json, playbooks/*.md, factory/config/routes.json, docs/sops/*.md and every RUNBOOK.md is cited by at least one element
-- [ ] `AC-H3` *(human)* the check finds no /home/ path, no bearings key, no email address and no element over 240 chars
+- [x] `AC-H1` *(human)* factory-spec.xml version 2.0.0 parses with xmllint and has sections S1 to S10
+  - observed `2026-10-12` specs/bin/export-check.sh check in the lint image (xmllint --noout first): ok specs/exports/factory-spec.xml version 2.0.0 sections S1..S10 elements 1056 longest 239; exit 0
+- [x] `AC-H2` *(human)* every file under roles/*.json, playbooks/*.md, factory/config/routes.json, docs/sops/*.md and every RUNBOOK.md is cited by at least one element
+  - observed `2026-10-12` specs/bin/export-check.sh coverage: ok specs/exports/factory-spec.xml cites 101 sources, covers 26 of 26 required files (roles/*.json, playbooks/*.md, factory/config/routes.json, docs/sops/*.md, every RUNBOOK.md); exit 0
+- [x] `AC-H3` *(human)* the check finds no /home/ path, no bearings key, no email address and no element over 240 chars
+  - observed `2026-10-12` check exit 0 on the export, make lint all ok; on a seeded copy it reported forbidden home path, email address, host or url, page key, a 300-char element and an element with no source; exit 3
 - [ ] `AC-H4` *(human)* the owner reads it on the page and accepts it (human)
 
 ## Test plan
@@ -85,6 +88,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Final figures after correcting S1-041 and S3-023 to main (main's seat.sh exports no COQ_EVENTS_ROOT and main's event.sh ignores it; only the records branch has both): check ok, version 2.0.0, sections S1..S10, 1058 elements, longest 239 chars; coverage 101 sources, 26 of 26 required files; make lint all ok. specs/exports/factory-spec.xml also sits in PR 32 as v1.1.0: v2.0.0 supersedes it, so PR 32 drops its copy or takes this one before merge.
 
 ## Outcome
 

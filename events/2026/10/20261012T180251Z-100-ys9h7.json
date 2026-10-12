@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T180251Z-100-ys9h7",
+  "at": "2026-10-12T18:02:51Z",
+  "code": 100,
+  "seat": "architect-wo-20261012-fd87-3077",
+  "kind": "work.started",
+  "ticket": "WO-20261012-fd87",
+  "pane": "wD3:pEX",
+  "note": "architect seat up on WO-20261012-fd87: rebuilding specs/exports/factory-spec.xml as v2.0.0, reading the ticket now",
+  "evidence": [],
+  "observations": []
+}

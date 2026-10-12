@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "description": "The copy rule of a spec export (specs/exports/*.xml), which leaves this repository for another host. specs/bin/export-check.sh check enforces it in make lint; coverage is run when an export is rebuilt.",
+  "exports": "specs/exports/*.xml",
+  "under_chars": 240,
+  "forbidden": [
+    { "name": "home path", "regex": "/home/|/Users/|[A-Za-z]:\\\\Users|~/" },
+    {
+      "name": "host or url",
+      "regex": "localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|://"
+    },
+    { "name": "page key", "regex": "[?&]key=|[0-9a-fA-F]{32,}" },
+    {
+      "name": "email address",
+      "regex": "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}"
+    },
+    { "name": "ticket id", "regex": "WO-[0-9]{8}-[0-9a-f]{4}" },
+    { "name": "record id", "regex": "[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}" },
+    { "name": "em dash", "regex": "\\u2014" }
+  ],
+  "cover": [
+    "roles/*.json",
+    "playbooks/*.md",
+    "factory/config/routes.json",
+    "docs/sops/*.md",
+    "**/RUNBOOK.md"
+  ]
+}
