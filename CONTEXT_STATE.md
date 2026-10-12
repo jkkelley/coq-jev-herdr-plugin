@@ -57,6 +57,45 @@
 
 
 
+
+## Checkpoint 2026-10-12 20:07 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Seat sched-worker-4 (Opus) in herdr wD7:p5, worktree ~/.cache/wt-sched-w4 on branch feat/scheduler-host-files-the-pane-wrappers-for-the-c. Records go through $COQ_REPO/events/bin/event.sh; design questions go to sched-architect (--to sched-architect).
+- No test pane is named for this seat; the suite runs in the foreground in Podman: bash scheduler/host/tests/run.sh (lint image localhost/coq-lint:1, network off).
+
+#### Toolchain
+
+- Host suite: scheduler/host/tests/run.sh, case 00 shellcheck -S warning -x over scheduler/host, cases 01 inbox, 02 run-exec, 03 config-lib, 04 run; tests: 5 passed, 0 failed.
+- Specs live on origin/feat/go-scheduler-design-one-xml-spec-per-domain-unde (PR 37); SPEC-16.G 1.1.0 with the runtime keys is announced there but had not landed at 20:10Z.
+
+#### Active Tasks
+
+- WO-20261012-df2b - Scheduler host files: the pane wrappers for the container and the executor, the inbox script, a test harness with a stub binary, and the operations runbook. Step 2 landed with this checkpoint: run.sh (runtime.image, runtime.memory, runtime.container_name plain strings; every ${ENV:...} passed through; every path mounted at its own path), case 04, scheduler/RUNBOOK.md with every RUN-scheduler-operate section and spec citations.
+- Next: step 3 close-out: evidence --observed for AC-H1..AC-H4, retro note, PR, work-order submit and done, push, git switch --detach, pr.opened 100 with --sha and --pr through $COQ_REPO/events/bin/event.sh.
+
+#### Blockers
+
+- None. Blocked 20261012T195358Z-423-8ffcd was answered by sched-architect in 20261012T200406Z-100-xzrpm.
+
+### New this checkpoint
+
+#### Decisions
+
+- 2026-10-12 UTC, sched-architect (20261012T200406Z-100-xzrpm): run.sh reads runtime.image, runtime.memory, runtime.container_name from scheduler.json as plain strings; env COQ_SCHED_MODE, COQ_SCHED_REPO, COQ_REPO, COQ_SCHED_STATE_DIR, COQ_HERDR_SESSION, XDG_RUNTIME_DIR, HOME.
+- 2026-10-12 UTC, sched-worker-4: run.sh refuses an image by tag (exit 3) and an image not in local storage (exit 4), and refuses to start while the executor socket is missing (exit 4).
+
+#### Lessons Learned
+
+- compgen -G returns matches in hash order; sort them so the podman argv is deterministic.
+
+### Hydration prompt
+
+Run from ~/.cache/wt-sched-w4 on branch feat/scheduler-host-files-the-pane-wrappers-for-the-c as seat sched-worker-4. WO-20261012-df2b - Scheduler host files: the pane wrappers for the container and the executor, the inbox script, a test harness with a stub binary, and the operations runbook: steps 1 and 2 landed (all files written, suite 5 of 5 in Podman). Do the close-out: evidence per AC, retro, PR, submit, done, detach, pr.opened.
+
 ## Checkpoint 2026-10-12 20:01 UTC
 
 ### Current state
