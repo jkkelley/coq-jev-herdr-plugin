@@ -93,6 +93,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Correction to AC-H1 evidence: the suite proves an EDITED node file is picked up by the next dev watch pass (case 14, build 1 to 2), not an added one; the added-node case rests on the same collector reading graph/nodes whole each pass. A live GET against the running dev pane was not made by the worker.
 - `2026-10-12` Retro: the branch was behind main by 3 merged tickets; merging origin/main put the runner and flow panes on 2.2.2 and 2.2.3, so the blueprint servers moved. First to 2.3.1 to 2.3.3, then to 3.3.1 to 3.3.3 because the owner's turn and record watches run at 2.3.1 and 2.3.2 (backlog 60l24). recover.sh's new pane step skips the belt slot, which step 5 owns. Jenkins runs the suite with LOOP_TEST_IN_CONTAINER=1 since the pod has no podman or make. A real ticket rarely names a CMP id, so in flight reads 0 today; the RUNBOOK says to name the id in title, Problem or Scope. graph/ is denied to this role: DEC-blueprint-server-tiers and a CMP node for the blueprint defined_in a RUN node are the architect's to add.
 - `2026-10-11` Owner 18:47Z: 'a separate local web client server for that blueprint that mimics the system design and blueprint, automatically updated; it needs a dev uat and stable version. Make files. Functional programming small scope easy testing. Full suite on CICD linting when smartly needed.' Folded into In, Degrees of freedom and ACs.
 
