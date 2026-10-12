@@ -63,6 +63,9 @@ Nothing in it is specific to one repository except the three config files below.
 - `config/sitrep.json` `build`: where tickets and events live (`work_orders_dir`, `events_dir`), the command that lists open pull requests (`prs_command`), the ref that names main (`main_ref`), and how long a failure stays on the briefing (`friction_window_hours`).
 - `config/sitrep.template.json`: the blocks, and the sentence of every item.
   `{{name}}` is a fact: `in_progress.count`, `startable.p0`, `friction.code`, `prs.count`.
+  `in_flight.count` is the work the line is doing: tickets an open pull request's title names, plus tickets whose status on this checkout is in-progress or in-review, counted once per ticket id.
+  `in_flight_source` is the sentence fragment that names where that figure came from, such as `6 open PRs` or `3 open PRs, 1 without a PR`.
+  Read `in_flight.count` for any "in flight" figure, never `in_progress.count`: a ticket started on its branch stays ready on main until its pull request lands.
   `when` drops an item whose fact is empty, `ref_from` fills the ref and its full title from a ticket, `links_from` turns pull requests into link badges.
   A sentence that breaks the standard fails the build, so a template cannot ship a wordy briefing.
 

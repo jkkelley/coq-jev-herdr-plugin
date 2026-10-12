@@ -19,7 +19,7 @@ echo "-- bringup builds the system in order"
 "$BU" --worktree "$REPO" > "$WORLD/out" 2>&1; rc=$?; out="$(tr '\n' ' ' < "$WORLD/out")"
 echo "$out" | sed 's/^/    /'
 assert_eq "bringup exits 0" "$rc" 0
-assert_match "monitors, the monitor seat and all thirteen reserved panes were fixed, in that order, the flow watch after the runner, the policy watch after glass, the record bus after policy, the watches tab last" "$out" "fixed monitors.*fixed monitor-seat.*fixed pane-lease.*fixed pane-guard.*fixed pane-events.*fixed pane-queue.*fixed pane-board.*fixed pane-runner.*fixed pane-flow.*fixed pane-glass.*fixed pane-policy.*fixed pane-bus.*fixed pane-turnwatch.*fixed pane-recwatch.*fixed pane-supervisor"
+assert_match "monitors, the monitor seat and every reserved pane were fixed, in that order, the flow watch after the runner, the policy watch after glass, the record bus after policy, the watches tab last" "$out" "fixed monitors.*fixed monitor-seat.*fixed pane-lease.*fixed pane-guard.*fixed pane-events.*fixed pane-queue.*fixed pane-board.*fixed pane-runner.*fixed pane-flow.*fixed pane-glass.*fixed pane-policy.*fixed pane-bus.*fixed pane-blueprint-dev.*fixed pane-blueprint-uat.*fixed pane-blueprint-stable.*fixed pane-turnwatch.*fixed pane-recwatch.*fixed pane-supervisor"
 ws="$(h workspace list | jq -r '.result.workspaces[] | select(.label == "coq") | .workspace_id')"
 assert_match "one workspace labelled coq" "$ws" '^w'
 assert_eq "four monitors tabs plus the monitor seat tab" "$(h tab list --workspace "$ws" | jq -r '[.result.tabs[].label] | sort | join("|")')" "monitor|monitors 1 - compaction watchers|monitors 2 - loop, events and queue|monitors 3 - shells|monitors 4 - watches"
@@ -48,11 +48,17 @@ assert_match "2.2.3 runs the flow watch (WO-20261011-6842)" "$st" "2\.2\.3 flow 
 assert_match "2.3.1 runs the break glass restore watch (WO-20261011-4562)" "$st" "2\.3\.1 break glass restore watch - glass  \[[^]]+\]  in use"
 assert_match "2.3.2 runs the policy watch (WO-20261012-9b2c)" "$st" "2\.3\.2 policy watch - policy  \[[^]]+\]  in use"
 assert_match "2.3.3 runs the record bus (WO-20261012-da52)" "$st" "2\.3\.3 record bus - bus  \[[^]]+\]  in use"
+# The three blueprint servers of WO-20261011-ceea: dev, uat and stable, one labelled pane each, started by the same bringup.
+assert_match "3.3.1 runs the blueprint dev server" "$st" "3\.3\.1 blueprint dev server - blueprint-dev  \[[^]]+\]  in use"
+assert_match "3.3.2 runs the blueprint uat server" "$st" "3\.3\.2 blueprint uat server - blueprint-uat  \[[^]]+\]  in use"
+assert_match "3.3.3 runs the blueprint stable server" "$st" "3\.3\.3 blueprint stable server - blueprint-stable  \[[^]]+\]  in use"
 assert_match "3.1.1 is an open shell" "$st" "3\.1\.1 OPEN - any shell  \[[^]]+\]  open"
 assert_eq "the monitor seat is live" "$(h agent get monitor | jq -r .result.agent.agent_status)" idle
-assert_eq "fifteen note 100 records, one per repaired node" "$(event_count note 100)" 15
+# Two nodes (monitors, the monitor seat) plus one per reserved pane that carries a command, read from monitors.json so a pane added by
+# another ticket does not turn this literal stale (it conflicted on every landing: WO-20261011-ceea, 4562, 9b2c).
+assert_eq "one note 100 record per repaired node" "$(event_count note 100)" "$(( $(jq '[.tabs[].reserved[] | select(.command != null)] | length' "$REPO/herdr/config/monitors.json") + 2 ))"
 chk="$("$BU" --check --worktree "$REPO" 2>&1)"; rc=$?; assert_eq "--check now exits 0" "$rc" 0
-assert_match "--check reports the lease and guard watchers ok, ahead of the tails" "$(tr '\n' ' ' <<<"$chk")" "ok pane-lease ok pane-guard ok pane-events ok pane-queue ok pane-board ok pane-runner ok pane-flow ok pane-glass ok pane-policy ok pane-bus"
+assert_match "--check reports the lease and guard watchers ok, ahead of the tails" "$(tr '\n' ' ' <<<"$chk")" "ok pane-lease ok pane-guard ok pane-events ok pane-queue ok pane-board ok pane-runner ok pane-flow ok pane-glass ok pane-policy ok pane-bus ok pane-blueprint-dev ok pane-blueprint-uat ok pane-blueprint-stable"
 
 echo "-- rerun is idempotent"
 "$BU" --worktree "$REPO" > "$WORLD/out" 2>&1; rc=$?; out="$(tr '\n' ' ' < "$WORLD/out")"

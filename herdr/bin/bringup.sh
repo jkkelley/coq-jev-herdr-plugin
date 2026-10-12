@@ -93,6 +93,12 @@ fi
 #   not links of its chain, and one stuck pane (a human typed into an open slot: `left alone`) used to leave every pane
 #   after it down. Cost: the run exits 1 after trying them all, and a stuck pane is a 500 on every run until it is freed.
 MC="${COQ_MONITORS_CONFIG:-$SL_HERDR/config/monitors.json}"
+# BREADCRUMB 2026-10-12 - WO-20261011-ceea, slots. The three blueprint servers (blueprint-dev, -uat, -stable, report/blueprint/serve.sh)
+#   sit at 3.3.1 to 3.3.3, the bottom row of the shells tab, not in the free row of tab 2: the owner's turn and record watches
+#   ran at 2.3.1 and 2.3.2, then broke glass and the policy watch took 2.3.1 and 2.3.2, and a server reserved there would have been
+#   "restarted" over a watch. monitors.json is JSON and cannot carry this comment. A killed server is a bare shell, which
+#   `monitors.sh health` reads as FAILED and the loop below plugs back in; serve.sh --check is the probe for a server that is alive but
+#   not answering, which health does not see.
 health="$("$MON" health 2>/dev/null)"; pane_bad=0
 while IFS=$'\t' read -r name what cmd; do
   cmd="${cmd//\$\{repo\}/$SL_REPO}"
