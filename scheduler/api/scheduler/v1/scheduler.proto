@@ -1,0 +1,218 @@
+// scheduler.proto - the control plane of the Go scheduler, written from SPEC-16.H h-proto.
+//
+// Two services on unix sockets only, mode 0600, no TCP port (h-proto-sockets):
+// Executor is the host half behind the executor socket; Scheduler is the container
+// half behind the control socket. No streaming call exists (h-proto-stream): records
+// are the data plane and travel by the log or the bus, never by a gRPC stream.
+//
+// Every time is a UTC string in the record's at form, 2006-01-02T15:04:05Z.
+// A change to this file is a ticket of its own; make proto regenerates the Go code
+// in the build container and the generated files are checked in beside it.
+syntax = "proto3";
+
+package coq.scheduler.v1;
+
+option go_package = "coq/scheduler/api/scheduler/v1;schedulerv1";
+
+// Executor runs one allowlisted verb per call and decides nothing (h-executor).
+service Executor {
+  rpc Run(RunRequest) returns (RunResponse);
+  rpc Health(HealthRequest) returns (ExecutorHealth);
+}
+
+// Scheduler answers the operator on the control socket (h-proto-scheduler).
+service Scheduler {
+  rpc Health(HealthRequest) returns (SchedulerHealth);
+  rpc Status(StatusRequest) returns (StatusResponse);
+  rpc Reload(ReloadRequest) returns (ReloadResponse);
+  rpc Drain(DrainRequest) returns (DrainResponse);
+  rpc Retry(RetryRequest) returns (RetryResponse);
+}
+
+// RunRequest is what to run and what it is about; the key and the ids are for the
+// executor's log only.
+message RunRequest {
+  string verb = 1;
+  repeated string args = 2;
+  string idempotency_key = 3;
+  uint32 timeout_seconds = 4;
+  string record_id = 5;
+  string ticket = 6;
+}
+
+// RunResponse is the verdict of one Run. refused means the verb was not run and
+// refusal says why.
+message RunResponse {
+  int32 exit_code = 1;
+  bool timed_out = 2;
+  bool refused = 3;
+  string refusal = 4;
+  string stdout_tail = 5;
+  string stderr_tail = 6;
+  string started_at = 7;
+  string finished_at = 8;
+}
+
+// HealthRequest asks either service whether it is up.
+message HealthRequest {}
+
+// ExecutorHealth says who answers, since when, which verbs it holds, and whether
+// the herdr session answers an agent list.
+message ExecutorHealth {
+  string version = 1;
+  string started_at = 2;
+  repeated string verbs = 3;
+  string herdr_session = 4;
+  bool herdr_ok = 5;
+}
+
+// SchedulerHealth says the scheduler is up, in what mode, past the start gate or
+// why not, and how old the belt is.
+message SchedulerHealth {
+  string version = 1;
+  string started_at = 2;
+  string mode = 3;
+  bool gate_passed = 4;
+  string gate_reason = 5;
+  uint32 belt_age_seconds = 6;
+}
+
+// StatusRequest asks for the status answer of SPEC-16.I i-status.
+message StatusRequest {}
+
+// StatusResponse is the status answer: mode, start gate and reason, belt age, last
+// tick, boundary, table versions, executor health, and the counters and lists
+// SPEC-16.I i-status names. Counters reset at start.
+message StatusResponse {
+  string mode = 1;
+  bool gate_passed = 2;
+  string gate_reason = 3;
+  uint32 belt_age_seconds = 4;
+  string last_tick = 5;
+  string boundary = 6;
+  TableVersions tables = 7;
+  bool executor_ok = 8;
+  string executor_reason = 9;
+  RecordCounters records = 10;
+  JobCounters jobs = 11;
+  repeated HeldJob held = 12;
+  repeated DeadJob dead = 13;
+  WakeCounters wakes = 14;
+  repeated Stall stalls = 15;
+  repeated OpenEscalation policies = 16;
+  uint64 defaults_applied = 17;
+  repeated SeatStatus seats = 18;
+  ShadowCounters shadow = 19;
+}
+
+// TableVersions names the hash of each loaded table.
+message TableVersions {
+  string routes_version = 1;
+  string policies_version = 2;
+  string flow_version = 3;
+  string roles_version = 4;
+}
+
+// RecordCounters counts records since start by what became of them.
+message RecordCounters {
+  uint64 listed = 1;
+  uint64 routed = 2;
+  uint64 ignored = 3;
+  uint64 unrouted = 4;
+  uint64 own = 5;
+  uint64 unreadable = 6;
+  uint64 interrupted = 7;
+}
+
+// JobCounters counts jobs by state.
+message JobCounters {
+  uint64 pending = 1;
+  uint64 held = 2;
+  uint64 running = 3;
+  uint64 confirming = 4;
+  uint64 done = 5;
+  uint64 dead = 6;
+}
+
+// HeldJob is one held job and the reason it is held: quiet, cap, absent, shared.
+message HeldJob {
+  string key = 1;
+  string reason = 2;
+}
+
+// DeadJob is one dead-lettered job.
+message DeadJob {
+  string key = 1;
+  uint32 attempts = 2;
+  string reason = 3;
+  string at = 4;
+}
+
+// WakeCounters counts wakes and how each was confirmed.
+message WakeCounters {
+  uint64 sent = 1;
+  uint64 confirmed_by_record = 2;
+  uint64 confirmed_by_busy = 3;
+  uint64 resent = 4;
+  uint64 unconfirmed = 5;
+  uint64 held_for_quiet = 6;
+}
+
+// Stall is one open latched stall.
+message Stall {
+  string gate_id = 1;
+  string ticket = 2;
+  string kind = 3;
+  string seat = 4;
+  string status = 5;
+}
+
+// OpenEscalation is one escalation a policies row covers that still waits.
+message OpenEscalation {
+  string record_id = 1;
+  string ticket = 2;
+  string policy = 3;
+  int64 seconds_to_deadline = 4;
+}
+
+// SeatStatus is one seat seen, with its status and since when.
+message SeatStatus {
+  string name = 1;
+  string role = 2;
+  string ticket = 3;
+  string status = 4;
+  string since = 5;
+}
+
+// ShadowCounters compares shadow decisions with the bash runner's, in shadow mode.
+message ShadowCounters {
+  uint64 compared = 1;
+  uint64 agreeing = 2;
+  uint64 mismatching = 3;
+  string since = 4;
+}
+
+// ReloadRequest asks the scheduler to reload its tables.
+message ReloadRequest {}
+
+// ReloadResponse names the hashes loaded after the call.
+message ReloadResponse {
+  string routes_version = 1;
+  string policies_version = 2;
+  string flow_version = 3;
+  string roles_version = 4;
+}
+
+// DrainRequest asks the scheduler to stop taking new work and finish what runs.
+message DrainRequest {}
+
+// DrainResponse acknowledges a drain.
+message DrainResponse {}
+
+// RetryRequest puts one dead job back to pending with its attempts reset.
+message RetryRequest {
+  string job_key = 1;
+}
+
+// RetryResponse acknowledges a retry.
+message RetryResponse {}

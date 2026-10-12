@@ -16,6 +16,9 @@
 #   sl_seat_dir NAME            <state_dir>/seats/<name>, created
 #   sl_report_500 KEY TEXT      one 500 note and one herdr notification per distinct failure per 15 minutes
 #   sl_exempt RULE SEAT PANE    exit 0 when herdr/config/exemptions.json lifts RULE for that seat or pane, now
+#   sl_pane_claude_pid PANE     pid of the claude process in that pane's foreground, empty when none
+#   sl_pane_session PANE        the Claude session id running in that pane right now, empty when none (WO-20261012-ee9c)
+#   sl_guard_targets            "<pane>\t<name>" for every pane the guard watchers govern: open seat records, then live exemptions
 #   sl_pane_busy                reads one `herdr pane process-info` reply on stdin; exit 0 when the pane's foreground is a job, not a bare shell
 #
 # BREADCRUMB - this library sets no shell options (bearings-v2 seat-lib.sh, same reasoning). What broke there: a
@@ -118,6 +121,51 @@ sl_live_seats() {
     sl_agent_live "$n" && printf '%s\n' "$n"
   done
   return 0
+}
+
+# BREADCRUMB 2026-10-12 - WO-20261012-ee9c, pane to session. What broke: compaction-guard watch (monitors.json slot 1.1.2) and
+#   unfreeze.sh sessions_of (before this change) walked every binding under ~/.local/state/compaction-guard/sessions/ and
+#   acted on any session whose binding.json named a pane, live or dead. A pane keeps its id across restarts, so 231 bindings
+#   at 15:45Z on 2026-10-12 (115 from other projects) mapped to a few dozen panes, and the 02:16Z restart typed about 189
+#   GOV-100 memos into the architect pane wD3:p2, one per second; backlog lh51y. Why this fix: the pane is the truth, so each
+#   tick asks herdr which claude process is in the pane (`pane process-info`), reads that pid's own session file that Claude
+#   Code writes (<claude_sessions_dir>/<pid>.json, key sessionId) and hands exactly that id to the guard. Rejected: reading the
+#   binding's own pane field (it is the stale thing), `herdr agent get` agent_session (set only for seats herdr reported a
+#   session for; a hand-started pane has none), and a change to the guard (not this repo's, and its --session verb already
+#   scopes a tick). Cost: one process-info call and one file read per pane per tick; a claude that has not written its file
+#   yet (the first second after start) reads as "no session" and is picked up on the next tick.
+# A claude process is named claude (the real one), or is a script whose path ends in /claude run by an interpreter (the suite's
+# stub: argv bash /repo/herdr/tests/stubs/claude). Anything else that merely matches reads as "no session file" below.
+sl_pane_claude_pid() {
+  sl_h pane process-info --pane "$1" 2>/dev/null | jq -r \
+    'def base: split("/") | last; first((.result.process_info.foreground_processes // [])[] | select(.name == "claude" or ((.argv[0]? // "") | base) == "claude" or ((.argv[1]? // "") | base) == "claude") | .pid) // empty'
+}
+sl_pane_session() {
+  local pid dir f
+  pid="$(sl_pane_claude_pid "$1")"; [ -n "$pid" ] || return 0
+  dir="$(sl_expand "$(sl_cfg .claude_sessions_dir)")"; f="$dir/$pid.json"; [ -f "$f" ] || return 0
+  jq -r --argjson pid "$pid" 'select(.pid == $pid) | .sessionId // empty' "$f" 2>/dev/null
+  return 0
+}
+# sl_guard_targets: the panes whose guard session the watchers act on. Open seat records first (their pane field), then the
+# hand-started panes only exemptions.json names (the architect), as unfreeze.sh --all always did.
+sl_guard_targets() {
+  local f n p
+  {
+    for f in "$STATE"/seats/*/seat.json; do
+      [ -f "$f" ] || continue; [ -z "$(jq -r '.ended_at // empty' "$f")" ] || continue
+      n="$(jq -r .name "$f")"; p="$(jq -r '.pane // empty' "$f")"; [ -n "$p" ] || continue
+      printf '%s\t%s\n' "$p" "$n"
+    done
+    # BREADCRUMB 2026-10-10 - WO-20261010-8fa8. What broke: this filter read `.until > now_iso`, a call to a jq function
+    #   that does not exist (the --arg variable is $now_iso), so jq failed to compile, 2>/dev/null hid it, and --all and
+    #   --watch never visited the hand-started architect pane wD3:p2, the one seat that froze on 2026-10-10 (unfreeze.sh
+    #   header). Why this fix: $now_iso is the one-character repair and case 06 now freezes an exempt pane and expects it
+    #   released. Rejected: dropping the 2>/dev/null, which would print a jq error on every 30 second tick if
+    #   exemptions.json is ever malformed. Cost: none; the stderr stays hidden, so case 06 is what proves this loop works.
+    #   (Moved here from unfreeze.sh pass() by WO-20261012-ee9c so guardwatch.sh and unfreeze.sh list the same panes.)
+    jq -r --arg now_iso "$(sl_now)" '.exemptions[] | select(.pane? and .until > $now_iso) | [.pane, (.seat // .pane)] | @tsv' "$SL_HERDR/config/exemptions.json" 2>/dev/null | sort -u
+  } | awk -F'\t' '!seen[$1]++'
 }
 
 # sl_report_500 KEY TEXT: one 500 record and one notification per distinct failure per 15 minutes.

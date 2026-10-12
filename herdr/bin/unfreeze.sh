@@ -40,14 +40,22 @@ pane_of() {
   local r; r="$(sl_seat_record "$1")"; [ -f "$r" ] || sl_die "no seat record for $1"
   jq -r '.pane // empty' "$r"
 }
-# sessions_of <pane>: every guard session bound to that pane of this herdr session, newest binding last.
+# sessions_of <pane>: the guard session running in that pane right now, when the guard has a herdr binding for it.
+# BREADCRUMB 2026-10-12 - WO-20261012-ee9c. What broke: this walked every binding.json under $GUARD_STATE/sessions and returned each
+#   whose pane field equalled the pane, so a pane that had hosted many sessions (231 bindings on the host at 15:45Z, 115 from
+#   other projects; the architect pane wD3:p2 alone had about 189) returned all of them, and a dead session still in phase
+#   armed or compacting had `compaction-guard release` and the wake prompt "continue your next step" sent into the pane of the
+#   live seat that happened to reuse the pane id. Why this fix: the pane is the truth, so the session is the one the pane's
+#   claude process reports (seat-lib.sh sl_pane_session); only that one is released. The binding's own pane field is no longer
+#   consulted (it is the stale value), its driver and herdr_session still are. Rejected: keeping the walk and filtering by
+#   the newest binding (a restarted seat can bind later than its predecessor's last write) and trusting seat.json claude_session
+#   (a hand-started pane has none, and a seat resumed in place changes it before the record does). Cost: one process-info call
+#   and one file read per pane per pass; a pane whose claude has not written its session file yet is "not frozen" for that pass.
 sessions_of() {
-  local d
-  for d in "$GUARD_STATE"/sessions/*/; do
-    [ -f "$d/binding.json" ] || continue
-    jq -e --arg p "$1" --arg hs "$HS" '.driver == "herdr" and .pane == $p and (.herdr_session // "stable") == $hs' "$d/binding.json" >/dev/null 2>&1 || continue
-    printf '%s\n' "$(basename "$d")"
-  done
+  local sid; sid="$(sl_pane_session "$1")"; [ -n "$sid" ] || return 0
+  [ -f "$GUARD_STATE/sessions/$sid/binding.json" ] || return 0
+  jq -e --arg hs "$HS" '.driver == "herdr" and (.herdr_session // "stable") == $hs' "$GUARD_STATE/sessions/$sid/binding.json" >/dev/null 2>&1 || return 0
+  printf '%s\n' "$sid"
 }
 # one <pane> <name>: release the frozen sessions of one pane. Prints one line per frozen session; sets LEFT=1 when a
 # frozen one was left in place.
@@ -75,20 +83,10 @@ one() {
 pass() {
   LEFT=0
   if [ "$all" = 1 ]; then
-    local f n p
-    for f in "$STATE"/seats/*/seat.json; do
-      [ -f "$f" ] || continue; [ -z "$(jq -r '.ended_at // empty' "$f")" ] || continue
-      n="$(jq -r .name "$f")"; p="$(jq -r '.pane // empty' "$f")"; [ -n "$p" ] || continue
-      one "$p" "$n"
-    done
-    # The architect seat is hand-started and exempt (herdr/config/exemptions.json), so it has no seat record.
-    # BREADCRUMB 2026-10-10 - WO-20261010-8fa8. What broke: this filter read `.until > now_iso`, a call to a jq function
-    #   that does not exist (the --arg variable is $now_iso), so jq failed to compile, 2>/dev/null hid it, and --all and
-    #   --watch never visited the hand-started architect pane wD3:p2, the one seat that froze on 2026-10-10 (this file's
-    #   header). Why this fix: $now_iso is the one-character repair and case 06 now freezes an exempt pane and expects it
-    #   released. Rejected: dropping the 2>/dev/null, which would print a jq error on every 30 second tick if
-    #   exemptions.json is ever malformed. Cost: none; the stderr stays hidden, so case 06 is what proves this loop works.
-    while IFS=$'\t' read -r p n; do [ -n "$p" ] && one "$p" "$n"; done < <(jq -r --arg now_iso "$(sl_now)" '.exemptions[] | select(.pane? and .until > $now_iso) | [.pane, (.seat // .pane)] | @tsv' "$SL_HERDR/config/exemptions.json" 2>/dev/null | sort -u)
+    local p n
+    # The panes are the watchers' shared list (seat-lib.sh sl_guard_targets): open seat records, then the hand-started panes
+    # exemptions.json names. Its breadcrumb holds the 2026-10-10 repair of the exemption filter this loop used to carry.
+    while IFS=$'\t' read -r p n; do [ -n "$p" ] && one "$p" "$n"; done < <(sl_guard_targets)
   else one "$(pane_of "$target")" "$target"; fi
   return "$LEFT"
 }

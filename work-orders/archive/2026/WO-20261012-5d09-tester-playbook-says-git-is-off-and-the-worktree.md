@@ -84,6 +84,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Correction for review 20261012T220248Z-422-nt4o0: AC-H2 is OBSERVED, superseding the evidence line that says NOT YET OBSERVED. tester-wo-20261012-5d09 was seated on PR 43 at head 5174224, read playbooks/tester.md there (it holds 'denied on purpose'), ran 23 Bash calls with zero git or gh, ran lint through testpane.sh and herdr pane read, and posted test.passed 20261012T215714Z-201-kt4hy with no approval question (session ba65397c). Caveat: the architect had told that seat 'you need no approval' after its first void run.
 - `2026-10-12` Retro: playbooks/tester.md is rendered from roles/tester.json (render-playbook.sh --check in make lint), so the edit went into must and forbidden there, per the architect ruling on block 4u22h (roles/tester.json only, via jq). The renderer has no table element, so GOOD and NEVER are two forbidden lines. roles/tester.json allow and deny untouched.
 
 ## Outcome

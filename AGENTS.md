@@ -3,15 +3,18 @@
 ## Contents
 
 - What this repository is
+- Law: the north star roadmap binds
 - Golden rule: checkpoint every step, compact early
 - Hard rule: the first 100 lines route
 - Hard rule: dated entry files, one file per entry
-- Law: the bus is NATS JetStream, the control plane is gRPC, status codes drive it
+- Law: runtime data never lives in git
+- Law: agents are never gates
 - Law: herdr-first, never background processes
 - Law: automation leads, never by hand
 - Law: Google Drive first
 - Law: the surface follows the runtime
 - Law: scope small, integrate in CI
+- Law: no file is ever touched by two open PRs
 - Law: testing
 - Law: the architect model chain
 - Hard rule: read the window, not the history
@@ -24,7 +27,20 @@
 
 ## What this repository is
 
-TODO: FILL THIS IN
+A herdr-first software factory: a small loop of worker, tester, reviewer and merger seats builds and proves each ticket, and a big loop takes an owner request from the bearings page to a released change.
+The first product it builds is a model that plays Caves of Qud inside a labelled herdr pane.
+Read `ROADMAP.md` before any work: it is the north star roadmap, it binds every agent, and work that is not on it waits.
+
+## Law: the north star roadmap binds
+
+Owner order, 2026-10-12 UTC: "ensure that you're following it until its complete".
+`ROADMAP.md` holds the locked decisions, the phases and the work items; only the owner changes it.
+A message from the owner containing `USERGO` restarts a held line; one containing `USERHALT` halts it at once.
+The only monitoring that never shuts off is bearings stable, the owner's page and the wait loop that brings the owner's messages to the architect; a halt stops everything else and never that.
+Progress, each item with the record or pull request that proves it, lives in the state root, never in git.
+
+GOOD: a worker reads `ROADMAP.md`, finds its ticket is `Roadmap A - State root`, and builds exactly that.
+NEVER: starting work that is not on the roadmap because it looked useful, or restarting a halted line without `USERGO`.
 
 ## Golden rule: checkpoint every step, compact early
 
@@ -65,11 +81,13 @@ Owner order, 2026-10-10 UTC: every scripted entry is a new file on one layout, n
 This covers logs, issues, backlog items, checkpoints, index entries, context files, and anything else an agent records more than once.
 
 ```text
-<tree>/YYYY/MM/YYYYMMDD-<descriptive-name>.<ext>
+<tree>/YYYY/MM/YYYYMMDDHHMMSS-<descriptive-name>.<ext>
 ```
 
-`YYYY`, `MM` and `YYYYMMDD` are the UTC date the entry was written.
-`<descriptive-name>` says what the entry is, in under 50 characters, lowercase, words joined by `-`.
+Owner order, 2026-10-12 UTC: the timestamp carries the second, so the name sorts in the order things happened.
+`YYYY`, `MM` and `YYYYMMDDHHMMSS` are the UTC time the entry was written.
+`<descriptive-name>` says what the entry is, in at most 55 characters, lowercase, words joined by `-`.
+Runtime trees (records, logs, test output, checkpoints) use this layout under the state root, never in git (Law: runtime data never lives in git); existing trees move with roadmap item A.
 Every entry opens with frontmatter that carries at least `title`, `at` (UTC, ISO 8601, `Z` suffix) and `type`; the owning script writes it.
 Two entries on the same day with the same name are two files: the script adds a short suffix, never a second write to the first.
 Two concurrent agents must never need to touch the same path, and distinct paths mean merges never meet.
@@ -86,15 +104,30 @@ GOOD: `events/2026/10/20261010-uat-tier-started.md` with frontmatter, written by
 GOOD: `changelog/2026/10/20261010-commit-the-factory-scripts.md` written by `bin/changelog.sh add`, and `CHANGELOG.md` rendered from the tree, never edited.
 NEVER: appending a line to a shared `LOG.md`, or editing yesterday's entry to say what happened today.
 
-## Law: the bus is NATS JetStream, the control plane is gRPC, status codes drive it
+## Law: runtime data never lives in git
 
-Owner decision, 2026-10-10 UTC: the producer-consumer model runs on NATS JetStream, gRPC carries only the synchronous control plane, and routing is by status code (SPEC-01 s-codes, SPEC-03 routes.json).
-Every component is a black box behind a subject: it consumes messages, emits a record with a code, and never reaches into another component.
-Adding behaviour is a routes row and a consumer.
-The file queue in `queue/` is the offline fallback only, until WO-20261010-539f lands the bus (graph node DEC-nats-jetstream-grpc).
+Owner decision, 2026-10-12 UTC (cards C10 to C15): the repository is the package source; logs, state, queues and caches live outside it, as a Linux package keeps them in `/var/log`, `/var/lib` and `/run`.
+On 2026-10-12 the repository was used as the message bus, one committed file per runtime event, and 2,689 such files queued on one pull request, about 80% routing and stall noise.
+Records, the routed ledger, logs, test output and checkpoints go to the state root, `$COQ_STATE` (default `${XDG_STATE_HOME:-~/.local/state}/coq/<repo>`), on the layout in `ROADMAP.md`; caches go to `$COQ_CACHE`.
+Verdict records of the tester, reviewer and merger seats live in the state root too.
+The changelog is rendered from merged pull request titles; the backlog lives in GitHub issues.
+There is no records branch: a ticket is cut and started on its own branch and rides its own pull request.
+NATS JetStream is deferred (C15); the bus is files in the state root, owned by the Go scheduler, and routing is still by status code through `factory/config/routes.json`.
+Until roadmap items A, F and H land, `bin/event.sh`, `make step` and `backlog.sh` still write into the repository; never add such a file by hand, and never carry one on a pull request it does not belong to.
 
-GOOD: a seat waits as a durable pull consumer and is woken by the publish, with no polling loop.
-NEVER: a second broker, gRPC streaming for events, or a component that reads another component's state directory to decide what to do.
+GOOD: a seat posts a record that lands in `$COQ_STATE/records/2026/10/`, and its pull request carries only the files its ticket names.
+NEVER: committing event, log, ledger or checkpoint files, or opening a branch whose only job is to carry records to main.
+
+## Law: agents are never gates
+
+Owner order, 2026-10-12 UTC: "how we're logically going to get this system working without agents being gates again".
+Every record kind has exactly one consumer in `factory/config/routes.json`, and routing reads the owner seat from the ticket.
+A carry, a merge, a verify on main, a stall and a block are each handled by a rule or a seat, never by waiting on the architect.
+The architect receives one digest of items addressed to it, never a copy of every record or seat turn.
+`ROADMAP.md` lists the nine rules and the guardrails; an agent that finds itself the only path for something reports it as a defect.
+
+GOOD: a pull request reposted after a main merge with byte-identical own files carries its test and review by rule.
+NEVER: a watch that forwards every record to one agent, or a merge that waits for the architect to notice it.
 
 ## Law: herdr-first, never background processes
 
@@ -166,6 +199,18 @@ Code is function-based and driven by a `Makefile`.
 Every entry point an agent or a pipeline uses is a `make` target.
 Full integration testing is CI's job, not an agent's.
 An agent proves its own unit of work and hands the rest to the pipeline.
+
+## Law: no file is ever touched by two open PRs
+
+Owner order, 2026-10-12 UTC: two agents on one file is forbidden.
+On 2026-10-12 five PRs edited the same seat.sh, routes.json and RUNBOOK.md, and every merge forced the next PR into a conflict and a full re-test.
+A ticket declares the files it will change (`factory/bin/claims.sh set`), and the architect cuts no two open tickets onto one file.
+Start a ticket with `bin/wo-start.sh`, which refuses an overlap with any open PR or live ticket; `factory/bin/gate.sh pr-files` fails a diff that strays.
+`CHANGELOG.md`, `work-orders/INDEX.md`, the work-orders READMEs and `CONTEXT_STATE.md` are gitignored and rendered locally (`make aggregates`); they never ride a PR.
+Doc numbers come from `bin/mint-id.sh` (SOP-0006), so two PRs cannot take one.
+
+GOOD: a ticket whose files field is `herdr/bin/seat.sh`, started only when no open PR changes that file.
+NEVER: `git add -f CHANGELOG.md`, or starting a ticket with `work-order.sh start` to skip the check.
 
 ## Law: testing
 

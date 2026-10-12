@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170038Z-200-0gi2b",
+  "at": "2026-10-12T17:00:38Z",
+  "code": 200,
+  "seat": "tester-ee9c",
+  "kind": "work.started",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pBW",
+  "note": "Tester seat up; reading the ticket test plan before running any case",
+  "evidence": [],
+  "observations": []
+}
