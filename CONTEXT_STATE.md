@@ -56,6 +56,43 @@
 
 
 
+
+## Checkpoint 2026-10-12 19:50 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, PR 31 open. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Branch merged with origin/main f7a891c (PR 34, WO-20261012-277d, landed). seat-lib.sh keeps both sides' index lines and functions; herdr.json and herdr.schema.json differ from main only by this ticket's three keys.
+- make lint rc 0; make -C herdr test: tests: 24 passed, 0 failed, from test pane wD3:pB7.
+
+#### Active Tasks
+
+- This step: the architect's re-merge after the crash and false 18:50 wake. Aggregates taken from main and re-rendered by script; push; git switch --detach to release the branch; repost pr.opened for PR 31.
+- Then hold.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- Aggregates (CHANGELOG, CONTEXT_STATE, INDEX, epic README) come from main each merge, then CHANGELOG and INDEX are rendered by their scripts; only the checkpoint this step writes is added to CONTEXT_STATE.
+
+#### Lessons Learned
+
+- A wake that says a PR merged must be checked against origin/main before acting on it; commit ad34828 merged main before PR 34 landed.
+
+### Hydration prompt
+
+WO-20261012-ee9c is done and PR 31 is open at the head posted in the latest pr.opened record, on a detached HEAD. Hold until the belt, reviewer or merger posts a record that wakes this seat.
+
 ## Checkpoint 2026-10-12 19:06 UTC
 
 ### Current state
