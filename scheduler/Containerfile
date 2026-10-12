@@ -1,0 +1,29 @@
+# scheduler/Containerfile - the scheduler's runtime image (SPEC-16.H h-image). Built by `make -C scheduler image`.
+#
+# Two stages. The builder is the digest-pinned Go image, run on the build platform and cross-compiling with cgo off
+# for the target platform, so the same file builds for the WSL host now and the arm64 cluster later (h-image-arch).
+# The runtime stage is scratch: the one static binary and a non-root user id, nothing else - no shell, no package
+# manager, no herdr, no git (h-image-content). Anything the scheduler needs from the host is an executor verb.
+# Repin the builder together with the Makefile's GO_IMAGE and tests/Containerfile:
+#   podman pull docker.io/library/golang:1.26-bookworm
+#   podman image inspect docker.io/library/golang:1.26-bookworm --format '{{index .RepoDigests 0}}'
+FROM --platform=$BUILDPLATFORM docker.io/library/golang@sha256:116d58cbd88c1297624acc6e967a060012422bacf9930927e23fb719189c6f36 AS build
+# golang:1.26-bookworm, pulled 2026-08
+ARG TARGETOS
+ARG TARGETARCH
+ARG VERSION=dev
+ENV GOTOOLCHAIN=local GOFLAGS=-buildvcs=false CGO_ENABLED=0
+WORKDIR /src
+# go.sum is gitignored (the ticket's assumption 4), so the glob copies it when make deps wrote it and go.mod alone
+# otherwise; either way every module is verified against the Go checksum database on download.
+COPY go.* ./
+RUN go mod download
+COPY . .
+RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build -mod=mod -trimpath \
+      -ldflags "-s -w -X coq/scheduler/internal/cli.version=${VERSION}" -o /out/scheduler ./cmd/scheduler
+
+FROM scratch
+COPY --from=build /out/scheduler /scheduler
+# 65532 is the conventional unprivileged id of a distroless image; scratch has no /etc/passwd, so a number, not a name.
+USER 65532:65532
+ENTRYPOINT ["/scheduler"]
