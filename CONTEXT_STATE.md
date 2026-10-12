@@ -53,6 +53,22 @@
 
 
 
+
+## Checkpoint 2026-10-12 16:29 UTC
+
+### Current state
+#### Infrastructure
+WO-20261012-da52 - Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand.
+PR 25 answers tester record test.failed 422 3h504: the failing 12-policy case (main's WO-20261012-9b2c) is a clock-step flake in its ordering sleeps, not a bus fault; sleeps widened to 3 s with a breadcrumb.
+#### Toolchain
+make -C factory lint ok; make -C factory test 17 passed, in test pane wD3:p8C.
+#### Active Tasks
+Post pr.opened with --pr 25 --sha, then hold for the belt.
+#### Blockers
+None.
+### Hydration prompt
+Hold; wake on record.review_changes_requested or test.failed for WO-20261012-da52.
+
 ## Checkpoint 2026-10-12 16:21 UTC
 
 ### Current state
