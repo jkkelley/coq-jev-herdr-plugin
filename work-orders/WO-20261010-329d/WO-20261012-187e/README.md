@@ -9,4 +9,5 @@ One level down only. A child of a child is listed in its own directory, not here
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
 | `WO-20261012-da52` | ready | p0 | - | [Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand](WO-20261012-da52-record-bus-every-slot-s-new-records-reach-the-ch.md) |
+| `WO-20261012-3cb1` | ready | p0 | - | [Test pane runs in the seat's worktree: testpane.sh wraps every command as a subshell that cds to the seat's worktree first, so no tester or worker result comes from the main checkout](WO-20261012-3cb1-test-pane-runs-in-the-seat-s-worktree-testpane-s.md) |
 | `WO-20261012-72a0` | ready | p0 | - | [Verifier seat: a merged record wakes a verifier that checks the merge on main against the ticket's criteria and posts verified or rejected, so no merge waits on the architect](WO-20261012-72a0-verifier-seat-a-merged-record-wakes-a-verifier-t.md) |
