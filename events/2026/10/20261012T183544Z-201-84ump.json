@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T183544Z-201-84ump",
+  "at": "2026-10-12T18:35:44Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-277d",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-277d",
+  "pane": "wD3:pFE",
+  "note": "make -C herdr test: tests: 21 passed, 0 failed on PR 34 sha 965ee97 (answers pr.opened 20261012T182016Z-100-0bpht)",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/8dddea9c-1a71-4cd1-9094-fc9bf4a30225/scratchpad/wo-277d-test.log"
+  ],
+  "observations": [],
+  "sha": "965ee97",
+  "pr": 34
+}

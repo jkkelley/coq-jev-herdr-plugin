@@ -10,6 +10,12 @@
 #   ack                 prints the guard's reply line "● ACK compaction-guard ..." and stays idle (the seat that stalls)
 #   ack-work N          the same ack, then the OSC title shows a working spinner for N seconds (the seat that carries on)
 # Every later line is only echoed, so a case counts the prompts the seat received by grepping "> ".
+# WO-20261012-ee9c: real Claude Code writes ~/.claude/sessions/<pid>.json (pid, sessionId) for the life of a session, and
+# herdr/bin/seat-lib.sh sl_pane_session reads exactly that file to name the session running in a pane. The stub writes the same
+# two keys for its own pid, session id CLAUDE_STUB_SESSION or stub-<pid>, and removes the file when it ends.
+sessions_dir="$HOME/.claude/sessions"; mkdir -p "$sessions_dir"
+printf '{"pid":%s,"sessionId":"%s"}\n' "$$" "${CLAUDE_STUB_SESSION:-stub-$$}" > "$sessions_dir/$$.json"
+trap 'rm -f "$sessions_dir/$$.json"' EXIT
 printf '\033]0;\xe2\x9c\xb3 stub claude\007'
 printf '\n stub claude %s\n\n' "$*"
 printf '\xe2\x95\xad%s\xe2\x95\xae\n' "$(printf '\xe2\x94\x80%.0s' $(seq 1 60))"

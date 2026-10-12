@@ -60,6 +60,21 @@ assert_eq "nothing was fixed" "$(grep -c '^fixed ' <<<"$out")" 0
 assert_match "bearings reads ok" "$out" "^ok bearings$"
 assert_match "last.log holds the tick" "$("$SUP" log)" "tick \\(apply\\)"
 
+echo "-- the wait loop shares the shell's process group, as bearings places node wait.mjs (WO-20261012-277d): still ok"
+# set +m turns job control off for this shell, so the background job stays in the shell's own group, the way node wait.mjs sat in
+# zsh 4175695's group on the live host (fg 4175695 = shell 4175695). Such a job ignores SIGINT, so the section kills it by pid.
+h pane send-keys "$WTAB" C-c >/dev/null; sleep 1
+h pane run "$WTAB" 'set +m; sleep 600 & p=$!; wait' >/dev/null; sleep 1
+assert_eq "precondition: the job's group is the shell's group" "$(h pane process-info --pane "$WTAB" | jq -r '.result.process_info | .foreground_process_group_id == .shell_pid')" true
+assert_match "precondition: a job that is not a shell is in the foreground" "$(h pane process-info --pane "$WTAB" | jq -r '[.result.process_info.foreground_processes[].argv[0] | split("/") | last] | join(" ")')" "sleep"
+tick --check
+assert_eq "--check exits 0" "$rc" 0
+assert_match "bearings reads ok, the live wait loop is not called dead" "$out" "^ok bearings$"
+tick
+assert_eq "an apply tick fixed nothing" "$(grep -c '^fixed ' <<<"$out")" 0
+h pane send-keys "$WTAB" C-c >/dev/null; sleep 1; h pane run "$WTAB" 'kill $p; set -m' >/dev/null; sleep 1
+h pane run "$WTAB" 'sleep 600' >/dev/null; sleep 1
+
 echo "-- the wait loop dies: the next tick restarts it, and only it"
 n0="$(grep -c 'serve' "$B/calls.log")"
 h pane send-keys "$WTAB" C-c >/dev/null; sleep 1
