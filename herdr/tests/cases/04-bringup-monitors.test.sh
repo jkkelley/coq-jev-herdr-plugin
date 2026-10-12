@@ -19,11 +19,11 @@ echo "-- bringup builds the system in order"
 "$BU" --worktree "$REPO" > "$WORLD/out" 2>&1; rc=$?; out="$(tr '\n' ' ' < "$WORLD/out")"
 echo "$out" | sed 's/^/    /'
 assert_eq "bringup exits 0" "$rc" 0
-assert_match "monitors, the monitor seat and every reserved pane were fixed, in that order, the flow watch after the runner, the blueprint servers last" "$out" "fixed monitors.*fixed monitor-seat.*fixed pane-lease.*fixed pane-guard.*fixed pane-events.*fixed pane-queue.*fixed pane-board.*fixed pane-runner.*fixed pane-flow.*fixed pane-glass.*fixed pane-policy.*fixed pane-blueprint-dev.*fixed pane-blueprint-uat.*fixed pane-blueprint-stable"
+assert_match "monitors, the monitor seat and every reserved pane were fixed, in that order, the flow watch after the runner, the policy watch after glass, the watches tab last" "$out" "fixed monitors.*fixed monitor-seat.*fixed pane-lease.*fixed pane-guard.*fixed pane-events.*fixed pane-queue.*fixed pane-board.*fixed pane-runner.*fixed pane-flow.*fixed pane-glass.*fixed pane-policy.*fixed pane-blueprint-dev.*fixed pane-blueprint-uat.*fixed pane-blueprint-stable.*fixed pane-turnwatch.*fixed pane-recwatch.*fixed pane-supervisor"
 ws="$(h workspace list | jq -r '.result.workspaces[] | select(.label == "coq") | .workspace_id')"
 assert_match "one workspace labelled coq" "$ws" '^w'
-assert_eq "three monitors tabs plus the monitor seat tab" "$(h tab list --workspace "$ws" | jq -r '[.result.tabs[].label] | sort | join("|")')" "monitor|monitors 1 - compaction watchers|monitors 2 - loop, events and queue|monitors 3 - shells"
-for t in "monitors 1 - compaction watchers" "monitors 2 - loop, events and queue" "monitors 3 - shells"; do
+assert_eq "four monitors tabs plus the monitor seat tab" "$(h tab list --workspace "$ws" | jq -r '[.result.tabs[].label] | sort | join("|")')" "monitor|monitors 1 - compaction watchers|monitors 2 - loop, events and queue|monitors 3 - shells|monitors 4 - watches"
+for t in "monitors 1 - compaction watchers" "monitors 2 - loop, events and queue" "monitors 3 - shells" "monitors 4 - watches"; do
   tid="$(h tab list --workspace "$ws" | jq -r --arg l "$t" '.result.tabs[] | select(.label == $l) | .tab_id')"
   assert_eq "$t holds 9 panes" "$(h pane list --workspace "$ws" | jq -r --arg t "$tid" '[.result.panes[] | select(.tab_id == $t)] | length')" 9
 done
@@ -56,8 +56,6 @@ assert_eq "the monitor seat is live" "$(h agent get monitor | jq -r .result.agen
 # Two nodes (monitors, the monitor seat) plus one per reserved pane that carries a command, read from monitors.json so a pane added by
 # another ticket does not turn this literal stale (it conflicted on every landing: WO-20261011-ceea, 4562, 9b2c).
 assert_eq "one note 100 record per repaired node" "$(event_count note 100)" "$(( $(jq '[.tabs[].reserved[] | select(.command != null)] | length' "$REPO/herdr/config/monitors.json") + 2 ))"
-# A label outlives its process, so --check asks each blueprint server (serve.sh --check); give the three a moment to listen.
-for tier in dev uat stable; do for _ in $(seq 1 40); do "$REPO/report/blueprint/serve.sh" --check "$tier" >/dev/null 2>&1 && break; sleep 1; done; done
 chk="$("$BU" --check --worktree "$REPO" 2>&1)"; rc=$?; assert_eq "--check now exits 0" "$rc" 0
 assert_match "--check reports the lease and guard watchers ok, ahead of the tails" "$(tr '\n' ' ' <<<"$chk")" "ok pane-lease ok pane-guard ok pane-events ok pane-queue ok pane-board ok pane-runner ok pane-flow ok pane-glass ok pane-policy ok pane-blueprint-dev ok pane-blueprint-uat ok pane-blueprint-stable"
 
@@ -65,7 +63,7 @@ echo "-- rerun is idempotent"
 "$BU" --worktree "$REPO" > "$WORLD/out" 2>&1; rc=$?; out="$(tr '\n' ' ' < "$WORLD/out")"
 assert_eq "rerun exits 0" "$rc" 0
 assert_match "every node reads ok" "$out" "^ok herdr.*ok monitors.*ok monitor-seat.*ok pane-events.*ok pane-queue.*ok pane-board.*ok pane-runner.*ok pane-flow.*ok pane-glass.*ok pane-policy"
-assert_eq "still 27 monitoring panes plus 3 seat panes (agent, monitor, test)" "$(h pane list --workspace "$ws" | jq '.result.panes | length')" 30
+assert_eq "still 36 monitoring panes plus 3 seat panes (agent, monitor, test)" "$(h pane list --workspace "$ws" | jq '.result.panes | length')" 39
 
 echo "-- take and release"
 "$MON" take shell probe -- claude --model x >/dev/null 2>"$WORLD/err"; assert_eq "take refuses an agent" "$?" 1

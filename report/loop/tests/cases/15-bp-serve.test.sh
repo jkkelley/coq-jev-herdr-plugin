@@ -13,7 +13,6 @@ eq "dev out_dir is the view's out_dir" "$(jq -r .out_dir "$REPO_ROOT/report/loop
 eq "the chain is dev, then uat, then stable" "null dev uat" "$(jq -rs 'map(.promotes_from) | join(" ")' "$BP"/config/{dev,uat,stable}.json | sed 's/^ /null /')"
 for tier in dev uat stable; do
   eq "monitors.json runs the $tier server in a slot named by the tier's pane label" "$(jq -r .pane_label "$BP/config/$tier.json")" "$(jq -r --arg t "$tier" '.tabs[].reserved[] | select(.command == "${repo}/report/blueprint/serve.sh \($t)") | .name' "$REPO_ROOT/herdr/config/monitors.json")"
-  eq "and its check is that tier's serve.sh --check" "\${repo}/report/blueprint/serve.sh --check $tier" "$(jq -r --arg t "$tier" '.tabs[].reserved[] | select(.name == "blueprint-\($t)") | .check' "$REPO_ROOT/herdr/config/monitors.json")"
 done
 t "the server's unit tests pass" env REPO_ROOT="$REPO_ROOT" python3 -I "$BP/tests/test_server.py"
 expect_exit 2 "serve.sh with no tier is usage" "$BP/serve.sh"

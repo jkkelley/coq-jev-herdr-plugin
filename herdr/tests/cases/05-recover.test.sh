@@ -47,8 +47,6 @@ seats_up() { local n=0 f; for f in "$STATE"/seats/*/seat.json; do [ -f "$f" ] &&
 notes0="$(event_count note 100)"; downs0="$(event_count seat.down 100)"
 echo "-- bringup, then a worker seat behind the monitor seat"
 "$BU" --worktree "$REPO" >/dev/null 2>&1; assert_eq "bringup exits 0" "$?" 0
-# recover.sh also asks the three blueprint servers whether they answer (WO-20261011-ceea); give them a moment to listen.
-for tier in dev uat stable; do for _ in $(seq 1 40); do "$REPO/report/blueprint/serve.sh" --check "$tier" >/dev/null 2>&1 && break; sleep 1; done; done
 "$SEAT" --ticket "$T" --role worker --worktree "$REPO" >/dev/null; assert_eq "the worker comes up" "$?" 0
 
 echo "-- AC-H1: --check on a healthy world prints ok per object and exits 0"
@@ -84,9 +82,9 @@ run --check
 echo "$out" | sed 's/^/    /'
 assert_eq "--check exits 1" "$rc" 1
 assert_match "it names the seat and the reason" "$out" "^FAILED $N \(agent gone\)$"
-# Five objects (herdr, monitors, the monitor seat, the belt, the guard) plus every reserved pane with a command except the runner, which
-# the belt covers; the pane count is read from monitors.json (WO-20261011-ceea) so a pane another ticket adds does not break this.
-assert_eq "the healthy objects still print ok" "$(grep -c '^ok ' <<<"$out")" "$(( 5 + $(jq '[.tabs[].reserved[] | select(.command != null and .name != "runner")] | length' "$REPO/herdr/config/monitors.json") ))"
+# Five objects (herdr, monitors, the monitor seat, the belt, the guard) plus one ok line per reserved pane that carries a command (6b, WO-20261012-b800).
+panes="$(jq '[.tabs[].reserved[] | select(.command != null)] | length' "$REPO/herdr/config/monitors.json")"
+assert_eq "the healthy objects still print ok, and every reserved pane is one of them" "$(grep -c '^ok ' <<<"$out")" "$((5 + panes))"
 assert_eq "no event was written" "$(find "$EVENTS" -name '*.json' | wc -l)" "$before"
 assert_eq "the seat record has no ended_at" "$(jq -r '.ended_at // "null"' "$STATE/seats/$N/seat.json")" null
 assert_eq "no seat.down was recorded" "$(( $(event_count seat.down 100) - downs0 ))" 0

@@ -55,7 +55,8 @@
             "enum": [
               "watcher",
               "monitor",
-              "shell"
+              "shell",
+              "watch"
             ]
           },
           "noun": {
@@ -89,11 +90,6 @@
                   "type": "string",
                   "minLength": 1,
                   "description": "when present, bringup.sh plugs this command into the slot (${repo} is the checkout); absent means the slot waits for its owner"
-                },
-                "check": {
-                  "type": "string",
-                  "minLength": 1,
-                  "description": "when present with command, a command that exits 0 while the slot's process is alive and answering (${repo} is the checkout); a slot whose label is up but whose check fails is restarted by bringup.sh and recover.sh, because the label outlives a killed process (WO-20261011-ceea)"
                 }
               }
             }

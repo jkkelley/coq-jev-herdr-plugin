@@ -39,5 +39,52 @@
     "bearings_tier": "stable"
   },
   "halt_flag": "${state_dir}/HALT",
-  "monitor_task": "watch the event log, the seats and the guard; wake a waiting seat on status change with one line; raise owner notifications for 423 and any 5xx; run cleanup every tick"
+  "monitor_task": "watch the event log, the seats and the guard; wake a waiting seat on status change with one line; raise owner notifications for 423 and any 5xx; run cleanup every tick",
+  "watches": {
+    "architect_agent": "architect",
+    "turn_poll_seconds": 15,
+    "record_poll_seconds": 10,
+    "record_kinds": [
+      "pr.opened",
+      "test.passed",
+      "test.failed",
+      "review.passed",
+      "review.changes",
+      "merged",
+      "merge.conflict",
+      "blocked",
+      "test",
+      "review"
+    ]
+  },
+  "supervisor": {
+    "step_timeout_seconds": 120,
+    "herdr_unit": "herdr-stable.service",
+    "herdr_wait_seconds": 30,
+    "podman": true,
+    "bearings": {
+      "enabled": true,
+      "tier": "stable",
+      "script": "${repo}/tools/bearings/scripts/bearings.sh"
+    },
+    "reseat": {
+      "enabled": true,
+      "grace_seconds": 20,
+      "max_per_window": 3,
+      "window_seconds": 1800,
+      "down_lock_seconds": 300,
+      "up_seconds": 90
+    },
+    "timeouts": {
+      "herdr_kill_after_seconds": 5,
+      "step_kill_after_seconds": 10,
+      "herdr_list_seconds": 15,
+      "herdr_probe_seconds": 5,
+      "herdr_query_seconds": 10,
+      "systemctl_seconds": 30,
+      "podman_seconds": 30,
+      "podman_migrate_seconds": 60,
+      "bearings_status_seconds": 30
+    }
+  }
 }
