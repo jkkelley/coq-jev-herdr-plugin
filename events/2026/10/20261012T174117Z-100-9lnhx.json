@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T174117Z-100-9lnhx",
+  "at": "2026-10-12T17:41:17Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261012-3bb0",
+  "kind": "note",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:pDA",
+  "note": "review started on PR 28 head fd36e21, after test.passed 201 f559c",
+  "evidence": [],
+  "observations": [],
+  "sha": "fd36e21",
+  "pr": 28
+}

@@ -137,6 +137,26 @@ for (let i = events.length - 1; i >= 0 && !friction; i--) {
   friction = { code: e.code, ago: mins >= 120 ? `${Math.round(mins / 60)} hours ago` : `${mins} minutes ago`, ticket: t ? { id: t.id, title: t.title } : undefined };
 }
 
+// BREADCRUMB 2026-10-12 - WO-20261012-8f4f, IN FLIGHT. What broke: the IN FLIGHT card read in_progress.count, which is ticket status
+//   on THIS checkout (the `inProgress` filter above). work-order start flips a ticket to in-progress on its feature branch only, so
+//   on main it stays `ready` until its PR lands, and the SITREP sent 2026-10-12 14:24Z showed almost nothing in flight with six PRs
+//   open. Why this fix: the work the line is doing is the union of two sets, deduplicated by ticket id so a ticket that is both
+//   in-progress here and has an open PR counts once: tickets an open PR's title names (the first WO id in the title is the ticket
+//   the PR is for; a PR with no id in its title is not counted, it is not tracked work) and tickets whose status here is in-progress
+//   or in-review. A PR naming an id this checkout has never seen still counts, as the id alone: main may simply be behind the
+//   branch. Rejected: reading headRefName (the title is the convention the merger and the owner read, and the ticket says title)
+//   and listing every remote branch (a pushed branch with no PR is not yet work anyone can review). Cost: a ticket started on a
+//   branch with no PR yet and still `ready` here is invisible until its PR opens; prs_command lists at most 20 PRs
+//   (config/sitrep.json), so beyond 20 open PRs the figure is a floor. The queues (IN PROGRESS, OPEN PRS) are unchanged on purpose.
+const WO_ID = /\bWO-\d{8}-[0-9a-f]{4}\b/;
+const prTicketIds = new Set(prsList.map((p) => WO_ID.exec(String(p.title ?? ""))?.[0]).filter(Boolean));
+const statusIds = all.filter((t) => t.status === "in-progress" || t.status === "in-review").map((t) => t.id);
+const inFlight = [...new Set([...prTicketIds, ...statusIds])].sort().map((id) => ({ id, title: tickets.get(id)?.title ?? id }));
+const withoutPr = inFlight.filter((t) => !prTicketIds.has(t.id)).length;
+const inFlightSource =
+  [prTicketIds.size ? `${prTicketIds.size} open ${prTicketIds.size === 1 ? "PR" : "PRs"}` : "", withoutPr ? `${withoutPr} without a PR` : ""].filter(Boolean).join(", ") ||
+  "nothing in flight";
+
 const prs = prsList.map((p) => ({ id: `PR ${p.number}`, title: p.title, url: p.url, number: p.number, priority: "" }));
 const facts = {
   project: cfg.project.toUpperCase(),
@@ -146,6 +166,8 @@ const facts = {
   startable,
   waiting,
   in_progress: inProgress,
+  in_flight: inFlight,
+  in_flight_source: inFlightSource,
   done_recent: doneRecent,
   prs,
   friction,

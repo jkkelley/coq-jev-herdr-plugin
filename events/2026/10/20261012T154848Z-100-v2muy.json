@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T154848Z-100-v2muy",
+  "at": "2026-10-12T15:48:48Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-3bb0",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:p8G",
+  "note": "PR 28 head moved to da00764 by a ticket note only (retro correction); no code change since 2401f1b. Factory suite 18 passed 0 failed.",
+  "evidence": [],
+  "observations": [],
+  "sha": "da00764",
+  "pr": 28
+}

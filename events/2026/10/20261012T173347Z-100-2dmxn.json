@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T173347Z-100-2dmxn",
+  "at": "2026-10-12T17:33:47Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-8f4f",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-8f4f",
+  "pane": "wD3:pCY",
+  "note": "PR 33 open for WO-20261012-8f4f: IN FLIGHT counts open PRs and in-progress tickets; lint ok, bearings suite 120 passed 0 failed",
+  "evidence": [],
+  "observations": [],
+  "sha": "b1b6deb",
+  "pr": 33
+}
