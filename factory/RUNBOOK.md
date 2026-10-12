@@ -141,7 +141,7 @@ A new `do` or a new row field is the only thing that needs runner code, and that
 ## Read the belt
 
 `factory/state/belt` is rewritten every tick, so its age is the age of the last tick.
-`route.sh status` prints it and exits 1 when it is older than `stale_seconds` (30 to 120, default 60), or missing.
+`route.sh status` prints it and exits 1 when it is `stale_seconds` old or older (30 to 120, default 60), or missing; it is running only while fresher than that.
 A stopped runner stops touching the file and reads as stale within `stale_seconds`.
 The runner is serial, so a `seat` row holds every later record until `seat.sh` returns.
 A bring-up can take about 45 seconds (15 for the shell prompt, 30 for the agent to start), and the belt is touched again as soon as `seat.sh` returns.

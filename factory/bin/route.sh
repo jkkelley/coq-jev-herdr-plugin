@@ -220,8 +220,17 @@ start() {
 }
 
 case $VERB in
+  # BREADCRUMB 2026-10-12 - WO-20261011-4db1. What broke: this test was `-le`, so a belt exactly stale_seconds old read
+  #   "running", while the header of this file (line 9) and AC-H6 of WO-20261011-38c7 say running means FRESHER than
+  #   stale_seconds. Found when factory case 06-belt failed on 49ab55b (record 20261012T132330Z-422-hyds1): a belt backdated
+  #   61 s read "running (touched 60s ago)" after the host clock stepped back about a second (see the breadcrumb in
+  #   factory/tests/cases/06-belt.test.sh). Why this fix: `-lt` makes the comparison say what the contract says, and the
+  #   case now pins 59, 60 and 61 with a fixed `date +%s`. Rejected: leaving `-le` and only widening the test margin, which
+  #   keeps a one second contradiction between code and contract. Cost: a belt touched exactly stale_seconds ago now reads
+  #   stopped, one second sooner than before; flow.sh takes its belt verdict from this exit code and moves with it (the board
+  #   in report/loop reads the file age itself against belt_max_age_seconds and does not).
   status) age=$(belt_age) || { echo "belt: stopped (no belt file at $BELT)"; exit 1; }
-    if [ "$age" -le "$STALE" ]; then echo "belt: running (touched ${age}s ago)"; else echo "belt: stopped (last touched ${age}s ago, stale after ${STALE}s)"; exit 1; fi ;;
+    if [ "$age" -lt "$STALE" ]; then echo "belt: running (touched ${age}s ago)"; else echo "belt: stopped (last touched ${age}s ago, stale after ${STALE}s)"; exit 1; fi ;;
   once) start; tick ;;
   run) start; trap 'log "stopping"; exit 0' TERM INT; log "running: events $EVENTS, routes $ROUTES, every ${POLL}s"
     # `read -t` rather than `sleep`: bash defers a trap until the foreground command ends, so a TERM sent during a sleep waited
