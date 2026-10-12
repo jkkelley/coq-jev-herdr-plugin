@@ -11,6 +11,22 @@
 > Never edit a checkpoint. A new one is prepended above the last; the ones below
 > are history and are immutable. Written by `checkpoint.sh`, never by hand.
 
+
+## Checkpoint 2026-10-12 19:24 UTC
+
+### Current state
+#### Infrastructure
+WO-20261012-da52 - Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand.
+PR 25 merged with origin/main after PR 28 (gate rules) under the architect's attempt-6 instruction: 08-break-glass takes main's version (main removed the ordering sleep and made the receipt check order-free, so my sleep 3 and its breadcrumb are moot); CONTEXT_STATE keeps every checkpoint from both sides; CHANGELOG, INDEX and the epic README re-rendered by script. The reviewer's untracked record 9zlbt (attempt 4) was moved out of events/.
+#### Toolchain
+make lint ok (a first run hit a shellcheck GHC crash, rerun green); make -C factory test 20 passed; make -C herdr test all cases pass except 17-resume-checkpoint, which needs the symlinked .claude/skills checkpoint.sh that the test container cannot see (main's case from WO-20261012-8fb2, not this ticket).
+#### Active Tasks
+Post pr.opened with --pr 25 --sha, then hold for the belt.
+#### Blockers
+None for this ticket.
+### Hydration prompt
+Hold; wake on record.review_changes_requested or test.failed for WO-20261012-da52.
+
 ## Checkpoint 2026-10-12 18:30 UTC
 
 ### Current state
