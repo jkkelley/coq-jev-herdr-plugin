@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261012-e27e` | ready | p0 | - | [Scheduler config files: scheduler.json and executor.json with their schemas, every key of SPEC-16.G, variables only, validated by the repository lint](WO-20261012-e27e-scheduler-config-files-scheduler-json-and-execut.md) |
+| `WO-20261012-e27e` | in-progress | p0 | - | [Scheduler config files: scheduler.json and executor.json with their schemas, every key of SPEC-16.G, variables only, validated by the repository lint](WO-20261012-e27e-scheduler-config-files-scheduler-json-and-execut.md) |
