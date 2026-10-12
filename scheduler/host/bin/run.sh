@@ -5,7 +5,8 @@
 #   run.sh          exec podman run of the runtime image's run subcommand on scheduler/config/scheduler.json
 #
 # Every flag comes from scheduler.json or the environment it names, never from this file (h-run-wrapper, AC-H3):
-#   runtime.image, runtime.memory, runtime.container_name   plain strings, read with jq: the image by digest, --memory, --name
+#   runtime.image, runtime.memory, runtime.container_name   plain strings, read with jq: the image by name and tag, --memory,
+#                                                           --name; the tag is resolved to a digest at start (h-run-digest)
 #   drain_seconds                                           --stop-timeout, so a podman stop waits for the drain (f-drain)
 #   every ${ENV:NAME} the file references                   passed into the container with the pane's value
 # Fixed by the run contract (h-run-flags): rootless, --network=none, --userns=keep-id, --init, --rm, signals proxied.
@@ -20,6 +21,13 @@
 #   the wrapper starts, so a slot added to the pool later is read only after the scheduler pane restarts (RUNBOOK.md).
 #   Record: blocked 20261012T195358Z-423-8ffcd, answered by sched-architect in 20261012T200406Z-100-xzrpm (runtime.* keys
 #   and the ENV names).
+# BREADCRUMB 2026-10-12 - WO-20261012-df2b. Why the tag is resolved here and not pinned in the file: a digest in
+#   scheduler.json would go stale on every make -C scheduler image and is a literal the copy rule forbids, so the file names
+#   the image by name and tag and the wrapper asks podman image inspect for the digest, logs it, runs <name>@<digest> and
+#   passes it as the variable runtime.image_digest reads, so Status names the running build. A tag rebuilt while the
+#   container runs does not change it; the next start picks the new build up. Rejected: running by tag (the build that
+#   runs would be unknown to Status) and by image id (not a digest, and not what the spec names).
+#   Record: correction 20261012T201032Z-100-yqm2x (SPEC-16.H 1.1.0 h-run-digest, SPEC-16.G 1.1.0 g-vars-env-digest).
 #
 # Exit codes: 0 ok, 2 usage, 3 validation (a key, a variable, a root that matches nothing), 4 io (no socket, no image),
 # else podman's or the scheduler's.
@@ -35,13 +43,14 @@ CFG=$SCHED/config/scheduler.json
 command -v jq >/dev/null || cfg_die 4 "jq is not on PATH"
 command -v podman >/dev/null || cfg_die 4 "podman is not on PATH"
 
-plain() { # KEY: a runtime string, which carries no variable (the architect's answer, record 20261012T200406Z-100-xzrpm)
+plain() { # KEY: a runtime string, which carries no variable (SPEC-16.G g-runtime-group)
   local v; v=$(cfg_raw "$CFG" "$1") || exit $?
   [ -n "$v" ] && [[ $v != *'${'* ]] || cfg_die 3 "scheduler.json: $1 must be a plain non-empty string"
   printf '%s\n' "$v"
 }
 image=$(plain runtime.image); memory=$(plain runtime.memory); name=$(plain runtime.container_name)
-[[ $image == *@sha256:* ]] || cfg_die 3 "scheduler.json: runtime.image must name the image by digest (h-run-flags), got $image"
+[[ $image =~ ^[a-z0-9][a-z0-9._/-]*:[A-Za-z0-9_][A-Za-z0-9._-]*$ ]] ||
+  cfg_die 3 "scheduler.json: runtime.image must be a name and tag with no digest (g-keys), got $image"
 drain=$(cfg_raw "$CFG" drain_seconds); [[ $drain =~ ^[0-9]+$ ]] || cfg_die 3 "scheduler.json: drain_seconds is not an integer"
 
 path_of() { local r; r=$(cfg_raw "$CFG" "$1") || exit $?; cfg_resolve "$CFG" "$r"; }
@@ -51,7 +60,13 @@ export CFG_REPO=$host_repo
 state=$(path_of state_dir); sock=$(path_of executor.socket); control=$(path_of control.socket)
 belt=$(path_of belt.file); shadow=$(path_of shadow.dir); halt=$(path_of halt_flag)
 [ -S "$sock" ] || cfg_die 4 "no executor socket at $sock; bring the executor pane up first (make -C scheduler run-exec)"
-podman image exists "$image" || cfg_die 4 "image $image is not in local storage; run make -C scheduler image and repin runtime.image"
+digest=$(podman image inspect --format '{{.Digest}}' "$image" 2>/dev/null) ||
+  cfg_die 4 "image $image is not in local storage; run make -C scheduler image"
+[[ $digest =~ ^sha256:[0-9a-f]{64}$ ]] || cfg_die 4 "podman image inspect gave no digest for $image (got '$digest')"
+digest_raw=$(cfg_raw "$CFG" runtime.image_digest)
+[[ $digest_raw =~ ^\$\{ENV:([A-Za-z_][A-Za-z0-9_]*)\}$ ]] ||
+  cfg_die 3 "scheduler.json: runtime.image_digest must be one \${ENV:NAME} variable (g-vars-env-digest)"
+digest_env=${BASH_REMATCH[1]}
 
 # Mounts, each at its own path. A path inside one already mounted is skipped when that mount is read-write or both are
 # read-only, so each directory is bound once with the strongest mode it needs.
@@ -88,11 +103,15 @@ repo_env=""; repo_raw=$(cfg_raw "$CFG" repo)
 envs=(-e "HOME=$HOME")
 while IFS= read -r v; do
   if [ "$v" = "$repo_env" ]; then envs+=(-e "$v=$host_repo"); continue; fi
+  if [ "$v" = "$digest_env" ]; then envs+=(-e "$v=$digest"); continue; fi
   [ -n "${!v:-}" ] || cfg_die 3 "scheduler.json: ENV:$v is unset in this pane"
   envs+=(-e "$v=${!v}")
 done < <(cfg_env_names "$CFG")
 
+# One log line in the shape of SPEC-16.I i-log-shape, so the pane shows which build starts before the scheduler's own lines.
+jq -nc --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --arg image "$image" --arg digest "$digest" --arg name "$name" \
+  '{ts: $ts, level: "info", comp: "run", msg: "image resolved", image: $image, digest: $digest, container: $name}'
 exec podman run --rm --init --network=none --userns=keep-id --sig-proxy=true \
   --name "$name" --memory "$memory" --stop-timeout "$drain" \
   "${envs[@]}" "${mounts[@]}" \
-  "$image" run --config "$CFG"
+  "${image%:*}@$digest" run --config "$CFG"

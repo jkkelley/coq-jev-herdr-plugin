@@ -69,10 +69,14 @@ The scheduler and the executor live in labelled herdr panes started by wrappers 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* bash scheduler/host/tests/run.sh prints tests: N passed, 0 failed inside Podman
-- [ ] `AC-H2` *(human)* make lint passes shellcheck on every script under scheduler/host
-- [ ] `AC-H3` *(human)* run.sh carries no literal path, host or image digest: every value comes from scheduler/config or the environment variables SPEC-16.H h-run-env names
-- [ ] `AC-H4` *(human)* scheduler/RUNBOOK.md opens with a contents list, has every section RUN-scheduler-operate names, and cites the spec section each step comes from
+- [x] `AC-H1` *(human)* bash scheduler/host/tests/run.sh prints tests: N passed, 0 failed inside Podman
+  - observed `2026-10-12` bash scheduler/host/tests/run.sh at 0415b1c re-execs in Podman (localhost/coq-lint:1, digest sha256:d2f6ded8, --network=none, repo read-only) and prints tests: 5 passed, 0 failed: 00-shellcheck, 01-inbox, 02-run-exec, 03-config-lib, 04-run; no real podman, binary or herdr runs (stub dist/scheduler and stub podman log argv)
+- [x] `AC-H2` *(human)* make lint passes shellcheck on every script under scheduler/host
+  - observed `2026-10-12` make lint at 0415b1c in localhost/coq-lint:1: shell: shellcheck ok, lint: all ok; shellcheck -S warning covers run.sh, run-exec.sh, inbox.sh, lib/config.sh and the tests; case 00 of the suite runs the same severity with -x so sourced files are followed
+- [x] `AC-H3` *(human)* run.sh carries no literal path, host or image digest: every value comes from scheduler/config or the environment variables SPEC-16.H h-run-env names
+  - observed `2026-10-12` run.sh reads runtime.image, runtime.memory, runtime.container_name (plain strings), drain_seconds and every path key from scheduler/config/scheduler.json with jq, and passes every ${ENV:NAME} the file references; case 04 greps run.sh code lines for an absolute path, localhost/docker.io/ghcr.io/.local and sha256:<hex> and finds none, and asserts the full podman argv against a rendered fixture
+- [x] `AC-H4` *(human)* scheduler/RUNBOOK.md opens with a contents list, has every section RUN-scheduler-operate names, and cites the spec section each step comes from
+  - observed `2026-10-12` scheduler/RUNBOOK.md opens with a Contents list matching its headings (checked by diff); it has Build and test, Bring up, Status, Modes: off, shadow, active, Parity, Rollback, When something goes wrong, GOOD and NEVER, and 46 bracketed SPEC-16 section citations, one per step
 
 ## Test plan
 
@@ -113,6 +117,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Retro: the specs had no key for the image, memory limit and container name, so run.sh blocked once (20261012T195358Z-423-8ffcd) until sched-architect answered with runtime.* keys (20261012T200406Z-100-xzrpm); SPEC-16.G 1.1.0 carrying them had not landed on PR 37 when this PR opened, so the fixture follows the answer record. Every host path is mounted at its own path, so no container path is a literal. The exec and run subcommands are assumed to take --config <file>; WO-20261012-d7f4 and WO-20261012-1ccf must match or the wrappers change. No test pane was named for this seat, so the suite ran in the foreground in Podman.
 - `2026-10-12` Ownership: this ticket owns scheduler/host/bin/run.sh, run-exec.sh, inbox.sh, scheduler/host/tests/ and scheduler/RUNBOOK.md; scheduler/host/bin/cutover.sh belongs to WO-20261012-fa36 and must not be created here.
 
 ## Outcome

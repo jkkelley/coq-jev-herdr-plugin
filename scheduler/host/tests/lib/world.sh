@@ -3,13 +3,15 @@
 # under $W/repo/scheduler, so the wrappers find everything relative to themselves exactly as they do in the real tree, plus:
 #   a stub scheduler binary at $W/repo/scheduler/dist/scheduler: one argv word per line into $W/bin.argv, its environment
 #     into $W/bin.env, then exit with the number in $W/bin.exit (0 when absent)
-#   a stub podman first on PATH: `image exists REF` answers from $W/podman.images (one ref per line, the fixture's image
-#     is there from the start); any other call writes one argv word per line into $W/podman.argv and exits 0
+#   a stub podman first on PATH: `image inspect --format {{.Digest}} REF` answers from $W/podman.images (lines
+#     "<ref> <digest>", the fixture's image there from the start; an unknown ref is exit 125 as in podman); any other call
+#     writes one argv word per line into $W/podman.argv and exits 0
 #   the two config files rendered from SPEC-16.G g-keys and g-executor with only the variable forms of g-vars, because the
 #     config ticket's files land in the same wave (ticket assumption 3); the wrappers read nothing else from them
 # Nothing real runs: no podman, no Go binary, no herdr. The environment the files name is set to paths inside $W.
 #   world_up NAME        sets W, R (the repo copy), SCHED (its scheduler dir), and exports the ENV names the files use
 #   argv_of FILE         the logged argv as one line, words joined by a space
+DIGEST=sha256:00000000000000000000000000000000000000000000000000000000000000a1   # what the stub's inspect answers
 world_up() {
   W="${COQ_CASE_WORK:-${WORK_ROOT:-/tmp}}/$1"; R="$W/repo"; SCHED="$R/scheduler"
   rm -rf "$W"; mkdir -p "$SCHED/dist" "$SCHED/config" "$W/bin" "$W/home" "$W/run" "$W/state" "$R/events"
@@ -21,7 +23,9 @@ exit "\$(cat "$W/bin.exit" 2>/dev/null || echo 0)"
 STUB
   cat > "$W/bin/podman" <<STUB
 #!/usr/bin/env bash
-if [ "\$1 \${2:-}" = "image exists" ]; then grep -qxF -- "\$3" "$W/podman.images"; exit; fi
+if [ "\$1 \${2:-}" = "image inspect" ]; then
+  d=\$(awk -v r="\${*: -1}" '\$1 == r { print \$2 }' "$W/podman.images"); [ -n "\$d" ] || exit 125; echo "\$d"; exit 0
+fi
 printf '%s\n' "\$@" > "$W/podman.argv"
 STUB
   chmod +x "$SCHED/dist/scheduler" "$W/bin/podman"
@@ -30,7 +34,7 @@ STUB
   unset COQ_SCHED_REPO
   render_scheduler_json > "$SCHED/config/scheduler.json"
   render_executor_json > "$SCHED/config/executor.json"
-  jq -r '."runtime.image"' "$SCHED/config/scheduler.json" > "$W/podman.images"
+  echo "$(jq -r '."runtime.image"' "$SCHED/config/scheduler.json") $DIGEST" > "$W/podman.images"
   mkdir -p "$W/home/.local/state/coq" "$W/home/.treehouse/pool-a/slot/events" "$W/home/.treehouse/pool-b/slot/events"
 }
 
@@ -58,7 +62,8 @@ render_scheduler_json() {
     "control.socket": "${state_dir}/scheduler.sock",
     "belt.file": "${state_dir}/belt",
     "shadow.dir": "${state_dir}/shadow",
-    "runtime.image": "localhost/coq-scheduler@sha256:0000000000000000000000000000000000000000000000000000000000000001",
+    "runtime.image": "coq-scheduler:1",
+    "runtime.image_digest": "${ENV:COQ_SCHED_IMAGE_DIGEST}",
     "runtime.memory": "256m",
     "runtime.container_name": "coq-scheduler"
   }'

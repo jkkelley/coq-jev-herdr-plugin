@@ -65,11 +65,13 @@ The environment both panes need, exported by the pane's shell or the supervisor'
 | `COQ_SCHED_MODE`      | `off`, `shadow` or `active`                       | the scheduler                                                  |
 | `XDG_RUNTIME_DIR`     | the runtime directory holding the executor socket | both                                                           |
 | `COQ_SCHED_REPO`      | the repository as the container sees it (`repo`)  | set by `run.sh` to the repository's mount point, never by hand |
+| `COQ_SCHED_IMAGE_DIGEST` | the digest of the image that runs (`runtime.image_digest`) | set by `run.sh` from `podman image inspect`, never by hand |
 
 The names are the `${ENV:...}` references in the two config files; the files are the authority, and this table follows them [SPEC-16.G g-vars, SPEC-16.H h-run-env].
 `run.sh` passes every name `scheduler.json` references into the container with the pane's value, plus `HOME`, and refuses with exit 3 when one is unset.
-The container's own settings are plain strings in `scheduler.json`, with no variable: `runtime.image` (the image by digest), `runtime.memory` and `runtime.container_name` [SPEC-16.G g-keys].
-After `make -C scheduler image`, repin `runtime.image` to the new digest, or `run.sh` refuses with exit 4 because the pinned image is not in local storage.
+The container's own settings are plain strings in `scheduler.json`, with no variable: `runtime.image` (the image by name and tag, never a digest), `runtime.memory` and `runtime.container_name` [SPEC-16.G g-keys, g-runtime-group].
+At every start `run.sh` resolves the tag to its digest with `podman image inspect`, prints one JSON log line naming the image and the digest, runs the container as `<name>@<digest>`, and passes the digest in `COQ_SCHED_IMAGE_DIGEST`, so Status names the running build [SPEC-16.H h-run-digest, SPEC-16.G g-vars-env-digest].
+A rebuild under the same tag is picked up at the next start of the scheduler pane; nothing is repinned.
 
 1. **Executor first.**
    Its monitors grid slot runs `scheduler/host/bin/run-exec.sh`, which is `make -C scheduler run-exec` [SPEC-16.H h-pane-two, h-pane-cmd].
@@ -77,7 +79,7 @@ After `make -C scheduler image`, repin `runtime.image` to the new digest, or `ru
    It is up when its pane shows the listening line and Health answers [SPEC-16.F f-executor].
 2. **Scheduler second.**
    Its slot runs `scheduler/host/bin/run.sh`, which is `make -C scheduler run` [SPEC-16.H h-pane-cmd].
-   The wrapper refuses to start while the executor socket is missing, then runs the container in the foreground: rootless, network none, user namespace keep-id, an init process, the memory limit, the image by digest, removed on exit, and a fixed name so a second start is refused by Podman [SPEC-16.H h-run-flags].
+   The wrapper refuses to start while the executor socket is missing, then runs the container in the foreground: rootless, network none, user namespace keep-id, an init process, the memory limit, the image by the digest resolved from its tag, removed on exit, and a fixed name so a second start is refused by Podman [SPEC-16.H h-run-flags].
    Every host path the scheduler reads is mounted at the same path it has on the host, so the configuration resolves the same on both sides: the repository and every intake root read-only, the state directory read-write, the executor socket's directory, the halt flag's directory read-only, and nothing else from the home directory [SPEC-16.H h-run-mounts].
    A path with a `:` or `,` in it cannot be a podman mount, and `run.sh` refuses it with exit 3.
    Intake root patterns are expanded when the wrapper starts; restart the scheduler pane after the treehouse pool grows, or a new slot's log is not read [SPEC-16.A a-roots].
@@ -151,8 +153,8 @@ In this order [SPEC-16.J j-rollback-steps]:
 | a wrapper exits 3 naming `ENV:<NAME> is unset`   | the pane's environment lacks a name the config uses                | export it in the pane's shell or the unit, then restart                            | SPEC-16.G g-vars           |
 | a wrapper exits 3 naming a key                   | a config file lacks a key                                          | fix the file and run `make lint`                                                   | SPEC-16.G g-nodefault-rule |
 | `run.sh` exits 3: an intake root matches nothing | a root pattern resolves to no directory                            | fix the pattern or create the root                                                 | SPEC-16.G g-val-cross      |
-| `run.sh` exits 4: image not in local storage     | `runtime.image` names a digest that was never built here           | `make -C scheduler image`, then repin `runtime.image`                              | SPEC-16.H h-image          |
-| `run.sh` exits 3: image must be by digest        | `runtime.image` names a tag                                        | pin it by digest                                                                   | SPEC-16.H h-run-flags      |
+| `run.sh` exits 4: image not in local storage | `runtime.image` names a tag never built here | `make -C scheduler image`, then restart the pane | SPEC-16.H h-run-digest |
+| `run.sh` exits 3: image must be a name and tag | `runtime.image` carries a digest or no tag | name the image by name and tag; the wrapper finds the digest | SPEC-16.G g-keys |
 | `run-exec.sh` exits 4: no binary                 | nothing built                                                      | `make -C scheduler build`                                                          | SPEC-16.H h-t1             |
 | podman refuses: the name is in use               | a scheduler container already runs                                 | find its pane; never start a second                                                | SPEC-16.H h-run-flags      |
 | status exits 1, the start gate failed            | a start step failed; the scheduler stays up and retries every tick | read the reason in status, fix that, wait one tick                                 | SPEC-16.F f-rec-gate       |

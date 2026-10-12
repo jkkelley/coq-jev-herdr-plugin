@@ -24,7 +24,7 @@ assert_eq "an & in a value survives" "$(COQ_SCHED_MODE='a&b' cfg_resolve "$F" '$
 assert_eq "a key's raw value" "$(cfg_raw "$F" executor.socket)" '${ENV:XDG_RUNTIME_DIR}/coq-scheduler/executor.sock'
 assert_eq "an array key, one item per line" "$(cfg_raw "$F" intake.roots | wc -l)" 2
 assert_eq "the ENV names the file uses" "$(cfg_env_names "$F" | paste -sd' ')" \
-  "COQ_HERDR_SESSION COQ_REPO COQ_SCHED_MODE COQ_SCHED_REPO COQ_SCHED_STATE_DIR XDG_RUNTIME_DIR"
+  "COQ_HERDR_SESSION COQ_REPO COQ_SCHED_IMAGE_DIGEST COQ_SCHED_MODE COQ_SCHED_REPO COQ_SCHED_STATE_DIR XDG_RUNTIME_DIR"
 
 echo "-- every failure is exit 3 naming what failed"
 err=$( (cfg_resolve "$F" '${repo}/events') 2>&1); assert_eq "repo through an unset ENV" "$?" 3
