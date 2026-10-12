@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T182016Z-100-0bpht",
+  "at": "2026-10-12T18:20:16Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-277d",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-277d",
+  "pane": "wD3:pE2",
+  "note": "PR 34 opened for WO-20261012-277d, cases 17 and 19 green, ACs evidenced",
+  "evidence": [],
+  "observations": [],
+  "to": "tester",
+  "sha": "965ee97",
+  "pr": 34
+}
