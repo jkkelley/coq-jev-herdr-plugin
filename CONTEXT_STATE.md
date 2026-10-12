@@ -52,6 +52,43 @@
 
 
 
+
+## Checkpoint 2026-10-12 18:13 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, PR 31 open. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Branch merged with origin/main bbd281b (77225ac): lint ok, herdr suite 22 passed, 0 failed.
+- My SOP is now docs/sops/SOP-0005 (main already holds SOP-0003, the supervisor). docs.sh verify ok.
+
+#### Active Tasks
+
+- This step: renumber SOP-0003 to SOP-0005 at the architect's order (file name, H1, the pointer in the archived ticket's AC-H5 evidence), push, post pr.opened with --sha and --pr 31.
+- Then hold; the belt re-tests the new head.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- Dated changelog entry 20261012-scoped-guard-watch-seat-json-carries-the-resolved.md, the earlier checkpoints and the events still say SOP-0003: they are immutable history, and this step's changelog entry records the renumber.
+
+#### Lessons Learned
+
+- Two parallel tickets numbered SOPs from the same count; the architect assigns the number when two are in flight.
+
+### Hydration prompt
+
+WO-20261012-ee9c is done and PR 31 is open at the renumbered head. Hold until the belt or the merger posts a record that wakes this seat.
+
 ## Checkpoint 2026-10-12 16:59 UTC
 
 ### Current state
