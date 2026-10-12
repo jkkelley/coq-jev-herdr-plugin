@@ -28,7 +28,8 @@
     "break_glass",
     "halt_flag",
     "monitor_task",
-    "watches"
+    "watches",
+    "supervisor"
   ],
   "properties": {
     "schema_version": {
@@ -253,6 +254,96 @@
             "type": "string"
           },
           "description": "record kinds recwatch.sh prompts for"
+        }
+      }
+    },
+    "supervisor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "step_timeout_seconds",
+        "herdr_unit",
+        "herdr_wait_seconds",
+        "podman",
+        "bearings",
+        "reseat"
+      ],
+      "description": "supervisor.sh (WO-20261012-b800): one tick brings herdr, podman, the panes, the belt, bearings and the seats back",
+      "properties": {
+        "step_timeout_seconds": {
+          "type": "integer",
+          "minimum": 5,
+          "description": "every step of a tick is killed after this long, so a hung command never holds the next tick"
+        },
+        "herdr_unit": {
+          "type": "string",
+          "description": "systemd user unit that owns the herdr server; empty means the supervisor never starts herdr (the suite, where the world owns it)"
+        },
+        "herdr_wait_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "podman": {
+          "type": "boolean",
+          "description": "check podman ps and run podman system migrate when its pause process is gone (backlog 60l24)"
+        },
+        "bearings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "tier",
+            "script"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "tier": {
+              "type": "string",
+              "pattern": "^[a-z]+$"
+            },
+            "script": {
+              "type": "string",
+              "minLength": 1,
+              "description": "${repo} is the checkout"
+            }
+          }
+        },
+        "reseat": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "enabled",
+            "grace_seconds",
+            "max_per_window",
+            "window_seconds",
+            "down_lock_seconds"
+          ],
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "grace_seconds": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "a seat's claude must have been gone this long, on two ticks, before it is re-seated"
+            },
+            "max_per_window": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "re-seats of one seat inside window_seconds before the supervisor stops and says so"
+            },
+            "window_seconds": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "down_lock_seconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "a seat.sh --down younger than this is still in progress and its seat is left alone"
+            }
+          }
         }
       }
     }

@@ -18,26 +18,10 @@ fixed=0
 okln() { printf 'ok %s\n' "$1"; }
 skipln() { printf 'skipped %s (%s)\n' "$1" "$2"; }
 fixedln() { printf 'fixed %s (%s)\n' "$1" "$2"; fixed=$((fixed + 1)); sl_record note 100 bringup --note "bringup: $1 $2"; }
-# report_500 KEY TEXT: one 500 record and one notification per distinct failure per 15 minutes.
-# BREADCRUMB 2026-10-12 - WO-20261012-b800. What broke (would break): the supervisor runs this script every 30 seconds, and a
-#   node that stays down (a pane a human is typing in, a guard that is not installed) wrote a 500 record and a herdr
-#   notification on every run, 120 an hour, which buries the one record that says something changed. Why this fix: the last
-#   text per key is kept in <state_dir>/bringup/last-KEY and a repeat inside 900 seconds says nothing; a new text, or the
-#   same one after 15 minutes, is said again. Rejected: a counter in the record (a record is never edited) and silencing
-#   after the first (a failure that outlives a day should still be heard). Cost: the failure is on screen every run but
-#   on the log once a quarter hour.
-report_500() {
-  local f="$STATE/bringup/last-$1" now; now="$(date +%s)"
-  mkdir -p "$STATE/bringup"
-  if [ -f "$f" ] && [ "$(cat "$f")" = "$2" ] && [ $((now - $(stat -c %Y "$f"))) -lt 900 ]; then return 0; fi
-  printf '%s' "$2" > "$f"
-  sl_record note 500 bringup --note "$(cut -c1-230 <<<"$2")"
-  sl_h notification show "500 $2" >/dev/null 2>&1 || true
-}
 # The first failure ends the run: every later node needs this one (the DAG is a chain).
 failln() {
   printf 'FAILED %s (%s)\n' "$1" "$2"
-  [ "$mode" != apply ] || report_500 "$1" "bringup: $1 failed: $2"
+  [ "$mode" != apply ] || sl_report_500 "$1" "bringup: $1 failed: $2"
   exit 1
 }
 
@@ -117,9 +101,9 @@ while IFS=$'\t' read -r name what cmd; do
   [ -n "$hline" ] || why="monitors.sh health said nothing about slot $name"
   if [ "$mode" = check ] || [[ "$why" == *"left alone"* ]]; then
     printf 'FAILED pane-%s (%s)\n' "$name" "$why"; pane_bad=1
-    [ "$mode" = check ] || report_500 "pane-$name" "bringup: pane-$name failed: $why"
+    [ "$mode" = check ] || sl_report_500 "pane-$name" "bringup: pane-$name failed: $why"
   elif "$MON" take "$name" "$name" -- "$cmd" >/dev/null 2>&1; then fixedln "pane-$name" "$what plugged in: $why"
-  else printf 'FAILED pane-%s (monitors.sh take %s failed: %s)\n' "$name" "$name" "$why"; pane_bad=1; report_500 "pane-$name" "bringup: pane-$name take failed: $why"; fi
+  else printf 'FAILED pane-%s (monitors.sh take %s failed: %s)\n' "$name" "$name" "$why"; pane_bad=1; sl_report_500 "pane-$name" "bringup: pane-$name take failed: $why"; fi
 done < <(jq -r '.tabs[].reserved[] | select(.command != null) | [.name, .what, .command] | @tsv' "$MC")
 
 [ "$mode" = check ] || [ "$fixed" = 0 ] || [ "$pane_bad" = 1 ] || sl_h notification show "bringup: $fixed node(s) repaired, system up" >/dev/null 2>&1 || true

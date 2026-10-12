@@ -56,5 +56,23 @@
       "test",
       "review"
     ]
+  },
+  "supervisor": {
+    "step_timeout_seconds": 120,
+    "herdr_unit": "herdr-stable.service",
+    "herdr_wait_seconds": 30,
+    "podman": true,
+    "bearings": {
+      "enabled": true,
+      "tier": "stable",
+      "script": "${repo}/tools/bearings/scripts/bearings.sh"
+    },
+    "reseat": {
+      "enabled": true,
+      "grace_seconds": 45,
+      "max_per_window": 3,
+      "window_seconds": 1800,
+      "down_lock_seconds": 300
+    }
   }
 }
