@@ -117,6 +117,9 @@ want_labels() { local i n; n="$(slot_count)"; for ((i = 0; i < n; i++)); do slot
 #   $wt (it would differ from the project file's string and run twice) and putting it in the owner's global hooks (not this
 #   repo's). Cost: every live seat's settings.json now differs from this render, so --check names the drift and recover.sh
 #   repairs it at the next restart. Record: WO-20261012-8fb2.
+#   Review 20261012T170103Z-422-8inhl found the hook timeout a literal 10 here; it is resume_checkpoint.hook_timeout_seconds in
+#   herdr/config/herdr.json now, like the break glass hook timeouts. Cost: .claude/settings.json is plain JSON and cannot read
+#   the config, so its entry still carries 10 by hand; case 17 asserts the two agree.
 # render_settings: the role's allow and deny as Claude Code permission rules, deterministic so --check and --audit can
 # cmp it with the file on disk. ${worktree} (alias ${repo}) in a path is the seat's worktree, a relative path is under it, a
 # trailing slash means the whole directory. allow.paths and deny.paths become Edit rules (Edit covers Write), so bare Write and Edit
@@ -124,7 +127,7 @@ want_labels() { local i n; n="$(slot_count)"; for ((i = 0; i < n; i++)); do slot
 # A command holding a * renders as Bash(<cmd>) and Bash(<cmd> *) (bearings-v2 F-23: Claude Code never matches a :*
 # rule with a * mid-pattern); a plain command keeps the Bash(<cmd>:*) prefix form.
 render_settings() {
-  jq --arg wt "$wt" --arg resume '"$CLAUDE_PROJECT_DIR"/herdr/bin/resume-checkpoint.sh' '
+  jq --arg wt "$wt" --arg resume '"$CLAUDE_PROJECT_DIR"/herdr/bin/resume-checkpoint.sh' --argjson rtimeout "$(sl_cfg .resume_checkpoint.hook_timeout_seconds)" '
     def ab: gsub("\\$\\{(worktree|repo)\\}"; $wt) | if startswith("/") then . else $wt + "/" + . end;
     def cmd: if contains("*") then "Bash(\(.))", "Bash(\(.) *)" else "Bash(\(.):*)" end;
     def rule($t): ab as $a | "\($t)(/\($a)\(if ($a | endswith("/")) then "**" else "" end))";
@@ -133,7 +136,7 @@ render_settings() {
     | {permissions: {defaultMode: .permission_mode,
         allow: ($bare + (if $edits then [(.allow.paths // [])[] | rule("Edit")] else [] end) + [(.allow.commands // [])[] | cmd]),
         deny: ((.deny.tools // []) + [(.deny.commands // [])[] | cmd] + [(.deny.paths // [])[] | rule("Edit")])},
-      hooks: {SessionStart: [{matcher: "compact", hooks: [{type: "command", command: $resume, timeout: 10}]}]}}' "$role_file"
+      hooks: {SessionStart: [{matcher: "compact", hooks: [{type: "command", command: $resume, timeout: $rtimeout}]}]}}' "$role_file"
 }
 
 load_seat() {

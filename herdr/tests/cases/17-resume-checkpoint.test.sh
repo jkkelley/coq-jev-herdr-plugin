@@ -37,6 +37,9 @@ S="$STATE/seats/$N/settings.json"
 assert_eq "one compact entry in the rendered settings" "$(jq '[.hooks.SessionStart[] | select(.matcher == "compact")] | length' "$S")" 1
 assert_eq "no other SessionStart entry in the rendered settings" "$(jq '.hooks.SessionStart | length' "$S")" 1
 assert_eq "the command is the project file's, character for character" "$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$S")" "$PCMD"
+CFGT="$(jq -r .resume_checkpoint.hook_timeout_seconds "$REPO/herdr/config/herdr.json")"
+assert_eq "the rendered timeout is the config's, not a literal" "$(jq -r '.hooks.SessionStart[0].hooks[0].timeout' "$S")" "$CFGT"
+assert_eq "the project file's timeout agrees with the config" "$(jq -r '.hooks.SessionStart[] | select(.matcher == "compact") | .hooks[0].timeout' "$P")" "$CFGT"
 assert_eq "the command names the hook script that exists" "$([ -x "$REPO/herdr/bin/resume-checkpoint.sh" ] && echo yes)" yes
 "$SEAT" --check "$N" >/dev/null; assert_eq "--check exits 0 on the fresh render" "$?" 0
 
