@@ -32,7 +32,7 @@ command -v jq >/dev/null || die 4 "jq is required"
 #   Cost: the enum is now a superset of the event kinds, so a typo'd factory kind is no longer a validation error here; the
 #   routes file and make lint own the meaning of a kind.
 KINDS='seat.up|seat.down|seat.stalled|gate|test|review|merge|deploy|compaction|blocked|escalation|note|request\.forwarded|request\.accepted|request\.rejected|ticket\.cut|work\.started|pr\.opened|test\.passed|test\.failed|review\.passed|review\.changes|merged|merge\.conflict|verified|rejected|escalated|record\.routed|break\.glass'
-ROLES='interface-agent|orchestrator|architect|worker|tester|reviewer|merger|player|monitor'
+ROLES='interface-agent|orchestrator|architect|worker|tester|reviewer|merger|verifier|player|monitor'
 line_of() { jq -r '"\(.at)\t\(.code)\t\(.kind)\t\(.seat)\t\(.ticket // "-")\t\(.note // "")"' "$1"; }
 VERB=${1:-}; shift || true
 case $VERB in

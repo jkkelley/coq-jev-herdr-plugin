@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T152225Z-423-s8cgf",
+  "at": "2026-10-12T15:22:25Z",
+  "code": 423,
+  "seat": "worker-wo-20261012-72a0",
+  "kind": "blocked",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:p8D",
+  "note": "Ticket needs roles/verifier.json and the role enum in roles/schema; my seat denies Edit on roles/, graph/ and specs/. Need roles/ opened for this ticket or the role files placed. Nothing written yet.",
+  "evidence": [
+    ".claude/settings.json"
+  ],
+  "observations": [],
+  "to": "architect"
+}

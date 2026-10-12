@@ -21,7 +21,7 @@ RESULT_JQ "role file and playbook parts come from the files" '.lines[0].st.worke
 RESULT_JQ "the belt is stopped with no state file, on the line and in the headline" '.lines[0].belt == "stopped" and (.headline | contains("belt stopped"))'
 RESULT_JQ "nothing waits on a belt when the last record has no route" '.lines[0] | has("waiting") | not'
 RESULT_JQ "the sources line counts what it read" '.sources | contains("2 records") and contains("2 panes")'
-RESULT_JQ "the entry names all nine stations from roles and config" '(.stations | length) == 9 and .stations[3].role == "Worker" and .stations[3].model == "sonnet · high" and .stations[7].model == "verify"'
+RESULT_JQ "the entry names all nine stations from roles and config" '(.stations | length) == 9 and .stations[3].role == "Worker" and .stations[3].model == "sonnet · high" and .stations[7].role == "Verifier"'
 RESULT_JQ "the kickback lanes are drawn from routes.json rows" '.kickbacks[0].tag == "test.failed 422 · attempt < 3" and .kickbacks[4].tag == "blocked 423 · escalations 1 · owner card" and .kickbacks[3].esc == true'
 
 # A pane that is gone is not a seat that is up: the record says up, herdr says no.

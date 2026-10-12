@@ -47,7 +47,7 @@ world_up flowstatus; flow_world
 out=$("$FLOW" status --from-start --repo "$R" --state "$FSTATE"); assert_eq "quiet: exit 0" "$?" 0; assert_match "quiet: says ok" "$out" '^flow: ok$'
 g=$(rec merged 200 merger "$T"); backdate "$g" 100
 out=$("$FLOW" status --from-start --repo "$R" --state "$FSTATE"); assert_eq "stalled: exit 1" "$?" 1
-assert_match "it names the record" "$out" "stall gate $g $T merged 200: no architect record"
+assert_match "it names the record" "$out" "stall gate $g $T merged 200: no verifier record"
 assert_eq "status wrote no note" "$(flow_notes | grep -c .)" 0
 
 echo "-- a config where poll + stall pass visible_within_seconds is refused at start"

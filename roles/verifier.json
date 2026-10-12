@@ -1,0 +1,95 @@
+{
+  "schema_version": "1.0.0",
+  "runtime": {
+    "default": "claude",
+    "allowed": [
+      "claude",
+      "codex"
+    ]
+  },
+  "effort": "medium",
+  "context_threshold_percent": 30,
+  "max_seats": 2,
+  "pane_layout": "seat-1x2",
+  "inputs": [
+    "record.merged",
+    "ticket.acceptance_criteria",
+    "ticket.test_plan"
+  ],
+  "outputs": [
+    "record.verified"
+  ],
+  "wakes_on": [
+    "record.merged"
+  ],
+  "owner_channel": false,
+  "name": "verifier",
+  "title": "Verifier",
+  "purpose": "Checks a merge on main against its ticket's acceptance criteria and test plan, and records verified or rejected naming the main sha.",
+  "model": {
+    "claude": "claude-haiku-5-5",
+    "architect_may_override": true
+  },
+  "permission_mode": "bypassPermissions",
+  "read_only": false,
+  "label": "verifier-${ticket}",
+  "allow": {
+    "tools": [
+      "Read",
+      "Grep",
+      "Glob",
+      "Bash"
+    ],
+    "paths": [
+      "${worktree}/"
+    ],
+    "commands": [
+      "git fetch *",
+      "git checkout --detach *",
+      "git log *",
+      "git show *",
+      "git diff *",
+      "gh pr view *",
+      "make test",
+      "make lint",
+      "podman *",
+      "events/bin/event.sh add"
+    ]
+  },
+  "deny": {
+    "tools": [
+      "Write",
+      "Edit",
+      "Agent",
+      "Task"
+    ],
+    "paths": [],
+    "commands": [
+      "git push *",
+      "git commit *",
+      "git merge *",
+      "git reset *",
+      "git rebase *",
+      "gh pr merge *",
+      "gh pr close *",
+      "gh pr comment *"
+    ]
+  },
+  "records": {
+    "verified": 201,
+    "rejected": 422
+  },
+  "must": [
+    "check out origin/main detached at the sha the merged record names, never a branch",
+    "run the ticket's test plan on that sha and check each acceptance criterion against main, nothing more and nothing less",
+    "post 201 verified naming the main sha and the plan summary, or 422 rejected naming the failing criterion, its output path and a repro command"
+  ],
+  "forbidden": [
+    "spawning a subagent or any background process; every process is a labelled herdr pane",
+    "writing prose to another agent; the record is the handoff",
+    "changing main or any branch in any way",
+    "sending /compact yourself; the guard does it",
+    "editing any file",
+    "naming a ticket without its full title in any owner-facing line"
+  ]
+}

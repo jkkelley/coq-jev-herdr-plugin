@@ -54,5 +54,5 @@ collect
 RESULT_JQ "review.passed 201 puts the work at the merger" '.lines[0].here == "merger"'
 ev 2026-10-11T14:55:00Z merger-wo-20261011-0002 merged 200 "$T" wD3:p9 "squashed"
 collect
-RESULT_JQ "merged 200 puts the work at the architect's verify station" '.lines[0].here == "verify"'
+RESULT_JQ "merged 200 puts the work at the verifier's verify station" '.lines[0].here == "verify"'
 done_case

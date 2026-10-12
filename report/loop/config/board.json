@@ -64,11 +64,9 @@
     },
     {
       "id": "verify",
-      "role": "architect",
-      "model": "verify",
+      "role": "verifier",
       "does": "checks main after merge",
-      "emits": { "kind": "verified", "code": 201 },
-      "takes": { "with": "verify" }
+      "emits": { "kind": "verified", "code": 201 }
     },
     {
       "id": "line",

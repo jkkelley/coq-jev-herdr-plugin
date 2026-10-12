@@ -70,17 +70,18 @@ Behaviour lives in the table; this section explains it and `make lint` checks th
 | 7 | `review.passed` 201 | `seat` merger (with pr) | down reviewer | The reviewer passed the PR. The merger is brought up and woken with the head sha, then the reviewer is taken down. |
 | 8 | `review.changes` 422 attempt < 3 | `wake` worker (with record) | down reviewer | The reviewer asked for changes. The worker is woken with the record, then the reviewer is taken down. |
 | 9 | `review.changes` 422 attempt 3 | `escalate` architect (code 423) | down reviewer | The third change request is an escalated 423 to the architect, and the reviewer is taken down. |
-| 10 | `merged` 200 | `wake` architect (with verify) | down merger | The merger merged. The architect is woken to verify, then the merger is taken down. |
+| 10 | `merged` 200 | `seat` verifier (with pr) | down merger | The merger merged. The verifier seat for the ticket is brought up on a slot detached at origin/main and woken with the PR and sha, then the merger is taken down. No architect is involved. |
 | 11 | `merge.conflict` 409 | `wake` worker (with record) | down merger | The merge conflicted. The worker is woken with the record, then the merger is taken down. |
-| 12 | `verified` 201 | `notify_owner` interface-agent (line done) |  | The architect verified the merge. The interface agent gets the done line for the owner. |
-| 13 | `blocked` 423 escalations < 1 | `escalate` architect (code 423) |  | A seat is blocked. The first 423 for a ticket is escalated to the architect; a second one becomes a decision line for the owner. |
-| 14 | `blocked` 423 escalations 1 | `notify_owner` interface-agent (line decision) |  | A second blocked 423 for the ticket: the interface agent gets a decision line for the owner. |
-| 15 | `seat.up` 100 | `ignore` |  | Housekeeping: seat.sh recorded a seat coming up. |
-| 16 | `seat.down` 100 | `ignore` |  | Housekeeping: seat.sh recorded a seat going down. This is the record the `down` field produces. |
-| 17 | `note` 100 | `ignore` |  | Housekeeping: a seat noted something. Notes are never routed on. |
-| 18 | `record.routed` 300 | `ignore` |  | Housekeeping: a receipt. The runner skips its own, this covers a receipt another seat name wrote. |
-| 19 | `seat.down` 500 | `wake` monitor (with record) |  | A seat went down badly. The monitor is woken with the record. |
-| 20 | code >= 500 | `wake` monitor (with record) |  | Any other 5xx. The monitor is woken with the record. |
+| 12 | `verified` 201 | `wake` monitor (with record) | down verifier | The verifier checked main against the ticket's criteria. The monitor is woken with the record until the interface agent is seated, and the verifier is taken down. |
+| 13 | `rejected` 422 | `wake` monitor (with record) | down verifier | Main does not meet a criterion. The monitor is woken with the record, which names the criterion, and the verifier is taken down. |
+| 14 | `blocked` 423 escalations < 1 | `escalate` architect (code 423) |  | A seat is blocked. The first 423 for a ticket is escalated to the architect; a second one becomes a decision line for the owner. |
+| 15 | `blocked` 423 escalations 1 | `notify_owner` interface-agent (line decision) |  | A second blocked 423 for the ticket: the interface agent gets a decision line for the owner. |
+| 16 | `seat.up` 100 | `ignore` |  | Housekeeping: seat.sh recorded a seat coming up. |
+| 17 | `seat.down` 100 | `ignore` |  | Housekeeping: seat.sh recorded a seat going down. This is the record the `down` field produces. |
+| 18 | `note` 100 | `ignore` |  | Housekeeping: a seat noted something. Notes are never routed on. |
+| 19 | `record.routed` 300 | `ignore` |  | Housekeeping: a receipt. The runner skips its own, this covers a receipt another seat name wrote. |
+| 20 | `seat.down` 500 | `wake` monitor (with record) |  | A seat went down badly. The monitor is woken with the record. |
+| 21 | code >= 500 | `wake` monitor (with record) |  | Any other 5xx. The monitor is woken with the record. |
 
 Why a record can need a `seat` and a `down` at once: it is one record and one row, and a second row would never get its turn.
 The merger is one shared seat named `merger`, so the `down` on `merged` and `merge.conflict` is safe only while one ticket is merging at a time.

@@ -17,6 +17,6 @@
     { "kind": "review.passed", "code": 201, "role": "merger", "consumers": ["merged", "merge.conflict", "blocked"] },
     { "kind": "review.changes", "code": 422, "role": "worker", "consumers": ["pr.opened", "blocked", "escalated"] },
     { "kind": "merge.conflict", "code": 409, "role": "worker", "consumers": ["pr.opened", "blocked", "escalated"] },
-    { "kind": "merged", "code": 200, "role": "architect", "consumers": ["verified", "rejected", "blocked"] }
+    { "kind": "merged", "code": 200, "role": "verifier", "consumers": ["verified", "rejected", "blocked"] }
   ]
 }

@@ -196,6 +196,15 @@ slot_to_branch() {
     "${g[@]}" branch --quiet --set-upstream-to="origin/$branch" "$branch" >/dev/null 2>&1 || true
   fi
 }
+# slot_to_main: the verifier's slot, detached at the freshly fetched origin/main (see the verifier breadcrumb at the ticket lookup).
+slot_to_main() {
+  local g=(git -C "$wt") out
+  if [ "$DRY" = 1 ]; then sl_run "${g[@]}" fetch origin; sl_run "${g[@]}" checkout --detach origin/main; return 0; fi
+  out="$("${g[@]}" fetch --quiet origin 2>&1)" || { echo "git fetch origin failed in $wt: $out"; return 1; }
+  out="$("${g[@]}" checkout --quiet --detach origin/main 2>&1)" || { echo "git checkout --detach origin/main failed in $wt: $out"; return 1; }
+}
+# slot_to_ref: the slot goes to the ticket's branch, or to origin/main for the verifier.
+slot_to_ref() { if [ "$role" = verifier ]; then slot_to_main; else slot_to_branch; fi; }
 # lease_up: sets wt, lease and lease_new for door 1 without --worktree, then puts the slot on the ticket's branch.
 lease_up() {
   local row owned=true
@@ -210,13 +219,13 @@ lease_up() {
     row="$(th_row "$id")" || refuse "treehouse status failed after leasing a slot for $id"
     if [ -z "$row" ]; then
       [ "$DRY" = 1 ] || refuse "treehouse get --lease succeeded but treehouse status lists no lease held by $id"
-      wt="/dry-run/treehouse-slot"; lease="$(jq -nc --arg h "$id" '{holder:$h,id:"dry-run",owned:true}')"; slot_to_branch; return 0
+      wt="/dry-run/treehouse-slot"; lease="$(jq -nc --arg h "$id" '{holder:$h,id:"dry-run",owned:true}')"; slot_to_ref; return 0
     fi
     lease_new=1; trap lease_abandon EXIT
   fi
   wt="$(jq -r .path <<<"$row")"; [ -d "$wt" ] || { lease_abandon; refuse "treehouse leased $wt to $id but it is not a directory"; }
   # A fresh lease that cannot reach the branch is given back by the EXIT trap; a lease the ticket already held is left alone.
-  why="$(slot_to_branch)" || { lease_abandon; refuse "slot $wt could not be put on $branch for $id: $why"; }
+  why="$(slot_to_ref)" || { lease_abandon; refuse "slot $wt could not be put on ${branch:-origin/main} for $id: $why"; }
   lease="$(jq -nc --arg h "$id" --arg i "$(jq -r .lease_id <<<"$row")" --argjson o "$owned" '{holder:$h,id:$i,owned:$o}')"
 }
 # BREADCRUMB 2026-10-11 - WO-20261011-36d7, the pane `treehouse return --force` killed twice. What broke: lease_down below ran
@@ -432,6 +441,20 @@ role_file="$(sl_role_file "$role")"
 branch=""
 if [ -n "$ticket" ] && [ "$mode" != adopt ]; then
   ticket_file="$(find "$SL_REPO/work-orders" -name "$ticket-*.md" -not -path '*/archive/*' 2>/dev/null | head -1)"
+  # BREADCRUMB 2026-10-12 - WO-20261012-72a0, the verifier seat. What broke: nothing yet, but the verifier is woken by merged 200,
+  #   and by then the worker's archive move is on main (it rides in the PR) and `work-order.sh cleanup` has deleted the ticket's
+  #   branch, so this lookup refuses the ticket ("archived or never cut") and slot_to_branch below finds no branch: the seat
+  #   the line needs to verify a merge could never come up on exactly the tickets it is for. Why this fix: for role verifier
+  #   only, the lookup falls back to work-orders/archive/ and the slot is detached at origin/main (slot_to_main) instead of put
+  #   on a branch that no longer exists; the verifier checks out the merged sha from there itself. Every other role keeps the
+  #   refusal, since a worker or tester on an archived ticket is a mistake. Rejected: a branch-less fallback for every role (it
+  #   hides a ticket that was never started) and a shared door 2 verifier (the role file is per ticket, verifier-${ticket}, so
+  #   one merge never waits on another's verdict). Cost: a role-name test in the script; the brief for this seat is built
+  #   below, not by roles/bin/brief.sh, because brief.sh and nudge.sh also exclude the archive and live under roles/, which
+  #   the architect owns. Follow-up for the architect: give both an archive fallback, then drop the verifier brief below.
+  if [ -z "$ticket_file" ] && [ "$role" = verifier ]; then
+    ticket_file="$(find "$SL_REPO/work-orders/archive" -name "$ticket-*.md" 2>/dev/null | head -1)"
+  fi
   [ -n "$ticket_file" ] || refuse "no ticket $ticket under work-orders/ (archived or never cut)"
   # BREADCRUMB 2026-10-11 - WO-20261011-c077, the ticket's branch. What broke: a slot leased below comes up detached at
   #   origin/main while `work-order start` made feat/<slug> in the main checkout, and the worker role may run git add,
@@ -444,7 +467,7 @@ if [ -n "$ticket" ] && [ "$mode" != adopt ]; then
   #   forgotten) and falling back to a detached slot when the branch is null (the worker would commit on no branch).
   #   Cost: a door 1 seat without --worktree now needs the ticket started first; `work-order start` is the step before
   #   seating anyway.
-  if [ "$wt_given" = 0 ]; then
+  if [ "$wt_given" = 0 ] && [ "$role" != verifier ]; then
     branch="$(awk '/^---$/{c++; next} c==1' "$ticket_file" | jq -r '.branch // empty' 2>/dev/null)" || branch=""
     [ -n "$branch" ] || refuse "ticket $ticket has no branch yet (frontmatter branch is null); run work-order start first, nothing leased"
     git check-ref-format "refs/heads/$branch" || refuse "ticket $ticket names branch '$branch', which is not a valid branch name; nothing leased"
@@ -737,6 +760,8 @@ fi
 if [ "$started" = 1 ]; then
   # A resumed session already holds its brief, so a second one would only make it post a second work.started.
   if [ -n "$resume_id" ]; then prompt="seat.sh resumed session $resume_id as the $role seat $name${id:+ on $id}. Playbook playbooks/$role.md. Carry on from where the session stopped."
+  elif [ -n "$ticket" ] && [ "$role" = verifier ]; then
+    prompt="$id - $(awk '/^---$/{c++; next} c==1' "$ticket_file" | jq -r '.title // empty' 2>/dev/null). Playbook playbooks/verifier.md. Your test pane is $tpane; run commands only there, through herdr/bin/testpane.sh. Post your first record before anything else."
   elif [ -n "$ticket" ]; then prompt="$("$SL_REPO/roles/bin/brief.sh" --role "$role" --ticket "$id" --project "$SL_REPO" --test-pane "$tpane")" \
       || prompt="$id. Playbook playbooks/$role.md. The ticket file could not be read; post blocked 423 before anything else."
   else prompt="You are the $role seat named $name. Read playbooks/$role.md first. Your task: $task. Post your first record before anything else."; fi

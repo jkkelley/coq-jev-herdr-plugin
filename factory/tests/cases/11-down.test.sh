@@ -50,11 +50,20 @@ next; rec review.changes 422 reviewer-wo-20261011-bbbb $U 1 >/dev/null; run_once
 assert_eq "worker woken, reviewer down" "$(order)" "herdr seat "
 assert_eq "the reviewer of the other ticket" "$(tail -1 "$W/seat.log")" "--down reviewer-wo-20261011-bbbb"
 
-echo "-- merged 200 wakes the architect and takes the merger down; merge.conflict 409 wakes the worker and takes it down"
+echo "-- merged 200 seats the verifier, wakes it, and takes the merger down; merge.conflict 409 wakes the worker and takes it down"
 next; idm=$(rec merged 200 merger $T); run_once
-assert_eq "architect woken, merger down" "$(order)" "herdr seat "
-assert_match "the architect line" "$(tail -1 "$HLOG")" "agent prompt architect-wo-20261011-aaaa record $idm playbook"
+assert_eq "verifier up, prompt, merger down" "$(order)" "seat herdr seat "
+assert_eq "the verifier was seated for the ticket" "$(grep -c -e '--ticket '$T' --role verifier' "$W/seat.log")" 1
+assert_match "the verifier line" "$(grep 'agent prompt' "$HLOG" | tail -1)" "agent prompt verifier-wo-20261011-aaaa record $idm playbook $R/playbooks/verifier.md"
 assert_eq "the merger is one shared seat: --down merger" "$(tail -1 "$W/seat.log")" "--down merger"
+echo "-- verified 201 and rejected 422 wake the monitor and take the verifier down; neither reaches the architect"
+next; idv=$(rec verified 201 verifier-wo-20261011-aaaa $T); run_once
+assert_eq "monitor woken, verifier down" "$(order)" "herdr seat "
+assert_match "the monitor line" "$(tail -1 "$HLOG")" "agent prompt monitor record $idv playbook"
+assert_eq "the verifier of the ticket went down" "$(tail -1 "$W/seat.log")" "--down verifier-wo-20261011-aaaa"
+next; idr=$(rec rejected 422 verifier-wo-20261011-bbbb $U); run_once
+assert_match "the monitor line for a rejection" "$(tail -1 "$HLOG")" "agent prompt monitor record $idr playbook"
+assert_eq "no architect was ever prompted" "$(grep -c 'agent prompt architect' "$HLOG")" 0
 next; rec merge.conflict 409 merger $U >/dev/null; run_once
 assert_eq "worker woken, merger down again (seat.sh says already down)" "$(order)" "herdr seat "
 assert_eq "no 500 through all of that" "$(fives)" 0

@@ -43,7 +43,8 @@
         "reviewer",
         "merger",
         "player",
-        "monitor"
+        "monitor",
+        "verifier"
       ]
     },
     "title": {

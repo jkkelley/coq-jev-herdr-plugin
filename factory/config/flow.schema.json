@@ -23,7 +23,7 @@
         "properties": {
           "kind": { "type": "string", "minLength": 1 },
           "code": { "type": "integer", "minimum": 100, "maximum": 599 },
-          "role": { "enum": ["interface-agent", "orchestrator", "architect", "worker", "tester", "reviewer", "merger", "player", "monitor"], "description": "the role whose record is expected next; named in the note" },
+          "role": { "enum": ["interface-agent", "orchestrator", "architect", "worker", "tester", "reviewer", "merger", "verifier", "player", "monitor"], "description": "the role whose record is expected next; named in the note" },
           "consumers": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "description": "record kinds on the same ticket, written after the gate record, that mean someone took it" }
         } }
     }
