@@ -51,6 +51,33 @@
 
 
 
+
+## Checkpoint 2026-10-12 16:27 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-72a0 on WO-20261012-72a0 - Verifier seat: a merged record wakes a verifier that checks the merge on main against the ticket's criteria and posts verified or rejected, so no merge waits on the architect, in slot 6. PR 29 is open.
+- The merger posted merge.conflict 409 (record 20261012T160513Z-409-jlg3v) on head ed07c19: main gained PR 27 (WO-20261012-9b2c - Standing policies). The monitor raised a 500 (20261012T160648Z-500-gqf5i) because my work.started sat in the slot, not the checkout events/.
+
+#### Toolchain
+
+- origin/main merged into the branch. event.sh keeps main's KINDS line and this branch's ROLES line with verifier. RUNBOOK keeps this branch's rows 10 to 13 and main's policy.applied row. CHANGELOG.md rendered, work-orders indexes rebuilt with work-order.sh reindex, CONTEXT_STATE.md keeps both sides' checkpoints in time order. Main carried a stale ready copy of this ticket in the epic directory: removed, the done copy in archive/ stays.
+- Verified in the test pane on the merged tree: make lint all ok, loop suite 9 passed, herdr suite 17 passed, factory suite 16 passed 0 failed.
+
+#### Active Tasks
+
+- After this step lands: post pr.opened 100 with the new head sha and pr 29, then stop and hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-72a0 as worker-wo-20261012-72a0 in slot 6. Read playbooks/worker.md and this checkpoint. The merge of origin/main is pushed; post pr.opened 100 with the new sha and pr 29 if it is not posted, then hold.
+
 ## Checkpoint 2026-10-12 15:52 UTC
 
 ### Current state
