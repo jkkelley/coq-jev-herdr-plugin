@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T185352Z-100-gpyjf",
+  "at": "2026-10-12T18:53:52Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-da52",
+  "kind": "work.started",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:p8A",
+  "note": "attempt 6 per architect: merge main after PR 28",
+  "evidence": [],
+  "observations": []
+}

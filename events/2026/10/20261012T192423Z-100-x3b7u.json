@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T192423Z-100-x3b7u",
+  "at": "2026-10-12T19:24:23Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-da52",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:p8A",
+  "note": "Attempt 6 per architect (conflict from merge order): merged origin/main after PR 28, 08-break-glass takes main's version, aggregates re-rendered. Answers 409 lam6y. lint ok, factory 20/20, herdr all but case 17.",
+  "evidence": [],
+  "observations": [],
+  "sha": "3371ef1",
+  "pr": 25
+}
