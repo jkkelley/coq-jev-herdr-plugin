@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T172948Z-100-6vpsq",
+  "at": "2026-10-12T17:29:48Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-3bb0",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-3bb0",
+  "pane": "wD3:p8G",
+  "note": "PR 28 on fd36e21: merged main, wake line carries the supersedes and merge main steps. Factory suite 19 passed 0 failed. Open for the architect: roles/tester.json and roles/worker.json steps.",
+  "evidence": [],
+  "observations": [],
+  "sha": "fd36e21",
+  "pr": 28
+}
