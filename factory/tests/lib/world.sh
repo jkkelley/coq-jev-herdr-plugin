@@ -73,12 +73,13 @@ hcalls() { wc -l < "$HLOG" | tr -d ' '; }
 #   flow_world               after world_up: FLOW (the watcher), FSTATE, a herdr stub that answers pane list and process-info
 #                            from $W/panes.json and $W/procinfo.json, a fresh belt file, and a runner pane that is up
 #   runner_pane up|idle|gone the runner pane running a job, its shell sitting at a prompt, or no such pane
+#   agent_state working|idle|gone   the answer of `herdr agent get` for any seat (the flow watch skips a gate whose consumer seat is working)
 #   backdate ID SECONDS      rewrite the record's "at" to SECONDS ago (ids keep their order; the watcher judges age by "at")
 #   flow_once [flags]        flow.sh once --from-start --repo $R --state $FSTATE
 #   flow_notes               the 500 notes the watcher wrote, as JSON lines
 flow_world() {
   FLOW="$R/factory/bin/flow.sh"; FSTATE="$W/fstate"; mkdir -p "$R/factory/state"
-  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s"\ncase "$*" in\n *"pane list"*) cat "%s/panes.json" ;;\n *"process-info"*) cat "%s/procinfo.json" ;;\nesac\n' "$HLOG" "$W" "$W" > "$W/bin/herdr"
+  printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s"\ncase "$*" in\n *"pane list"*) cat "%s/panes.json" ;;\n *"process-info"*) cat "%s/procinfo.json" ;;\n *"agent get"*) [ -f "%s/agent.json" ] && cat "%s/agent.json" || exit 1 ;;\nesac\n' "$HLOG" "$W" "$W" "$W" "$W" > "$W/bin/herdr"
   chmod +x "$W/bin/herdr"; runner_pane up; : > "$R/factory/state/belt"
 }
 runner_pane() {
@@ -89,6 +90,8 @@ runner_pane() {
        else echo '{"result":{"process_info":{"foreground_process_group_id":100,"shell_pid":100}}}' > "$W/procinfo.json"; fi ;;
   esac
 }
+# agent_state working|idle|gone   what `herdr agent get <any seat>` answers: that agent_status, or an error when there is no such agent
+agent_state() { if [ "$1" = gone ]; then rm -f "$W/agent.json"; else printf '{"result":{"agent":{"agent_status":"%s"}}}\n' "$1" > "$W/agent.json"; fi; }
 backdate() { local f; f=$(find "$R/events" -name "$1.json"); jq --arg at "$(date -u -d "-$2 seconds" +%Y-%m-%dT%H:%M:%SZ)" '.at = $at' "$f" > "$f.tmp" && mv "$f.tmp" "$f"; }
 flow_once() { "$FLOW" once --from-start --repo "$R" --state "$FSTATE" "$@"; }
 flow_notes() { "$R/events/bin/event.sh" list --json | jq -c 'select(.seat == "flow-watch")'; }
