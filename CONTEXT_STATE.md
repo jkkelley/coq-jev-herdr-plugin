@@ -48,6 +48,61 @@
 
 
 
+
+
+## Checkpoint 2026-10-12 14:58 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p83, run only through herdr/bin/testpane.sh.
+- The merger posted merge.conflict 409 (record 20261012T143647Z-409-e1nbe) on head 2d3f8b8: main gained PR 22 (WO-20261011-4562 - break glass, one owner-authorised action at a time) and PR 23 (WO-20261012-668a - SITREP panel in this project's bearings).
+
+#### Toolchain
+
+- origin/main merged into the branch. Resolved by keeping both sides: route.sh has main's perform with break-glass and none plus this branch's act_primary, act_down, seat and ignore; routes.json has this branch's ignore rows then main's break.glass rows; routes.schema.json do enum carries all eight actions; event.sh and event.schema.json carry sha, pr, action and answer; factory/RUNBOOK.md table has all eight rows; CHANGELOG.md was re-rendered from its entries, never edited; CONTEXT_STATE.md is the union of both sides' checkpoints, newest first, no block edited.
+- Verified in the test pane on the merged tree: make lint all ok, factory suite 15 passed 0 failed (main added a break-glass case), herdr suite 16 passed 0 failed.
+
+#### Active Tasks
+
+- After this step lands: post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester again. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The merge of origin/main is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
+
+## Checkpoint 2026-10-12 14:09 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p83, run only through herdr/bin/testpane.sh.
+- The tester failed 49ab55b with test.failed 422 (record 20261012T132330Z-422-hyds1): factory case 06-belt read a belt backdated 61 s as running.
+
+#### Toolchain
+
+- Cause: route.sh status used -le against stale_seconds, so a belt exactly 60 s old read running, against the file header and AC-H6 which say fresher than. The host clock steps back about a second every ~35 s, so a 61 s backdate can be 60 s old by the time route.sh reads it.
+- Fix: factory/bin/route.sh status uses -lt. Case 06-belt now backdates 65 and 55 s on the real clock and pins 59, 60 and 61 with a date stub. factory/RUNBOOK.md states the boundary. Breadcrumbs sit at both fix sites.
+- Verified in the test pane: factory suite 14 passed 0 failed, make lint all ok, case 06 alone three more times 1 passed each.
+
+#### Active Tasks
+
+- After this step lands: work-order.sh evidence, submit and done are already recorded by earlier steps, so post pr.opened 100 with the new sha and pr 21 so the route table wakes the tester again. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The 06-belt boundary fix is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
+
 ## Checkpoint 2026-10-12 13:55 UTC
 
 ### Current state
@@ -89,6 +144,32 @@ Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/wor
 ### Hydration prompt
 Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/worker.md and this checkpoint. The code and tests are done and green; what is left is the evidence per acceptance criterion, the live send of a SITREP on the stable page (AC-H4), the close-out flow in AGENTS.md, and the pr.opened 100 record.
 
+## Checkpoint 2026-10-12 12:50 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p72, run only through herdr/bin/testpane.sh with output sent to a file in the scratchpad.
+- The reviewer passed head 2c5f807 (record 20261012T123900Z-201-lay41), but PR 21 then conflicted with main after PR 20 (WO-20261011-f896 - Test pane per seat) merged as 05ef0d2.
+
+#### Toolchain
+
+- origin/main was merged into the branch. The only conflict was CONTEXT_STATE.md: both sides kept, this branch's checkpoints plus main's 2026-10-11 23:09 UTC block (the other ticket's) below the newest. CHANGELOG.md was re-rendered from its entries, never edited.
+- make lint (all ok) and make -C factory test (14 passed, 0 failed) ran in the test pane on the merged tree before the commit.
+
+#### Active Tasks
+
+- Push, then post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester again. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The merge of origin/main is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
+
 ## Checkpoint 2026-10-12 12:40 UTC
 
 ### Current state
@@ -123,6 +204,37 @@ Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/wor
 Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 2. Read playbooks/worker.md and this checkpoint.
 The code, the note and the push are done; the only step left is pr.opened 100 with the head sha, then stop and wait for the reviewer.
 
+## Checkpoint 2026-10-12 12:19 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p72, run only through herdr/bin/testpane.sh with output sent to a file in the scratchpad.
+- Woken by the reviewer's 422 (record 20261012T022449Z-422-t39yq): attempt 1 of 3.
+
+#### Toolchain
+
+- The reviewer's first finding is fixed: factory/RUNBOOK.md has its Graph and Ticket lines back, verbatim from origin/main, after the contents list. 3c255dc had dropped them with no reason. The change is three added lines.
+- The reviewer's second finding needs a test.passed 201 for the new head from the tester, not code. make lint (all ok) and make -C factory test (14 passed, 0 failed) were run in the test pane on this tree before the commit.
+- A formatter hook rewrites Markdown tables on Edit and realigned all of RUNBOOK.md (109 changed lines for a three line fix). Apply Markdown edits through python replace in Bash so the diff stays reviewable.
+
+#### Active Tasks
+
+- Push this step, then post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Evidence in the ticket (AC-H1 to AC-H5) cites tree 8f72207; the tester's test.passed for the new head is what supersedes it. The ticket file is not edited again.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md, the reviewer record 20261012T022449Z-422-t39yq and this checkpoint. The RUNBOOK fix is pushed; post pr.opened 100 with sha and pr 21 if it is not posted, then hold. Run commands only through herdr/bin/testpane.sh.
+
 ## Checkpoint 2026-10-11 23:09 UTC
 
 ### Current state
@@ -144,6 +256,38 @@ The code, the note and the push are done; the only step left is pr.opened 100 wi
 
 ### Hydration prompt
 Resume WO-20261011-f896 as worker-wo-20261011-f896 in slot 9. Read playbooks/worker.md and this checkpoint. The merge of origin/main is staged; read the post-merge lint and suite log, commit, push, post pr.opened 100 and stop.
+
+## Checkpoint 2026-10-11 21:36 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 4, branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-. Test pane wD3:p1V, shared and serial: a command can wait 20 to 40 minutes behind other seats. Run it as a harness background job and poll its log; never resend.
+- The branch was rebuilt on origin/main on the architect's order (record 20261011T203650Z-422-4xk1v): the first cut came from the records branch and carried other tickets' files. Old tip kept locally as backup/4db1-old-base. The architect pushed the rebuilt branch (record 20261011T205133Z-100-12zp4); a worker may not push --force*.
+- The ticket file is not on origin/main (it was cut on the records branch), so the rebuilt branch does not carry it yet.
+
+#### Toolchain
+
+- All five steps are in code and RUNBOOK is written; origin/main (flow watch, PR 19) was merged into the branch, conflicts in CHANGELOG.md (rendered), CONTEXT_STATE.md (taken from main) and factory/RUNBOOK.md (both appended sections kept). make -C factory test and make lint are rerun on the merged tree before the PR.
+- Rebuild notes: events/bin/event.sh on main has no COQ_EVENTS_ROOT block (that is PR 15's), so only the --sha and --pr breadcrumb was kept. CHANGELOG.md is generated: restore from main, then bin/changelog.sh render.
+- A formatter hook rewrites .json files on Edit and Write. Use python replace through Bash.
+
+#### Active Tasks
+
+- Close-out: restore the ticket file (git checkout 74ace3b -- work-orders/WO-20261010-329d/WO-20261011-4db1-*.md), work-order.sh evidence --observed for AC-H1 to AC-H5, a retro note, work-order.sh submit --pr N after gh pr create, done, push the archive move, post pr.opened 100 with --sha and --pr.
+
+#### Blockers
+
+- None. WO-20261011-4562 in slot 6 also edits route.sh, event.sh and routes.json; the merge overlap is the architect's.
+
+### New this checkpoint
+
+- Findings for the retro: work.started 100 has no row (four 500s in the live log) and is left alone because an ignore row with no to would move a ticket's board line to the owner station (report/loop/lib/collect.jq route_of needs select(.do != "ignore")); ticket.cut still wakes a worker that does not exist yet; a bring-up can outlast stale_seconds (WO-20261011-5355); the merger is one shared seat so down merger is safe for one ticket at a time.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 4. Read playbooks/worker.md, the ticket and this checkpoint. Code and RUNBOOK are committed. Do the close-out in Active Tasks, run work-order.sh evidence per criterion, then open one PR. Run commands only through the scratchpad tp.sh as a background job.
 
 ## Checkpoint 2026-10-11 21:26 UTC
 
