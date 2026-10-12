@@ -49,6 +49,28 @@ CASE="the five blocks are in the fixed order"; check test "$(jq -r '[.blocks[].n
 CASE="startable queue counts ready tickets whose dependencies are done (2)"; check test "$(jq -r '.blocks[3].queues[] | select(.name=="STARTABLE") | .count' /work/built.json)" = 2
 CASE="waiting queue counts the ready ticket with an open dependency (1)"; check test "$(jq -r '.blocks[3].queues[] | select(.name=="WAITING") | .count' /work/built.json)" = 1
 CASE="in progress queue counts 2 and open PRs counts 2"; check test "$(jq -r '[.blocks[3].queues[] | select(.name=="IN PROGRESS" or .name=="OPEN PRS") | .count] | join(",")' /work/built.json)" = "2,2"
+# IN FLIGHT (WO-20261012-8f4f): AC-H2 is the first case below, PR 7 names a ticket that is also in progress and it counts once. Open PRs and in-progress or in-review tickets, deduplicated by ticket id, never ticket status on main alone.
+inflight() { sed 's/^#SITREP\/v1#//' "$1" | jq -r '.stats[] | select(.label=="IN FLIGHT") | "\(.value)|\(.note)"'; }
+export -f inflight; export K
+CASE="IN FLIGHT counts PR 7's ticket once though it is also in progress, plus the other in-progress ticket (2)"; check test "$(inflight /work/built.txt)" = "2|1 open PR, 1 without a PR"
+CASE="the objective sentence states the same IN FLIGHT figure as the card"; check bash -c 'jq -e "[.blocks[0].items[] | select(.label==\"OBJECTIVE\") | .text] | .[0] | startswith(\"Tickets in flight: 2,\")" /work/built.json >/dev/null'
+# AC-H1: three open PRs naming tickets that are ready on main, nothing in progress there: IN FLIGHT is 3. A second PR for the same ticket and a PR with no ticket id add nothing.
+cp -r $F/repo /work/repo-ready
+sed -i 's/"status": "in-progress"/"status": "ready"/' /work/repo-ready/work-orders/WO-20261001-aa01/WO-20261001-bb0*.md
+set +e; $BUILD --tier dev --ticket t1 --config /work/config.json --repo /work/repo-ready --prs-json $F/prs-inflight.json --now 2026-10-12T13:00:00Z --out /work/built-ready.txt 2>/dev/null; rc=$?; set -e
+CASE="three open PRs naming ready tickets (one named twice, one with no id) make IN FLIGHT 3, source 3 open PRs"; check bash -c 'test "$1" = 0 && test "$(inflight /work/built-ready.txt)" = "3|3 open PRs"' _ "$rc"
+CASE="AC-H3 the IN FLIGHT payload passes the checker with 0 violations"; check bash -c '$K /work/built-ready.txt 2>&1 | grep -q "0 violations"'
+# a PR may name a ticket this checkout does not have: main can be behind the branch.
+jq '. + [{number: 16, title: "WO-20261001-ee01 - Synthetic ticket this checkout has never seen", url: "https://github.com/example/synthetic/pull/16", headRefName: "feat/ee01"}]' $F/prs-inflight.json > /work/prs-unknown.json
+set +e; $BUILD --tier dev --ticket t1 --config /work/config.json --repo /work/repo-ready --prs-json /work/prs-unknown.json --now 2026-10-12T13:00:00Z --out /work/built-unknown.txt 2>/dev/null; rc=$?; set -e
+CASE="a PR naming a ticket this checkout has never seen still counts (4 open PRs)"; check bash -c 'test "$1" = 0 && test "$(inflight /work/built-unknown.txt)" = "4|4 open PRs"' _ "$rc"
+# in-review counts, and with no PRs at all the source says the tickets have none.
+cp -r $F/repo /work/repo-review
+sed -i 's/"status": "in-progress"/"status": "in-review"/' /work/repo-review/work-orders/WO-20261001-aa01/WO-20261001-bb02-running-two.md
+set +e; $BUILD --tier dev --ticket t1 --config /work/config.json --repo /work/repo-review --prs-json /work/prs-none.json --now 2026-10-12T13:00:00Z --out /work/built-review.txt 2>/dev/null; rc=$?; set -e
+CASE="in-progress and in-review tickets with no open PR count (2 without a PR)"; check bash -c 'test "$1" = 0 && test "$(inflight /work/built-review.txt)" = "2|2 without a PR"' _ "$rc"
+set +e; $BUILD --tier dev --ticket t1 --config /work/config.json --repo /work/repo-ready --prs-json /work/prs-none.json --now 2026-10-12T13:00:00Z --out /work/built-idle.txt 2>/dev/null; rc=$?; set -e
+CASE="nothing in progress and no open PR is IN FLIGHT 0, source nothing in flight"; check bash -c 'test "$1" = 0 && test "$(inflight /work/built-idle.txt)" = "0|nothing in flight"' _ "$rc"
 CASE="state is degraded while a failure record is unanswered"; check test "$(jq -r .state /work/built.json)" = degraded
 CASE="the answered 409 is not friction: the shown code is the unanswered 423"; check bash -c 'jq -r "[.blocks[0].items[] | select(.label==\"FRICTION\") | .text] | .[0]" /work/built.json | grep -q "code 423, filed 4 hours ago"'
 CASE="a ticket reference carries the full title read from the ticket file"; check bash -c '

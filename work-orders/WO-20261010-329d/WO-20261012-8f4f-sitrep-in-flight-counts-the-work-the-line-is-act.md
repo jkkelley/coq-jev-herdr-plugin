@@ -62,9 +62,12 @@ The SITREP sent 2026-10-12 14:24Z (owner approved it as the standard, card S2, 1
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* with three open PRs naming tickets that are ready on main, IN FLIGHT is 3
-- [ ] `AC-H2` *(human)* a ticket that is both in-progress and has an open PR counts once
-- [ ] `AC-H3` *(human)* sitrep-check.mjs passes the built payload against STD-owner-sitrep-001 with 0 violations
+- [x] `AC-H1` *(human)* with three open PRs naming tickets that are ready on main, IN FLIGHT is 3
+  - observed `2026-10-12` make -C tools/bearings test 120 passed 0 failed in test pane wD3:pC0; case 'three open PRs naming ready tickets (one named twice, one with no id) make IN FLIGHT 3, source 3 open PRs' ok: fixture prs-inflight.json, tickets aa01-aa03 ready, IN FLIGHT stat = 3|3 open PRs (tests/sitrep.sh)
+- [x] `AC-H2` *(human)* a ticket that is both in-progress and has an open PR counts once
+  - observed `2026-10-12` case 'IN FLIGHT counts PR 7's ticket once though it is also in progress, plus the other in-progress ticket (2)' ok: PR 7 names bb01 (in-progress on the checkout), bb02 in-progress, stat = 2|1 open PR, 1 without a PR; suite 120 passed 0 failed
+- [x] `AC-H3` *(human)* sitrep-check.mjs passes the built payload against STD-owner-sitrep-001 with 0 violations
+  - observed `2026-10-12` case 'AC-H3 the IN FLIGHT payload passes the checker with 0 violations' ok (sitrep-check.mjs on the 3-PR payload prints '0 violations'); the builder also runs the same check and exits 3 on any violation; suite 120 passed 0 failed
 
 ## Test plan
 
@@ -83,6 +86,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Retro: the card read in_progress.count (ticket status on the checkout); IN FLIGHT is now in_flight.count, the union of PR-titled ticket ids and in-progress or in-review tickets, deduplicated by id, with the source named in the note (sitrep-build.mjs, breadcrumb at the fix site). The OBJECTIVE sentence also said 'Tickets in flight' from in_progress.count, so it now reads in_flight.count too, otherwise one card would carry two figures under one name; owner may veto. Known limit: a ticket started on a branch with no PR yet is invisible until its PR opens, and prs_command lists 20 PRs. A post-edit formatter hook reformats whole .mjs files at 80 columns; the edit was reapplied through a script to keep the diff to the change.
 
 ## Outcome
 
