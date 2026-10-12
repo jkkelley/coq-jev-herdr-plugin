@@ -34,10 +34,11 @@ run_once
 assert_eq "the seat.up record the stub wrote is ignored, not a 500" "$(find "$R/events" -name '*-500-*.json' | wc -l | tr -d ' ')" 0
 
 echo "-- the merger is one shared seat named merger"
-sleep 1; id3=$(rec review.passed 201 reviewer-wo-20261011-aaaa $T)
+sleep 1; REC_SHA=abc1234 rec test.passed 201 tester-wo-20261011-aaaa $T >/dev/null
+sleep 1; id3=$(REC_SHA=abc1234 rec review.passed 201 reviewer-wo-20261011-aaaa $T)
 run_once
 assert_match "seat.sh --ticket --role merger" "$(grep -e '--role merger' "$W/seat.log")" "^--ticket $T --role merger$"
-assert_match "the prompt went to merger" "$(tail -1 "$HLOG")" "^--session stable agent prompt merger record $id3 playbook $R/playbooks/merger.md$"
+assert_match "the prompt went to merger" "$(tail -1 "$HLOG")" "^--session stable agent prompt merger record $id3 sha abc1234 playbook $R/playbooks/merger.md$"
 
 echo "-- a refused bring-up is a 500 that says what seat.sh said, and nothing is prompted"
 printf 'seat.sh: refused - bring-up order: monitor seat monitor is down\n' > "$W/seat.fail"
@@ -47,7 +48,7 @@ assert_eq "herdr was not called" "$(hcalls)" "$before"
 n=$(grep -l "$id4" "$R"/events/20*/*/*-500-*.json | head -1)
 assert_match "the 500 names the record, the command, the exit code and the reason" "$(jq -r .note "$n")" "route failed for pr.opened 100, record $id4: seat.sh --ticket $U --role tester failed \(exit 3\): seat.sh: refused - bring-up order"
 assert_eq "it is addressed to the monitor" "$(jq -r .to "$n")" monitor
-assert_eq "no receipt for it" "$(ids_of record.routed | grep -c "")" 3
+assert_eq "no receipt for it" "$(ids_of record.routed | grep -c "")" 4
 rm -f "$W/seat.fail"
 
 echo "-- a row that stays wake does not call seat.sh"

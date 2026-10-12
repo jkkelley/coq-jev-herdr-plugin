@@ -55,80 +55,57 @@
 
 
 
-## Checkpoint 2026-10-12 18:35 UTC
+## Checkpoint 2026-10-12 18:30 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, PR 31 open. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code. Treehouse slot 7, branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, PR 28. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+- Review az7ec passed the code, but its merge wake was lost and PR 28 became CONFLICTING with main 372f9aa (f329478 first, then PR 30 landed). The architect ordered a merge of origin/main.
 
 #### Toolchain
 
-- Branch merged with origin/main (eb83819). Diff against main is now this ticket's own files only: guard watch code and tests, SOP-0005, ee9c ticket archive, its changelog entries, and the aggregates re-rendered by their scripts.
-- Sibling ticket files: epic 265d README taken from main; 8fb2 dropped (main has none). The 265d ticket, 898a and c41f already equal main.
-- make lint ok on the merged tree. The full herdr suite was started on it in wD3:pB7 (output full3.out in the scratchpad).
+- origin/main (f329478, then 372f9aa after PR 30 landed) merged into the branch. The only conflicts were CONTEXT_STATE.md, rebuilt as the union of both sides' checkpoint blocks in their original order with none edited (checkpoint.sh verify ok, 73 blocks), and work-orders/INDEX.md, rebuilt by work-order.sh reindex. CHANGELOG.md re-rendered by bin/changelog.sh, check ok.
+- The delta since the reviewed head is the main merge only; no code of this ticket changed.
 
 #### Active Tasks
 
-- This step answers review.changes 422 (20261012T183132Z-422-5xfoz) per the architect ruling: merge main, drop sibling ticket files, aggregates by their scripts.
-- Confirm full3.out ends tests: N passed, 0 failed for this head; post blocked 423 or test.failed 422 if not.
-- Then hold.
+- Post pr.opened 100 with --pr 28 and the new head sha, then hold.
 
 #### Blockers
 
-- None.
-
-### New this checkpoint
-
-#### Decisions
-
-- Architect ruling: PR 31 lands before PR 34 (shared files herdr.json, herdr.schema.json, seat-lib.sh); aggregates (CHANGELOG, INDEX, CONTEXT_STATE) leave PRs only when WO-20261012-0677 lands.
-- reindex would have written ee9c as done into the epic README; the ruling keeps main's README, so work-order reindex --check disagrees with it until the merge; lint does not run that check.
-
-#### Lessons Learned
-
-- A review.changes record is answered with pr.opened at the new head; the monitor alerts after 90 seconds without a worker record.
+- roles/tester.json and roles/worker.json need the supersedes and merge main steps; a worker cannot edit roles/.
 
 ### Hydration prompt
 
-WO-20261012-ee9c is done, PR 31 is open at the merged head. If the suite output full3.out shows a failure, post test.failed 422 with the case; otherwise hold until the belt or the merger wakes this seat.
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
 
-## Checkpoint 2026-10-12 18:13 UTC
+## Checkpoint 2026-10-12 18:28 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, PR 31 open. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code. Treehouse slot 7, branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, PR 28. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+- Review az7ec passed the code, but its merge wake was lost and PR 28 became CONFLICTING with main f329478. The architect ordered a merge of origin/main.
 
 #### Toolchain
 
-- Branch merged with origin/main bbd281b (77225ac): lint ok, herdr suite 22 passed, 0 failed.
-- My SOP is now docs/sops/SOP-0005 (main already holds SOP-0003, the supervisor). docs.sh verify ok.
+- origin/main (f329478) merged into the branch. The only conflicts were CONTEXT_STATE.md, rebuilt as the union of both sides' checkpoint blocks in their original order with none edited (checkpoint.sh verify ok, 71 blocks), and work-orders/INDEX.md, rebuilt by work-order.sh reindex. CHANGELOG.md re-rendered by bin/changelog.sh, check ok.
+- The delta since the reviewed head is the main merge only; no code of this ticket changed.
 
 #### Active Tasks
 
-- This step: renumber SOP-0003 to SOP-0005 at the architect's order (file name, H1, the pointer in the archived ticket's AC-H5 evidence), push, post pr.opened with --sha and --pr 31.
-- Then hold; the belt re-tests the new head.
+- Post pr.opened 100 with --pr 28 and the new head sha, then hold.
 
 #### Blockers
 
-- None.
-
-### New this checkpoint
-
-#### Decisions
-
-- Dated changelog entry 20261012-scoped-guard-watch-seat-json-carries-the-resolved.md, the earlier checkpoints and the events still say SOP-0003: they are immutable history, and this step's changelog entry records the renumber.
-
-#### Lessons Learned
-
-- Two parallel tickets numbered SOPs from the same count; the architect assigns the number when two are in flight.
+- roles/tester.json and roles/worker.json need the supersedes and merge main steps; a worker cannot edit roles/.
 
 ### Hydration prompt
 
-WO-20261012-ee9c is done and PR 31 is open at the renumbered head. Hold until the belt or the merger posts a record that wakes this seat.
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
 
 ## Checkpoint 2026-10-12 18:03 UTC
 
@@ -155,6 +132,32 @@ WO-20261012-ee9c is done and PR 31 is open at the renumbered head. Hold until th
 ### Hydration prompt
 
 Resume WO-20261012-8fb2 as worker-wo-20261012-8fb2 in slot 9. Read playbooks/worker.md and this checkpoint. The merge with main is committed; post pr.opened for PR 30 with the pushed head, then hold.
+
+## Checkpoint 2026-10-12 17:47 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code. Treehouse slot 7, branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, PR 28 open and CLEAN against main. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+- The reviewer sent review.changes 422 (record 20261012T174330Z-422-lqevs, attempt 2) on fd36e21: the gate code, wake line and case 13 are accepted, but make lint failed on a bad changelog entry name.
+
+#### Toolchain
+
+- Cause: bin/changelog.sh built its collision suffix from 16 random bytes filtered to a-z0-9, so the suffix was often 2 chars, and check wants exactly 5. The second make step with the same title wrote changelog/2026/10/20261012-wake-line-carries-the-supersedes-and-merge-main-st-ga.md, a duplicate of the first entry.
+- Fix: removed the duplicate entry, re-rendered CHANGELOG.md with bin/changelog.sh render, and changed the suffix source to 256 bytes with a breadcrumb in bin/changelog.sh. make -C factory lint ok.
+
+#### Active Tasks
+
+- Post pr.opened 100 with --pr 28 and the new head sha, then hold.
+
+#### Blockers
+
+- roles/tester.json and roles/worker.json need the supersedes and merge main steps; a worker cannot edit roles/.
+
+### Hydration prompt
+
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
 
 ## Checkpoint 2026-10-12 17:33 UTC
 
@@ -188,85 +191,86 @@ Resume WO-20261012-8fb2 as worker-wo-20261012-8fb2 in slot 9. Read playbooks/wor
 
 You are worker-wo-20261012-8f4f on WO-20261012-8f4f. Read this checkpoint and playbooks/worker.md. Next: gh pr create, work-order.sh submit and done, push, post pr.opened, then idle.
 
-## Checkpoint 2026-10-12 16:59 UTC
+## Checkpoint 2026-10-12 17:29 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, no PR yet. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code. Treehouse slot 7, branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, PR 28 open. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+- The reviewer sent review.changes 422 (record 20261012T172204Z-422-bahk9, attempt 1) on f9b7d1d: PR 28 conflicted with main, and no playbook tells the tester to drop a superseded head or the worker to merge main.
 
 #### Toolchain
 
-- Code is complete: seat-lib.sh resolver and target list, guardwatch.sh, unfreeze.sh sessions_of, seat.sh claude_session_set, herdr.json keys with schema, monitors.json slot 1.1.2, stub claude and stub guard, cases 04, 06, 17.
-- Full suite green from the test pane: tests: 17 passed, 0 failed. Live read-only check of sl_pane_session on the stable herdr session resolved this seat's own pane to its own session id.
-- docs/sops/SOP-0003 documents the watch (docs.sh verify ok).
+- origin/main merged into the branch. CHANGELOG.md re-rendered by bin/changelog.sh, work-orders/INDEX.md and the child READMEs rebuilt by work-order.sh reindex, CONTEXT_STATE.md rebuilt as the union of both sides' checkpoint blocks newest first with no block edited (checkpoint.sh verify ok, 67 blocks), factory/RUNBOOK.md routes table keeps this branch's rows plus main's policy.applied row.
+- Playbooks cannot be edited by a worker (rendered from roles/, denied), so the instruction now rides on the wake line: supersedes <id> (drop that run and post nothing for it), and merge main (git fetch origin, git merge origin/main, fix the conflicts, push, post pr.opened with the new sha). Case 13-gate-route pins both lines; RUNBOOK and the route.sh breadcrumb say why. The roles/tester.json and roles/worker.json steps remain the architect's edit.
+- Verified in the test pane on the merged tree: make -C factory lint ok, factory suite 19 passed 0 failed.
 
 #### Active Tasks
 
-- Steps A (a14c459), B (04c338f) landed; step C (seat.sh claude_session, SOP-0003) is this commit.
-- Next: close-out per AGENTS.md. work-order.sh evidence --observed for AC-H1..AC-H5, retro note, push, one PR with the criteria as the body, work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened 100 with sha and pr, stop.
+- Post pr.opened 100 with --pr 28 and the new head sha, then hold.
 
 #### Blockers
 
-- None.
-
-### New this checkpoint
-
-#### Decisions
-
-- seat.sh polls sl_pane_session up to session_wait_seconds after the start branch; a null claude_session is filled by the next guardwatch tick.
-- Backlog item lh51y is not moved to done by this ticket; its done-when is proven by case 17 and the architect closes it after the merge.
-- recover.sh is unchanged.
-
-#### Lessons Learned
-
-- A wait loop in a Bash call that outlasts 120 s is moved to a harness background job; poll the test pane output file in bursts under 100 s.
+- roles/tester.json and roles/worker.json need the supersedes and merge main steps; a worker cannot edit roles/.
 
 ### Hydration prompt
 
-Resume WO-20261012-ee9c at close-out: read the ticket, record evidence --observed for AC-H1..AC-H5 from the case 17, 06, 04 output in the scratchpad (a1.out, b1.out, full1.out), add the retro note, open one PR, submit, done, post pr.opened 100.
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
 
-## Checkpoint 2026-10-12 16:47 UTC
+## Checkpoint 2026-10-12 17:28 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, no PR yet. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code. Treehouse slot 7, branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, PR 28 open. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+- The reviewer sent review.changes 422 (record 20261012T172204Z-422-bahk9, attempt 1) on f9b7d1d: PR 28 conflicted with main, and no playbook tells the tester to drop a superseded head or the worker to merge main.
 
 #### Toolchain
 
-- herdr/bin/seat-lib.sh: sl_pane_claude_pid, sl_pane_session, sl_guard_targets. herdr/bin/guardwatch.sh is in monitors.json slot 1.1.2. unfreeze.sh sessions_of and pass() use them.
-- herdr.json has session_wait_seconds (10), claude_sessions_dir, guard_watch_interval_seconds (15), schema updated. session_wait_seconds is not read yet.
-- Suite subset run as: testpane.sh wD3:pB7 "<scratchpad>/runcase.sh '06 17' name"; output file read from the scratchpad.
+- origin/main merged into the branch. CHANGELOG.md re-rendered by bin/changelog.sh, work-orders/INDEX.md and the child READMEs rebuilt by work-order.sh reindex, CONTEXT_STATE.md rebuilt as the union of both sides' checkpoint blocks newest first with no block edited (checkpoint.sh verify ok, 67 blocks), factory/RUNBOOK.md routes table keeps this branch's rows plus main's policy.applied row.
+- Playbooks cannot be edited by a worker (rendered from roles/, denied), so the instruction now rides on the wake line: supersedes <id> (drop that run and post nothing for it), and merge main (git fetch origin, git merge origin/main, fix the conflicts, push, post pr.opened with the new sha). Case 13-gate-route pins both lines; RUNBOOK and the route.sh breadcrumb say why. The roles/tester.json and roles/worker.json steps remain the architect's edit.
+- Verified in the test pane on the merged tree: make -C factory lint ok, factory suite 19 passed 0 failed.
 
 #### Active Tasks
 
-- Step A landed (a14c459): guardwatch.sh, case 17 (AC-H1, AC-H2), case 04 slot check.
-- Step B (this commit): unfreeze.sh releases only the live session of a pane; case 06 extended (AC-H3), proven to fail on the old unfreeze.sh (3 releases into one pane) and pass on the new.
-- Step C next: seat.sh writes claude_session into seat.json at seat up and on a repair rerun (AC-H4), waits up to session_wait_seconds; world.sh config sets it to 1; new case or extension of case 01 for the assertion.
-- Then RUNBOOK doc, full suite (make -C herdr test, no CASES), close-out per AGENTS.md.
+- Post pr.opened 100 with --pr 28 and the new head sha, then hold.
+
+#### Blockers
+
+- roles/tester.json and roles/worker.json need the supersedes and merge main steps; a worker cannot edit roles/.
+
+### Hydration prompt
+
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
+
+## Checkpoint 2026-10-12 17:15 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker. Treehouse slot 7, branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, PR 28 open. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+- The tester failed da00764 with test.failed 422 (record 20261012T160201Z-422-bs49j, attempt 2): factory cases 08-break-glass and 02-no-route failed intermittently. Architect linked it to backlog disva.
+
+#### Toolchain
+
+- Causes found, three, all the same family. (1) The host clock steps back about a second, so "sleep 1 between records" does not keep ids in order: a later record landed in the same second as and sorted before an earlier one (08-break-glass read the 300 receipt as the 200 receipt; 10-sha ran a review before its test; 03-escalate counted escalations wrong). (2) A real bug in gate.sh log_all: under pipefail the fallback loop's status was the last file's jq status, so an unreadable record file that find listed last made the whole read fail and the pr.opened route to a 500 (02-no-route, about one run in three).
+- Fix: world.sh evo now gives every record an id strictly after every other record in the world (including the runner's own) and rec goes through it; 08-break-glass reads the receipt by content; gate.sh adds || true; case 12-gate gained a test of one good and nine unreadable record files. Before the fix 5 runs gave 3 failures; after it 20 consecutive runs of make -C factory test gave 18 passed 0 failed each.
+- Incident: I ran pkill -f loop.sh in the test pane, which also matched report/loop/loop.sh watch processes of other seats; the supervisor respawned them within seconds. Not repeated.
+
+#### Active Tasks
+
+- Post pr.opened 100 with --pr 28 and the new head sha, then hold.
 
 #### Blockers
 
 - None.
 
-### New this checkpoint
-
-#### Decisions
-
-- sessions_of no longer consults the binding's pane field; it keeps the binding's driver and herdr_session checks.
-- sl_guard_targets de-duplicates by pane, so a seat that is also exempt is visited once.
-- recover.sh stays unchanged (ticket scope does not list it); it can read claude_session from seat.json in a later ticket.
-
-#### Lessons Learned
-
-- A mutation check (run the case against the old script) is cheap and proved the AC-H3 assertions fail without the fix.
-
 ### Hydration prompt
 
-Resume WO-20261012-ee9c at step C: in herdr/bin/seat.sh add a claude_session_set function (like nudged_set) and call it after the start/already-running branch, polling sl_pane_session "$a" up to .session_wait_seconds; add session_wait_seconds=1 to the world config filter in herdr/tests/lib/world.sh with a breadcrumb; assert seat.json claude_session equals the stub's session after seat up (AC-H4) in a case.
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
 
 ## Checkpoint 2026-10-12 16:44 UTC
 
@@ -301,44 +305,55 @@ Resume WO-20261012-ee9c at step C: in herdr/bin/seat.sh add a claude_session_set
 
 You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint and playbooks/worker.md. Next: post pr.opened for PR 26 with the pushed sha, then idle.
 
-## Checkpoint 2026-10-12 16:43 UTC
+## Checkpoint 2026-10-12 15:46 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, no PR yet. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker. Treehouse slot 7 (lease holder is this ticket), branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, no PR yet. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
 
 #### Toolchain
 
-- herdr/bin/seat-lib.sh now has sl_pane_claude_pid, sl_pane_session and sl_guard_targets; herdr/bin/guardwatch.sh is new; herdr.json has session_wait_seconds, claude_sessions_dir, guard_watch_interval_seconds.
-- Suite subset run as: testpane.sh wD3:pB7 "<scratchpad>/runcase.sh '17 04' name", output file read from the scratchpad.
+- Step 3 landed: factory/RUNBOOK.md documents the optional row fields (with merge-main, when, supersede), the routes table rows 3, 4, 5, 6, 7 and 11, a new section The gate rules, and busy_grace_seconds under Tune it.
+- Steps 1 and 2 are in earlier checkpoints: gate.sh with route.sh guards (cases 12-gate, 13-gate-route), and the flow watch busy rule (case 14-flow-busy). Factory suite 18 passed 0 failed, make -C factory lint ok.
 
 #### Active Tasks
 
-- Step A (this commit): guardwatch.sh in slot 1.1.2, stub claude writes its session file, stub guard returns on --once, case 17 (AC-H1, AC-H2) and case 04 (AC-H5 slot) green.
-- Step B next: unfreeze.sh sessions_of resolves the pane to its live session (AC-H3), case 06 gets session files for its stub seats.
-- Step C after: seat.sh writes claude_session into seat.json at seat up (AC-H4), waits session_wait_seconds, world config shortens it.
-- Then docs (RUNBOOK), full suite, close-out per AGENTS.md.
+- Step 4: close out. Run the factory suite once more on the final tree, then work-order.sh evidence --observed for AC-H1 and AC-H2, the retro note (findings: tester and merger playbooks cannot name supersedes or the tree rule because roles/ is denied to a worker; case 04-restart raced a TERM; routes.schema.json existed twice and had drifted, now identical; event.sh in a slot writes to the slot, not the checkout), work-order.sh done, push, gh pr create with the criteria as the body, work-order.sh submit --pr N, push the archive move, pr.opened 100 with sha and pr.
 
 #### Blockers
 
 - None.
 
-### New this checkpoint
+### Hydration prompt
 
-#### Decisions
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Step 4 above remains; run every command through herdr/bin/testpane.sh in pane wD3:p8J.
 
-- A claude process is matched by name claude or by an interpreter running a script whose path ends in /claude, because the suite stub runs as bash /repo/herdr/tests/stubs/claude. A false match only reads as no session file.
-- recover.sh is not changed: the ticket scope lists seat.sh writing the session so recover.sh can use it, not recover.sh itself.
+## Checkpoint 2026-10-12 15:44 UTC
 
-#### Lessons Learned
+### Current state
 
-- herdr pane process-info reports name bash for the stub, so the matching rule had to look at argv[1] as well.
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker. Treehouse slot 7 (lease holder is this ticket), branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, no PR yet. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Step 2 landed: the flow watch no longer notes a gate record while the consumer role's seat for the ticket reports herdr agent_status working (factory/bin/flow.sh seat_working, judged again every tick, so the note comes the moment the seat goes idle with no record). busy_grace_seconds 1800 in flow.json and flow.schema.json is the backstop for a seat stuck in working. Case 14-flow-busy, stub answer agent_state in world.sh. Factory suite 18 passed 0 failed, make -C factory lint ok.
+- Step 1 (earlier checkpoint): gate.sh and the route guards, cases 12-gate and 13-gate-route.
+
+#### Active Tasks
+
+- Step 3: factory/RUNBOOK.md rows for when, supersede, merge-main, gate.sh and the flow busy rule. Step 4: close out - evidence per criterion, retro note (include the finding that the tester and merger playbooks cannot name supersedes or the tree rule because roles/ is denied to a worker), push, PR, submit, done, pr.opened 100 with sha and pr.
+
+#### Blockers
+
+- None.
 
 ### Hydration prompt
 
-Resume WO-20261012-ee9c at step B: unfreeze.sh sessions_of must return only the live session of the pane, using sl_pane_session from herdr/bin/seat-lib.sh; update case 06 so its stub seats have session files (mk_session sids taken from the stub's own session file), and add the dead-session-into-live-pane assertion for AC-H3.
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Steps 3 and 4 above remain; run every command through herdr/bin/testpane.sh in pane wD3:p8J.
 
 ## Checkpoint 2026-10-12 15:41 UTC
 
@@ -364,6 +379,32 @@ Resume WO-20261012-ee9c at step B: unfreeze.sh sessions_of must return only the 
 ### Hydration prompt
 
 Resume WO-20261012-9b2c as worker-wo-20261012-9b2c in slot 8. Read playbooks/worker.md and this checkpoint. The code is committed; do the close-out in Active Tasks, then hold.
+
+## Checkpoint 2026-10-12 15:39 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker. Treehouse slot 7 (lease holder is this ticket), branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, no PR yet. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Step 1 landed: factory/bin/gate.sh (same-head, when head_current|heads_match, supersedes) and the wiring in factory/bin/route.sh: a routes row may carry `when` (gate predicate; a hold writes a receipt and nothing else, not even the row's down) and `supersede`, and `with: merge-main` appends " merge main". routes.json: pr.opened supersede, test.passed and test.failed head_current, review.passed heads_match, merge.conflict with merge-main. Both routes schemas updated and made identical.
+- Tests: new cases 12-gate (git fixtures, gate.sh alone) and 13-gate-route (the runner end to end), world.sh gained evo and REC_SHA/REC_PR, cases 09-seat, 10-sha and 11-down give review.passed a test.passed on the same head first, case 04-restart now waits for receipts instead of herdr calls (it raced a TERM between the prompt and its receipt). Container image bumped to coq-factory-test:2 because gate.sh needs git. Factory suite 17 passed 0 failed, make -C factory lint ok.
+- Not done: the tester playbook cannot say what to do with "supersedes <id>" because playbooks are rendered from roles/tester.json, which a worker may not edit. The runner-side guard drops the older head's results, so nothing is posted downstream for it; the wording is a finding for the retro note.
+
+#### Active Tasks
+
+- Step 2: flow.sh stall rule - judge a stall by the consumer seat's state, not a fixed timer (ticket note, scope added at start). Step 3: factory/RUNBOOK.md rows for when, supersede, merge-main and gate.sh. Step 4: close out - evidence per criterion, retro note, push, PR, submit, done, pr.opened 100 with sha and pr.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Steps 2 to 4 above remain; run every command through herdr/bin/testpane.sh in pane wD3:p8J.
 
 ## Checkpoint 2026-10-12 14:58 UTC
 
