@@ -10,7 +10,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 world_up tpsub || exit 1
 TP="$REPO/herdr/bin/testpane.sh"; P="$WORLD_TEST_PANE"
 SLOT="$WORLD/fake-slot"; mkdir -p "$SLOT"
-export COQ_TEST_PANE="$P"
+export COQ_TEST_PANE="$P" COQ_WORKTREE="$SLOT"
 pane_cwd() { h pane process-info --pane "$P" | jq -r '.result.process_info.foreground_processes[0].cwd // empty'; }
 # settle FILE: wait for the command to have finished (it touches FILE last), then give the shell a moment to print its prompt.
 settle() { local n=0; while [ ! -f "$1" ] && [ "$n" -lt 30 ]; do sleep 0.5; n=$((n + 1)); done; sleep 1; }
