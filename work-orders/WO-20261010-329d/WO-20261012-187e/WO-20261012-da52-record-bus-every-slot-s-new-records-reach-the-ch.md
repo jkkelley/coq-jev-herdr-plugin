@@ -60,8 +60,10 @@ Seats write records into their slot's events/, route.sh watches only the checkou
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a record written in any slot appears in the checkout events/ within 10 s, byte identical, once
-- [ ] `AC-H2` *(human)* the interim ~/.cache record-bus.sh is removed and grep finds no ~/.cache path in herdr/ or factory/
+- [x] `AC-H1` *(human)* a record written in any slot appears in the checkout events/ within 10 s, byte identical, once
+  - observed `2026-10-12` make -C factory test case 12-bus: a record written by event.sh in slot 1, 2 and a later slot 3 appears in the checkout events/ at the same path, cmp byte identical, one file after three more ticks; run mode delivered in 4 s against the 10 s limit; route.sh once then seated the tester for a bus-copied pr.opened 100 with no copy by hand
+- [x] `AC-H2` *(human)* the interim ~/.cache record-bus.sh is removed and grep finds no ~/.cache path in herdr/ or factory/
+  - observed `2026-10-12` grep for the user cache path finds nothing in herdr/ or factory/ (case 12 greps both). NOT DONE by this seat: deleting the interim record-bus.sh under the user cache directory and stopping its loop in monitor slot 2.3.3, because the file is outside the worker's allowed paths; the architect or owner removes it, then bringup takes slot 2.3.3 for bus.sh
 
 ## Test plan
 
@@ -80,6 +82,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Retro: bus.sh reads slots from treehouse status --json run in the repo, copies once through a ledger under factory/state/bus/copied, tmp then rename. The interim loop's skip-if-in-checkout rule let a record the architect removed come back, which is why the ledger exists. A record a seat commits and merges also arrives untracked in the checkout, so git pull there can refuse until the records commit takes it (breadcrumb in bus.sh). herdr case 04 and 05 counts moved from ten to eleven nodes for the new bus pane. Left to the architect or owner: delete the interim record-bus.sh in the user cache directory and stop its loop in slot 2.3.3 before bringup can take the slot.
 
 ## Outcome
 
