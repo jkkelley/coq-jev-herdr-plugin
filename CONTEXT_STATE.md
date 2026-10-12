@@ -48,6 +48,45 @@
 
 
 
+
+## Checkpoint 2026-10-12 14:26 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
+  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only (never herdr pane run directly).
+- First record work.started 100 posted; lease_holder checked against treehouse status.
+
+#### Toolchain
+
+- Step 1 landed: monitors.sh health verb judges each reserved slot by herdr process-info (bare shell, open-but-busy, wrong holder), bringup.sh uses it and continues past a stuck pane with one deduped 500 per 15 minutes, recover.sh has a 6b pane node, case 17-pane-health added, case 05 count updated.
+- Verified in the test pane: make -C herdr lint, full make -C herdr test (17 cases; 05 fixed after, rerun passed).
+- Test run recipe: herdr/bin/testpane.sh $COQ_TEST_PANE "cd $COQ_WORKTREE && clear; CASES=NN make -C herdr test 2>&1 | grep -E 'FAIL|^tests:'; echo CASE-DONE" then herdr --session stable pane wait-output $COQ_TEST_PANE --regex '^CASE-DONE$' --source recent --timeout 115000 (at most 120 s per call, loop).
+
+#### Active Tasks
+
+Plan, one commit and one checkpoint each (design decisions made while reading the code):
+- S2 watches into the repo: herdr/bin/turnwatch.sh and recwatch.sh ported from the interim ~/.cache/coq-watch scripts (config-driven architect agent name and session, slots from treehouse status), reserved slots in a NEW monitors tab 4 "monitors 4 - supervisor and watches" (kind watch) so they do not fight glass at 2.3.1 or the record bus (WO-20261012-da52) at 2.3.2/2.3.3; update case 04 counts (tabs, panes).
+- S3 supervisor.sh core: flock single instance, halt flag honoured, timeouts on every call, herdr started through systemctl --user start herdr-stable (never a child process), bringup --apply (panes, belt via shared function, monitor seat), podman check and podman system migrate (backlog 60l24), bearings (alive via bearings.sh stable status; restart with HERDR_ENV=1 HERDR_TAB_ID of its labelled pane, serve --join with session.json values, then wait --to the wake agent), summary line to a state log; supervisor slot tail pane.
+- S4 re-seat: for each open non-adopted seat record whose pane has no claude/codex in the foreground (process-info, not herdr agent get alone), dead on two consecutive ticks, no fresh down.lock, ticket not closed: rerun seat.sh (door 1 --ticket T --role R without --worktree keeps the lease owned flag; door 2 --role R --task) ; cap 3 per 30 min then one 500; closed ticket gets seat.sh --down. seat.sh --down writes down.lock for its duration.
+- S5 systemd units herdr/systemd/coq-supervisor.service + .timer (30 s, oneshot, TimeoutStartSec, linger), make target, RUNBOOK + SOP via docs.sh, evidence per AC (AC-H1..H3 are human; give live recipe), retro note, PR, work-order done.
+- Do not touch ~/.cache/coq-watch (outside paths); da52 owns removing record-bus.
+
+#### Blockers
+
+- None. Installing the units on the host is the owner's or architect's action (worker may not install on the host); the PR carries the runbook.
+
+### New this checkpoint
+
+- Decision: process health = herdr pane process-info (foreground group differs from shell pid) AND the label equals the reserved owner label; a command that is alive but hung reads ok and is the supervisor's timeout problem.
+- Decision: bringup panes are leaves, not chain links; a stuck pane no longer stops the panes after it.
+
+### Hydration prompt
+
+You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint, then AGENTS.md first 60 lines and playbooks/worker.md. Next: step S2 (watches into the repo, monitors tab 4). Commit with make step; test only in wD3:p89 through herdr/bin/testpane.sh.
+
 ## Checkpoint 2026-10-12 12:40 UTC
 
 ### Current state
