@@ -48,6 +48,34 @@
 
 
 
+
+## Checkpoint 2026-10-12 14:09 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p83, run only through herdr/bin/testpane.sh.
+- The tester failed 49ab55b with test.failed 422 (record 20261012T132330Z-422-hyds1): factory case 06-belt read a belt backdated 61 s as running.
+
+#### Toolchain
+
+- Cause: route.sh status used -le against stale_seconds, so a belt exactly 60 s old read running, against the file header and AC-H6 which say fresher than. The host clock steps back about a second every ~35 s, so a 61 s backdate can be 60 s old by the time route.sh reads it.
+- Fix: factory/bin/route.sh status uses -lt. Case 06-belt now backdates 65 and 55 s on the real clock and pins 59, 60 and 61 with a date stub. factory/RUNBOOK.md states the boundary. Breadcrumbs sit at both fix sites.
+- Verified in the test pane: factory suite 14 passed 0 failed, make lint all ok, case 06 alone three more times 1 passed each.
+
+#### Active Tasks
+
+- After this step lands: work-order.sh evidence, submit and done are already recorded by earlier steps, so post pr.opened 100 with the new sha and pr 21 so the route table wakes the tester again. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The 06-belt boundary fix is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
+
 ## Checkpoint 2026-10-12 12:50 UTC
 
 ### Current state
