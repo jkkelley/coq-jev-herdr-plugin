@@ -78,6 +78,28 @@
 
 Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md, the reviewer record 20261012T022449Z-422-t39yq and this checkpoint. The RUNBOOK fix is pushed; post pr.opened 100 with sha and pr 21 if it is not posted, then hold. Run commands only through herdr/bin/testpane.sh.
 
+## Checkpoint 2026-10-11 23:09 UTC
+
+### Current state
+
+#### Infrastructure
+- Worker seat worker-wo-20261011-f896 on WO-20261011-f896 - Test pane per seat: seat.sh opens a labelled test pane in the seat's own tab and exports it as COQ_TEST_PANE, so sixteen seats test in parallel instead of queueing on the architect tab's one pane. Branch feat/test-pane-per-seat-seat-sh-opens-a-labelled-test, slot 9, PR 20 open against main. Ticket submitted and done, archived on the branch.
+- Reviewer record 20261011T222140Z-422-r8xoi (attempt 1 of 3): SOP-0002 lacked Contents, GOOD and NEVER, and observed Verification, and PR 20 was CONFLICTING. Fixed: SOP-0002 now has all three (Contents from bin/md-contents.sh --fix).
+- main moved to 55f4e22 (PR 18, seat.sh adopt and resume, merged). origin/main merged into the branch: seat.sh conflict kept both the adopt block and the test pane block; my case was renamed 14-test-pane-per-seat to 16-test-pane-per-seat because main took 14 (adopt) and 15 (resume); CONTEXT_STATE.md keeps both sides.
+
+#### Toolchain
+- make lint and make -C herdr test after this merge are queued in the shared pane wD3:p1V (log post2.log in the scratchpad); the push waits for them.
+
+#### Active Tasks
+- When both are green: commit the merge, push (no force), post pr.opened 100 with the new sha and the pr, stop.
+- For the architect: specs/ is denied to a worker, so SPEC-04 s-seat and specs/exports/factory-spec.xml S1-059 still describe two panes; the layout keeps the name seat-1x2 with three panes until roles/ is renamed.
+
+#### Blockers
+- None.
+
+### Hydration prompt
+Resume WO-20261011-f896 as worker-wo-20261011-f896 in slot 9. Read playbooks/worker.md and this checkpoint. The merge of origin/main is staged; read the post-merge lint and suite log, commit, push, post pr.opened 100 and stop.
+
 ## Checkpoint 2026-10-11 21:36 UTC
 
 ### Current state

@@ -13,6 +13,17 @@
       "kind": "monitor",
       "label": "MONITOR - ${name}",
       "command": "while :; do clear; ${repo}/events/bin/event.sh tail; sleep 15; done"
+    },
+    {
+      "slot": "c",
+      "kind": "test",
+      "label": "test - herdr - ${name}",
+      "command": "cd ${repo} && clear",
+      "split": {
+        "from": "b",
+        "direction": "down",
+        "ratio": 0.4
+      }
     }
   ]
 }

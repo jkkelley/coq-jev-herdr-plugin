@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T121932Z-100-0s1il",
+  "at": "2026-10-12T12:19:32Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4db1",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p60",
+  "note": "review 422 fixed: RUNBOOK Graph and Ticket lines restored. make lint ok and make -C factory test 14 passed on this tree; tester to prove head 2c5f807",
+  "evidence": [],
+  "observations": [],
+  "sha": "2c5f807",
+  "pr": 21
+}
