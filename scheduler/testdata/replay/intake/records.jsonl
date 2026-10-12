@@ -1,0 +1,2 @@
+{"schema_version": "1.0.0", "id": "<<id:01:300>>", "at": "2000-01-01T00:00:01Z", "code": 300, "seat": "interface", "kind": "request.forwarded", "ticket": "<<ticket:a>>", "note": "synthetic request"}
+{"schema_version": "1.0.0", "id": "<<id:02:100>>", "at": "2000-01-01T00:00:02Z", "code": 100, "seat": "architect-<<tkt:a>>", "kind": "ticket.cut", "ticket": "<<ticket:a>>", "to": "worker"}

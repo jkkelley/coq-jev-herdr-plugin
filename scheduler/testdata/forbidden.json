@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "description": "A pinned copy of the forbidden list of specs/scheduler/config/check.json, for the one window in which that file is not on main yet. scheduler/testdata/bin/check.sh reads check.json whenever it exists and then fails when this copy differs from it, so the copy can never drift silently; delete it once check.json is on main.",
+  "source": "specs/scheduler/config/check.json",
+  "forbidden": [
+    { "name": "home path", "regex": "/home/|/Users/|[A-Za-z]:\\\\Users|~/" },
+    {
+      "name": "host or url",
+      "regex": "localhost|127\\.0\\.0\\.1|0\\.0\\.0\\.0|://"
+    },
+    { "name": "page key", "regex": "[?&]key=|[0-9a-fA-F]{32,}" },
+    {
+      "name": "email address",
+      "regex": "[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\\.[A-Za-z0-9-]+)*\\.[A-Za-z]{2,}"
+    },
+    { "name": "ticket id", "regex": "WO-[0-9]{8}-[0-9a-f]{4}" },
+    { "name": "record id", "regex": "[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}" },
+    { "name": "herdr pane id", "regex": "\\bw[A-Z0-9]{2}:[pt][A-Z0-9]+\\b" },
+    { "name": "em dash", "regex": "\\u2014" }
+  ]
+}

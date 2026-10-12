@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "file": "expected",
+  "case": "housekeeping",
+  "derived_from": ["specs/scheduler/SPEC-16.F-health-supervision.xml#f-housekeeping", "herdr/config/monitors.json"],
+  "decisions": [
+    { "record": "<<id:01:100>>", "verdict": "ignored", "row": 14, "jobs": [] }
+  ],
+  "defaults": [],
+  "engine": [
+    {
+      "domain": "health", "spec": "SPEC-16.F#f-housekeeping",
+      "jobs": [{ "key": "housekeeping:queue_sweep:20000101T010000Z", "verb": "queue_sweep", "args": [], "after": [] }]
+    },
+    {
+      "domain": "health", "spec": "SPEC-16.F#f-housekeeping",
+      "jobs": [{ "key": "housekeeping:glass_sweep:20000101T010000Z", "verb": "glass_sweep", "args": [], "after": [] }]
+    }
+  ]
+}

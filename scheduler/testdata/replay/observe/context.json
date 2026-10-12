@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "file": "context",
+  "clock": "2000-01-01T00:01:00Z",
+  "scheduler_seat": "replay-scheduler",
+  "runner_seats": ["replay-scheduler", "replay-runner"],
+  "playbooks_dir": "/repo/playbooks",
+  "evidence_dir": "events/2000/01",
+  "seat_read_lines": 40,
+  "history": [],
+  "seats": [{ "name": "worker-<<tkt:a>>", "pane": "w1:p3", "status": "idle", "quiet": false }],
+  "gates": [],
+  "executor": [
+    { "verb": "seat_quiet", "args": ["worker-<<tkt:a>>"], "exit": 1 },
+    { "verb": "agent_list", "args": [], "exit": 0, "stdout": "{\"result\":{\"agents\":[{\"name\":\"worker-<<tkt:a>>\",\"agent_status\":\"idle\",\"pane_id\":\"w1:p3\"}]}}" },
+    { "verb": "pane_read", "args": ["w1:p3", "40"], "exit": 0, "stdout": "synthetic output\n> " }
+  ]
+}

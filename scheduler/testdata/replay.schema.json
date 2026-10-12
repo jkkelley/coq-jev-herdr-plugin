@@ -1,0 +1,296 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/scheduler/testdata/replay.schema.json",
+  "title": "replay fixture",
+  "description": "The context and expected files of one golden replay case under scheduler/testdata/replay/<case>/ (SPEC-16.K k-replay). Validated after the synthetic placeholders are expanded; scheduler/testdata/README.md names the placeholders and scheduler/testdata/bin/check.sh is the check.",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$"
+    },
+    "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
+    "seat": { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$" },
+    "utc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "record": {
+      "description": "One record as the event writer writes it; the event schema is the full check, this is the shape the replay reads.",
+      "type": "object",
+      "required": ["schema_version", "id", "at", "code", "seat", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "at": { "$ref": "#/$defs/utc" },
+        "seat": { "$ref": "#/$defs/seat" },
+        "ticket": { "$ref": "#/$defs/ticket" }
+      }
+    },
+    "job": {
+      "description": "One job spec as a plan or a domain creates it (SPEC-16 s-contracts Job), or one executor call a domain makes while running a job.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "verb", "args", "after"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "minLength": 3,
+          "description": "record id or housekeeping, colon, the verb, colon, the target: the seat for prompt, seat_up, seat_down, break_glass, seat_quiet, inbox and pane_read, the ticket for enqueue, the record kind written for record, the UTC period for a housekeeping verb"
+        },
+        "verb": {
+          "enum": [
+            "prompt",
+            "agent_list",
+            "pane_read",
+            "pane_process_info",
+            "notify",
+            "seat_up",
+            "seat_down",
+            "break_glass",
+            "glass_sweep",
+            "enqueue",
+            "enqueue_priority",
+            "queue_sweep",
+            "record",
+            "seat_quiet",
+            "inbox"
+          ]
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[^\\n\\u0000]*$" },
+          "description": "positional arguments bound to the verb's argv template; for record, the writer flags in the order the bash runner passes them; {out:KEY} is replaced at run time by the first stdout line of the job KEY names, which must be in after"
+        },
+        "after": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "keys this job waits on; a trailing ? accepts done or dead, a plain key done only"
+        },
+        "state": {
+          "enum": ["done", "held", "pending", "confirming", "dead"],
+          "description": "the job's state when the replay ends; done when absent"
+        },
+        "hold": {
+          "enum": ["quiet", "cap", "absent", "shared"],
+          "description": "the hold reason, only with state held"
+        },
+        "exit": {
+          "type": "integer",
+          "description": "the exit code the fake executor answered and the job kept, when not 0"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "context",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "file",
+        "clock",
+        "scheduler_seat",
+        "runner_seats",
+        "playbooks_dir",
+        "evidence_dir",
+        "history",
+        "seats",
+        "gates",
+        "executor"
+      ],
+      "properties": {
+        "schema_version": { "const": "1.0.0" },
+        "file": { "const": "context" },
+        "clock": {
+          "$ref": "#/$defs/utc",
+          "description": "the fake clock when the replay runs; deadlines and housekeeping periods are judged against it"
+        },
+        "scheduler_seat": {
+          "$ref": "#/$defs/seat",
+          "description": "the seat the record verb forces; records with it are own"
+        },
+        "runner_seats": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/seat" },
+          "minItems": 1,
+          "description": "intake.runner_seats: own records, and the seats whose escalated records count toward escalations"
+        },
+        "playbooks_dir": {
+          "type": "string",
+          "pattern": "^/[a-z/]+$",
+          "description": "where the wake line's playbook path points"
+        },
+        "evidence_dir": {
+          "type": "string",
+          "pattern": "^events/[0-9]{4}/[0-9]{2}$",
+          "description": "the repo-relative directory of the replayed records, for the receipt's evidence"
+        },
+        "seat_read_lines": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "seat.read_lines, the pane read verb's line count"
+        },
+        "housekeeping": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 1 },
+          "description": "housekeeping periods in seconds by verb"
+        },
+        "history": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/record" },
+          "description": "records already in the log before the boundary: never routed or judged, but counted for escalations and policy limits"
+        },
+        "seats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "status"],
+            "properties": {
+              "name": { "$ref": "#/$defs/seat" },
+              "pane": { "type": "string" },
+              "status": { "enum": ["absent", "idle", "busy", "unknown"] },
+              "quiet": {
+                "type": "boolean",
+                "description": "the seat's quiet file exists"
+              }
+            }
+          }
+        },
+        "gates": {
+          "type": "array",
+          "description": "what gate.sh answers for a record whose row names when or supersede; the Go engine reads the same facts from the log",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["record"],
+            "properties": {
+              "record": { "$ref": "#/$defs/id" },
+              "when": { "enum": ["head_current", "heads_match"] },
+              "result": { "enum": ["proceed", "held"] },
+              "supersedes": {
+                "oneOf": [{ "$ref": "#/$defs/id" }, { "type": "null" }]
+              }
+            }
+          }
+        },
+        "executor": {
+          "type": "array",
+          "description": "the fake executor's script: an answer for a verb and exact arguments; every other call exits 0 with empty output",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["verb", "args", "exit"],
+            "properties": {
+              "verb": { "type": "string" },
+              "args": { "type": "array", "items": { "type": "string" } },
+              "exit": { "type": "integer" },
+              "stdout": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    {
+      "title": "expected",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "file",
+        "case",
+        "derived_from",
+        "decisions",
+        "defaults",
+        "engine"
+      ],
+      "properties": {
+        "schema_version": { "const": "1.0.0" },
+        "file": { "const": "expected" },
+        "case": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "the case directory's name"
+        },
+        "derived_from": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^(factory|herdr|specs)/[A-Za-z0-9_./#-]+$"
+          },
+          "description": "the bash case or spec section this case reproduces"
+        },
+        "decisions": {
+          "type": "array",
+          "description": "one per record of records.jsonl, in the same order: the plan routing makes for it",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["record", "verdict", "row", "jobs"],
+            "properties": {
+              "record": { "$ref": "#/$defs/id" },
+              "verdict": {
+                "enum": ["routed", "ignored", "unrouted", "own", "unreadable"]
+              },
+              "row": {
+                "type": ["integer", "null"],
+                "minimum": 0,
+                "description": "the index of the first matching routes row; null when no row is consulted or none matches"
+              },
+              "jobs": { "type": "array", "items": { "$ref": "#/$defs/job" } }
+            }
+          }
+        },
+        "defaults": {
+          "type": "array",
+          "description": "one per escalation a policies row defaults in this replay",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["policy", "escalation", "jobs"],
+            "properties": {
+              "policy": { "type": "string", "pattern": "^POL-[a-z0-9-]+$" },
+              "escalation": { "$ref": "#/$defs/id" },
+              "jobs": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/$defs/job" }
+              }
+            }
+          }
+        },
+        "engine": {
+          "type": "array",
+          "description": "jobs and executor calls other domains make (quiet window, observation, housekeeping); within one entry they appear in the fake executor's call log in this order with other calls allowed between, and entries are independent of each other",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["domain", "spec", "jobs"],
+            "properties": {
+              "domain": {
+                "enum": [
+                  "intake",
+                  "routing",
+                  "seats",
+                  "jobs",
+                  "policies",
+                  "health"
+                ]
+              },
+              "spec": {
+                "type": "string",
+                "pattern": "^SPEC-16(\\.[A-K])?#[a-z0-9-]+$"
+              },
+              "jobs": {
+                "type": "array",
+                "minItems": 1,
+                "items": { "$ref": "#/$defs/job" }
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

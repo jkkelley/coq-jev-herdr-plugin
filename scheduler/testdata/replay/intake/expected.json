@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0.0",
+  "file": "expected",
+  "case": "intake",
+  "derived_from": ["factory/tests/cases/05-new-row.test.sh", "factory/bin/route.sh#act_primary"],
+  "decisions": [
+    {
+      "record": "<<id:01:300>>", "verdict": "routed", "row": 0,
+      "jobs": [
+        { "key": "<<id:01:300>>:enqueue:<<ticket:a>>", "verb": "enqueue", "args": ["<<ticket:a>>", "<<id:01:300>>"], "after": [] },
+        { "key": "<<id:01:300>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "architect", "--note", "routed request.forwarded 300 (<<id:01:300>>): enqueue architect", "--evidence", "events/2000/01/<<id:01:300>>.json", "--ticket", "<<ticket:a>>"],
+          "after": ["<<id:01:300>>:enqueue:<<ticket:a>>"] }
+      ]
+    },
+    {
+      "record": "<<id:02:100>>", "verdict": "routed", "row": 1,
+      "jobs": [
+        { "key": "<<id:02:100>>:prompt:worker-<<tkt:a>>", "verb": "prompt", "args": ["worker-<<tkt:a>>", "record <<id:02:100>> playbook /repo/playbooks/worker.md"], "after": [] },
+        { "key": "<<id:02:100>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "worker", "--note", "routed ticket.cut 100 (<<id:02:100>>): wake worker", "--evidence", "events/2000/01/<<id:02:100>>.json", "--ticket", "<<ticket:a>>"],
+          "after": ["<<id:02:100>>:prompt:worker-<<tkt:a>>"] }
+      ]
+    }
+  ],
+  "defaults": [],
+  "engine": []
+}

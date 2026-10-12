@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0.0",
+  "file": "expected",
+  "case": "escalate",
+  "derived_from": ["factory/tests/cases/03-escalate.test.sh", "factory/tests/cases/11-down.test.sh"],
+  "decisions": [
+    {
+      "record": "<<id:01:422>>", "verdict": "routed", "row": 5,
+      "jobs": [
+        { "key": "<<id:01:422>>:record:escalated", "verb": "record", "args": ["--code", "423", "--kind", "escalated", "--to", "architect", "--note", "escalated record <<id:01:422>>", "--ticket", "<<ticket:a>>"], "after": [] },
+        { "key": "<<id:01:422>>:seat_down:tester-<<tkt:a>>", "verb": "seat_down", "args": ["tester-<<tkt:a>>"], "after": ["<<id:01:422>>:record:escalated?"] },
+        { "key": "<<id:01:422>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "architect", "--note", "routed test.failed 422 (<<id:01:422>>): escalate architect, down tester", "--evidence", "events/2000/01/<<id:01:422>>.json", "--ticket", "<<ticket:a>>"],
+          "after": ["<<id:01:422>>:record:escalated", "<<id:01:422>>:seat_down:tester-<<tkt:a>>"] }
+      ]
+    },
+    {
+      "record": "<<id:02:422>>", "verdict": "routed", "row": 4,
+      "jobs": [
+        { "key": "<<id:02:422>>:prompt:worker-<<tkt:b>>", "verb": "prompt", "args": ["worker-<<tkt:b>>", "record <<id:02:422>> playbook /repo/playbooks/worker.md"], "after": [] },
+        { "key": "<<id:02:422>>:seat_down:tester-<<tkt:b>>", "verb": "seat_down", "args": ["tester-<<tkt:b>>"], "after": ["<<id:02:422>>:prompt:worker-<<tkt:b>>?"] },
+        { "key": "<<id:02:422>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "worker", "--note", "routed test.failed 422 (<<id:02:422>>): wake worker, down tester", "--evidence", "events/2000/01/<<id:02:422>>.json", "--ticket", "<<ticket:b>>"],
+          "after": ["<<id:02:422>>:prompt:worker-<<tkt:b>>", "<<id:02:422>>:seat_down:tester-<<tkt:b>>"] }
+      ]
+    },
+    {
+      "record": "<<id:03:422>>", "verdict": "routed", "row": 8,
+      "jobs": [
+        { "key": "<<id:03:422>>:record:escalated", "verb": "record", "args": ["--code", "423", "--kind", "escalated", "--to", "architect", "--note", "escalated record <<id:03:422>>", "--ticket", "<<ticket:c>>"], "after": [] },
+        { "key": "<<id:03:422>>:seat_down:reviewer-<<tkt:c>>", "verb": "seat_down", "args": ["reviewer-<<tkt:c>>"], "after": ["<<id:03:422>>:record:escalated?"] },
+        { "key": "<<id:03:422>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "architect", "--note", "routed review.changes 422 (<<id:03:422>>): escalate architect, down reviewer", "--evidence", "events/2000/01/<<id:03:422>>.json", "--ticket", "<<ticket:c>>"],
+          "after": ["<<id:03:422>>:record:escalated", "<<id:03:422>>:seat_down:reviewer-<<tkt:c>>"] }
+      ]
+    },
+    {
+      "record": "<<id:04:423>>", "verdict": "routed", "row": 12,
+      "jobs": [
+        { "key": "<<id:04:423>>:record:escalated", "verb": "record", "args": ["--code", "423", "--kind", "escalated", "--to", "architect", "--note", "escalated record <<id:04:423>>", "--ticket", "<<ticket:b>>"], "after": [] },
+        { "key": "<<id:04:423>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "architect", "--note", "routed blocked 423 (<<id:04:423>>): escalate architect", "--evidence", "events/2000/01/<<id:04:423>>.json", "--ticket", "<<ticket:b>>"],
+          "after": ["<<id:04:423>>:record:escalated"] }
+      ]
+    },
+    { "record": "<<id:05:423>>", "verdict": "own", "row": null, "jobs": [] },
+    {
+      "record": "<<id:06:423>>", "verdict": "routed", "row": 13,
+      "jobs": [
+        { "key": "<<id:06:423>>:prompt:interface", "verb": "prompt", "args": ["interface", "record <<id:06:423>> line decision playbook /repo/playbooks/interface-agent.md"], "after": [] },
+        { "key": "<<id:06:423>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "interface-agent", "--note", "routed blocked 423 (<<id:06:423>>): notify_owner interface-agent", "--evidence", "events/2000/01/<<id:06:423>>.json", "--ticket", "<<ticket:b>>"],
+          "after": ["<<id:06:423>>:prompt:interface"] }
+      ]
+    }
+  ],
+  "defaults": [],
+  "engine": []
+}

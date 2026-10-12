@@ -1,0 +1,7 @@
+{"schema_version": "1.0.0", "id": "<<id:01:100>>", "at": "2000-01-01T00:00:01Z", "code": 100, "seat": "tester-<<tkt:a>>", "kind": "seat.up", "ticket": "<<ticket:a>>"}
+{"schema_version": "1.0.0", "id": "<<id:02:100>>", "at": "2000-01-01T00:00:02Z", "code": 100, "seat": "tester-<<tkt:a>>", "kind": "seat.down", "ticket": "<<ticket:a>>"}
+{"schema_version": "1.0.0", "id": "<<id:03:100>>", "at": "2000-01-01T00:00:03Z", "code": 100, "seat": "worker-<<tkt:a>>", "kind": "note", "ticket": "<<ticket:a>>", "note": "synthetic progress note"}
+{"schema_version": "1.0.0", "id": "<<id:04:300>>", "at": "2000-01-01T00:00:04Z", "code": 300, "seat": "some-other-runner", "kind": "record.routed", "ticket": "<<ticket:a>>"}
+{"schema_version": "1.0.0", "id": "<<id:05:100>>", "at": "2000-01-01T00:00:05Z", "code": 100, "seat": "monitor", "kind": "seat.up"}
+{"schema_version": "1.0.0", "id": "<<id:06:500>>", "at": "2000-01-01T00:00:06Z", "code": 500, "seat": "route-check", "kind": "note", "ticket": "<<ticket:a>>", "note": "synthetic failure"}
+{"schema_version": "1.0.0", "id": "<<id:07:500>>", "at": "2000-01-01T00:00:07Z", "code": 500, "seat": "tester-<<tkt:b>>", "kind": "seat.down", "ticket": "<<ticket:b>>", "note": "synthetic down failure"}

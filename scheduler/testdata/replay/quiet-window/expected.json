@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "file": "expected",
+  "case": "quiet-window",
+  "derived_from": ["specs/scheduler/SPEC-16.D-jobs-retries-confirmation.xml#d-quiet", "factory/bin/route.sh#act_primary"],
+  "decisions": [
+    {
+      "record": "<<id:01:100>>", "verdict": "routed", "row": 1,
+      "jobs": [
+        { "key": "<<id:01:100>>:prompt:worker-<<tkt:a>>", "verb": "prompt", "args": ["worker-<<tkt:a>>", "record <<id:01:100>> playbook /repo/playbooks/worker.md"], "after": [], "state": "held", "hold": "quiet" },
+        { "key": "<<id:01:100>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "worker", "--note", "routed ticket.cut 100 (<<id:01:100>>): wake worker", "--evidence", "events/2000/01/<<id:01:100>>.json", "--ticket", "<<ticket:a>>"],
+          "after": ["<<id:01:100>>:prompt:worker-<<tkt:a>>"], "state": "pending" }
+      ]
+    }
+  ],
+  "defaults": [],
+  "engine": [
+    {
+      "domain": "jobs", "spec": "SPEC-16.D#d-quiet",
+      "jobs": [
+        { "key": "<<id:01:100>>:seat_quiet:worker-<<tkt:a>>", "verb": "seat_quiet", "args": ["worker-<<tkt:a>>"], "after": [] },
+        { "key": "<<id:01:100>>:inbox:worker-<<tkt:a>>", "verb": "inbox", "args": ["worker-<<tkt:a>>", "record <<id:01:100>> playbook /repo/playbooks/worker.md"], "after": ["<<id:01:100>>:seat_quiet:worker-<<tkt:a>>"] }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{"schema_version": "1.0.0", "id": "<<id:01:300>>", "at": "2000-01-01T00:00:01Z", "code": 300, "seat": "worker-<<tkt:a>>", "kind": "break.glass", "action": "gh pr merge 17 --squash"}
+{"schema_version": "1.0.0", "id": "<<id:02:200>>", "at": "2000-01-01T00:00:02Z", "code": 200, "seat": "worker-<<tkt:a>>", "kind": "break.glass", "action": "gh pr merge 17 --squash", "answer": "<<id:01:300>>"}
+{"schema_version": "1.0.0", "id": "<<id:03:200>>", "at": "2000-01-01T00:00:03Z", "code": 200, "seat": "worker-<<tkt:a>>", "kind": "break.glass", "action": "gh pr merge 17 --squash"}
+{"schema_version": "1.0.0", "id": "<<id:04:100>>", "at": "2000-01-01T00:00:04Z", "code": 100, "seat": "worker-<<tkt:a>>", "kind": "break.glass", "action": "gh pr merge 17 --squash", "answer": "<<id:01:300>>"}
+{"schema_version": "1.0.0", "id": "<<id:05:201>>", "at": "2000-01-01T00:00:05Z", "code": 201, "seat": "worker-<<tkt:a>>", "kind": "break.glass", "action": "gh pr merge 17 --squash", "answer": "<<id:01:300>>"}
+{"schema_version": "1.0.0", "id": "<<id:06:204>>", "at": "2000-01-01T00:00:06Z", "code": 204, "seat": "worker-<<tkt:a>>", "kind": "break.glass", "action": "gh pr merge 17 --squash", "answer": "<<id:01:300>>"}
+{"schema_version": "1.0.0", "id": "<<id:07:423>>", "at": "2000-01-01T00:00:07Z", "code": 423, "seat": "worker-<<tkt:a>>", "kind": "break.glass", "action": "gh pr merge 17 --squash", "answer": "<<id:01:300>>"}

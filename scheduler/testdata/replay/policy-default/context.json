@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "file": "context",
+  "clock": "2000-01-01T01:00:00Z",
+  "scheduler_seat": "replay-scheduler",
+  "runner_seats": ["replay-scheduler", "replay-runner"],
+  "playbooks_dir": "/repo/playbooks",
+  "evidence_dir": "events/2000/01",
+  "history": [
+    {"schema_version": "1.0.0", "id": "<<id:01:423>>", "at": "2000-01-01T00:00:01Z", "code": 423, "seat": "worker-<<tkt:b>>", "kind": "blocked", "ticket": "<<ticket:b>>"}
+  ],
+  "seats": [],
+  "gates": [],
+  "executor": [
+    { "verb": "record", "args": ["--code", "200", "--kind", "policy.applied", "--ticket", "<<ticket:a>>", "--policy", "POL-blocked-land-it", "--answer", "<<id:10:423>>", "--note", "default POL-blocked-land-it: Owner default: land the PR on its criteria as written. Prove only the change locally, leave the full suite to CI, add nothing the criteria do not name.", "--to", "worker"], "exit": 0, "stdout": "<<id:20:200>>" }
+  ]
+}

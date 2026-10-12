@@ -1,0 +1,5 @@
+{"schema_version": "1.0.0", "id": "<<id:10:423>>", "at": "2000-01-01T00:00:10Z", "code": 423, "seat": "worker-<<tkt:a>>", "kind": "blocked", "ticket": "<<ticket:a>>"}
+{"schema_version": "1.0.0", "id": "<<id:11:200>>", "at": "2000-01-01T00:00:11Z", "code": 200, "seat": "replay-policy-watch", "kind": "policy.applied", "ticket": "<<ticket:b>>", "to": "worker", "policy": "POL-blocked-land-it", "answer": "<<id:01:423>>", "note": "default POL-blocked-land-it: synthetic"}
+{"schema_version": "1.0.0", "id": "<<id:12:423>>", "at": "2000-01-01T00:00:12Z", "code": 423, "seat": "worker-<<tkt:b>>", "kind": "blocked", "ticket": "<<ticket:b>>"}
+{"schema_version": "1.0.0", "id": "<<id:13:423>>", "at": "2000-01-01T00:00:13Z", "code": 423, "seat": "worker-<<tkt:c>>", "kind": "blocked", "ticket": "<<ticket:c>>"}
+{"schema_version": "1.0.0", "id": "<<id:14:100>>", "at": "2000-01-01T00:00:14Z", "code": 100, "seat": "architect-<<tkt:c>>", "kind": "ticket.cut", "ticket": "<<ticket:c>>", "to": "worker"}

@@ -1,0 +1,3 @@
+{"schema_version": "1.0.0", "id": "<<id:01:100>>", "at": "2000-01-01T00:00:01Z", "code": 100, "seat": "worker-<<tkt:a>>", "kind": "pr.opened", "ticket": "<<ticket:a>>"}
+{"schema_version": "1.0.0", "id": "<<id:02:100>>", "at": "2000-01-01T00:00:02Z", "code": 100, "seat": "worker-<<tkt:b>>", "kind": "pr.opened", "ticket": "<<ticket:b>>", "pr": 17, "sha": "abc1234"}
+{"schema_version": "1.0.0", "id": "<<id:03:100>>", "at": "2000-01-01T00:00:03Z", "code": 100, "seat": "worker-<<tkt:b>>", "kind": "pr.opened", "ticket": "<<ticket:b>>", "pr": 17, "sha": "def5678"}

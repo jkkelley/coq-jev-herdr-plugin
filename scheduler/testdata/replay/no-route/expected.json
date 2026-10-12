@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "file": "expected",
+  "case": "no-route",
+  "derived_from": ["factory/tests/cases/02-no-route.test.sh", "factory/tests/cases/08-ignore.test.sh"],
+  "decisions": [
+    {
+      "record": "<<id:01:250>>", "verdict": "unrouted", "row": null,
+      "jobs": [
+        { "key": "<<id:01:250>>:record:note", "verb": "record", "args": ["--code", "500", "--kind", "note", "--to", "monitor", "--note", "no route for deploy 250, record <<id:01:250>>", "--ticket", "<<ticket:a>>"], "after": [] }
+      ]
+    },
+    { "record": "<<id:02:300>>", "verdict": "own", "row": null, "jobs": [] },
+    {
+      "record": "<<id:03:429>>", "verdict": "unrouted", "row": null,
+      "jobs": [
+        { "key": "<<id:03:429>>:record:note", "verb": "record", "args": ["--code", "500", "--kind", "note", "--to", "monitor", "--note", "no route for note 429, record <<id:03:429>>", "--ticket", "<<ticket:a>>"], "after": [] }
+      ]
+    },
+    {
+      "record": "<<id:04:150>>", "verdict": "unrouted", "row": null,
+      "jobs": [
+        { "key": "<<id:04:150>>:record:note", "verb": "record", "args": ["--code", "500", "--kind", "note", "--to", "monitor", "--note", "no route for gate 150, record <<id:04:150>>"], "after": [] }
+      ]
+    }
+  ],
+  "defaults": [],
+  "engine": []
+}

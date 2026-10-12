@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0.0",
+  "file": "expected",
+  "case": "wake",
+  "derived_from": ["factory/tests/cases/01-wake.test.sh", "factory/tests/cases/12-gate.test.sh"],
+  "decisions": [
+    {
+      "record": "<<id:01:100>>", "verdict": "routed", "row": 2,
+      "jobs": [
+        { "key": "<<id:01:100>>:seat_up:tester-<<tkt:a>>", "verb": "seat_up", "args": ["<<ticket:a>>", "tester"], "after": [] },
+        { "key": "<<id:01:100>>:prompt:tester-<<tkt:a>>", "verb": "prompt", "args": ["tester-<<tkt:a>>", "record <<id:01:100>> playbook /repo/playbooks/tester.md"], "after": ["<<id:01:100>>:seat_up:tester-<<tkt:a>>"] },
+        { "key": "<<id:01:100>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "tester", "--note", "routed pr.opened 100 (<<id:01:100>>): seat tester", "--evidence", "events/2000/01/<<id:01:100>>.json", "--ticket", "<<ticket:a>>"],
+          "after": ["<<id:01:100>>:seat_up:tester-<<tkt:a>>", "<<id:01:100>>:prompt:tester-<<tkt:a>>"] }
+      ]
+    },
+    {
+      "record": "<<id:02:100>>", "verdict": "routed", "row": 2,
+      "jobs": [
+        { "key": "<<id:02:100>>:seat_up:tester-<<tkt:b>>", "verb": "seat_up", "args": ["<<ticket:b>>", "tester"], "after": [] },
+        { "key": "<<id:02:100>>:prompt:tester-<<tkt:b>>", "verb": "prompt", "args": ["tester-<<tkt:b>>", "record <<id:02:100>> pr 17 sha abc1234 playbook /repo/playbooks/tester.md"], "after": ["<<id:02:100>>:seat_up:tester-<<tkt:b>>"] },
+        { "key": "<<id:02:100>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "tester", "--note", "routed pr.opened 100 (<<id:02:100>>): seat tester", "--evidence", "events/2000/01/<<id:02:100>>.json", "--ticket", "<<ticket:b>>"],
+          "after": ["<<id:02:100>>:seat_up:tester-<<tkt:b>>", "<<id:02:100>>:prompt:tester-<<tkt:b>>"] }
+      ]
+    },
+    {
+      "record": "<<id:03:100>>", "verdict": "routed", "row": 2,
+      "jobs": [
+        { "key": "<<id:03:100>>:seat_up:tester-<<tkt:b>>", "verb": "seat_up", "args": ["<<ticket:b>>", "tester"], "after": [] },
+        { "key": "<<id:03:100>>:prompt:tester-<<tkt:b>>", "verb": "prompt", "args": ["tester-<<tkt:b>>", "record <<id:03:100>> pr 17 sha def5678 supersedes <<id:02:100>> (drop that run and post nothing for it) playbook /repo/playbooks/tester.md"], "after": ["<<id:03:100>>:seat_up:tester-<<tkt:b>>"] },
+        { "key": "<<id:03:100>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "tester", "--note", "routed pr.opened 100 (<<id:03:100>>): seat tester", "--evidence", "events/2000/01/<<id:03:100>>.json", "--ticket", "<<ticket:b>>"],
+          "after": ["<<id:03:100>>:seat_up:tester-<<tkt:b>>", "<<id:03:100>>:prompt:tester-<<tkt:b>>"] }
+      ]
+    }
+  ],
+  "defaults": [],
+  "engine": []
+}

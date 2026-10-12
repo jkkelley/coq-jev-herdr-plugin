@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0.0",
+  "file": "expected",
+  "case": "seat-down",
+  "derived_from": ["factory/tests/cases/11-down.test.sh", "factory/tests/cases/13-gate-route.test.sh", "factory/bin/route.sh#act_primary"],
+  "decisions": [
+    {
+      "record": "<<id:01:201>>", "verdict": "routed", "row": 3,
+      "jobs": [
+        { "key": "<<id:01:201>>:seat_up:reviewer-<<tkt:a>>", "verb": "seat_up", "args": ["<<ticket:a>>", "reviewer"], "after": [] },
+        { "key": "<<id:01:201>>:prompt:reviewer-<<tkt:a>>", "verb": "prompt", "args": ["reviewer-<<tkt:a>>", "record <<id:01:201>> playbook /repo/playbooks/reviewer.md"], "after": ["<<id:01:201>>:seat_up:reviewer-<<tkt:a>>"] },
+        { "key": "<<id:01:201>>:seat_down:tester-<<tkt:a>>", "verb": "seat_down", "args": ["tester-<<tkt:a>>"], "after": ["<<id:01:201>>:seat_up:reviewer-<<tkt:a>>?", "<<id:01:201>>:prompt:reviewer-<<tkt:a>>?"] },
+        { "key": "<<id:01:201>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "reviewer", "--note", "routed test.passed 201 (<<id:01:201>>): seat reviewer, down tester", "--evidence", "events/2000/01/<<id:01:201>>.json", "--ticket", "<<ticket:a>>"],
+          "after": ["<<id:01:201>>:seat_up:reviewer-<<tkt:a>>", "<<id:01:201>>:prompt:reviewer-<<tkt:a>>", "<<id:01:201>>:seat_down:tester-<<tkt:a>>"] }
+      ]
+    },
+    { "record": "<<id:02:100>>", "verdict": "ignored", "row": 15, "jobs": [] },
+    {
+      "record": "<<id:03:201>>", "verdict": "routed", "row": 6,
+      "jobs": [
+        { "key": "<<id:03:201>>:seat_up:merger", "verb": "seat_up", "args": ["<<ticket:a>>", "merger"], "after": [] },
+        { "key": "<<id:03:201>>:prompt:merger", "verb": "prompt", "args": ["merger", "record <<id:03:201>> pr 12 sha abc1234 playbook /repo/playbooks/merger.md"], "after": ["<<id:03:201>>:seat_up:merger"] },
+        { "key": "<<id:03:201>>:seat_down:reviewer-<<tkt:a>>", "verb": "seat_down", "args": ["reviewer-<<tkt:a>>"], "after": ["<<id:03:201>>:seat_up:merger?", "<<id:03:201>>:prompt:merger?"] },
+        { "key": "<<id:03:201>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "merger", "--note", "routed review.passed 201 (<<id:03:201>>): seat merger, down reviewer", "--evidence", "events/2000/01/<<id:03:201>>.json", "--ticket", "<<ticket:a>>"],
+          "after": ["<<id:03:201>>:seat_up:merger", "<<id:03:201>>:prompt:merger", "<<id:03:201>>:seat_down:reviewer-<<tkt:a>>"] }
+      ]
+    },
+    { "record": "<<id:04:100>>", "verdict": "ignored", "row": 14, "jobs": [] },
+    {
+      "record": "<<id:05:200>>", "verdict": "routed", "row": 9,
+      "jobs": [
+        { "key": "<<id:05:200>>:prompt:architect-<<tkt:a>>", "verb": "prompt", "args": ["architect-<<tkt:a>>", "record <<id:05:200>> playbook /repo/playbooks/architect.md"], "after": [] },
+        { "key": "<<id:05:200>>:seat_down:merger", "verb": "seat_down", "args": ["merger"], "after": ["<<id:05:200>>:prompt:architect-<<tkt:a>>?"] },
+        { "key": "<<id:05:200>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "architect", "--note", "routed merged 200 (<<id:05:200>>): wake architect, down merger", "--evidence", "events/2000/01/<<id:05:200>>.json", "--ticket", "<<ticket:a>>"],
+          "after": ["<<id:05:200>>:prompt:architect-<<tkt:a>>", "<<id:05:200>>:seat_down:merger"] }
+      ]
+    },
+    {
+      "record": "<<id:06:201>>", "verdict": "routed", "row": 11,
+      "jobs": [
+        { "key": "<<id:06:201>>:prompt:interface", "verb": "prompt", "args": ["interface", "record <<id:06:201>> line done playbook /repo/playbooks/interface-agent.md"], "after": [] },
+        { "key": "<<id:06:201>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "interface-agent", "--note", "routed verified 201 (<<id:06:201>>): notify_owner interface-agent", "--evidence", "events/2000/01/<<id:06:201>>.json", "--ticket", "<<ticket:a>>"],
+          "after": ["<<id:06:201>>:prompt:interface"] }
+      ]
+    },
+    {
+      "record": "<<id:07:422>>", "verdict": "routed", "row": 4,
+      "jobs": [
+        { "key": "<<id:07:422>>:prompt:worker-<<tkt:b>>", "verb": "prompt", "args": ["worker-<<tkt:b>>", "record <<id:07:422>> playbook /repo/playbooks/worker.md"], "after": [] },
+        { "key": "<<id:07:422>>:seat_down:tester-<<tkt:b>>", "verb": "seat_down", "args": ["tester-<<tkt:b>>"], "after": ["<<id:07:422>>:prompt:worker-<<tkt:b>>?"] },
+        { "key": "<<id:07:422>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "worker", "--note", "routed test.failed 422 (<<id:07:422>>): wake worker, down tester", "--evidence", "events/2000/01/<<id:07:422>>.json", "--ticket", "<<ticket:b>>"],
+          "after": ["<<id:07:422>>:prompt:worker-<<tkt:b>>", "<<id:07:422>>:seat_down:tester-<<tkt:b>>"] }
+      ]
+    },
+    {
+      "record": "<<id:08:422>>", "verdict": "routed", "row": 7,
+      "jobs": [
+        { "key": "<<id:08:422>>:prompt:worker-<<tkt:b>>", "verb": "prompt", "args": ["worker-<<tkt:b>>", "record <<id:08:422>> playbook /repo/playbooks/worker.md"], "after": [] },
+        { "key": "<<id:08:422>>:seat_down:reviewer-<<tkt:b>>", "verb": "seat_down", "args": ["reviewer-<<tkt:b>>"], "after": ["<<id:08:422>>:prompt:worker-<<tkt:b>>?"] },
+        { "key": "<<id:08:422>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "worker", "--note", "routed review.changes 422 (<<id:08:422>>): wake worker, down reviewer", "--evidence", "events/2000/01/<<id:08:422>>.json", "--ticket", "<<ticket:b>>"],
+          "after": ["<<id:08:422>>:prompt:worker-<<tkt:b>>", "<<id:08:422>>:seat_down:reviewer-<<tkt:b>>"] }
+      ]
+    },
+    {
+      "record": "<<id:09:409>>", "verdict": "routed", "row": 10,
+      "jobs": [
+        { "key": "<<id:09:409>>:prompt:worker-<<tkt:b>>", "verb": "prompt", "args": ["worker-<<tkt:b>>", "record <<id:09:409>> pr 12 sha 9f8e7d6 merge main (git fetch origin, git merge origin/main, fix the conflicts, push, post pr.opened with the new sha) playbook /repo/playbooks/worker.md"], "after": [] },
+        { "key": "<<id:09:409>>:seat_down:merger", "verb": "seat_down", "args": ["merger"], "after": ["<<id:09:409>>:prompt:worker-<<tkt:b>>?"] },
+        { "key": "<<id:09:409>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "worker", "--note", "routed merge.conflict 409 (<<id:09:409>>): wake worker, down merger", "--evidence", "events/2000/01/<<id:09:409>>.json", "--ticket", "<<ticket:b>>"],
+          "after": ["<<id:09:409>>:prompt:worker-<<tkt:b>>", "<<id:09:409>>:seat_down:merger"] }
+      ]
+    }
+  ],
+  "defaults": [],
+  "engine": []
+}

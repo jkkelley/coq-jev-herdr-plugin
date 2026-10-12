@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "file": "context",
+  "clock": "2000-01-01T00:01:00Z",
+  "scheduler_seat": "replay-scheduler",
+  "runner_seats": ["replay-scheduler", "replay-runner"],
+  "playbooks_dir": "/repo/playbooks",
+  "evidence_dir": "events/2000/01",
+  "history": [],
+  "seats": [],
+  "gates": [],
+  "executor": []
+}

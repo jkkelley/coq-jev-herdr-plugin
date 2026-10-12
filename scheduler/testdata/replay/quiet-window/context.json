@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "file": "context",
+  "clock": "2000-01-01T00:01:00Z",
+  "scheduler_seat": "replay-scheduler",
+  "runner_seats": ["replay-scheduler", "replay-runner"],
+  "playbooks_dir": "/repo/playbooks",
+  "evidence_dir": "events/2000/01",
+  "history": [],
+  "seats": [{ "name": "worker-<<tkt:a>>", "pane": "w1:p3", "status": "idle", "quiet": true }],
+  "gates": [],
+  "executor": [
+    { "verb": "seat_quiet", "args": ["worker-<<tkt:a>>"], "exit": 0 }
+  ]
+}

@@ -1,0 +1,4 @@
+{"schema_version": "1.0.0", "id": "<<id:01:250>>", "at": "2000-01-01T00:00:01Z", "code": 250, "seat": "someone", "kind": "deploy", "ticket": "<<ticket:a>>"}
+{"schema_version": "1.0.0", "id": "<<id:02:300>>", "at": "2000-01-01T00:00:02Z", "code": 300, "seat": "replay-runner", "kind": "record.routed", "ticket": "<<ticket:a>>", "to": "monitor", "note": "a receipt the runner wrote is its own"}
+{"schema_version": "1.0.0", "id": "<<id:03:429>>", "at": "2000-01-01T00:00:03Z", "code": 429, "seat": "seat-check", "kind": "note", "ticket": "<<ticket:a>>"}
+{"schema_version": "1.0.0", "id": "<<id:04:150>>", "at": "2000-01-01T00:00:04Z", "code": 150, "seat": "someone", "kind": "gate"}

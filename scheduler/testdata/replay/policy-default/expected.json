@@ -1,0 +1,39 @@
+{
+  "schema_version": "1.0.0",
+  "file": "expected",
+  "case": "policy-default",
+  "derived_from": ["factory/tests/cases/12-policy.test.sh"],
+  "decisions": [
+    { "record": "<<id:10:423>>", "verdict": "routed", "row": 12, "jobs": [ { "key": "<<id:10:423>>:record:escalated", "verb": "record", "args": ["--code", "423", "--kind", "escalated", "--to", "architect", "--note", "escalated record <<id:10:423>>", "--ticket", "<<ticket:a>>"], "after": [] },
+        { "key": "<<id:10:423>>:record:record.routed", "verb": "record", "args": ["--code", "300", "--kind", "record.routed", "--to", "architect", "--note", "routed blocked 423 (<<id:10:423>>): escalate architect", "--evidence", "events/2000/01/<<id:10:423>>.json", "--ticket", "<<ticket:a>>"], "after": ["<<id:10:423>>:record:escalated"] } ] },
+    {
+      "record": "<<id:11:200>>", "verdict": "routed", "row": 23,
+      "jobs": [
+        { "key": "<<id:11:200>>:record:record.routed", "verb": "record", "args": ["--code", "300", "--kind", "record.routed", "--to", "monitor", "--note", "routed policy.applied 200 (<<id:11:200>>): none monitor", "--evidence", "events/2000/01/<<id:11:200>>.json", "--ticket", "<<ticket:b>>"], "after": [] }
+      ]
+    },
+    { "record": "<<id:12:423>>", "verdict": "routed", "row": 12, "jobs": [ { "key": "<<id:12:423>>:record:escalated", "verb": "record", "args": ["--code", "423", "--kind", "escalated", "--to", "architect", "--note", "escalated record <<id:12:423>>", "--ticket", "<<ticket:b>>"], "after": [] },
+        { "key": "<<id:12:423>>:record:record.routed", "verb": "record", "args": ["--code", "300", "--kind", "record.routed", "--to", "architect", "--note", "routed blocked 423 (<<id:12:423>>): escalate architect", "--evidence", "events/2000/01/<<id:12:423>>.json", "--ticket", "<<ticket:b>>"], "after": ["<<id:12:423>>:record:escalated"] } ] },
+    { "record": "<<id:13:423>>", "verdict": "routed", "row": 12, "jobs": [ { "key": "<<id:13:423>>:record:escalated", "verb": "record", "args": ["--code", "423", "--kind", "escalated", "--to", "architect", "--note", "escalated record <<id:13:423>>", "--ticket", "<<ticket:c>>"], "after": [] },
+        { "key": "<<id:13:423>>:record:record.routed", "verb": "record", "args": ["--code", "300", "--kind", "record.routed", "--to", "architect", "--note", "routed blocked 423 (<<id:13:423>>): escalate architect", "--evidence", "events/2000/01/<<id:13:423>>.json", "--ticket", "<<ticket:c>>"], "after": ["<<id:13:423>>:record:escalated"] } ] },
+    {
+      "record": "<<id:14:100>>", "verdict": "routed", "row": 1,
+      "jobs": [
+        { "key": "<<id:14:100>>:prompt:worker-<<tkt:c>>", "verb": "prompt", "args": ["worker-<<tkt:c>>", "record <<id:14:100>> playbook /repo/playbooks/worker.md"], "after": [] },
+        { "key": "<<id:14:100>>:record:record.routed", "verb": "record", "args": ["--code", "300", "--kind", "record.routed", "--to", "worker", "--note", "routed ticket.cut 100 (<<id:14:100>>): wake worker", "--evidence", "events/2000/01/<<id:14:100>>.json", "--ticket", "<<ticket:c>>"], "after": ["<<id:14:100>>:prompt:worker-<<tkt:c>>"] }
+      ]
+    }
+  ],
+  "defaults": [
+    {
+      "policy": "POL-blocked-land-it", "escalation": "<<id:10:423>>",
+      "jobs": [
+        { "key": "<<id:10:423>>:record:policy.applied", "verb": "record",
+          "args": ["--code", "200", "--kind", "policy.applied", "--ticket", "<<ticket:a>>", "--policy", "POL-blocked-land-it", "--answer", "<<id:10:423>>", "--note", "default POL-blocked-land-it: Owner default: land the PR on its criteria as written. Prove only the change locally, leave the full suite to CI, add nothing the criteria do not name.", "--to", "worker"],
+          "after": [] },
+        { "key": "<<id:10:423>>:prompt:worker-<<tkt:a>>", "verb": "prompt", "args": ["worker-<<tkt:a>>", "record {out:<<id:10:423>>:record:policy.applied} playbook /repo/playbooks/worker.md"], "after": ["<<id:10:423>>:record:policy.applied"] }
+      ]
+    }
+  ],
+  "engine": []
+}

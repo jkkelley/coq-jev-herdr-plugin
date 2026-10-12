@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0.0",
+  "file": "expected",
+  "case": "ignore",
+  "derived_from": ["factory/tests/cases/08-ignore.test.sh"],
+  "decisions": [
+    { "record": "<<id:01:100>>", "verdict": "ignored", "row": 14, "jobs": [] },
+    { "record": "<<id:02:100>>", "verdict": "ignored", "row": 15, "jobs": [] },
+    { "record": "<<id:03:100>>", "verdict": "ignored", "row": 16, "jobs": [] },
+    { "record": "<<id:04:300>>", "verdict": "ignored", "row": 17, "jobs": [] },
+    { "record": "<<id:05:100>>", "verdict": "ignored", "row": 14, "jobs": [] },
+    {
+      "record": "<<id:06:500>>", "verdict": "routed", "row": 26,
+      "jobs": [
+        { "key": "<<id:06:500>>:prompt:monitor", "verb": "prompt", "args": ["monitor", "record <<id:06:500>> playbook /repo/playbooks/monitor.md"], "after": [] },
+        { "key": "<<id:06:500>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "monitor", "--note", "routed note 500 (<<id:06:500>>): wake monitor", "--evidence", "events/2000/01/<<id:06:500>>.json", "--ticket", "<<ticket:a>>"],
+          "after": ["<<id:06:500>>:prompt:monitor"] }
+      ]
+    },
+    {
+      "record": "<<id:07:500>>", "verdict": "routed", "row": 25,
+      "jobs": [
+        { "key": "<<id:07:500>>:prompt:monitor", "verb": "prompt", "args": ["monitor", "record <<id:07:500>> playbook /repo/playbooks/monitor.md"], "after": [] },
+        { "key": "<<id:07:500>>:record:record.routed", "verb": "record",
+          "args": ["--code", "300", "--kind", "record.routed", "--to", "monitor", "--note", "routed seat.down 500 (<<id:07:500>>): wake monitor", "--evidence", "events/2000/01/<<id:07:500>>.json", "--ticket", "<<ticket:b>>"],
+          "after": ["<<id:07:500>>:prompt:monitor"] }
+      ]
+    }
+  ],
+  "defaults": [],
+  "engine": []
+}

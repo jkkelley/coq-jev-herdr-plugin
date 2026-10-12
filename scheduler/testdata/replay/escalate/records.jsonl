@@ -1,0 +1,6 @@
+{"schema_version": "1.0.0", "id": "<<id:01:422>>", "at": "2000-01-01T00:00:01Z", "code": 422, "seat": "tester-<<tkt:a>>", "kind": "test.failed", "ticket": "<<ticket:a>>", "attempt": 3}
+{"schema_version": "1.0.0", "id": "<<id:02:422>>", "at": "2000-01-01T00:00:02Z", "code": 422, "seat": "tester-<<tkt:b>>", "kind": "test.failed", "ticket": "<<ticket:b>>", "attempt": 2}
+{"schema_version": "1.0.0", "id": "<<id:03:422>>", "at": "2000-01-01T00:00:03Z", "code": 422, "seat": "reviewer-<<tkt:c>>", "kind": "review.changes", "ticket": "<<ticket:c>>", "attempt": 3}
+{"schema_version": "1.0.0", "id": "<<id:04:423>>", "at": "2000-01-01T00:00:04Z", "code": 423, "seat": "worker-<<tkt:b>>", "kind": "blocked", "ticket": "<<ticket:b>>"}
+{"schema_version": "1.0.0", "id": "<<id:05:423>>", "at": "2000-01-01T00:00:05Z", "code": 423, "seat": "replay-runner", "kind": "escalated", "ticket": "<<ticket:b>>", "to": "architect", "note": "escalated record <<id:04:423>>"}
+{"schema_version": "1.0.0", "id": "<<id:06:423>>", "at": "2000-01-01T00:00:06Z", "code": 423, "seat": "worker-<<tkt:b>>", "kind": "blocked", "ticket": "<<ticket:b>>"}

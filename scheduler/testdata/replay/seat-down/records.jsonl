@@ -1,0 +1,9 @@
+{"schema_version": "1.0.0", "id": "<<id:01:201>>", "at": "2000-01-01T00:00:01Z", "code": 201, "seat": "tester-<<tkt:a>>", "kind": "test.passed", "ticket": "<<ticket:a>>"}
+{"schema_version": "1.0.0", "id": "<<id:02:100>>", "at": "2000-01-01T00:00:02Z", "code": 100, "seat": "tester-<<tkt:a>>", "kind": "seat.down", "ticket": "<<ticket:a>>", "note": "stub seat.sh"}
+{"schema_version": "1.0.0", "id": "<<id:03:201>>", "at": "2000-01-01T00:00:03Z", "code": 201, "seat": "reviewer-<<tkt:a>>", "kind": "review.passed", "ticket": "<<ticket:a>>", "pr": 12, "sha": "abc1234"}
+{"schema_version": "1.0.0", "id": "<<id:04:100>>", "at": "2000-01-01T00:00:04Z", "code": 100, "seat": "merger", "kind": "seat.up", "ticket": "<<ticket:a>>", "note": "stub seat.sh"}
+{"schema_version": "1.0.0", "id": "<<id:05:200>>", "at": "2000-01-01T00:00:05Z", "code": 200, "seat": "merger", "kind": "merged", "ticket": "<<ticket:a>>"}
+{"schema_version": "1.0.0", "id": "<<id:06:201>>", "at": "2000-01-01T00:00:06Z", "code": 201, "seat": "architect-<<tkt:a>>", "kind": "verified", "ticket": "<<ticket:a>>"}
+{"schema_version": "1.0.0", "id": "<<id:07:422>>", "at": "2000-01-01T00:00:07Z", "code": 422, "seat": "tester-<<tkt:b>>", "kind": "test.failed", "ticket": "<<ticket:b>>", "attempt": 1}
+{"schema_version": "1.0.0", "id": "<<id:08:422>>", "at": "2000-01-01T00:00:08Z", "code": 422, "seat": "reviewer-<<tkt:b>>", "kind": "review.changes", "ticket": "<<ticket:b>>", "attempt": 1}
+{"schema_version": "1.0.0", "id": "<<id:09:409>>", "at": "2000-01-01T00:00:09Z", "code": 409, "seat": "merger", "kind": "merge.conflict", "ticket": "<<ticket:b>>", "pr": 12, "sha": "9f8e7d6"}
