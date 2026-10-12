@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T184658Z-409-d43oc",
+  "at": "2026-10-12T18:46:58Z",
+  "code": 409,
+  "seat": "merger",
+  "kind": "merge.conflict",
+  "ticket": "WO-20261012-72a0",
+  "pane": null,
+  "note": "PR 29 at bf2042c conflicts with main: CHANGELOG.md CONTEXT_STATE.md factory/RUNBOOK.md factory/config/routes.json factory/config/routes.schema.json factory/schema/routes.schema.json work-orders/INDEX.md",
+  "evidence": [],
+  "observations": [],
+  "sha": "bf2042c3d84f9f21baadcbb2e6fd7437487343c2",
+  "pr": 29
+}

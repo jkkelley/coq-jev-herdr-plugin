@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T180240Z-201-t29zv",
+  "at": "2026-10-12T18:02:40Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261012-72a0",
+  "kind": "review.passed",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:pEK",
+  "note": "PR 29 at bf2042c: both ACs have evidence (AC-H2 per architect ruling note), paths in scope, make lint all ok, no em dash, tester 16/16. AC-H1 verdict is live-only.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-6-coq-jev-herdr-plugin/b0f4d6fe-4391-4d52-b748-d750b73e269a/scratchpad/review.log"
+  ],
+  "observations": [],
+  "to": "merger",
+  "sha": "bf2042c3d84f9f21baadcbb2e6fd7437487343c2",
+  "pr": 29
+}

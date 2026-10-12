@@ -43,7 +43,9 @@ assert_eq "an escalated record was written" "$(ids_of escalated | grep -c .)" 1
 assert_eq "and the tester went down" "$(tail -1 "$W/seat.log")" "--down tester-wo-20261011-cccc"
 
 echo "-- review.passed seats the merger and takes the reviewer down; review.changes wakes the worker and takes the reviewer down"
-next; rec review.passed 201 reviewer-wo-20261011-aaaa $T >/dev/null; run_once
+# review.passed reaches the merger only on the head a test.passed named (gate.sh heads_match, WO-20261012-3bb0), so the test comes first.
+next; REC_SHA=abc1234 rec test.passed 201 tester-wo-20261011-aaaa $T >/dev/null; run_once
+next; REC_SHA=abc1234 rec review.passed 201 reviewer-wo-20261011-aaaa $T >/dev/null; run_once
 assert_eq "merger up, prompt, reviewer down" "$(order)" "seat herdr seat "
 assert_eq "reviewer went down" "$(tail -1 "$W/seat.log")" "--down reviewer-wo-20261011-aaaa"
 next; rec review.changes 422 reviewer-wo-20261011-bbbb $U 1 >/dev/null; run_once

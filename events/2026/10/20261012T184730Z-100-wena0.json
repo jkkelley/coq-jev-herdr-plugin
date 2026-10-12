@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T184730Z-100-wena0",
+  "at": "2026-10-12T18:47:30Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-72a0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:p8D",
+  "note": "worker woken by merge.conflict 409 (20261012T184658Z-409-d43oc); merging origin/main (PR 28, PR 30, PR 24) into the branch",
+  "evidence": [],
+  "observations": []
+}

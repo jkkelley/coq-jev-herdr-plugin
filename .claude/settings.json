@@ -14,6 +14,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/herdr/bin/resume-checkpoint.sh",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "Stop": [

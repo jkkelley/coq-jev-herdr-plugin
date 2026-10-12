@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T180000Z-201-kz9s5",
+  "at": "2026-10-12T18:00:00Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-72a0",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:pEA",
+  "note": "make -C factory test on PR 29 head bf2042c in the worktree: 16 passed, 0 failed",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-6-coq-jev-herdr-plugin/f9202cfd-f191-45e0-834b-a52832d3b553/scratchpad/wt-test.log"
+  ],
+  "observations": [],
+  "to": "monitor",
+  "sha": "bf2042c3d84f9f21baadcbb2e6fd7437487343c2",
+  "pr": 29
+}

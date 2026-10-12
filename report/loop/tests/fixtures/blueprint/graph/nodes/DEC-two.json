@@ -1,0 +1,11 @@
+{
+  "id": "DEC-two",
+  "type": "Decision",
+  "title": "Two is only proposed",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [],
+  "created": "2026-01-01T00:00Z",
+  "updated": "2026-01-01T00:00Z"
+}

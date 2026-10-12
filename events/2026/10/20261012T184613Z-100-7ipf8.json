@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T184613Z-100-7ipf8",
+  "at": "2026-10-12T18:46:13Z",
+  "code": 100,
+  "seat": "worker-72a0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:pGJ",
+  "note": "Started WO-20261012-72a0 - Verifier seat: a merged record wakes a verifier that checks merges on main against ticket criteria. Reading playbooks/verifier.md first.",
+  "evidence": [],
+  "observations": []
+}

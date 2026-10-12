@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T175611Z-100-z7tp5",
+  "at": "2026-10-12T17:56:11Z",
+  "code": 100,
+  "seat": "tester-wo-20261012-72a0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:pEA",
+  "note": "Tester seat up on WO-20261012-72a0 in worktree; running its test plan make -C factory test in the test pane",
+  "evidence": [],
+  "observations": []
+}

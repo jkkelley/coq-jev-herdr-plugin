@@ -8,5 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261012-3bb0` | ready | p0 | - | [Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker, all from routes and the merger's checks](WO-20261012-3bb0-gate-rules-as-code-a-test-on-a-head-that-differs.md) |
 | `WO-20261012-da52` | ready | p0 | - | [Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand](WO-20261012-da52-record-bus-every-slot-s-new-records-reach-the-ch.md) |

@@ -32,6 +32,15 @@ spec:
         stage('Lint') {
             steps { sh 'bash lint/lint.sh "$WORKSPACE"' }
         }
+        // WO-20261011-ceea. The blueprint (report/loop view, report/blueprint tiers) reads graph/ and work-orders/, so a change to
+        // any of the three can break it; a change elsewhere cannot, so the suite runs only then ("when smartly needed", owner
+        // 2026-10-11 18:47Z). The pod is already the lint image (jq, python3 jsonschema, shellcheck), so run.sh runs its cases
+        // directly (LOOP_TEST_IN_CONTAINER=1) instead of re-executing itself in Podman, which the pod does not have. Rejected: the
+        // suite on every push (the board suite is the slow part of the run) and `make -C report/loop test` (the image has no make).
+        stage('Blueprint') {
+            when { anyOf { changeset 'report/**'; changeset 'graph/**'; changeset 'work-orders/**' } }
+            steps { sh 'LOOP_TEST_IN_CONTAINER=1 REPO_ROOT="$WORKSPACE" HOME=/tmp/home bash report/loop/tests/run.sh' }
+        }
     }
     post { cleanup { cleanWs() } }
 }

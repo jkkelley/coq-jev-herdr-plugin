@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T180029Z-100-xbrsf",
+  "at": "2026-10-12T18:00:29Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261012-72a0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:pEK",
+  "note": "Reviewer seat up on WO-20261012-72a0 - Verifier seat; checking PR 29 against the acceptance criteria and conventions",
+  "evidence": [],
+  "observations": [],
+  "pr": 29
+}

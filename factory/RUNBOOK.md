@@ -4,6 +4,7 @@
 
 - What it does
 - The routes, row by row
+- The gate rules
 - Run it here
 - Run it against another repo
 - Add behaviour
@@ -34,18 +35,22 @@ No line in the script reads a kind, a code or a note except to match a row.
 | `break-glass`  | `herdr/bin/seat.sh --break-glass <record's seat> --record <id>`; exit 3 is a refusal seat.sh already recorded as a 423, not a failure (herdr/RUNBOOK.md) |
 | `none`         | nothing: the record is seen and receipted (the break glass lifecycle records 100, 201 and 204)                                                           |
 
-Two optional fields on a row change what the action carries.
+Optional fields on a row change what the action carries.
 
-| Field        | Meaning                                                                                                                                                  |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `with: pr`   | the wake line gains ` pr <N>` and ` sha <S>` from the record, whichever it carries (`event.sh add --pr N --sha S`); a malformed value is a 500           |
-| `down: role` | after the row's action, `herdr/bin/seat.sh --down <seat of that role for the ticket>`; it runs even when the action failed, and a failure of either is one 500 |
+| Field              | Meaning                                                                                                                                                        |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `with: pr`         | the wake line gains ` pr <N>` and ` sha <S>` from the record, whichever it carries (`event.sh add --pr N --sha S`); a malformed value is a 500                 |
+| `with: merge-main` | as `with: pr`, then ` merge main`: the words a worker needs to merge origin/main into the PR branch                                                            |
+| `down: role`       | after the row's action, `herdr/bin/seat.sh --down <seat of that role for the ticket>`; it runs even when the action failed, and a failure of either is one 500 |
+| `when: predicate`  | a `gate.sh` predicate (`head_current` or `heads_match`) asked before the action: it passes, or the record is held (see The gate rules)                         |
+| `supersede: true`  | the wake line gains ` supersedes <record id>` when `gate.sh` names an older `pr.opened` of the ticket still waiting for a tester result                        |
 
 After every action except `ignore` it writes one `record.routed` 300, addressed to the row's `to`, whose note ends with `, down <role>` when the row has a `down`.
 A record that matches no row, and an action that fails, each become a 500 `note` addressed to the monitor.
 The monitor wakes on new events, so a 500 is seen without the runner waking anyone.
 
 The wake prompt carries the record id and the playbook path, and for a `with pr` row the PR number and head sha the record holds.
+A `with merge-main` row adds the words `merge main` and the four steps (fetch, merge origin/main, fix conflicts, push and post `pr.opened`), and a `supersede` row the older record it replaces with the words `drop that run and post nothing for it`.
 The seat reads the record, never a sentence.
 
 Matching:
@@ -60,35 +65,59 @@ Matching:
 This is `factory/config/routes.json` in order; the first row that matches wins, so a row placed above another shadows it.
 Behaviour lives in the table; this section explains it and `make lint` checks the table against its schema.
 
-| # | Record | Action | Then | What it means |
-| - | ------ | ------ | ---- | ------------- |
-| 1 | `request.forwarded` 300 | `enqueue` architect |  | An owner request the interface agent forwarded waits in `queue/` for the architect. |
-| 2 | `ticket.cut` 100 | `wake` worker (with ticket) |  | A cut ticket wakes its worker. This row only prompts: the worker seat is still brought up by hand. |
-| 3 | `pr.opened` 100 | `seat` tester (with pr) |  | The worker opened a PR. The tester seat for the ticket is brought up if it is not, and woken with the PR and head sha. |
-| 4 | `test.passed` 201 | `seat` reviewer (with pr) | down tester | The tester passed the PR. The reviewer is brought up and woken, then the tester is taken down. |
-| 5 | `test.failed` 422 attempt < 3 | `wake` worker (with record) | down tester | The tester failed the PR. The worker is woken with the record, then the tester is taken down. |
-| 6 | `test.failed` 422 attempt 3 | `escalate` architect (code 423) | down tester | The third failure is not woken to the worker again: it is an escalated 423 to the architect, and the tester is taken down. |
-| 7 | `review.passed` 201 | `seat` merger (with pr) | down reviewer | The reviewer passed the PR. The merger is brought up and woken with the head sha, then the reviewer is taken down. |
-| 8 | `review.changes` 422 attempt < 3 | `wake` worker (with record) | down reviewer | The reviewer asked for changes. The worker is woken with the record, then the reviewer is taken down. |
-| 9 | `review.changes` 422 attempt 3 | `escalate` architect (code 423) | down reviewer | The third change request is an escalated 423 to the architect, and the reviewer is taken down. |
-| 10 | `merged` 200 | `seat` verifier (with pr) | down merger | The merger merged. The verifier seat for the ticket is brought up on a slot detached at origin/main and woken with the PR and sha, then the merger is taken down. No architect is involved. |
-| 11 | `merge.conflict` 409 | `wake` worker (with record) | down merger | The merge conflicted. The worker is woken with the record, then the merger is taken down. |
-| 12 | `verified` 201 | `wake` monitor (with record) | down verifier | The verifier checked main against the ticket's criteria. The monitor is woken with the record until the interface agent is seated, and the verifier is taken down. |
-| 13 | `rejected` 422 | `wake` monitor (with record) | down verifier | Main does not meet a criterion. The monitor is woken with the record, which names the criterion, and the verifier is taken down. |
-| 14 | `blocked` 423 escalations < 1 | `escalate` architect (code 423) |  | A seat is blocked. The first 423 for a ticket is escalated to the architect; a second one becomes a decision line for the owner. |
-| 15 | `blocked` 423 escalations 1 | `notify_owner` interface-agent (line decision) |  | A second blocked 423 for the ticket: the interface agent gets a decision line for the owner. |
-| 16 | `seat.up` 100 | `ignore` |  | Housekeeping: seat.sh recorded a seat coming up. |
-| 17 | `seat.down` 100 | `ignore` |  | Housekeeping: seat.sh recorded a seat going down. This is the record the `down` field produces. |
-| 18 | `note` 100 | `ignore` |  | Housekeeping: a seat noted something. Notes are never routed on. |
-| 19 | `record.routed` 300 | `ignore` |  | Housekeeping: a receipt. The runner skips its own, this covers a receipt another seat name wrote. |
-| 20 | `seat.down` 500 | `wake` monitor (with record) |  | A seat went down badly. The monitor is woken with the record. |
-| 21 | code >= 500 | `wake` monitor (with record) |  | Any other 5xx. The monitor is woken with the record. |
-| - | `policy.applied` 200 | `none` monitor |  | The policy watch took a default (see Standing policies). Seen and receipted, so it is not a no-route 500. In `routes.json` it sits before the 5xx rows, with the break glass rows this table does not list. |
+| #  | Record                                            | Action                                         | Then          | What it means                                                                                                                                                                                               |
+| -- | ------------------------------------------------- | ---------------------------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1  | `request.forwarded` 300                           | `enqueue` architect                            |               | An owner request the interface agent forwarded waits in `queue/` for the architect.                                                                                                                         |
+| 2  | `ticket.cut` 100                                  | `wake` worker (with ticket)                    |               | A cut ticket wakes its worker. This row only prompts: the worker seat is still brought up by hand.                                                                                                          |
+| 3  | `pr.opened` 100                                   | `seat` tester (with pr)                        | supersede     | The worker opened a PR. The tester seat for the ticket is brought up if it is not, and woken with the PR and head sha, and with the older head it replaces when one is still being tested.                  |
+| 4  | `test.passed` 201 (when head_current)             | `seat` reviewer (with pr)                      | down tester   | The tester passed the PR on the current head. The reviewer is brought up and woken, then the tester is taken down. A pass on a head the worker moved past is held.                                          |
+| 5  | `test.failed` 422 attempt < 3 (when head_current) | `wake` worker (with record)                    | down tester   | The tester failed the PR. The worker is woken with the record, then the tester is taken down.                                                                                                               |
+| 6  | `test.failed` 422 attempt 3 (when head_current)   | `escalate` architect (code 423)                | down tester   | The third failure is not woken to the worker again: it is an escalated 423 to the architect, and the tester is taken down.                                                                                  |
+| 7  | `review.passed` 201 (when heads_match)            | `seat` merger (with pr)                        | down reviewer | The reviewer passed the PR on the head a test passed, or one record file apart. The merger is brought up and woken with the head sha, then the reviewer is taken down. Any other head is held.              |
+| 8  | `review.changes` 422 attempt < 3                  | `wake` worker (with record)                    | down reviewer | The reviewer asked for changes. The worker is woken with the record, then the reviewer is taken down.                                                                                                       |
+| 9  | `review.changes` 422 attempt 3                    | `escalate` architect (code 423)                | down reviewer | The third change request is an escalated 423 to the architect, and the reviewer is taken down.                                                                                                              |
+| 10 | `merged` 200                                      | `seat` verifier (with pr)                      | down merger   | The merger merged. The verifier seat for the ticket is brought up on a slot detached at origin/main and woken with the PR and sha, then the merger is taken down. No architect is involved.                 |
+| 11 | `merge.conflict` 409                              | `wake` worker (with merge-main)                | down merger   | The merge conflicted. The worker is woken with the PR and the words merge main, then the merger is taken down.                                                                                              |
+| 12 | `verified` 201                                    | `wake` monitor (with record)                   | down verifier | The verifier checked main against the ticket's criteria. The monitor is woken with the record until the interface agent is seated, and the verifier is taken down.                                          |
+| 13 | `rejected` 422                                    | `wake` monitor (with record)                   | down verifier | Main does not meet a criterion. The monitor is woken with the record, which names the criterion, and the verifier is taken down.                                                                            |
+| 14 | `blocked` 423 escalations < 1                     | `escalate` architect (code 423)                |               | A seat is blocked. The first 423 for a ticket is escalated to the architect; a second one becomes a decision line for the owner.                                                                            |
+| 15 | `blocked` 423 escalations 1                       | `notify_owner` interface-agent (line decision) |               | A second blocked 423 for the ticket: the interface agent gets a decision line for the owner.                                                                                                                |
+| 16 | `seat.up` 100                                     | `ignore`                                       |               | Housekeeping: seat.sh recorded a seat coming up.                                                                                                                                                            |
+| 17 | `seat.down` 100                                   | `ignore`                                       |               | Housekeeping: seat.sh recorded a seat going down. This is the record the `down` field produces.                                                                                                             |
+| 18 | `note` 100                                        | `ignore`                                       |               | Housekeeping: a seat noted something. Notes are never routed on.                                                                                                                                            |
+| 19 | `record.routed` 300                               | `ignore`                                       |               | Housekeeping: a receipt. The runner skips its own, this covers a receipt another seat name wrote.                                                                                                           |
+| 20 | `seat.down` 500                                   | `wake` monitor (with record)                   |               | A seat went down badly. The monitor is woken with the record.                                                                                                                                               |
+| 21 | code >= 500                                       | `wake` monitor (with record)                   |               | Any other 5xx. The monitor is woken with the record.                                                                                                                                                        |
+| -  | `policy.applied` 200                              | `none` monitor                                 |               | The policy watch took a default (see Standing policies). Seen and receipted, so it is not a no-route 500. In `routes.json` it sits before the 5xx rows, with the break glass rows this table does not list. |
 
 Why a record can need a `seat` and a `down` at once: it is one record and one row, and a second row would never get its turn.
 The merger is one shared seat named `merger`, so the `down` on `merged` and `merge.conflict` is safe only while one ticket is merging at a time.
 
 A `ticket.cut` is not a `seat` row yet: the row wakes a worker that the architect still brings up with `herdr/bin/seat.sh`.
+
+## The gate rules
+
+Ticket: WO-20261012-3bb0 - Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker.
+Before this the architect applied three rules by hand, so they stopped when the architect did.
+`factory/bin/gate.sh` holds them, and the table calls it with the row fields `when` and `supersede`.
+It reads the event log and git and writes nothing.
+
+| Rule                                  | Where it is written                                                                            | What it does                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Same head                             | `gate.sh same-head A B`                                                                        | Two shas are one head when they are equal, one is a prefix of the other, or `git diff` of their trees is empty outside `events/`. A sha the repo does not have is an error (exit 4) after one `git fetch origin`, never a difference.                                                                                                  |
+| Merge only on a tested head           | `review.passed` row, `when: heads_match`                                                       | The newest `test.passed` for the ticket before the review must name the same head as the review, and the review must be on the ticket's newest `pr.opened` head. A missing sha on either side holds, because a merge cannot be taken back.                                                                                             |
+| A head that moves drops the older run | `pr.opened` row, `supersede: true`; `test.passed` and `test.failed` rows, `when: head_current` | The wake line for the second `pr.opened` ends ` supersedes <older record id>` when the older head has no tester result yet and is a different head. A tester result on any head but the newest `pr.opened` is held, so nothing is posted downstream for it. A record with no sha passes, so tickets written before `--sha` still move. |
+| A conflict goes back to its worker    | `merge.conflict` row, `with: merge-main`                                                       | The worker is woken with ` pr N sha S merge main`, then the merger is taken down. Generated-file conflicts are WO-20261011-5064's.                                                                                                                                                                                                     |
+
+A held record writes one `record.routed` 300 receipt, `held <kind> <code> (<id>): <reason>`, and the ledger entry `held <predicate>`.
+It does nothing else: no wake, no seat, no 500, and not the row's `down`.
+The `down` is skipped on purpose, because the tester seat is named per ticket and is by then running the newer head.
+A held `review.passed` has no consumer record, so the flow watch notes it as a stall after `stall_seconds`, which is the alarm a held merge should raise.
+A `gate.sh` failure (exit other than 0 or 1) is a 500 that names the predicate and the exit code, never a silent hold.
+
+The tester and worker playbooks are rendered from `roles/tester.json` and `roles/worker.json`, which a worker may not edit, so they do not yet mention `supersedes` or `merge main`.
+The instruction therefore rides on the wake line itself (the words in brackets above), and the runner holds the older head's results either way.
+Putting the steps into the roles is the architect's edit; the wake line can then shrink back to the bare tokens.
 
 ## Run it here
 
@@ -236,6 +265,9 @@ Everything is `factory/config/flow.json`, validated by `flow.schema.json` in `ma
 
 - `poll_seconds` and `stall_seconds`: their sum may not pass `visible_within_seconds` (120), or `flow.sh` refuses to start with exit 3.
   A stall is then on the board within two minutes of when it began.
+- `busy_grace_seconds`: a gate record is not a stall while the consumer role's seat for the ticket reports `agent_status` `working` (`herdr agent get`), until the record is this old.
+  A working seat is skipped without claiming the latch, so the same record is judged again on the next tick and noted the moment the seat is idle with no record.
+  A seat herdr cannot report is judged as idle, which is the old behaviour.
 - `gates`: one row per record the line must pick up.
   A new gate is a new row with its `kind`, `code`, the `role` named in the note and the `consumers` kinds that mean someone took it.
   The script is not touched.

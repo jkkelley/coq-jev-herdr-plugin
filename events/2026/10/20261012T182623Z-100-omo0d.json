@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T182623Z-100-omo0d",
+  "at": "2026-10-12T18:26:23Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-3bb0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-3bb0",
+  "pane": null,
+  "note": "merge origin/main (f329478) into PR 28; the review az7ec stands, delta is the main merge only",
+  "evidence": [],
+  "observations": []
+}

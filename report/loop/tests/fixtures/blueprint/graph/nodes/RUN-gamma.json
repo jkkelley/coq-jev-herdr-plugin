@@ -1,0 +1,16 @@
+{
+  "id": "RUN-gamma",
+  "type": "Runbook",
+  "title": "Gamma runbook, written the other way round",
+  "status": "proposed",
+  "text": "",
+  "sources": [],
+  "edges": [
+    {
+      "kind": "defined_in",
+      "to": "CMP-gamma"
+    }
+  ],
+  "created": "2026-01-01T00:00Z",
+  "updated": "2026-01-01T00:00Z"
+}

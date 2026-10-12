@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T175507Z-100-efaf5",
+  "at": "2026-10-12T17:55:07Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-72a0",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:p8D",
+  "note": "PR 29 merged with main 78ae088 (PR 26 and PR 33) ahead of the merger; lint ok, factory 16 passed",
+  "evidence": [],
+  "observations": [],
+  "to": "tester",
+  "sha": "bf2042c3d84f9f21baadcbb2e6fd7437487343c2",
+  "pr": 29
+}
