@@ -46,6 +46,41 @@
 
 
 
+
+## Checkpoint 2026-10-12 02:17 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4562 on WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day.
+  Branch feat/break-glass-one-owner-authorised-action-at-a-tim, treehouse slot 2, test pane wD3:p1V through herdr/bin/testpane.sh only.
+  PR 22 is open and clean; this step is review attempt 2 (record 20261012T013042Z-422-2g2pn) on 57dacf2.
+
+#### Toolchain
+
+- Fixed: observation 1 (break-glass-lib.sh no longer forces defaultMode bypassPermissions; the role's mode is kept, so a dontAsk seat opens only the one command), observation 2 (case 13 flips an orchestrator seat and asserts dontAsk, allow gained only the action, Write and Edit denies stay, podman deny stays, the hook blocks a second git command), observation 5 (hook timeouts are break_glass.hook_pre_timeout_seconds and hook_post_timeout_seconds in herdr.json and its schema).
+- Verified in the test pane: make lint green, make -C herdr test 15 passed with 13-break-glass including the new dontAsk section.
+
+#### Active Tasks
+
+- Post blocked 423 for observations 3 and 4: AC-H1 and AC-H3 are ticked in the archived ticket while their evidence says the live run and the owner card half are not observed.
+  A worker cannot untick them: work-order.sh done refuses unchecked criteria, reopen refuses an archived ticket, and the live proofs need the owner's Grant on the bearings page and PR 17.
+- After the push, post nothing else until the reviewer answers.
+
+#### Blockers
+
+- Owner or architect decision on AC-H1 and AC-H3: observe live, or split the unobserved halves into a new ticket and amend the criteria.
+
+### New this checkpoint
+
+- Lesson: the test pane is shared by every seat of the architect tab; a command sent while another seat's suite runs queues behind it and starts late, so a watch on my own done file is the only safe wait.
+
+### Hydration prompt
+
+Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 2. Read playbooks/worker.md, this checkpoint and records 20261012T013042Z-422-2g2pn and the 423 posted after it.
+Observations 1, 2 and 5 are fixed and pushed; observations 3 and 4 wait on an owner decision about AC-H1 and AC-H3.
+
 ## Checkpoint 2026-10-11 22:38 UTC
 
 ### Current state
