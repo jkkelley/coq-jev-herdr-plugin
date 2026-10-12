@@ -49,6 +49,33 @@
 
 
 
+
+## Checkpoint 2026-10-12 14:58 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p83, run only through herdr/bin/testpane.sh.
+- The merger posted merge.conflict 409 (record 20261012T143647Z-409-e1nbe) on head 2d3f8b8: main gained PR 22 (WO-20261011-4562 - break glass, one owner-authorised action at a time) and PR 23 (WO-20261012-668a - SITREP panel in this project's bearings).
+
+#### Toolchain
+
+- origin/main merged into the branch. Resolved by keeping both sides: route.sh has main's perform with break-glass and none plus this branch's act_primary, act_down, seat and ignore; routes.json has this branch's ignore rows then main's break.glass rows; routes.schema.json do enum carries all eight actions; event.sh and event.schema.json carry sha, pr, action and answer; factory/RUNBOOK.md table has all eight rows; CHANGELOG.md was re-rendered from its entries, never edited; CONTEXT_STATE.md is the union of both sides' checkpoints, newest first, no block edited.
+- Verified in the test pane on the merged tree: make lint all ok, factory suite 15 passed 0 failed (main added a break-glass case), herdr suite 16 passed 0 failed.
+
+#### Active Tasks
+
+- After this step lands: post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester again. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The merge of origin/main is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
+
 ## Checkpoint 2026-10-12 14:09 UTC
 
 ### Current state
