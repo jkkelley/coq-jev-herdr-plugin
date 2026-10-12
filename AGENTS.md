@@ -36,6 +36,7 @@ Read `ROADMAP.md` before any work: it is the north star roadmap, it binds every 
 Owner order, 2026-10-12 UTC: "ensure that you're following it until its complete".
 `ROADMAP.md` holds the locked decisions, the phases and the work items; only the owner changes it.
 A message from the owner containing `USERGO` restarts a held line; one containing `USERHALT` halts it at once.
+The only monitoring that never shuts off is bearings stable, the owner's page and the wait loop that brings the owner's messages to the architect; a halt stops everything else and never that.
 Progress, each item with the record or pull request that proves it, lives in the state root, never in git.
 
 GOOD: a worker reads `ROADMAP.md`, finds its ticket is `Roadmap A - State root`, and builds exactly that.

@@ -29,7 +29,10 @@ This roadmap gets the small loop running on its own first, because the big loop 
 | Signal     | Meaning                                                                                                                                                               |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `USERGO`   | The owner's go. A held line restarts only on it.                                                                                                                      |
-| `USERHALT` | Halt now: stop the belt and every watch, interrupt every seat's turn, keep seats up, post a halt record. `make line-halt` once work item C lands; by hand until then. |
+| `USERHALT` | Halt now: stop the belt and every watch, interrupt every seat's turn, keep seats up, post a halt record. It never stops bearings stable. `make line-halt` once work item C lands; by hand until then. |
+
+Owner order, 2026-10-12 UTC: the only monitoring that never shuts off is bearings stable, the server of the owner's page and the wait loop that carries the owner's messages to the architect.
+Every other watch, monitor and loop stops on `USERHALT` and stays off until `USERGO`.
 
 ## Why this roadmap exists
 
@@ -115,7 +118,8 @@ One state root serves every worktree and slot of a repository, so no record is e
 - Code reaches main only through a ticket in the small loop; nobody, the architect included, commits code on any other branch.
 - At most four tickets in flight at once.
 - Tickets that touch the same files run one after another; their files are declared when they are cut.
-- The supervisor stays uninstalled until work item C gives it the halt flag.
+- The supervisor stays uninstalled until work item C gives it the halt flag; while halted, it brings back only bearings stable.
+- Bearings stable is never stopped by a halt, a restart or a cleanup; if its server or wait loop dies, bringing it back comes before anything else.
 - Until work item D lands, the belt restarts without the stall escalation to the owner, and the architect gets one batched digest every 30 minutes.
 - Every phase gate checks the architect prompt count.
 
@@ -163,7 +167,7 @@ Order: B, then D, then E, then C, because they share the belt's files.
 - **B - Seats on rules (C12, C18).** Tester, reviewer and merger read and write verdict records in the state root; the merger verifies on main after each merge.
 - **D - Routing and the digest.** One consumer per record kind, owner seat from the ticket, the architect digest, the stall policy, the architect prompt counter, and a test that pushes 50 records through the router and allows the architect at most one prompt.
 - **E - Carry rule.** The gate carries a test and review when the pull request's own files equal the tested commit.
-- **C - Halt and resume.** `make line-halt`, `make line-resume` with its preflight, the halt flag the supervisor honours, `USERHALT` (C22); then the supervisor is installed.
+- **C - Halt and resume.** `make line-halt`, `make line-resume` with its preflight, the halt flag the supervisor honours, `USERHALT` (C22); `make line-halt` leaves bearings stable running and the supervisor keeps only it alive while halted; then the supervisor is installed.
 
 ### Phase 4
 
