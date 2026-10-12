@@ -98,6 +98,21 @@
 
 # lock files used by the scaffold tools
 .issues.lock
+
+# generated aggregates and per-seat state: never tracked, so no pull request can carry them. WO-20261012-0677.
+# What broke: CHANGELOG.md, work-orders/INDEX.md, the epic and archive READMEs and CONTEXT_STATE.md were tracked, and every PR
+# rewrote them (work-order start, submit and done reindex; make step renders the changelog and appends a checkpoint), so
+# each merge forced the next PR into a conflict, a main merge and a full re-test (PRs 25, 28, 29, 30, 31 on 2026-10-12).
+# Why this fix: ignored files cannot ride a diff, and each is rebuilt from tracked sources by `make aggregates` (the
+# changelog from changelog/, the index and READMEs from the tickets). CONTEXT_STATE.md is the seat's own sliding window,
+# read in place by resume-checkpoint.sh. Rejected: rendering after merge from the merger seat (its role file is off limits
+# to a worker and a skipped render leaves main wrong). Cost: github.com no longer shows CHANGELOG.md or INDEX.md, and a
+# fresh slot starts with no checkpoint file. factory/bin/claims.sh diff still refuses them if one is force-added.
+# Placed here, not at the end of the file, so it does not sit next to the lines other PRs append there.
+/CHANGELOG.md
+/CONTEXT_STATE.md
+/work-orders/INDEX.md
+/work-orders/**/README.md
 .backlog.lock
 
 # runtime work queue state (queue/bin/queue.sh), never committed
@@ -110,17 +125,3 @@ report/loop/out/
 # skip records it never saw or route ones already routed. Runtime state, never committed, same as queue/items/ above.
 factory/state/
 report/blueprint/out/
-
-# generated aggregates and per-seat state: never tracked, so no pull request can carry them. WO-20261012-0677.
-# What broke: CHANGELOG.md, work-orders/INDEX.md, the epic and archive READMEs and CONTEXT_STATE.md were tracked, and every PR
-# rewrote them (work-order start, submit and done reindex; make step renders the changelog and appends a checkpoint), so
-# each merge forced the next PR into a conflict, a main merge and a full re-test (PRs 25, 28, 29, 30, 31 on 2026-10-12).
-# Why this fix: ignored files cannot ride a diff, and each is rebuilt from tracked sources by `make aggregates` (the
-# changelog from changelog/, the index and READMEs from the tickets). CONTEXT_STATE.md is the seat's own sliding window,
-# read in place by resume-checkpoint.sh. Rejected: rendering after merge from the merger seat (its role file is off limits
-# to a worker and a skipped render leaves main wrong). Cost: github.com no longer shows CHANGELOG.md or INDEX.md, and a
-# fresh slot starts with no checkpoint file. factory/bin/claims.sh diff still refuses them if one is force-added.
-/CHANGELOG.md
-/CONTEXT_STATE.md
-/work-orders/INDEX.md
-/work-orders/**/README.md
