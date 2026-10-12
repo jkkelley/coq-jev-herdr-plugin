@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Catches (WO-20261012-ee9c, AC-H1, AC-H2): guardwatch.sh calling the guard for a session that is not the one running in the
-# pane (the 2026-10-12 02:16Z flood: about 189 dead sessions bound to the architect pane, one GOV-100 memo each), calling it
-# for a pane that has no claude process, calling it more than once per live pane per tick, not writing the resolved session to
-# seat.json, or leaving a stale seat.json session in place.
+# Catches (WO-20261012-ee9c, AC-H1, AC-H2, AC-H4): guardwatch.sh calling the guard for a session that is not the one running
+# in the pane (the 2026-10-12 02:16Z flood: about 189 dead sessions bound to the architect pane, one GOV-100 memo each), calling it
+# for a pane that has no claude process, calling it more than once per live pane per tick, seat.sh not writing the resolved session
+# to seat.json at seat up, or guardwatch.sh leaving a stale session in seat.json.
 # World: one worker seat from seat.sh (stub claude, which writes ~/.claude/sessions/<pid>.json as the real one does), two
 # guard bindings on its pane (the live session and a dead one), and a plain shell pane that only an exemption names. The
 # guard is the suite's stub; COMPACTION_GUARD_STUB_LOG records every argv it is called with.
@@ -23,6 +23,7 @@ pid="$(h pane process-info --pane "$WP" | jq -r 'first(.result.process_info.fore
 assert_match "herdr names a claude process in the seat's pane" "$pid" '^[0-9]+$'
 LIVE="$(jq -r .sessionId "$HOME/.claude/sessions/$pid.json")"
 assert_match "the stub claude wrote its session file" "$LIVE" '^stub-[0-9]+$'
+assert_eq "AC-H4: seat.json carries the resolved session straight after seat up" "$(jq -r .claude_session "$STATE/seats/$W/seat.json")" "$LIVE"
 mk_binding "$LIVE" "$WP"; mk_binding s-dead-one "$WP"; mk_binding s-dead-two "$WP"
 
 echo "-- AC-H1: three bindings on one pane, two dead - one guard call, for the live session"
@@ -34,8 +35,7 @@ assert_eq "the guard was called once" "$(calls)" 1
 assert_eq "the one call is watch --once --session <live>" "$(cat "$COMPACTION_GUARD_STUB_LOG")" "watch --once --session $LIVE"
 assert_eq "no dead session was named" "$(grep -c 's-dead' "$COMPACTION_GUARD_STUB_LOG")" 0
 
-echo "-- seat.json carries the resolved session, and a stale one is replaced"
-assert_eq "claude_session is the live session" "$(jq -r .claude_session "$STATE/seats/$W/seat.json")" "$LIVE"
+echo "-- a stale session in seat.json is replaced by the next tick"
 jq '.claude_session = "stale-session"' "$STATE/seats/$W/seat.json" > "$WORLD/seat.tmp" && mv "$WORLD/seat.tmp" "$STATE/seats/$W/seat.json"
 : > "$COMPACTION_GUARD_STUB_LOG"
 "$GW" --once >/dev/null 2>&1

@@ -734,6 +734,25 @@ else
   started=1
   sl_record seat.up 100 "$name" ${id:+--ticket "$id"} --pane "$a" --note "$role seat up: $MODEL $effort $pmode"
 fi
+# BREADCRUMB 2026-10-12 - WO-20261012-ee9c, seat.json claude_session. What broke: seat.json named the herdr pane but never the
+#   Claude session running in it, so recover.sh could not scope `compaction-guard recover` to a seat (its breadcrumb rejected
+#   "--session per seat, the seat record carries no guard session id") and walked every session on the host (115 on 2026-10-10,
+#   100+ of them dead panes from other projects), and nothing but a binding walk could say which session a pane held. Why this
+#   fix: the pane's claude process names it (seat-lib.sh sl_pane_session), so the seat writes it once the agent is up, on a
+#   fresh start and on a repair rerun of a live seat; guardwatch.sh rewrites it on a tick when it differs (a seat resumed in
+#   place). Rejected: parsing the session out of the pane's screen (it is not printed) and the guard's binding (the stale
+#   value this ticket exists to stop trusting). Cost: up to .session_wait_seconds of polling for the file after a start, then
+#   claude_session stays null and the next guardwatch tick fills it; the field is absent from adopted seats only until their
+#   first tick, because --adopt writes the session it was given.
+claude_session_set() { jq --arg s "$1" '.claude_session = $s' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }
+if [ "$DRY" != 1 ] && [ "$runtime" = claude ]; then
+  wait_s="$(sl_cfg .session_wait_seconds)"; csid=""
+  for ((s = 0; s <= wait_s; s++)); do
+    csid="$(sl_pane_session "$a")"; [ -z "$csid" ] || break
+    [ "$s" -ge "$wait_s" ] || sleep 1
+  done
+  if [ -n "$csid" ]; then claude_session_set "$csid"; else sl_log "seat $name: no claude session file for pane $a within ${wait_s}s; claude_session stays null and guardwatch.sh fills it"; fi
+fi
 if [ "$started" = 1 ]; then
   # A resumed session already holds its brief, so a second one would only make it post a second work.started.
   if [ -n "$resume_id" ]; then prompt="seat.sh resumed session $resume_id as the $role seat $name${id:+ on $id}. Playbook playbooks/$role.md. Carry on from where the session stopped."
