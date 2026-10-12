@@ -27,7 +27,8 @@
     "belt",
     "break_glass",
     "halt_flag",
-    "monitor_task"
+    "monitor_task",
+    "watches"
   ],
   "properties": {
     "schema_version": {
@@ -220,6 +221,40 @@
       "type": "string",
       "minLength": 1,
       "description": "the task text bringup.sh hands the monitor seat (door 2 of seat.sh)"
+    },
+    "watches": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "architect_agent",
+        "turn_poll_seconds",
+        "record_poll_seconds",
+        "record_kinds"
+      ],
+      "description": "turnwatch.sh and recwatch.sh (WO-20261012-b800): the agent they prompt and how often they look",
+      "properties": {
+        "architect_agent": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+          "description": "herdr agent name that receives a TURN or REC prompt"
+        },
+        "turn_poll_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "record_poll_seconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "record_kinds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "record kinds recwatch.sh prompts for"
+        }
+      }
     }
   }
 }

@@ -39,5 +39,22 @@
     "bearings_tier": "stable"
   },
   "halt_flag": "${state_dir}/HALT",
-  "monitor_task": "watch the event log, the seats and the guard; wake a waiting seat on status change with one line; raise owner notifications for 423 and any 5xx; run cleanup every tick"
+  "monitor_task": "watch the event log, the seats and the guard; wake a waiting seat on status change with one line; raise owner notifications for 423 and any 5xx; run cleanup every tick",
+  "watches": {
+    "architect_agent": "architect",
+    "turn_poll_seconds": 15,
+    "record_poll_seconds": 10,
+    "record_kinds": [
+      "pr.opened",
+      "test.passed",
+      "test.failed",
+      "review.passed",
+      "review.changes",
+      "merged",
+      "merge.conflict",
+      "blocked",
+      "test",
+      "review"
+    ]
+  }
 }

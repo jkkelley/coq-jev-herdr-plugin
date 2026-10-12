@@ -84,6 +84,26 @@
       "kind": "shell",
       "noun": "shell",
       "reserved": []
+    },
+    {
+      "n": 4,
+      "label": "monitors 4 - watches",
+      "kind": "watch",
+      "noun": "watch",
+      "reserved": [
+        {
+          "pos": "4.1.1",
+          "name": "turnwatch",
+          "what": "seat turn watch",
+          "command": "${repo}/herdr/bin/turnwatch.sh"
+        },
+        {
+          "pos": "4.1.2",
+          "name": "recwatch",
+          "what": "gate record watch",
+          "command": "${repo}/herdr/bin/recwatch.sh"
+        }
+      ]
     }
   ]
 }
