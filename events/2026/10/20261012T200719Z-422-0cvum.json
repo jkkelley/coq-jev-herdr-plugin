@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T200719Z-422-0cvum",
+  "at": "2026-10-12T20:07:19Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261012-0677",
+  "kind": "review.changes",
+  "ticket": "WO-20261012-0677",
+  "pane": "wD3:pH0",
+  "note": "PR 36 at 6493523: AC-H1..H4 have evidence, gate pr-files and make lint pass, no em dash; SOP-0006 fails the docs convention in 3 places",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "docs/sops/SOP-0006-declare-a-ticket-s-files-start-it-without-a-clash-and-mint-doc-numbers.md",
+      "line": 3,
+      "saw": "no Contents list after the title (SOP-0001, 0002, 0003 each have one at line 3)",
+      "expected": "a '## Contents' list naming Purpose, When to run this, Steps, Verification, GOOD and NEVER"
+    },
+    {
+      "path": "docs/sops/SOP-0006-declare-a-ticket-s-files-start-it-without-a-clash-and-mint-doc-numbers.md",
+      "line": 23,
+      "saw": "Verification holds only the unfilled template text 'A step that cannot be verified is a wish. Record what the successful run actually printed.'",
+      "expected": "the real commands (claims.sh start, gate.sh pr-files, mint-id.sh sop) and what each printed, as in AC-H1 to AC-H4"
+    },
+    {
+      "path": "docs/sops/SOP-0006-declare-a-ticket-s-files-start-it-without-a-clash-and-mint-doc-numbers.md",
+      "line": 26,
+      "saw": "file ends at Verification with no GOOD or NEVER lines (SOP-0002 and 0003 end with them)",
+      "expected": "GOOD and NEVER lines matching the AGENTS.md law"
+    }
+  ],
+  "attempt": 1,
+  "sha": "6493523",
+  "pr": 36
+}
