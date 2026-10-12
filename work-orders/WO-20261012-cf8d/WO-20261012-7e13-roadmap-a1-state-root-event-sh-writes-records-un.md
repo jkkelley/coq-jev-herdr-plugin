@@ -72,10 +72,14 @@ Records are committed to git under events/, named <UTC>-<code>-<suffix>.json tha
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* with COQ_STATE unset, event.sh add writes under the default state root and prints the new path
-- [ ] `AC-H2` *(human)* with COQ_STATE set to a temp dir, the record lands there with a YYYYMMDDHHMMSS-<name>.json name and validates against the event schema
-- [ ] `AC-H3` *(human)* two writes in the same second with the same name produce <name>.json and <name>-2.json, neither overwritten
-- [ ] `AC-H4` *(human)* no path or default is hardcoded in a script; every default comes from the config file
+- [x] `AC-H1` *(human)* with COQ_STATE unset, event.sh add writes under the default state root and prints the new path
+  - observed `2026-10-12` events/tests case 02-add: with COQ_STATE unset and XDG_STATE_HOME inside the test world, event.sh add printed one line, <xdg>/coq/repo/records/2026/10/<14 digits>-work-started-wo-20261012-7e13.json, the file exists, and no record file appeared in the repository events/ tree. Suite log: state root tests/2026/10/20261012231146-wo-20261012-7e13-events-suite-3-of-3-green.log
+- [x] `AC-H2` *(human)* with COQ_STATE set to a temp dir, the record lands there with a YYYYMMDDHHMMSS-<name>.json name and validates against the event schema
+  - observed `2026-10-12` events/tests case 02-add: with COQ_STATE set to a temp dir the record landed at <state>/records/2026/10/<14 digits>-test-passed-pr-36-wo-20261012-0677.json, the file name time equals the record's at, and python3 jsonschema validated it against events/schema/event.schema.json. Suite log: state root tests/2026/10/20261012231146-wo-20261012-7e13-events-suite-3-of-3-green.log
+- [x] `AC-H3` *(human)* two writes in the same second with the same name produce <name>.json and <name>-2.json, neither overwritten
+  - observed `2026-10-12` events/tests case 02-add: three writes in one frozen second with one name gave <name>.json, <name>-2.json and <name>-3.json with their own notes, the first not overwritten; a name at the 55 character limit takes -2 and stays at most 55; eight parallel writers (xargs -P8) left eight distinct files and no temporary file. Suite log: state root tests/2026/10/20261012231146-wo-20261012-7e13-events-suite-3-of-3-green.log
+- [x] `AC-H4` *(human)* no path or default is hardcoded in a script; every default comes from the config file
+  - observed `2026-10-12` events/tests case 01-resolver: changing namespace, home_fallback, name_max and a tree name in config/state.json changed what bin/state-root.sh prints; a missing config is exit 4, not a guess; grep of the code lines (comments excluded) of bin/state-root.sh and events/bin/event.sh finds none of .local/state, .cache, /coq/, XDG_STATE_HOME, XDG_CACHE_HOME, COQ_STATE, COQ_CACHE; config/state.json validates against config/state.schema.json and make lint passed. Suite log: state root tests/2026/10/20261012231146-wo-20261012-7e13-events-suite-3-of-3-green.log
 
 ## Test plan
 
@@ -94,6 +98,9 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Correction to the note above: the line in factory/tests/lib/world.sh that copies only events/bin and events/schema is line 24, not 25.
+- `2026-10-12` Retro and BLOCKER. Built and green in its own suite (events/tests, 3 cases, 114 checks, run in Podman through the test pane): bin/state-root.sh, config/state.json and config/state.schema.json, and event.sh add, list, tail and check on the state root (AC-H1 to AC-H4). The test plan in this ticket also names make -C factory test and make -C herdr test, and both go red because of the change itself, not a defect in it: factory 4 of 21 pass (the 17 failures are all event.sh exit 4, bin/state-root.sh is missing, because factory/tests/lib/world.sh line 25 copies only events/bin and events/schema), herdr 10 of 25 pass (14 failures are event_count reading $REPO/events while herdr/tests/lib/world.sh line 46 exports COQ_STATE=$STATE, so records land in $STATE/records; the 15th, 17-resume-checkpoint, fails on mkdir .claude/skills File exists because this slot's .claude/skills is a symlink to the installed skills, which is not A1). Neither file is in this ticket's files list, and making them read the new place needs route.sh and the seat scripts to read it too, which is item A2. Logs: tests/2026/10 under the state root, names 20261012231146-wo-20261012-7e13-*. Not run: scheduler Go tests (its testkit copies events/bin/event.sh and runs event.sh check). Other facts for A2: herdr.json state_dir is ~/.local/state/coq with no repo name, while the resolver gives ~/.local/state/coq/<repo>; a record's id field keeps the old shape, so the file name no longer equals the id. Recommended resolution: merge A1 with these suites known red and let A2 (WO-20261012-0229 - Roadmap A2) repair the worlds in the same change that switches the belt, keeping the live checkout off this event.sh until A2 lands. A fallback that writes the old tree when the resolver is missing was rejected: it would put records back in git silently.
 
 ## Outcome
 
