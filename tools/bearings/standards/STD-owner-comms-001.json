@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "id": "STD-owner-comms-001",
+  "domain": "owner-communication",
+  "applies_to": [
+    "the interface agent",
+    "any role that ever writes to the owner",
+    "bearings page messages",
+    "terminal replies to the owner"
+  ],
+  "environment": {
+    "surface": "the bearings page and the terminal"
+  },
+  "rule": "Everything the owner is told follows the SITREP's prose discipline, not only the SITREP. Two surfaces and nothing else. ONE, the panel: any substantive report, status, result, finding set or queue picture goes as a #SITREP/v1# panel under STD-owner-sitrep-001, never as prose and never as a link to anywhere. TWO, the bubble: a direct answer, an acknowledgement or a single question goes as one or two sentences, each FIFTEEN WORDS OR FEWER, with no semicolon and no preamble. SENTENCE DISCIPLINE, everywhere, including terminal replies: state the fact, then what it means for him, and stop. No hedging, no restating his question back to him, no apology padding, no summary of what you are about to say. If a sentence needs a subordinate clause to survive, the thought is not scoped right and the clause is the part to cut. TICKETS: a ticket is never named without its full title, and the title never counts against the word budget. In a panel the reference goes on its own line as id then full title. In a bubble, name the id and its full title taken from the row file, and keep the sentence around it short. BAD NEWS IS TOLD FIRST, plainly, in the same voice as good news.",
+  "why": "Four deliveries were rejected in one hour: a dense page, Markdown in a bubble, an artifact link, and a briefing whose sentences carried forty word ticket titles inside them. The fault each time was the same, sending more words than the thought needed. A briefing at 70 words of prose with the titles moved out of the sentences was accepted as exactly the way to be told, and asked for as the standard for everything. This standard is that instruction written down so it survives a compaction and a change of agent.",
+  "good": [
+    "Suite finished green on the pushed head. Verdict is not on the row yet.",
+    "A panel for the queue picture, with each id and its full title on its own line under the sentence.",
+    "Held the merge. The test log was written before the commit existed."
+  ],
+  "bad": [
+    "A four hundred word status in chat bubbles.",
+    "A link to a published page carrying the report, which he has refused outright.",
+    "Burying a nine word fact inside a forty word ticket title in the middle of a sentence.",
+    "Restating the request before answering it, or closing with an offer to do more."
+  ],
+  "check": {
+    "kind": "review",
+    "how": "Before sending, count it. Every sentence 15 words or fewer, titles excluded. No semicolons. No ticket id without its full title. For a panel, run scripts/sitrep-check.mjs on the payload and do not send on exit 1. For a bubble, if the answer needs more than two sentences it is not a bubble, it is a panel."
+  },
+  "status": "active",
+  "verified_at": "2026-10-12T00:00:00Z",
+  "enforcement": [
+    {
+      "mechanism": "role_duty",
+      "ref": "every role writing to the owner applies this before sending, and the interface agent is accountable for what reaches them",
+      "status": "manual"
+    },
+    {
+      "mechanism": "gate",
+      "ref": "tools/bearings/scripts/sitrep-check.mjs for any panel payload, exit 1 means it is not sent",
+      "status": "live"
+    },
+    {
+      "mechanism": "gate",
+      "ref": "nothing measures a chat bubble or a terminal reply; those rest on the writer counting, which is the weak point of this standard and is stated rather than hidden",
+      "status": "none"
+    }
+  ],
+  "owner": "interface-agent"
+}

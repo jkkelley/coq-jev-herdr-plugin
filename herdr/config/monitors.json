@@ -69,6 +69,12 @@
           "name": "flow",
           "what": "flow watch",
           "command": "${repo}/factory/bin/flow.sh run"
+        },
+        {
+          "pos": "2.3.1",
+          "name": "glass",
+          "what": "break glass restore watch",
+          "command": "while :; do ${repo}/herdr/bin/seat.sh --break-glass-sweep; sleep 15; done"
         }
       ]
     },

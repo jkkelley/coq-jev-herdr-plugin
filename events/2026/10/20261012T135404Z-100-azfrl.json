@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T135404Z-100-azfrl",
+  "at": "2026-10-12T13:54:04Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4db1",
+  "kind": "work.started",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p60",
+  "note": "worker woken by test.failed 422 on 49ab55b: case 06-belt, a 61s old belt reads running; reproduce, fix the stale boundary",
+  "evidence": [],
+  "observations": []
+}

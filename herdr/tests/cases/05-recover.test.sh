@@ -60,10 +60,10 @@ assert_match "the guard ran and was ok" "$out" "^ok compaction-guard$"
 assert_match "the ticket nobody holds is warned, with its title" "$out" "^WARN $T2 - fixture ticket nobody holds \(no live seat"
 assert_eq "the ticket with a seat is not warned" "$(grep -c "^WARN $T " <<<"$out")" 0
 assert_eq "--check called the guard once, without --apply" "$(grep -c '^recover$' "$GUARD_LOG")" 1
-# Twelve since WO-20261011-ceea: monitors, the monitor seat and ten reserved panes (lease and guard joined events and queue in
+# Thirteen since WO-20261011-ceea: monitors, the monitor seat and eleven reserved panes (lease and guard joined events and queue in
 # WO-20261010-8fa8, the factory board watch in WO-20261011-616c, the route runner and the flow watch in WO-20261011-6842, the
-# three blueprint servers in WO-20261011-ceea).
-assert_eq "--check wrote no note 100 beyond bringup's twelve" "$(( $(event_count note 100) - notes0 ))" 12
+# break glass restore watch in WO-20261011-4562, the three blueprint servers in WO-20261011-ceea).
+assert_eq "--check wrote no note 100 beyond bringup's thirteen" "$(( $(event_count note 100) - notes0 ))" 13
 
 echo "-- AC-H3: the halt flag stops both modes and changes nothing"
 touch "$STATE/HALT"; before="$(find "$EVENTS" -name '*.json' | wc -l)"; : > "$GUARD_LOG"
@@ -85,8 +85,8 @@ run --check
 echo "$out" | sed 's/^/    /'
 assert_eq "--check exits 1" "$rc" 1
 assert_match "it names the seat and the reason" "$out" "^FAILED $N \(agent gone\)$"
-# Five objects (herdr, monitors, the monitor seat, the belt, the guard) plus the nine reserved panes (all but the runner, which the belt covers) recover.sh also checks since WO-20261011-ceea.
-assert_eq "the healthy objects still print ok" "$(grep -c '^ok ' <<<"$out")" 14
+# Five objects (herdr, monitors, the monitor seat, the belt, the guard) plus the ten reserved panes (all but the runner, which the belt covers) recover.sh also checks since WO-20261011-ceea.
+assert_eq "the healthy objects still print ok" "$(grep -c '^ok ' <<<"$out")" 15
 assert_eq "no event was written" "$(find "$EVENTS" -name '*.json' | wc -l)" "$before"
 assert_eq "the seat record has no ended_at" "$(jq -r '.ended_at // "null"' "$STATE/seats/$N/seat.json")" null
 assert_eq "no seat.down was recorded" "$(( $(event_count seat.down 100) - downs0 ))" 0

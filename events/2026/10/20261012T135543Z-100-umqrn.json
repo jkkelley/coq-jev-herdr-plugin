@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T135543Z-100-umqrn",
+  "at": "2026-10-12T13:55:43Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-668a",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-668a",
+  "pane": "wD3:p79",
+  "note": "pr.opened: PR 23 head c6212f3, review 422 ucd33 fixed: .claude/skills untracked, GOOD and NEVER in RUNBOOK.md and SITREP-PAYLOAD.md, make lint green",
+  "evidence": [],
+  "observations": []
+}
