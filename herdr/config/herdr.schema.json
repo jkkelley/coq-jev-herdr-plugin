@@ -24,6 +24,7 @@
     "bringup_gate",
     "require_guard",
     "monitor_seat",
+    "shells",
     "runtime_bin",
     "keys",
     "control_plane",
@@ -119,6 +120,17 @@
       "type": "string",
       "minLength": 1,
       "description": "name of the monitor seat the gate looks for"
+    },
+    "shells": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "^[^/]+$"
+      },
+      "description": "basenames of the programs that count as a bare shell: a pane is busy when its foreground holds a process whose argv[0] is not one of these (seat-lib.sh sl_pane_busy, WO-20261012-277d)"
     },
     "runtime_bin": {
       "type": "object",

@@ -17,6 +17,7 @@
   "bringup_gate": true,
   "require_guard": true,
   "monitor_seat": "monitor",
+  "shells": ["sh", "bash", "dash", "zsh", "fish", "ksh"],
   "runtime_bin": {
     "claude": "claude",
     "codex": "codex"
