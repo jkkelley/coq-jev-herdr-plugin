@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<spec id="SPEC-16.H" domain="runtime" version="1.0.0" title="Podman runtime and the executor: image, run contract, verb table, gRPC services, build and panes" status="proposed" updated="2026-10-12T19:30Z">
+<spec id="SPEC-16.H" domain="runtime" version="1.1.0" title="Podman runtime and the executor: image, run contract, verb table, gRPC services, build and panes" status="proposed" updated="2026-10-12T20:07Z">
   <contents>
     <item ref="h-purpose" title="What the runtime domain decides"/>
     <item ref="h-image" title="The image"/>
@@ -36,7 +36,9 @@
 
   <section id="h-run" title="The run contract">
     <text id="h-run-wrapper" level="MUST" source="spec:SPEC-16#s-laws">One wrapper script in the scheduler's host directory runs the container in the foreground of its pane; every flag below is in the wrapper and read from the configuration, never typed by hand.</text>
-    <text id="h-run-flags" level="MUST" source="factory/tests/run.sh">Rootless, network none, user namespace keep-id, init process on, a memory limit, the image by digest, removed on exit, a name so a second start is refused by Podman.</text>
+    <text id="h-run-flags" level="MUST" source="factory/tests/run.sh">Rootless, network none, user namespace keep-id, init process on, a memory limit, the image by the digest resolved from its configured tag at start, removed on exit, a name so a second start is refused by Podman.</text>
+    <text id="h-run-keys" level="MUST" source="spec:SPEC-16.G#g-keys; spec:SPEC-16.G#g-vars">The image reference, the memory limit and the container name are the runtime keys of the scheduler's file; the wrapper reads them with a JSON tool, and the environment names it exports are fixed in the config spec.</text>
+    <text id="h-run-digest" level="MUST" source="spec:SPEC-16.G#g-vars; spec:SPEC-16.I#i-status">The wrapper resolves the configured tag to a digest with the engine's inspect, logs it, passes it through the digest environment name and runs the container by it, so no file holds a digest and the status answer names the running build.</text>
     <text id="h-run-mounts" level="MUST" source="spec:SPEC-16.A#a-roots; spec:SPEC-16.G#g-vars">Mounts: the repository read-only at the repo path; every intake root read-only at a fixed path; the state directory read-write; the runtime directory holding the executor socket; nothing from the home directory beyond those.</text>
     <text id="h-run-env" source="spec:SPEC-16.G#g-vars">Environment: the mode, the host repository path, the state directory, the session; the configuration reads them through variables, so the wrapper is the only place that knows the host.</text>
     <text id="h-run-signal" source="spec:SPEC-16.F#f-drain">The wrapper forwards termination to the binary, which drains; a stop from the pane is a clean drain, not a kill.</text>

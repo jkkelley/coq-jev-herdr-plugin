@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<spec id="SPEC-16.G" domain="config" version="1.0.0" title="Config and schema: the two files, variables, validation and hot reload" status="proposed" updated="2026-10-12T19:30Z">
+<spec id="SPEC-16.G" domain="config" version="1.1.0" title="Config and schema: the two files, variables, validation and hot reload" status="proposed" updated="2026-10-12T20:07Z">
   <contents>
     <item ref="g-purpose" title="What the config domain decides"/>
     <item ref="g-files" title="The files"/>
@@ -35,6 +35,9 @@
   <section id="g-vars" title="Variables">
     <text id="g-vars-set" level="MUST" source="spec:SPEC-01#s-config">A string value may carry repo, state_dir, host_repo, HOME or ENV:NAME in the variable form; the loader resolves them after the file is read, and an unknown variable or an unset environment name is exit 3 naming it.</text>
     <text id="g-vars-two-repos" level="MUST" source="spec:SPEC-16.H#h-run">repo is the repository as mounted in the container, for reading; host_repo is the repository on the host, for the executor. The scheduler uses host_repo only in text typed or run on the host, such as a wake line's playbook path.</text>
+    <text id="g-vars-env" level="MUST" source="spec:SPEC-16.H#h-run-env; spec:SPEC-16.H#h-run-flags">The environment names are fixed so the wrapper and the files agree: COQ_SCHED_MODE for mode, COQ_SCHED_REPO for repo, COQ_REPO for host_repo, COQ_SCHED_STATE_DIR for state_dir, COQ_HERDR_SESSION for the session.</text>
+    <text id="g-vars-env-home" level="MUST" source="spec:SPEC-16.H#h-run-mounts; spec:SPEC-16.A#a-roots">XDG_RUNTIME_DIR names the directory holding the executor socket, the same path on both sides of the mount; HOME passes through unchanged so a pattern under it resolves to the same mounted path in the container.</text>
+    <text id="g-vars-env-digest" level="MUST" source="spec:SPEC-16.H#h-run-flags; specs/scheduler/config/check.json">COQ_SCHED_IMAGE_DIGEST carries the digest the wrapper resolved from the configured tag at start; the digest key reads it through the variable form, so no file ever holds a digest.</text>
     <text id="g-vars-portable" source="node:DEC-no-hardcode-config-s3">No absolute path, host name or user name inside the file: every machine-specific value comes in through a variable, so the file can be lifted to another host or to object storage unchanged.</text>
   </section>
 
@@ -58,6 +61,7 @@
   </section>
 
   <section id="g-keys" title="The key registry of scheduler.json">
+    <text id="g-runtime-group" level="MUST" source="spec:SPEC-16.H#h-run-wrapper; spec:SPEC-16.G#g-nodefault">The keys image, memory and container_name are read by the wrapper with a JSON tool before any process runs, so they carry no variable; the loader knows the whole group and reports it in Status, so no unknown-key refusal.</text>
     <key name="schema_version" type="string" source="spec:SPEC-01#s-config">The file's schema version.</key>
     <key name="mode" type="string: off, shadow, active" source="spec:SPEC-16.J#j-mode">What the scheduler may do; a variable so the run wrapper can set it from the environment.</key>
     <key name="seat" type="string" source="factory/config/runner.json#runner_seat">The scheduler's own seat name on the records it writes.</key>
@@ -80,6 +84,10 @@
     <key name="notify.min_code" type="integer" source="spec:SPEC-16.F#f-config">The lowest code that raises a herdr notification.</key>
     <key name="housekeeping.queue_sweep_seconds, housekeeping.glass_sweep_seconds, housekeeping.prune_seconds" type="integer" source="spec:SPEC-16.F#f-housekeeping">The periods.</key>
     <key name="shadow.dir, shadow.parity_min_records" type="string, integer" source="spec:SPEC-16.J#j-shadow">Where shadow decisions go and how many agreeing records parity needs.</key>
+    <key name="runtime.image" type="string: name and tag" source="spec:SPEC-16.H#h-run-flags; factory/tests/run.sh">The runtime image by name and tag, no registry host and no digest, so the file lifts unchanged and the copy rule holds; the wrapper resolves the tag to a digest at start, and a change is a restart.</key>
+    <key name="runtime.memory" type="string: a number with k, m or g" source="spec:SPEC-16.H#h-run-flags">The container's memory limit in the unit form the container engine takes.</key>
+    <key name="runtime.container_name" type="string" source="spec:SPEC-16.H#h-run-flags">The container's name; the engine refuses a second start while a container of that name exists.</key>
+    <key name="runtime.image_digest" type="string: a variable from the environment" source="spec:SPEC-16.H#h-run-flags">The digest the wrapper resolved and passed through its environment name; the loader resolves it and Status reports it, so the running build is known without a digest in any file.</key>
     <key name="log.level" type="string: debug, info, warn, error" source="spec:SPEC-16.I#i-log">The log level.</key>
   </section>
 
@@ -99,6 +107,7 @@
     <case id="g-t3" command="go test ./internal/config -run TestVariablesResolved" expected="exit 0: repo, state_dir, host_repo, HOME and ENV names resolve; an unknown variable or unset name fails naming it" source="spec:SPEC-16.G#g-vars">Portable values.</case>
     <case id="g-t4" command="go test ./internal/config -run TestCrossChecks" expected="exit 0: a role without an acknowledgement window, a gate kind without a deadline, and a broken visible bound each fail naming the key" source="spec:SPEC-16.G#g-validate">Cross checks at start.</case>
     <case id="g-t5" command="go test ./internal/config -run TestReloadSwapsWholeOrNot" expected="exit 0: a changed valid table is swapped with a new version; a changed invalid one leaves the old version in place with one note" source="spec:SPEC-16.G#g-reload">Whole or not at all.</case>
+    <case id="g-t7" command="go test ./internal/config -run TestRuntimeKeysLiteral" expected="exit 0: image, memory or container_name carrying a variable form fails naming it; the digest key resolves from the environment and the group appears in Status" source="spec:SPEC-16.G#g-keys">The wrapper's keys are literal.</case>
     <case id="g-t6" command="make lint" expected="configs: schema ok, with scheduler.json and executor.json validated against their schemas" source="lint/lint.sh">The repository lint covers the files.</case>
   </section>
 
