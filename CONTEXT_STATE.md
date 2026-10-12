@@ -53,6 +53,39 @@
 
 
 
+
+## Checkpoint 2026-10-12 17:55 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-72a0 on WO-20261012-72a0 - Verifier seat: a merged record wakes a verifier that checks the merge on main against the ticket's criteria and posts verified or rejected, so no merge waits on the architect.
+  Branch feat/verifier-seat-a-merged-record-wakes-a-verifier-t, PR 29, treehouse slot 6, test pane wD3:p8F.
+- The tester and the reviewer both passed PR 29 on 4d5dbac (records 20261012T163042Z-201-ixdzq and 20261012T163410Z-201-nc0yo).
+  Then main gained PR 26 (WO-20261012-b800 - Supervisor), so GitHub showed PR 29 CONFLICTING with 55e799e.
+  The owner ordered the merge now, skipping the merger's 409 round trip.
+
+#### Toolchain
+
+- origin/main 78ae088 (PR 33, WO-20261012-8f4f - SITREP IN FLIGHT) merged on top of the PR 26 merge; conflicts only in CHANGELOG.md, CONTEXT_STATE.md and work-orders/INDEX.md, resolved by their scripts and by ordering the checkpoints.
+  INDEX and READMEs by work-order.sh reindex, CHANGELOG.md by bin/changelog.sh render, CONTEXT_STATE.md rebuilt keeping every checkpoint in time order.
+  herdr/bin/seat.sh auto-merged: main's down.lock breadcrumb in the down path sits beside this branch's verifier door-1 change.
+- Renamed herdr/tests/cases/17-verifier-archived.test.sh to 22-verifier-archived.test.sh because main took 17 for 17-pane-health.
+- Verified in the test pane: after the PR 26 merge make lint ok, loop 9, herdr 22, factory 16 passed; after the PR 33 merge (touches only tools/bearings and generated files) make lint ok and factory 16 passed, 0 failed.
+
+#### Active Tasks
+
+- After this step lands: post pr.opened 100 with the new head sha and --pr 29, then idle for the belt.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-72a0 as worker-wo-20261012-72a0 in slot 6. Read playbooks/worker.md and this checkpoint. The merge of origin/main 78ae088 is pushed; post pr.opened 100 with the new sha and pr 29 if it is not posted, then hold.
+
 ## Checkpoint 2026-10-12 17:49 UTC
 
 ### Current state
