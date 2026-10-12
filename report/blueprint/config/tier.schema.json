@@ -5,7 +5,7 @@
   "description": "One tier of the blueprint server (WO-20261011-ceea, DEC-blueprint-server-tiers): its port, where its page lives, the label of the herdr pane that runs it, and where it takes promotions from. dev is live (it refreshes its own page from graph/ and work-orders/), uat and stable are released (they serve out_dir/current, which bin/promote.sh switches). A second repository changes these files and report/loop/config/blueprint.json and nothing else.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "tier", "host", "port", "out_dir", "pane_label", "mode", "promotes_from"],
+  "required": ["schema_version", "tier", "host", "port", "out_dir", "pane_label", "probe_timeout_seconds", "mode", "promotes_from"],
   "properties": {
     "schema_version": { "const": "1.0.0" },
     "tier": { "enum": ["dev", "uat", "stable"] },
@@ -13,6 +13,7 @@
     "port": { "type": "integer", "minimum": 1024, "maximum": 65535 },
     "out_dir": { "type": "string", "minLength": 1, "description": "relative to the repository root; gitignored" },
     "pane_label": { "type": "string", "pattern": "^blueprint-(dev|uat|stable)$" },
+    "probe_timeout_seconds": { "type": "integer", "minimum": 1, "maximum": 60, "description": "how long serve.sh --check waits for GET /healthz before it calls the server not serving" },
     "mode": { "enum": ["live", "released"] },
     "promotes_from": { "enum": [null, "dev", "uat"] }
   }

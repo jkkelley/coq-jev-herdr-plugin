@@ -5,6 +5,7 @@
   "port": 44910,
   "out_dir": "report/blueprint/out/dev",
   "pane_label": "blueprint-dev",
+  "probe_timeout_seconds": 3,
   "mode": "live",
   "promotes_from": null
 }

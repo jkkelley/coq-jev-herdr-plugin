@@ -22,7 +22,7 @@ import json, sys, urllib.request, urllib.error
 cfg = json.load(open(sys.argv[1]))
 url = f"http://{cfg.get('host', '127.0.0.1')}:{cfg['port']}/healthz"
 try:
-    body = json.load(urllib.request.urlopen(url, timeout=3))
+    body = json.load(urllib.request.urlopen(url, timeout=cfg['probe_timeout_seconds']))
     print(f"ok {body['tier']} build {body['build']}")
 except urllib.error.HTTPError as e:
     # 503 with the health body: the server is up and answering, nothing has been promoted into this tier yet. That is a healthy

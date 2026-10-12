@@ -5,6 +5,7 @@
   "port": 44912,
   "out_dir": "report/blueprint/out/stable",
   "pane_label": "blueprint-stable",
+  "probe_timeout_seconds": 3,
   "mode": "released",
   "promotes_from": "uat"
 }

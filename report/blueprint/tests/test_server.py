@@ -152,6 +152,12 @@ class RefreshTimeout(unittest.TestCase):
         self.assertIsInstance(server.view_config()["refresh_timeout_seconds"], int)
         self.assertNotRegex(Path(server.__file__).read_text(), r"timeout=\d")
 
+    def test_the_probe_timeout_is_tier_config_not_a_literal(self):
+        for tier in ("dev", "uat", "stable"):
+            cfg = json.loads((REPO / "report" / "blueprint" / "config" / f"{tier}.json").read_text())
+            self.assertIsInstance(cfg["probe_timeout_seconds"], int, tier)
+        self.assertNotRegex((REPO / "report" / "blueprint" / "serve.sh").read_text(), r"timeout=\d")
+
     def test_a_pass_that_outlives_the_timeout_keeps_the_last_page(self):
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, True)

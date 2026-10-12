@@ -5,6 +5,7 @@
   "port": 44911,
   "out_dir": "report/blueprint/out/uat",
   "pane_label": "blueprint-uat",
+  "probe_timeout_seconds": 3,
   "mode": "released",
   "promotes_from": "dev"
 }

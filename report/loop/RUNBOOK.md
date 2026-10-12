@@ -191,7 +191,7 @@ make -C report/loop promote-uat          # uat takes dev's current build, tagged
 make -C report/loop promote-stable       # stable takes uat's build
 ```
 
-Three tiers, each a file in `report/blueprint/config/` (`dev.json`, `uat.json`, `stable.json`, checked by `tier.schema.json`) with its own `port`, `out_dir` and `pane_label`.
+Three tiers, each a file in `report/blueprint/config/` (`dev.json`, `uat.json`, `stable.json`, checked by `tier.schema.json`) with its own `port`, `out_dir`, `pane_label` and `probe_timeout_seconds` (how long `serve.sh --check` waits for `/healthz`).
 Dev rebuilds its own page every `watch_seconds`, and gives one pass `refresh_timeout_seconds` (both in `config/blueprint.json`) before it keeps the last page and says so.
 Uat and stable serve only what a promotion put in `out_dir/releases/<build>`, behind a `current` link, so the build number on stable is the build uat held.
 `promote.sh` is the only way a page moves forward; a hand copy breaks that promise.
