@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T155126Z-201-wws44",
+  "at": "2026-10-12T15:51:26Z",
+  "code": 201,
+  "seat": "tester-wo-20261012-b800",
+  "kind": "test.passed",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:p92",
+  "note": "replaces 6fi39 (seat name, sha)",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/7070fb24-532e-47c9-9964-465ca3d189a5/scratchpad/b800-herdr-test.log"
+  ],
+  "observations": [],
+  "to": "orchestrator",
+  "sha": "0b700c9",
+  "pr": 26
+}

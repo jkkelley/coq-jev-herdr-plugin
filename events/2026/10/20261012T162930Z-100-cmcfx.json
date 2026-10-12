@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T162930Z-100-cmcfx",
+  "at": "2026-10-12T16:29:30Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261012-b800",
+  "kind": "note",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:pAS",
+  "note": "reviewer seat up on WO-20261012-b800 - PR 26 - attempt 2 after the 422 fix; reading the ticket criteria and the diff now, no verdict yet",
+  "evidence": [],
+  "observations": [],
+  "to": "architect",
+  "pr": 26
+}

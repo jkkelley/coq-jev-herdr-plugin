@@ -20,7 +20,10 @@ assert_match "agent prompt to the interface seat names the record, the decision 
 assert_eq "seat.sh was not run for a request" "$(wc -l < "$SLOG" | tr -d ' ')" 0
 
 echo "-- a 200 runs seat.sh --break-glass for the record's seat with the 200's own id"
-sleep 1; grant=$(bg --code 200 --answer "$req"); run_once
+# BREADCRUMB 2026-10-12 - WO-20261012-da52, flake seen on PR 25. What broke: the receipt check below takes the last record.routed by id (UTC
+# second plus a random suffix); the host clock steps back about 1 s every ~35 s (see case 06-belt), so with sleep 1 the 300's and the
+# 200's receipts can share a second and sort at random. Fix: sleep 3, the same as 12-policy. Cost: two seconds per run.
+sleep 3; grant=$(bg --code 200 --answer "$req"); run_once
 assert_eq "seat.sh was run once, with the seat and the record id only" "$(cat "$SLOG")" "--break-glass worker-wo-20261011-aaaa --record $grant"
 assert_eq "herdr was not asked for anything else" "$(hcalls)" 1
 assert_match "the receipt names the action" "$(jq -r .note <<<"$(rec_json "$(ids_of record.routed | tail -1)")")" "routed break.glass 200 \($grant\): break-glass orchestrator"
