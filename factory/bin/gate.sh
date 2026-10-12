@@ -10,8 +10,18 @@
 #       heads_match    head_current, and the newest test.passed 201 for the ticket names the same head as the record
 #   gate.sh supersedes --id ID [flags]            prints the id of the older pr.opened of the ticket that still has no tester result
 #                                                 and names a different head, nothing when there is none
+#   gate.sh pr-files --ticket ID [--base REF] [--head REF]
+#                                                 0 the PR diff stays inside the ticket's files field, carries no aggregate and takes no doc number
+#                                                 another PR or main already has   1 hold: each offending path on one line, joined with "; "   4 error
 # Flags: --repo DIR (default: the checkout this script is in)   --events DIR (default: <repo>/events)
 # Exit: 0 ok, 1 hold or differ, 2 usage, 4 io or a sha the repo cannot resolve.
+#
+# BREADCRUMB 2026-10-12 - WO-20261012-0677, verb pr-files. What broke: nothing checked a PR's diff against what its ticket said it would
+#   change, so five PRs edited one set of files on 2026-10-12 and each merge conflicted the next (AC-H2 of the ticket). Why this fix: the
+#   rule is factory/bin/claims.sh (files field, aggregates, doc numbers); this verb only gives it the gate's contract, exit 1 and one
+#   line, so route.sh can hold a record on it the way it holds one on head_current. Rejected: a second copy of the rule here (two places
+#   to drift) and a `when` predicate (those take a record id, and a PR diff has no record). Cost: routes.json does not call it yet -
+#   that file was another PR's when this landed - so until a row says `when pr-files` the gate is run by hand or by the merger's step.
 #
 # BREADCRUMB 2026-10-12 - WO-20261012-3bb0. What broke: three rules lived in the architect's head. (1) On 2026-10-12 the architect judged
 #   by hand that a test on efc1cd2 covered 43c22b4, one record file apart, because the merger gate said "test.passed 201 and review.passed
@@ -36,16 +46,17 @@
 set -uo pipefail
 export LC_ALL=C
 HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd); FACTORY=$(cd "$HERE/.." && pwd)
-REPO=$(cd "$FACTORY/.." && pwd); EVENTS=""; ID=""
+REPO=$(cd "$FACTORY/.." && pwd); EVENTS=""; ID=""; TICKET_ARG=""; BASE_ARG=""; HEAD_ARG=""
 die() { local c=$1; shift; printf 'gate: %s\n' "$*" >&2; exit "$c"; }
 command -v jq >/dev/null || die 4 "jq is required"
 VERB=${1:-}; shift || true
 ARGS=()
 while [ $# -gt 0 ]; do case $1 in
   --repo) REPO=$(cd "${2:?}" && pwd) || die 4 "no such --repo"; shift 2;; --events) EVENTS=${2:?}; shift 2;; --id) ID=${2:?}; shift 2;;
+  --ticket) TICKET_ARG=${2:?}; shift 2;; --base) BASE_ARG=${2:?}; shift 2;; --head) HEAD_ARG=${2:?}; shift 2;;
   -*) die 2 "unknown flag $1";; *) ARGS+=("$1"); shift;; esac; done
 [ -n "$EVENTS" ] || EVENTS=$REPO/events
-case $VERB in same-head|when|supersedes) ;; *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2;; esac
+case $VERB in same-head|when|supersedes|pr-files) ;; *) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2;; esac
 
 # resolve SHA: the commit it names in the repo, fetching once when it is not there; empty when it cannot be found.
 resolve() {
@@ -104,6 +115,12 @@ head_current() {
 }
 
 case $VERB in
+  pr-files) [ -n "$TICKET_ARG" ] || die 2 "pr-files needs --ticket"
+    ex=(--repo "$REPO"); [ -z "$BASE_ARG" ] || ex+=(--base "$BASE_ARG"); [ -z "$HEAD_ARG" ] || ex+=(--head "$HEAD_ARG")
+    d=$("$HERE/claims.sh" diff --id "$TICKET_ARG" "${ex[@]}"); r1=$?; i=$("$HERE/claims.sh" ids "${ex[@]}"); r2=$?
+    [ "$r1" -lt 4 ] && [ "$r2" -lt 4 ] || die 4 "claims.sh could not read the PR (diff $r1, ids $r2)"
+    [ "$r1" = 0 ] && [ "$r2" = 0 ] || hold "$(printf '%s\n%s\n' "$d" "$i" | grep . | paste -sd';' | sed 's/;/; /g')"
+    exit 0 ;;
   same-head) [ "${#ARGS[@]}" = 2 ] || die 2 "same-head needs two shas"; same_head "${ARGS[0]}" "${ARGS[1]}"; exit $? ;;
   when) [ "${#ARGS[@]}" = 1 ] || die 2 "when needs a predicate"; load
     case ${ARGS[0]} in

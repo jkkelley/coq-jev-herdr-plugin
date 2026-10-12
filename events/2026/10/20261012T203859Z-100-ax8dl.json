@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T203859Z-100-ax8dl",
+  "at": "2026-10-12T20:38:59Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-72a0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:p8D",
+  "note": "worker: merging origin/main 883ea00 (PR 36, aggregates gitignored) into PR 29 by architect order",
+  "evidence": [],
+  "observations": []
+}
