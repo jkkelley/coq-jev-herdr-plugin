@@ -48,6 +48,27 @@
 
 
 
+
+## Checkpoint 2026-10-12 13:55 UTC
+
+### Current state
+
+#### Infrastructure
+- Worker seat worker-wo-20261012-668a on WO-20261012-668a, PR 23, slot 1, test pane wD3:p7B. Review record 20261012T132207Z-422-ucd33 (attempt 1): remove the tracked .claude/skills symlink, add GOOD and NEVER to tools/bearings/RUNBOOK.md and standards/SITREP-PAYLOAD.md.
+- Done in this step: git rm --cached .claude/skills (kept on disk, excluded in the worktree's info/exclude), both docs have a GOOD and NEVER section and a contents entry.
+
+#### Toolchain
+- make lint runs inside make step. No code changed, so the bearings suite (113 passed) is not rerun.
+
+#### Active Tasks
+- After the step lands: post pr.opened 100 with the new head sha and PR 23, then stop.
+
+#### Blockers
+- None.
+
+### Hydration prompt
+Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/worker.md and this checkpoint. The review fixes are committed; post pr.opened 100 with the new head and PR 23 if the record is missing, then stop.
+
 ## Checkpoint 2026-10-12 13:15 UTC
 
 ### Current state
