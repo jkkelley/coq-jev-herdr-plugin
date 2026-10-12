@@ -61,7 +61,7 @@ echo "-- rerun is idempotent"
 "$BU" --worktree "$REPO" > "$WORLD/out" 2>&1; rc=$?; out="$(tr '\n' ' ' < "$WORLD/out")"
 assert_eq "rerun exits 0" "$rc" 0
 assert_match "every node reads ok" "$out" "^ok herdr.*ok monitors.*ok monitor-seat.*ok pane-events.*ok pane-queue.*ok pane-board.*ok pane-runner.*ok pane-flow"
-assert_eq "still 27 monitoring panes plus 2 seat panes" "$(h pane list --workspace "$ws" | jq '.result.panes | length')" 29
+assert_eq "still 27 monitoring panes plus 3 seat panes (agent, monitor, test)" "$(h pane list --workspace "$ws" | jq '.result.panes | length')" 30
 
 echo "-- take and release"
 "$MON" take shell probe -- claude --model x >/dev/null 2>"$WORLD/err"; assert_eq "take refuses an agent" "$?" 1
