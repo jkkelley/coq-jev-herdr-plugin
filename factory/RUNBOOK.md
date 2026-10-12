@@ -13,6 +13,9 @@
 - GOOD and NEVER
 - Flow watch
 
+Graph: `RUN-route-runner` is this runbook, `CMP-route-runner` is the component, and `CMP-route-runner` carries `defined_in RUN-route-runner`.
+Ticket: WO-20261011-38c7 - Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else.
+
 ## What it does
 
 `factory/bin/route.sh` reads each new record in the event log, matches it against `factory/config/routes.json` top to bottom, and performs the first row that matches.

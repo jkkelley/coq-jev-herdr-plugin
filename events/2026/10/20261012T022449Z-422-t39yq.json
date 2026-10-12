@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T022449Z-422-t39yq",
+  "at": "2026-10-12T02:24:49Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261011-4db1",
+  "kind": "review.changes",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p1V",
+  "note": "changes: RUNBOOK lost its Graph and Ticket lines in 3c255dc with no reason given, restore them. No test.passed 201 exists for head 20d6017; AC evidence is on 8f72207, before the PR 18 merge, so the tester must prove the head.",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "factory/RUNBOOK.md",
+      "line": 15,
+      "saw": "the Graph and Ticket lines that origin/main carries are gone, removed by 3c255dc with no reason in the ticket or a comment, and no other file keeps that text",
+      "expected": "restore both lines or leave a reason where the change was made"
+    },
+    {
+      "path": "work-orders/archive/2026/WO-20261011-4db1-belt-seats-the-line-route-sh-brings-a-role-seat-.md",
+      "line": 71,
+      "saw": "AC evidence cites tree 8f72207 but the head is 20d6017 after the PR 18 merge and no test.passed 201 names it",
+      "expected": "tester runs make -C factory test on 20d6017 and posts test.passed with its sha"
+    }
+  ],
+  "attempt": 1,
+  "sha": "20d6017",
+  "pr": 21
+}
