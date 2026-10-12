@@ -290,3 +290,19 @@ factory/bin/bus.sh slots         # the slot paths treehouse lists
 ```
 
 Verify with `make -C factory test` (case 12-bus) from the labelled test pane.
+
+### Cut-over from the interim bus
+
+The interim bus is a loop script in the user cache directory, running in monitor slot 2.3.3.
+The belt needs it until `bus.sh` runs from `main`, so the cut-over happens after the merge and belongs to the architect.
+No worker removes the interim script or stops its loop.
+
+1. Merge the ticket's PR and bring the checkout to `main`.
+2. Stop the job in slot 2.3.3 with `herdr/bin/monitors.sh release <pane>`, where the pane comes from `herdr/bin/monitors.sh status`.
+3. Delete the interim script from the user cache directory.
+4. Run `herdr/bin/bringup.sh`, which plugs `bus.sh run` into slot 2.3.3, then `herdr/bin/bringup.sh --check` and expect `ok pane-bus`.
+5. Write one record in a treehouse slot and see it in the checkout `events/` within ten seconds.
+
+Order matters: stop the interim loop before the repo bus starts, so two copiers never race on one record.
+The ticket's AC-H2 is checked at verification, after these steps.
+Its grep half (no user cache path in `herdr/` or `factory/`) holds on the PR head and is checked by case 12-bus.

@@ -83,6 +83,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Review 422 62gz9, AC-H2: the first half (the interim record-bus.sh under the user cache directory removed) is the post-merge cut-over and belongs to the architect, checked at verification: the architect stops monitor slot 2.3.3, deletes the interim script, and starts the repo bus (bringup takes slot 2.3.3). The worker does not and must not remove it, because the belt needs it until bus.sh runs from main. The grep half (no user cache path in herdr/ or factory/) holds on this head and is checked by case 12-bus.
 - `2026-10-12` Retro: bus.sh reads slots from treehouse status --json run in the repo, copies once through a ledger under factory/state/bus/copied, tmp then rename. The interim loop's skip-if-in-checkout rule let a record the architect removed come back, which is why the ledger exists. A record a seat commits and merges also arrives untracked in the checkout, so git pull there can refuse until the records commit takes it (breadcrumb in bus.sh). herdr case 04 and 05 counts moved from ten to eleven nodes for the new bus pane. Left to the architect or owner: delete the interim record-bus.sh in the user cache directory and stop its loop in slot 2.3.3 before bringup can take the slot.
 
 ## Outcome
