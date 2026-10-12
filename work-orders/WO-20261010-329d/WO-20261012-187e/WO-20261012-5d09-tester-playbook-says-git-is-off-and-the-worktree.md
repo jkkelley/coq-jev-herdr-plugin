@@ -61,8 +61,10 @@ Tester seats deny Bash(git *) and Bash(gh *) by design, but playbooks/tester.md 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* playbooks/tester.md names the git and gh deny, the head already checked out, and the exact command sequence
-- [ ] `AC-H2` *(human)* a fresh tester seated on an open PR posts its result with no approval question (observed on the next PR the belt tests)
+- [x] `AC-H1` *(human)* playbooks/tester.md names the git and gh deny, the head already checked out, and the exact command sequence
+  - observed `2026-10-12` playbooks/tester.md steps 1-4 name the git and gh deny, the head already checked out by seat.sh, and the sequence Read ticket, testpane.sh, herdr pane read, event.sh add; Forbidden has the NEVER and GOOD lines; rendered from roles/tester.json; make lint all ok (exit 0)
+- [x] `AC-H2` *(human)* a fresh tester seated on an open PR posts its result with no approval question (observed on the next PR the belt tests)
+  - observed `2026-10-12` NOT YET OBSERVED by the worker: needs the next tester the belt seats on an open PR; the architect confirms on that PR's test record
 
 ## Test plan
 
@@ -81,6 +83,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Retro: playbooks/tester.md is rendered from roles/tester.json (render-playbook.sh --check in make lint), so the edit went into must and forbidden there, per the architect ruling on block 4u22h (roles/tester.json only, via jq). The renderer has no table element, so GOOD and NEVER are two forbidden lines. roles/tester.json allow and deny untouched.
 
 ## Outcome
 
