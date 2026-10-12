@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "coq/herdr/layouts/layout.schema.json",
   "title": "pane layout",
-  "description": "A grid of slots seat.sh renders into one herdr tab (SPEC-04 s-labels). Labels and commands take ${MODEL} ${effort} ${ticket} ${seat} ${name} ${state_dir} ${worktree} ${repo}. One slot of kind agent per seat layout; none in a monitors layout.",
+  "description": "A grid of slots seat.sh renders into one herdr tab (SPEC-04 s-labels). Labels and commands take ${MODEL} ${effort} ${ticket} ${seat} ${name} ${state_dir} ${worktree} ${repo}. One slot of kind agent per seat layout; none in a monitors layout. At most one slot of kind test: the seat's own test pane, whose id seat.sh exports as COQ_TEST_PANE (WO-20261011-f896).",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "grid", "panes"],
@@ -22,11 +22,26 @@
         "required": ["slot", "kind", "label", "command"],
         "properties": {
           "slot": { "type": "string", "pattern": "^[a-z]$" },
-          "kind": { "enum": ["agent", "monitor", "viewer", "tool"] },
+          "kind": { "enum": ["agent", "monitor", "viewer", "tool", "test"] },
           "label": { "type": "string", "minLength": 1 },
           "command": {
             "type": "string",
             "description": "run once in a fresh pane; empty for the agent slot and for a shell"
+          },
+          "split": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["from", "direction", "ratio"],
+            "description": "Opts this slot out of the rows x columns grid: it is split from the slot named by from, not placed by sl_grid_step, and is not counted against grid. Such slots come after every grid slot. ratio is the share the pane being split keeps.",
+            "properties": {
+              "from": { "type": "string", "pattern": "^[a-z]$" },
+              "direction": { "enum": ["right", "down"] },
+              "ratio": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "exclusiveMaximum": 1
+              }
+            }
           }
         }
       }

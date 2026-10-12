@@ -67,7 +67,7 @@
 
 #### Active Tasks
 
-- Push, then post pr.opened 100 with the new head sha and PR 22, then stop.
+- Merge origin/main (PR 20 test pane per seat, conflicts in case 04 and CONTEXT_STATE.md), re-run the herdr suite, push, post pr.opened 100 with the new head sha and PR 22, then stop.
 
 #### Blockers
 
@@ -82,77 +82,27 @@
 Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 2. Read playbooks/worker.md and this checkpoint.
 The code, the note and the push are done; the only step left is pr.opened 100 with the head sha, then stop and wait for the reviewer.
 
-## Checkpoint 2026-10-12 02:17 UTC
+## Checkpoint 2026-10-11 23:09 UTC
 
 ### Current state
 
 #### Infrastructure
-
-- Worker seat worker-wo-20261011-4562 on WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day.
-  Branch feat/break-glass-one-owner-authorised-action-at-a-tim, treehouse slot 2, test pane wD3:p1V through herdr/bin/testpane.sh only.
-  PR 22 is open and clean; this step is review attempt 2 (record 20261012T013042Z-422-2g2pn) on 57dacf2.
-
-#### Toolchain
-
-- Fixed: observation 1 (break-glass-lib.sh no longer forces defaultMode bypassPermissions; the role's mode is kept, so a dontAsk seat opens only the one command), observation 2 (case 13 flips an orchestrator seat and asserts dontAsk, allow gained only the action, Write and Edit denies stay, podman deny stays, the hook blocks a second git command), observation 5 (hook timeouts are break_glass.hook_pre_timeout_seconds and hook_post_timeout_seconds in herdr.json and its schema).
-- Verified in the test pane: make lint green, make -C herdr test 15 passed with 13-break-glass including the new dontAsk section.
-
-#### Active Tasks
-
-- Post blocked 423 for observations 3 and 4: AC-H1 and AC-H3 are ticked in the archived ticket while their evidence says the live run and the owner card half are not observed.
-  A worker cannot untick them: work-order.sh done refuses unchecked criteria, reopen refuses an archived ticket, and the live proofs need the owner's Grant on the bearings page and PR 17.
-- After the push, post nothing else until the reviewer answers.
-
-#### Blockers
-
-- Owner or architect decision on AC-H1 and AC-H3: observe live, or split the unobserved halves into a new ticket and amend the criteria.
-
-### New this checkpoint
-
-- Lesson: the test pane is shared by every seat of the architect tab; a command sent while another seat's suite runs queues behind it and starts late, so a watch on my own done file is the only safe wait.
-
-### Hydration prompt
-
-Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 2. Read playbooks/worker.md, this checkpoint and records 20261012T013042Z-422-2g2pn and the 423 posted after it.
-Observations 1, 2 and 5 are fixed and pushed; observations 3 and 4 wait on an owner decision about AC-H1 and AC-H3.
-
-## Checkpoint 2026-10-11 22:38 UTC
-
-### Current state
-
-#### Infrastructure
-
-- Worker seat worker-wo-20261011-4562 on WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day.
-  Branch feat/break-glass-one-owner-authorised-action-at-a-tim, treehouse slot 6, test pane wD3:p1V through herdr/bin/testpane.sh only (scratchpad tp.sh).
-- Branch history: rebuilt on origin/main by the architect's order (422 record 20261011T203650Z-422-z8261), then steps 1 to 4, then a merge of origin/main (PR 19, the route runner and flow watch slots) resolved additively.
-  Pushes are plain fast-forward pushes; my role denies force pushes, so the branch is never rewritten from here.
-- This step: herdr/RUNBOOK.md (break glass: rules, records, flow, ask, verify, failures, limits) and two rows (break-glass, none) in the do table of factory/RUNBOOK.md.
+- Worker seat worker-wo-20261011-f896 on WO-20261011-f896 - Test pane per seat: seat.sh opens a labelled test pane in the seat's own tab and exports it as COQ_TEST_PANE, so sixteen seats test in parallel instead of queueing on the architect tab's one pane. Branch feat/test-pane-per-seat-seat-sh-opens-a-labelled-test, slot 9, PR 20 open against main. Ticket submitted and done, archived on the branch.
+- Reviewer record 20261011T222140Z-422-r8xoi (attempt 1 of 3): SOP-0002 lacked Contents, GOOD and NEVER, and observed Verification, and PR 20 was CONFLICTING. Fixed: SOP-0002 now has all three (Contents from bin/md-contents.sh --fix).
+- main moved to 55f4e22 (PR 18, seat.sh adopt and resume, merged). origin/main merged into the branch: seat.sh conflict kept both the adopt block and the test pane block; my case was renamed 14-test-pane-per-seat to 16-test-pane-per-seat because main took 14 (adopt) and 15 (resume); CONTEXT_STATE.md keeps both sides.
 
 #### Toolchain
-
-- After the merge, cases 04 and 05 count ten bringup note 100 records (monitors, the monitor seat, eight reserved panes: lease, guard, events, queue, board, runner, flow, glass).
-- Verified green on this tree before this step committed: make lint, make -C factory test, make -C herdr test (13-break-glass among them), make -C report/loop test (08-glass among them).
-- Not run here: make -C report/loop test-browser (needs a browser), and the live AC-H1 run on a real seat with the owner's answer.
+- make lint and make -C herdr test after this merge are queued in the shared pane wD3:p1V (log post2.log in the scratchpad); the push waits for them.
 
 #### Active Tasks
-
-- Close-out is blocked on two things only the architect can do: the ticket file work-orders/WO-20261010-329d/WO-20261011-4562-*.md exists only on origin/chore/architect-records-20261011, not on this branch, so work-order.sh cannot record evidence or finish it; and interface/ (PR 17) is not on main, so the Grant or Refuse card and the verdict are not on this branch.
-- The interface part is ready as origin/backup/4562-before-rebuild (commit 9907813, interface/ files) and as scratchpad/interface-card-verdict.patch; interface/tests/run.sh cases 6 and 6b (56 checks) passed on it.
-- Open the PR (criteria as the body, AC-H1 and AC-H3's card half stated as not yet observed and why) and post pr.opened 100 once the architect answers.
+- When both are green: commit the merge, push (no force), post pr.opened 100 with the new sha and the pr, stop.
+- For the architect: specs/ is denied to a worker, so SPEC-04 s-seat and specs/exports/factory-spec.xml S1-059 still describe two panes; the layout keeps the name seat-1x2 with three panes until roles/ is renamed.
 
 #### Blockers
-
-- Ticket file and PR 17, both architect-owned.
-
-### New this checkpoint
-
-- Lesson: when main moves under an open branch, merge it in (additive conflicts in herdr/config and cases 04 and 05) rather than rebase, because a rebase needs a force push.
-- Lesson: take the generated files (CHANGELOG.md, CONTEXT_STATE.md) from main during a merge and re-render, never hand-merge them.
+- None.
 
 ### Hydration prompt
-
-Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 6. Read playbooks/worker.md, the ticket (on origin/chore/architect-records-20261011) and this checkpoint.
-The code is done and pushed. Post a blocked 423 asking the architect for the ticket file on this branch and for PR 17 to merge so the interface patch can be applied; if they answer, run the close-out (evidence, retro note, gh pr create, submit, done, pr.opened 100). Do not rewrite pushed history.
+Resume WO-20261011-f896 as worker-wo-20261011-f896 in slot 9. Read playbooks/worker.md and this checkpoint. The merge of origin/main is staged; read the post-merge lint and suite log, commit, push, post pr.opened 100 and stop.
 
 ## Checkpoint 2026-10-11 21:26 UTC
 
