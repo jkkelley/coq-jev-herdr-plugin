@@ -51,6 +51,31 @@
 
 
 
+
+## Checkpoint 2026-10-12 15:52 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-72a0 on WO-20261012-72a0 - Verifier seat: a merged record wakes a verifier that checks the merge on main against the ticket's criteria and posts verified or rejected, so no merge waits on the architect. PR 29 is open, ticket done and archived.
+
+#### Toolchain
+
+- The architect ruled on AC-H2 at 15:51Z: accepted on its intent. The ruling is a note on the ticket. The evidence line could not be added: the ticket is archived, so evidence and reopen both refuse it. The ruling and the grep output are in the PR 29 body instead.
+
+#### Active Tasks
+
+- Post pr.opened 100 with --pr 29 and the head sha after this step lands, then hold for the tester.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-72a0 as worker-wo-20261012-72a0 in slot 6. Read playbooks/worker.md and this checkpoint. Everything is pushed; post pr.opened for the head and hold.
+
 ## Checkpoint 2026-10-12 15:49 UTC
 
 ### Current state
