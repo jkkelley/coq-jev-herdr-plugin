@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T165006Z-100-eeklg",
+  "at": "2026-10-12T16:50:06Z",
+  "code": 100,
+  "seat": "tester-wo-20261012-8fb2",
+  "kind": "work.started",
+  "ticket": "WO-20261012-8fb2",
+  "pane": "wD3:pBG",
+  "note": "tester started WO-20261012-8fb2 test plan (make -C herdr test) in test pane wD3:pBG",
+  "evidence": [],
+  "observations": []
+}

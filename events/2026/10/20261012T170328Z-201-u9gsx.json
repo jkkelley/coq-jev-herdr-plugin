@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170328Z-201-u9gsx",
+  "at": "2026-10-12T17:03:28Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261012-b800",
+  "kind": "review.passed",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:pBS",
+  "note": "review passed on PR 26 - WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr back. Timeout literals now supervisor.timeouts.* keys; every AC has evidence; lint ok on clean HEAD; tested sha e46fa34 equals head code",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-2-coq-jev-herdr-plugin/010bf99d-a1c9-417b-99b9-944f2e121bbf/scratchpad/b800-review.txt"
+  ],
+  "observations": [
+    {
+      "path": "events/2026/10/20261012T160316Z-422-19hjw.json",
+      "line": 1,
+      "saw": "untracked attempt 1 record fails make lint (graph and events checks)",
+      "expected": "a record that passes the schema, do not commit it as is"
+    },
+    {
+      "path": "work-orders/archive/2026/WO-20261012-b800-supervisor-at-boot-and-every-minute-a-process-br.md",
+      "line": 64,
+      "saw": "AC-H1 to AC-H3 ticked on suite equivalents, Not run live",
+      "expected": "architect or owner decides if that closes a human criterion"
+    }
+  ],
+  "attempt": 2,
+  "to": "architect",
+  "sha": "7c790f6",
+  "pr": 26
+}

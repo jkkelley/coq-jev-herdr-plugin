@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170027Z-100-g8atz",
+  "at": "2026-10-12T17:00:27Z",
+  "code": 100,
+  "seat": "tester-wo-20261012-ee9c",
+  "kind": "seat.up",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pBT",
+  "note": "tester seat up: claude-haiku-5-5 medium bypassPermissions",
+  "evidence": [],
+  "observations": []
+}

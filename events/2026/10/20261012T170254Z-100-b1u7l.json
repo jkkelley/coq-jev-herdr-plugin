@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170254Z-100-b1u7l",
+  "at": "2026-10-12T17:02:54Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-8fb2",
+  "pane": null,
+  "note": "owner notified for 500 ygszx: review.changes 8inhl has no worker record after 90s; worker-wo-20261012-8fb2 prompted",
+  "evidence": [],
+  "observations": [],
+  "to": "worker"
+}

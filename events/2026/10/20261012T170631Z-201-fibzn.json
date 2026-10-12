@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170631Z-201-fibzn",
+  "at": "2026-10-12T17:06:31Z",
+  "code": 201,
+  "seat": "tester-wo-20261011-ceea",
+  "kind": "test.passed",
+  "ticket": "WO-20261011-ceea",
+  "pane": "wD3:pBK",
+  "note": "sha 0e9afea: make -C report/loop test 17 passed 0 failed, 288 ok 0 not ok, exit 0; run in the worktree from the test pane",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-4-coq-jev-herdr-plugin/229e051b-5ed0-4edc-9d84-6e68bfe048cb/scratchpad/tester-ceea-loop-test-0e9afea-rerun.log"
+  ],
+  "observations": [],
+  "to": "reviewer",
+  "sha": "0e9afea",
+  "pr": 24
+}

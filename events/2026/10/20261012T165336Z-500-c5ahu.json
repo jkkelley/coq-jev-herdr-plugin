@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T165336Z-500-c5ahu",
+  "at": "2026-10-12T16:53:36Z",
+  "code": 500,
+  "seat": "route-runner",
+  "kind": "note",
+  "ticket": "WO-20261011-ceea",
+  "pane": null,
+  "note": "no route for work.started 100, record 20261012T165324Z-100-nm7q8",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T164509Z-100-4hpi6",
+  "at": "2026-10-12T16:45:09Z",
+  "code": 100,
+  "seat": "tester-wo-20261012-b800",
+  "kind": "test",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:pBD",
+  "note": "Tester started on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back. Reading the ticket test plan now.",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

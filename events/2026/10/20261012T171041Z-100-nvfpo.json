@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T171041Z-100-nvfpo",
+  "at": "2026-10-12T17:10:41Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "seat.down",
+  "ticket": "WO-20261011-ceea",
+  "pane": "wD3:pC6",
+  "note": "seat retired",
+  "evidence": [],
+  "observations": []
+}

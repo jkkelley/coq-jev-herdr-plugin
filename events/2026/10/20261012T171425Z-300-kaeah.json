@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T171425Z-300-kaeah",
+  "at": "2026-10-12T17:14:25Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261012-8fb2",
+  "pane": null,
+  "note": "routed test.passed 201 (20261012T171333Z-201-02nnq): seat reviewer, down tester",
+  "evidence": [
+    "events/2026/10/20261012T171333Z-201-02nnq.json"
+  ],
+  "observations": [],
+  "to": "reviewer"
+}

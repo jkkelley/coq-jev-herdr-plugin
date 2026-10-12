@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T164935Z-100-h4kag",
+  "at": "2026-10-12T16:49:35Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-8fb2",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-8fb2",
+  "pane": null,
+  "note": "PR 30 opened for WO-20261012-8fb2, head b558ed4",
+  "evidence": [],
+  "observations": [],
+  "to": "tester",
+  "sha": "b558ed4",
+  "pr": 30
+}

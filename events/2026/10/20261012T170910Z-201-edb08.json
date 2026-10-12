@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170910Z-201-edb08",
+  "at": "2026-10-12T17:09:10Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261011-ceea",
+  "kind": "review.passed",
+  "ticket": "WO-20261011-ceea",
+  "pane": "wD3:pC3",
+  "note": "PR 24 at 0e9afea: AC-H1 to H4 each carry an observed line; tester fibzn 201 on same sha (loop 17/17); make lint ok. 422 bxcjs fixed: serve.sh:25 reads probe_timeout_seconds from tier config. Residual: no live GET on a running dev pane.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-4-coq-jev-herdr-plugin/35cf611b-5486-42ef-9cfb-c0c2dcc7b951/scratchpad/lint.log"
+  ],
+  "observations": [],
+  "to": "merger",
+  "sha": "0e9afea",
+  "pr": 24
+}

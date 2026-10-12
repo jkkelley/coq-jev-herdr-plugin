@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170103Z-422-8inhl",
+  "at": "2026-10-12T17:01:03Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261012-8fb2",
+  "kind": "review.changes",
+  "ticket": "WO-20261012-8fb2",
+  "pane": "wD3:pBP",
+  "note": "PR 30: criteria AC-H1..H3 have evidence, lint rc 0, no em dash, scope ok; one miss: hook timeout literal 10 in seat.sh render_settings, config has none",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "herdr/bin/seat.sh",
+      "line": 136,
+      "saw": "timeout",
+      "expected": " 10 literal in the rendered compact hook"
+    }
+  ],
+  "attempt": 1,
+  "to": "worker",
+  "sha": "b558ed4",
+  "pr": 30
+}

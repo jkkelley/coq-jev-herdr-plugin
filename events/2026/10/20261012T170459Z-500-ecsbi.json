@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170459Z-500-ecsbi",
+  "at": "2026-10-12T17:04:59Z",
+  "code": 500,
+  "seat": "flow-watch",
+  "kind": "note",
+  "ticket": "WO-20261012-b800",
+  "pane": null,
+  "note": "stall: review.passed 201 20261012T170328Z-201-u9gsx has no merger record after 90s",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

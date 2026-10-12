@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170952Z-409-dj0ae",
+  "at": "2026-10-12T17:09:52Z",
+  "code": 409,
+  "seat": "merger",
+  "kind": "merge.conflict",
+  "ticket": "WO-20261011-ceea",
+  "pane": null,
+  "note": "PR 24 at 0e9afea conflicts with main 55e799e, not merged. Files: herdr/bin/bringup.sh, recover.sh, config/monitors.json, tests/cases/04, 05, work-orders/INDEX.md",
+  "evidence": [],
+  "observations": [],
+  "to": "architect",
+  "sha": "0e9afea",
+  "pr": 24
+}

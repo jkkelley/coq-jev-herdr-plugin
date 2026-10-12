@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170512Z-409-wv2rr",
+  "at": "2026-10-12T17:05:12Z",
+  "code": 409,
+  "seat": "merger",
+  "kind": "blocked",
+  "ticket": "WO-20261012-b800",
+  "pane": null,
+  "note": "PR 26 merged 55e799e per architect ruling (e46fa34..7c790f6 records-only). cleanup blocked: ticket matches 2 files (WO-20261010-329d/WO-20261012-187e stale copy and archive copy). Waiting for the stale copy removal; no merged 200 yet.",
+  "evidence": [],
+  "observations": [],
+  "to": "architect",
+  "sha": "7c790f6",
+  "pr": 26
+}

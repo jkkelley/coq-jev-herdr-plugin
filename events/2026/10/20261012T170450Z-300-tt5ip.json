@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170450Z-300-tt5ip",
+  "at": "2026-10-12T17:04:50Z",
+  "code": 300,
+  "seat": "route-runner",
+  "kind": "record.routed",
+  "ticket": "WO-20261012-8fb2",
+  "pane": null,
+  "note": "routed pr.opened 100 (20261012T170358Z-100-hrqra): seat tester",
+  "evidence": [
+    "events/2026/10/20261012T170358Z-100-hrqra.json"
+  ],
+  "observations": [],
+  "to": "tester"
+}

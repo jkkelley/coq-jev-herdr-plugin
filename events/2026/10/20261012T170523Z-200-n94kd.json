@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170523Z-200-n94kd",
+  "at": "2026-10-12T17:05:23Z",
+  "code": 200,
+  "seat": "merger",
+  "kind": "merged",
+  "ticket": "WO-20261012-b800",
+  "pane": null,
+  "note": "PR 26 merged squash 55e799e from head 7c790f6 per architect ruling (e46fa34..7c790f6 records-only; test.passed 6tduy on e46fa34 holds). Cleanup held on duplicate ready copy under WO-20261012-187e, architect removes via records branch.",
+  "evidence": [],
+  "observations": [],
+  "to": "architect",
+  "sha": "55e799e",
+  "pr": 26
+}

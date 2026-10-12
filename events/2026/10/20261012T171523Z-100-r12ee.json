@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T171523Z-100-r12ee",
+  "at": "2026-10-12T17:15:23Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-8fb2",
+  "pane": null,
+  "note": "owner notified for 500 zjdm1: test.passed 02nnq has no reviewer record after 90s; reviewer-wo-20261012-8fb2 prompted",
+  "evidence": [],
+  "observations": [],
+  "to": "reviewer"
+}

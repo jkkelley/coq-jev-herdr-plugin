@@ -55,7 +55,8 @@
             "enum": [
               "watcher",
               "monitor",
-              "shell"
+              "shell",
+              "watch"
             ]
           },
           "noun": {

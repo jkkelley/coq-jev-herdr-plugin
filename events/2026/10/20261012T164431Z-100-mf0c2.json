@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T164431Z-100-mf0c2",
+  "at": "2026-10-12T16:44:31Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-b800",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-b800",
+  "pane": "wD3:p87",
+  "note": "PR 26 head e46fa34: origin/main 1f6e819 merged, generated files re-rendered by script, cases 04 05 recounted for the policy watch; full suite 21 of 21",
+  "evidence": [],
+  "observations": [],
+  "to": "merger",
+  "sha": "e46fa34",
+  "pr": 26
+}

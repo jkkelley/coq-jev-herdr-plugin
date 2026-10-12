@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T171533Z-429-r7w49",
+  "at": "2026-10-12T17:15:33Z",
+  "code": 429,
+  "seat": "worker-wo-20261012-c41f",
+  "kind": "note",
+  "ticket": "WO-20261012-c41f",
+  "pane": null,
+  "note": "seat refused: 8 worker seats live, role max_seats 8",
+  "evidence": [],
+  "observations": []
+}

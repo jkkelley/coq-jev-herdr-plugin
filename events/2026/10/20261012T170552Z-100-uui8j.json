@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170552Z-100-uui8j",
+  "at": "2026-10-12T17:05:52Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-8fb2",
+  "pane": null,
+  "note": "owner notified for 500 o8a6g: pr.opened hrqra has no tester record after 90s; tester-wo-20261012-8fb2 prompted",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

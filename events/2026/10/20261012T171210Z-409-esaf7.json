@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T171210Z-409-esaf7",
+  "at": "2026-10-12T17:12:10Z",
+  "code": 409,
+  "seat": "merger",
+  "kind": "merge.conflict",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pCC",
+  "note": "PR 31 conflicts with origin/main bbd281b in CHANGELOG.md CONTEXT_STATE.md herdr/bin/seat-lib.sh work-orders/INDEX.md; not resolved by hand",
+  "evidence": [],
+  "observations": [],
+  "sha": "2da884e",
+  "pr": 31
+}

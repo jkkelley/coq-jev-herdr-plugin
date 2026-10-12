@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T171709Z-100-j57lb",
+  "at": "2026-10-12T17:17:09Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261012-3bb0",
+  "pane": null,
+  "note": "owner notified for 500 srsrz: pr.opened encmz has no tester record after 90s; tester-wo-20261012-3bb0 prompted",
+  "evidence": [],
+  "observations": [],
+  "to": "tester"
+}

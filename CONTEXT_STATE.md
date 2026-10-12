@@ -55,6 +55,40 @@
 
 
 
+
+## Checkpoint 2026-10-12 16:44 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
+  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, PR 26, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
+
+#### Toolchain
+
+- Merge conflict 409 (record 20261012T163437Z-409-wccwn): origin/main 1f6e819 (PR 27) merged into the branch as 5312774.
+  CHANGELOG.md re-rendered with bin/changelog.sh render, work-orders/INDEX.md and epic READMEs by work-order.sh reindex, CONTEXT_STATE.md took main's file with this checkpoint on top, epic 187e README and 3bb0 ticket took main's.
+  Cases 04 and 05 re-counted by hand: main added the policy watch pane (slot 2.3.2), so twelve reserved panes, fourteen note 100 records, 39 panes.
+  SOP-0003 step 8 updated: slot 2.3.2 now belongs to the policy watch, so the interim record-watch pane must be released.
+- Full make -C herdr test after the merge: 21 passed, 0 failed.
+
+#### Active Tasks
+
+- Post pr.opened with --pr 26 --sha of the pushed head, then idle for the belt.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: generated files are never merged by hand; they are re-rendered with their scripts.
+
+### Hydration prompt
+
+You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint and playbooks/worker.md. Next: post pr.opened for PR 26 with the pushed sha, then idle.
+
 ## Checkpoint 2026-10-12 15:41 UTC
 
 ### Current state

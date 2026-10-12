@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T170007Z-100-69zhd",
+  "at": "2026-10-12T17:00:07Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-ee9c",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-ee9c",
+  "pane": null,
+  "note": "WO-20261012-ee9c - Scoped guard watch: PR 31 opened, ticket done, suite 17 passed",
+  "evidence": [],
+  "observations": [],
+  "sha": "2da884e",
+  "pr": 31
+}
