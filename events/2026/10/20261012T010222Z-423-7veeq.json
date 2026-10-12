@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T010222Z-423-7veeq",
+  "at": "2026-10-12T01:02:22Z",
+  "code": 423,
+  "seat": "worker-wo-20261011-4db1",
+  "kind": "blocked",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p6C",
+  "note": "blocked: merged tree 8ee2c45 (PR 18 merged in, not pushed) cannot be proven; test pane podman is broken on the host, needs podman system migrate, not mine to run; PR 21 head 3077b75 is CONFLICTING until pushed",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "factory/Makefile",
+      "line": 18,
+      "saw": "podman error 'invalid internal status, try resetting the pause process with podman system migrate' in test pane wD3",
+      "expected": "p1V, make lint images exit 1, make -C factory test and make -C herdr test exit 2"
+    }
+  ],
+  "attempt": 1,
+  "to": "architect"
+}
