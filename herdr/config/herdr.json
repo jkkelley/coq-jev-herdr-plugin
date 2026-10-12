@@ -34,6 +34,8 @@
   },
   "break_glass": {
     "ttl_seconds": 600,
+    "hook_pre_timeout_seconds": 10,
+    "hook_post_timeout_seconds": 30,
     "bearings_tier": "stable"
   },
   "halt_flag": "${state_dir}/HALT",

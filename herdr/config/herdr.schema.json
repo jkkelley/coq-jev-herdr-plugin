@@ -180,6 +180,8 @@
       "additionalProperties": false,
       "required": [
         "ttl_seconds",
+        "hook_pre_timeout_seconds",
+        "hook_post_timeout_seconds",
         "bearings_tier"
       ],
       "description": "DEC-break-glass-one-time: the owner-authorised, one-command bypass of seat.sh --break-glass",
@@ -189,6 +191,18 @@
           "minimum": 30,
           "maximum": 3599,
           "description": "how long a break glass may last before seat.sh restores the role settings; under one hour, never a session or a day"
+        },
+        "hook_pre_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "description": "timeout Claude Code gives the PreToolUse guard hook of a break glass (break-glass-guard.sh pre); it only reads a file and takes a mkdir"
+        },
+        "hook_post_timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120,
+          "description": "timeout Claude Code gives the PostToolUse guard hook of a break glass (break-glass-guard.sh post); it writes the 201 record and runs seat.sh --break-glass-restore, so it gets longer"
         },
         "bearings_tier": {
           "type": "string",

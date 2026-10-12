@@ -36,7 +36,8 @@ It is a script path, `herdr/bin/seat.sh --break-glass`, never a hand edit of a s
 3. The action is one plain command.
    No newline, `;`, `&`, `|`, backtick, `$(` or `*`.
    A multi-step fix is a script, and the script's path is the action.
-4. For that one command the seat runs with bypass permissions, and a second command is still denied (below).
+4. For that one command the seat is allowed to run it, and a second command is still denied (below).
+   The seat keeps its role's permission mode: a worker already runs in bypassPermissions, and a monitor, orchestrator or interface agent stays in dontAsk, so nothing but that one command is opened.
 5. The role settings come back when the command's follow-up record lands or after `break_glass.ttl_seconds` in `herdr/config/herdr.json` (600, at most 3599), whichever is first.
 6. A seat that keeps bypass after that is a `seat.stalled` 500 from `seat.sh --audit`.
 7. Every one is a record, and the board shows each as a row.
@@ -67,7 +68,7 @@ The record's `seat` is the seat the glass is broken for, whoever wrote it.
    The interface agent runs `interface.sh forward` on the answer wake: `Grant` becomes a 200, anything else a 423.
 4. The route runner sees the 200 and runs `herdr/bin/seat.sh --break-glass <seat> --record <200 id>` (route `do: break-glass`).
    `seat.sh` takes the seat and the command from the 300 request, not from the 200, and refuses 423 unless every check below holds.
-5. `seat.sh` rewrites the seat's `settings.json`: bypassPermissions, the deny rules that cover the command removed, the command allowed, and a PreToolUse and PostToolUse hook on Bash.
+5. `seat.sh` rewrites the seat's `settings.json`: the deny rules that cover the command removed, the command allowed, the role's `defaultMode` unchanged, and a PreToolUse and PostToolUse hook on Bash whose timeouts are `break_glass.hook_pre_timeout_seconds` and `break_glass.hook_post_timeout_seconds` in `herdr/config/herdr.json`.
    It keeps the role's own copy at `<state_dir>/seats/<seat>/settings.pre-break-glass.json`, writes 100, and prompts the seat with the record id and the command.
 6. The hook lets exactly that command through once.
    Any other command that holds the head of a lifted rule (for `gh pr merge *` the head is `gh pr merge`) is blocked with exit 2, and so is the same command a second time.

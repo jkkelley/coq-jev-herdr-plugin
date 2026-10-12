@@ -12,8 +12,8 @@
 #                  whose card text names this seat and this action. Read here from the page, never taken from a 200 record.
 #   One use        <state>/break-glass/<request id>.json is created with noclobber and is never deleted, so a second 200
 #                  for the same answer finds it and is refused 423 (AC-H3).
-#   The flip       the seat's settings.json becomes the role's render with defaultMode bypassPermissions, the deny rules
-#                  that cover the action removed, Bash(<action>) allowed, and a PreToolUse and a PostToolUse hook on Bash
+#   The flip       the seat's settings.json becomes the role's render with the deny rules that cover the action removed,
+#                  Bash(<action>) allowed, the role's own defaultMode kept, and a PreToolUse and a PostToolUse hook on Bash
 #                  (break-glass-guard.sh) that allow exactly that command once and deny any other command that holds a lifted
 #                  rule's head, so a second command is still denied. Then the seat is prompted with the record id.
 #   The restore    the role's render is written back and compared with cmp, the same check --check makes; break.glass 204.
@@ -35,6 +35,17 @@
 #      Rejected: leaving the deny and allowing the action (it never runs) and dropping the whole deny list (a second command
 #      would run). Cost: the hook is the fence for the lifted territory; a seat that rewrites its own settings.json defeats
 #      it, as it defeats every other rule, and --audit then calls the drift out. Only a Bash command is an action.
+#   4. The role's defaultMode is kept, never forced to bypassPermissions (review of 2026-10-12, attempts 1 and 2, on 57dacf2:
+#      herdr/bin/break-glass-lib.sh line 122). What broke: the first cut set defaultMode bypassPermissions for every role, but
+#      the monitor, orchestrator and interface-agent roles are dontAsk and allow almost nothing, so for up to ttl_seconds any
+#      Bash command or tool call their allow list did not name (rm, curl, an Edit outside a deny rule) would have run, not
+#      only the one action. Why this fix: the action is opened by the deny lift plus Bash(<action>) in allow, which works
+#      under dontAsk and under bypassPermissions alike, so the mode adds nothing for the action and everything for the rest.
+#      A bypassPermissions role (the worker, which is where the hotfix need arose) already runs in bypass, so for it the
+#      flip is the lift and the hook, as it always was. Rejected: a PreToolUse hook on every tool that refuses all but the
+#      action on a dontAsk seat (a second allow list to drift from the role, and a hook that fails open when it errors).
+#      Cost: the ticket title says "flips to bypass permissions"; on a dontAsk seat what flips is the one allowed command,
+#      and the seat is never in bypass, so --audit has nothing to call out for it. Case 13 proves the dontAsk seat.
 #   Not proved here: that a running Claude Code re-reads --settings on change. The suite proves the file, the hook and the
 #   records; the live check is the owner's AC-H1 run, and the runbook says how to read the seat's own deny result.
 
@@ -72,7 +83,7 @@ bg_active_state() {
 bg_copy_of() { printf '%s/settings.break-glass.json' "$(dirname "$(jq -r .settings "$1")")"; }
 
 bg_grant() {
-  local seat=$1 recid=$2 all rec code req_id req action rseat dir line choice decide sf ttl exp now base lifted=() heads=() d inner h hs ls
+  local seat=$1 recid=$2 all rec code req_id req action rseat dir line choice decide sf ttl tpre tpost exp now base lifted=() heads=() d inner h hs ls
   [[ $recid =~ $BG_ID_RE ]] || bg_refuse "$seat" "" "" "--record must be a record id"
   all=$(bg_events) || bg_refuse "$seat" "" "" "the event log could not be read"
   rec=$(jq -c --arg id "$recid" 'map(select(.id == $id and .kind == "break.glass")) | first // empty' <<<"$all")
@@ -118,12 +129,12 @@ bg_grant() {
   hs=$(printf '%s\n' ${heads[@]+"${heads[@]}"} | jq -R . | jq -s .)
   if [ "$DRY" = 1 ]; then sl_log "DRY: break glass $req_id for $seat: lift $ls, heads $hs, until $exp"; return 0; fi
   cp "$settings" "$sd/settings.pre-break-glass.json"
-  jq --arg a "$action" --argjson lifted "$ls" --arg pre "$(printf '%q pre %q' "$SL_HERE/break-glass-guard.sh" "$sf")" --arg post "$(printf '%q post %q' "$SL_HERE/break-glass-guard.sh" "$sf")" '
-      .permissions.defaultMode = "bypassPermissions"
-      | .permissions.deny -= $lifted
+  tpre=$(sl_cfg .break_glass.hook_pre_timeout_seconds); tpost=$(sl_cfg .break_glass.hook_post_timeout_seconds)
+  jq --arg a "$action" --argjson lifted "$ls" --argjson tpre "$tpre" --argjson tpost "$tpost" --arg pre "$(printf '%q pre %q' "$SL_HERE/break-glass-guard.sh" "$sf")" --arg post "$(printf '%q post %q' "$SL_HERE/break-glass-guard.sh" "$sf")" '
+      .permissions.deny -= $lifted
       | .permissions.allow += ["Bash(\($a))"]
-      | .hooks = {PreToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $pre, timeout: 10}]}],
-                  PostToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $post, timeout: 30}]}]}' <<<"$base" > "$sd/settings.break-glass.json"
+      | .hooks = {PreToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $pre, timeout: $tpre}]}],
+                  PostToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $post, timeout: $tpost}]}]}' <<<"$base" > "$sd/settings.break-glass.json"
   jq -n --arg req "$req_id" --arg seat "$seat" --arg a "$action" --arg grant "$recid" --argjson lifted "$ls" --argjson heads "$hs" --arg now "$now" --arg exp "$exp" \
     --arg settings "$settings" --arg eb "$SL_REPO/events/bin/event.sh" --arg er "${COQ_EVENTS_ROOT:-$SL_REPO/events}" --arg t "$id" \
     '{request: $req, seat: $seat, ticket: $t, action: $a, grant_record: $grant, lifted: $lifted, heads: $heads, started_at: $now, expires_at: $exp,
