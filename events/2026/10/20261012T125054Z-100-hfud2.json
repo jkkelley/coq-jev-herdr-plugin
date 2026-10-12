@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T125054Z-100-hfud2",
+  "at": "2026-10-12T12:50:54Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4db1",
+  "kind": "pr.opened",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p60",
+  "note": "origin/main (PR 20) merged, CONTEXT_STATE keeps both sides. make lint ok and make -C factory test 14 passed on the merged tree; tester to prove head 49ab55b",
+  "evidence": [],
+  "observations": [],
+  "sha": "49ab55b",
+  "pr": 21
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T123900Z-201-lay41",
+  "at": "2026-10-12T12:39:00Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261011-4db1",
+  "kind": "review.passed",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p1V",
+  "note": "passed 2c5f807: RUNBOOK Graph and Ticket lines restored as on main, code unchanged since 20d6017, all five AC have evidence, no em dash. Needs test.passed on this sha before merge. PR conflicts with main in CONTEXT_STATE.md only.",
+  "evidence": [],
+  "observations": [],
+  "to": "merger",
+  "sha": "2c5f807",
+  "pr": 21
+}

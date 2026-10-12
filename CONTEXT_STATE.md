@@ -51,8 +51,7 @@
 
 
 
-
-## Checkpoint 2026-10-12 15:14 UTC
+## Checkpoint 2026-10-12 15:29 UTC
 
 ### Current state
 
@@ -66,11 +65,12 @@
 
 - Steps 1 to 3 pushed (ed59a75, a4b7097, 6771e9a): monitors.sh health, bringup and recover on it, turnwatch/recwatch in tab 4, supervisor.sh (herdr via systemctl unit, podman, bringup, belt.sh, bearings node).
 - Step 4+5 landed: supervisor.sh seat node (re-seat after two sightings past grace, caps, closed ticket downed, down.lock written by seat.sh --down), slot 4.1.3 supervisor log, belt.sh message keeps "belt stopped" when a bare-shell runner pane has a stale belt, herdr/systemd/*.in + bin/supervisor-units.sh (render install uninstall status, refuses a linked worktree), Makefile supervisor targets, docs/sops/SOP-0003 with observed verification and the three live AC recipes, cases 19 20 21.
-- Verified in the test pane: full suite after step 3 (19 of 20, 13-recover-belt then fixed and rerun green), then CASES='04 05 17 18 19 20 21' (7 passed) and root make lint ok. Full suite once more before the PR.
+- Step 5 verification: full make -C herdr test, 21 passed, 0 failed, after step 4+5 (4de2b4a). origin/main (PR 21 belt seats the line, PR 23 SITREP) merged into the branch; conflicts only in CHANGELOG.md (re-rendered), work-orders/INDEX.md (reindexed) and CONTEXT_STATE.md (took main's file, this checkpoint added on top; checkpoints 1 to 3 of this ticket are in git history of the branch).
+- Earlier: full suite after step 3 (19 of 20, 13-recover-belt then fixed and rerun green), then CASES='04 05 17 18 19 20 21' (7 passed) and root make lint ok. 
 
 #### Active Tasks
 
-- Close-out (remaining): full make -C herdr test; work-order.sh evidence --observed per AC (AC-H1..H3 are human criteria: the evidence is the suite plus the live recipe in SOP-0003, say the live run waits for the owner or architect after make -C herdr supervisor-install); retro note; push; gh pr create with the criteria as body; work-order.sh submit --pr N; work-order.sh done; push the archive move; post pr.opened 100 with sha and pr; stop.
+- Close-out (remaining): rerun CASES='13-recover 19 20' after the merge if route.sh from PR 21 changes seat behaviour; work-order.sh evidence --observed per AC (AC-H1..H3 are human criteria: the evidence is the suite plus the live recipe in SOP-0003, say the live run waits for the owner or architect after make -C herdr supervisor-install); retro note; push; gh pr create with the criteria as body; work-order.sh submit --pr N; work-order.sh done; push the archive move; post pr.opened 100 with sha and pr; stop.
 - Do not touch ~/.cache/coq-watch or install anything on the host.
 
 #### Blockers
@@ -87,117 +87,125 @@
 
 You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint, AGENTS.md first 60 lines, playbooks/worker.md and the ticket's close-out steps. Next: full suite in wD3:p89 through herdr/bin/testpane.sh, then the close-out flow of AGENTS.md.
 
-## Checkpoint 2026-10-12 14:44 UTC
+## Checkpoint 2026-10-12 14:58 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
-  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
-- Architect order 2026-10-12: at 22 percent context do not hold for compaction; keep going, the guard compacts at 30 percent.
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p83, run only through herdr/bin/testpane.sh.
+- The merger posted merge.conflict 409 (record 20261012T143647Z-409-e1nbe) on head 2d3f8b8: main gained PR 22 (WO-20261011-4562 - break glass, one owner-authorised action at a time) and PR 23 (WO-20261012-668a - SITREP panel in this project's bearings).
 
 #### Toolchain
 
-- Step 1 (ed59a75): monitors.sh health, bringup and recover judge reserved panes by process; case 17.
-- Step 2 (a4b7097): herdr/bin/turnwatch.sh and recwatch.sh in the repo (config herdr.json watches.*, schema updated), monitors.json tab 4 "monitors 4 - watches" kind watch with slots 4.1.1 turnwatch and 4.1.2 recwatch, monitors.schema.json kind enum has watch; cases 04 and 05 counts updated (ten reserved panes, twelve note 100), case 18-watches added.
-- Step 3 landed: herdr/bin/supervisor.sh (tick: halt flag, herdr via systemctl --user start herdr_unit, podman ps and system migrate, bringup, belt.sh, bearings node), herdr/bin/belt.sh extracted from recover.sh node 5 (recover calls it; belt now judged by monitors.sh health), sl_report_500 moved into seat-lib.sh, herdr.json supervisor.* keys and schema, stubs systemctl and podman, case 19-supervisor (passes). Cases 04 05 13 not rerun after the belt.sh extraction: run the full suite before the PR.
-- Verified in the test pane: make -C herdr lint, CASES='19' (1 passed). Full suite last ran after step 1.
-- Test recipe: herdr/bin/testpane.sh $COQ_TEST_PANE "cd $COQ_WORKTREE && clear; CASES='NN' make -C herdr test > $SCRATCH/run.log 2>&1; grep -E 'FAIL|^tests:' $SCRATCH/run.log; echo CASE-DONE" then loop herdr --session stable pane wait-output $COQ_TEST_PANE --regex '^CASE-DONE$' --source recent --timeout 115000 (each call under 120 s).
+- origin/main merged into the branch. Resolved by keeping both sides: route.sh has main's perform with break-glass and none plus this branch's act_primary, act_down, seat and ignore; routes.json has this branch's ignore rows then main's break.glass rows; routes.schema.json do enum carries all eight actions; event.sh and event.schema.json carry sha, pr, action and answer; factory/RUNBOOK.md table has all eight rows; CHANGELOG.md was re-rendered from its entries, never edited; CONTEXT_STATE.md is the union of both sides' checkpoints, newest first, no block edited.
+- Verified in the test pane on the merged tree: make lint all ok, factory suite 15 passed 0 failed (main added a break-glass case), herdr suite 16 passed 0 failed.
 
 #### Active Tasks
-- (S3 landed, see Toolchain.)
 
-- S3b still open: reserved slot 4.1.3 "supervisor" in monitors.json tailing `supervisor.sh log` (while :; do clear; ${repo}/herdr/bin/supervisor.sh log; sleep 10; done); update case 04/05 counts (eleven reserved panes, thirteen note 100) when added.
-- S4 re-seat (rerun seat.sh door 1 or door 2 when a seat's pane has no claude in the foreground twice in a row; down.lock in seat.sh --down; cap 3 per 30 min then one 500; closed ticket gets --down; adopted seats and the monitor seat skipped, monitor seat is bringup's).
-- S5 systemd units herdr/systemd (timer 30 s, oneshot, linger note), Makefile target, RUNBOOK, docs.sh sop, evidence per AC (all three are human; give the live recipe), retro note, PR, work-order done.
-- Leave ~/.cache/coq-watch alone (outside paths): after the owner or architect runs bringup apply the interim turnwatch at 2.3.1 is released by glass, interim recwatch at 2.3.2 keeps running and double-prompts until killed; say so in the runbook.
+- After this step lands: post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester again. Then stop and hold.
 
 #### Blockers
 
-- None. Installing the systemd units on the host is not a worker action.
-
-### New this checkpoint
-
-- Decision: turnwatch reads seats from seat records and finds the architect by agent name (config), recwatch walks events/YYYY/MM under the checkout and every treehouse status path, announces a file name once across roots, ignores records older than the watcher start.
+- None.
 
 ### Hydration prompt
 
-You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint, AGENTS.md first 60 lines and playbooks/worker.md. Next: S3b slot 4.1.3, then S4 re-seat in supervisor.sh (node 7) plus down.lock in seat.sh --down. Commit each step with make step, test only in wD3:p89 through herdr/bin/testpane.sh.
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The merge of origin/main is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
 
-## Checkpoint 2026-10-12 14:36 UTC
+## Checkpoint 2026-10-12 14:09 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
-  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only.
-- Architect order 2026-10-12: at 22 percent context do not hold for compaction; keep going, the guard compacts at 30 percent.
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p83, run only through herdr/bin/testpane.sh.
+- The tester failed 49ab55b with test.failed 422 (record 20261012T132330Z-422-hyds1): factory case 06-belt read a belt backdated 61 s as running.
 
 #### Toolchain
 
-- Step 1 (ed59a75): monitors.sh health, bringup and recover judge reserved panes by process; case 17.
-- Step 2 landed: herdr/bin/turnwatch.sh and recwatch.sh in the repo (config herdr.json watches.*, schema updated), monitors.json tab 4 "monitors 4 - watches" kind watch with slots 4.1.1 turnwatch and 4.1.2 recwatch, monitors.schema.json kind enum has watch; cases 04 and 05 counts updated (ten reserved panes, twelve note 100), case 18-watches added.
-- Verified in the test pane: make -C herdr lint, CASES='04 05 17 18' make -C herdr test (4 passed). Full suite last run after step 1 only.
-- Test recipe: herdr/bin/testpane.sh $COQ_TEST_PANE "cd $COQ_WORKTREE && clear; CASES='NN' make -C herdr test > $SCRATCH/run.log 2>&1; grep -E 'FAIL|^tests:' $SCRATCH/run.log; echo CASE-DONE" then loop herdr --session stable pane wait-output $COQ_TEST_PANE --regex '^CASE-DONE$' --source recent --timeout 115000 (each call under 120 s).
+- Cause: route.sh status used -le against stale_seconds, so a belt exactly 60 s old read running, against the file header and AC-H6 which say fresher than. The host clock steps back about a second every ~35 s, so a 61 s backdate can be 60 s old by the time route.sh reads it.
+- Fix: factory/bin/route.sh status uses -lt. Case 06-belt now backdates 65 and 55 s on the real clock and pins 59, 60 and 61 with a date stub. factory/RUNBOOK.md states the boundary. Breadcrumbs sit at both fix sites.
+- Verified in the test pane: factory suite 14 passed 0 failed, make lint all ok, case 06 alone three more times 1 passed each.
 
 #### Active Tasks
 
-- S3 supervisor.sh core: flock single instance, halt flag honoured, timeouts on every call, herdr started via systemctl --user start herdr-stable only, bringup --apply, belt (shared function from recover.sh belt node, or call recover's logic), podman check and podman system migrate (backlog 60l24), bearings (bearings.sh stable status --json; restart with HERDR_ENV=1 and HERDR_TAB_ID of the bearings pane, serve --join with session.json values, then wait --to herdr.json watches.architect_agent), one summary line per tick into <state>/supervisor/last.log, reserved slot 4.1.3 "supervisor" tailing it.
-- S4 re-seat (rerun seat.sh door 1 or door 2 when a seat's pane has no claude in the foreground twice in a row; down.lock in seat.sh --down; cap 3 per 30 min then one 500; closed ticket gets --down; adopted seats and the monitor seat skipped, monitor seat is bringup's).
-- S5 systemd units herdr/systemd (timer 30 s, oneshot, linger note), Makefile target, RUNBOOK, docs.sh sop, evidence per AC (all three are human; give the live recipe), retro note, PR, work-order done.
-- Leave ~/.cache/coq-watch alone (outside paths): after the owner or architect runs bringup apply the interim turnwatch at 2.3.1 is released by glass, interim recwatch at 2.3.2 keeps running and double-prompts until killed; say so in the runbook.
+- After this step lands: work-order.sh evidence, submit and done are already recorded by earlier steps, so post pr.opened 100 with the new sha and pr 21 so the route table wakes the tester again. Then stop and hold.
 
 #### Blockers
 
-- None. Installing the systemd units on the host is not a worker action.
-
-### New this checkpoint
-
-- Decision: turnwatch reads seats from seat records and finds the architect by agent name (config), recwatch walks events/YYYY/MM under the checkout and every treehouse status path, announces a file name once across roots, ignores records older than the watcher start.
+- None.
 
 ### Hydration prompt
 
-You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint, AGENTS.md first 60 lines and playbooks/worker.md. Next: step S3 (herdr/bin/supervisor.sh). Commit each step with make step, test only in wD3:p89 through herdr/bin/testpane.sh.
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The 06-belt boundary fix is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
 
-## Checkpoint 2026-10-12 14:26 UTC
+## Checkpoint 2026-10-12 13:55 UTC
+
+### Current state
+
+#### Infrastructure
+- Worker seat worker-wo-20261012-668a on WO-20261012-668a, PR 23, slot 1, test pane wD3:p7B. Review record 20261012T132207Z-422-ucd33 (attempt 1): remove the tracked .claude/skills symlink, add GOOD and NEVER to tools/bearings/RUNBOOK.md and standards/SITREP-PAYLOAD.md.
+- Done in this step: git rm --cached .claude/skills (kept on disk, excluded in the worktree's info/exclude), both docs have a GOOD and NEVER section and a contents entry.
+
+#### Toolchain
+- make lint runs inside make step. No code changed, so the bearings suite (113 passed) is not rerun.
+
+#### Active Tasks
+- After the step lands: post pr.opened 100 with the new head sha and PR 23, then stop.
+
+#### Blockers
+- None.
+
+### Hydration prompt
+Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/worker.md and this checkpoint. The review fixes are committed; post pr.opened 100 with the new head and PR 23 if the record is missing, then stop.
+
+## Checkpoint 2026-10-12 13:15 UTC
+
+### Current state
+
+#### Infrastructure
+- Worker seat worker-wo-20261012-668a on WO-20261012-668a - SITREP panel in this project's bearings: a #SITREP/v1# reply renders as the colored status card, built from records by a script and checked against the owner standard before it is sent. Slot 1, branch feat/sitrep-panel-in-this-project-s-bearings-a-sitrep, test pane wD3:p7B.
+- Landed in tools/bearings: panel renderer and styles ported from the handoff (page.html hunk 3 hand-ported, announcer says SITREP received), build stamp in server.mjs, max_reply_chars 32000 in config, schema and reply.mjs, standards/ (two generic standards and SITREP-PAYLOAD.md), config/sitrep.json, config/sitrep.template.json, scripts/sitrep-check.mjs, scripts/sitrep-build.mjs, bearings.sh sitrep verb, Makefile targets, RUNBOOK.md, AGENTS.md section, tests/sitrep.sh with fixtures.
+
+#### Toolchain
+- make -C tools/bearings test: 113 passed, 0 failed, run in the test pane. make lint run by make step.
+- Screenshots of the rendered panel are in /tmp/claude-1000/shots when BEARINGS_SHOT_DIR is set on the test run.
+
+#### Active Tasks
+- Next: open PR work is not started. Remaining: AC evidence with --observed, retro note, then send the real SITREP for this repo to the owner with bearings.sh stable sitrep (needs the stable page running; check make bearings-status), then work-order submit, done, PR, pr.opened 100.
+
+#### Blockers
+- None.
+
+### Hydration prompt
+Resume WO-20261012-668a as worker-wo-20261012-668a in slot 1. Read playbooks/worker.md and this checkpoint. The code and tests are done and green; what is left is the evidence per acceptance criterion, the live send of a SITREP on the stable page (AC-H4), the close-out flow in AGENTS.md, and the pr.opened 100 record.
+
+## Checkpoint 2026-10-12 12:50 UTC
 
 ### Current state
 
 #### Infrastructure
 
-- Worker seat worker-wo-20261012-b800 on WO-20261012-b800 - Supervisor: at boot and every minute a process brings herdr, the belt, the watches, bearings and the seats back, judging each by its process, not its label, and re-seats a seat whose claude died.
-  Branch feat/supervisor-at-boot-and-every-minute-a-process-br, treehouse slot 2, test pane wD3:p89 through herdr/bin/testpane.sh only (never herdr pane run directly).
-- First record work.started 100 posted; lease_holder checked against treehouse status.
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p72, run only through herdr/bin/testpane.sh with output sent to a file in the scratchpad.
+- The reviewer passed head 2c5f807 (record 20261012T123900Z-201-lay41), but PR 21 then conflicted with main after PR 20 (WO-20261011-f896 - Test pane per seat) merged as 05ef0d2.
 
 #### Toolchain
 
-- Step 1 landed: monitors.sh health verb judges each reserved slot by herdr process-info (bare shell, open-but-busy, wrong holder), bringup.sh uses it and continues past a stuck pane with one deduped 500 per 15 minutes, recover.sh has a 6b pane node, case 17-pane-health added, case 05 count updated.
-- Verified in the test pane: make -C herdr lint, full make -C herdr test (17 cases; 05 fixed after, rerun passed).
-- Test run recipe: herdr/bin/testpane.sh $COQ_TEST_PANE "cd $COQ_WORKTREE && clear; CASES=NN make -C herdr test 2>&1 | grep -E 'FAIL|^tests:'; echo CASE-DONE" then herdr --session stable pane wait-output $COQ_TEST_PANE --regex '^CASE-DONE$' --source recent --timeout 115000 (at most 120 s per call, loop).
+- origin/main was merged into the branch. The only conflict was CONTEXT_STATE.md: both sides kept, this branch's checkpoints plus main's 2026-10-11 23:09 UTC block (the other ticket's) below the newest. CHANGELOG.md was re-rendered from its entries, never edited.
+- make lint (all ok) and make -C factory test (14 passed, 0 failed) ran in the test pane on the merged tree before the commit.
 
 #### Active Tasks
 
-Plan, one commit and one checkpoint each (design decisions made while reading the code):
-- S2 watches into the repo: herdr/bin/turnwatch.sh and recwatch.sh ported from the interim ~/.cache/coq-watch scripts (config-driven architect agent name and session, slots from treehouse status), reserved slots in a NEW monitors tab 4 "monitors 4 - supervisor and watches" (kind watch) so they do not fight glass at 2.3.1 or the record bus (WO-20261012-da52) at 2.3.2/2.3.3; update case 04 counts (tabs, panes).
-- S3 supervisor.sh core: flock single instance, halt flag honoured, timeouts on every call, herdr started through systemctl --user start herdr-stable (never a child process), bringup --apply (panes, belt via shared function, monitor seat), podman check and podman system migrate (backlog 60l24), bearings (alive via bearings.sh stable status; restart with HERDR_ENV=1 HERDR_TAB_ID of its labelled pane, serve --join with session.json values, then wait --to the wake agent), summary line to a state log; supervisor slot tail pane.
-- S4 re-seat: for each open non-adopted seat record whose pane has no claude/codex in the foreground (process-info, not herdr agent get alone), dead on two consecutive ticks, no fresh down.lock, ticket not closed: rerun seat.sh (door 1 --ticket T --role R without --worktree keeps the lease owned flag; door 2 --role R --task) ; cap 3 per 30 min then one 500; closed ticket gets seat.sh --down. seat.sh --down writes down.lock for its duration.
-- S5 systemd units herdr/systemd/coq-supervisor.service + .timer (30 s, oneshot, TimeoutStartSec, linger), make target, RUNBOOK + SOP via docs.sh, evidence per AC (AC-H1..H3 are human; give live recipe), retro note, PR, work-order done.
-- Do not touch ~/.cache/coq-watch (outside paths); da52 owns removing record-bus.
+- Push, then post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester again. Then stop and hold.
 
 #### Blockers
 
-- None. Installing the units on the host is the owner's or architect's action (worker may not install on the host); the PR carries the runbook.
-
-### New this checkpoint
-
-- Decision: process health = herdr pane process-info (foreground group differs from shell pid) AND the label equals the reserved owner label; a command that is alive but hung reads ok and is the supervisor's timeout problem.
-- Decision: bringup panes are leaves, not chain links; a stuck pane no longer stops the panes after it.
+- None.
 
 ### Hydration prompt
 
-You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint, then AGENTS.md first 60 lines and playbooks/worker.md. Next: step S2 (watches into the repo, monitors tab 4). Commit with make step; test only in wD3:p89 through herdr/bin/testpane.sh.
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md and this checkpoint. The merge of origin/main is pushed; post pr.opened 100 with the new sha and pr 21 if it is not posted, then hold.
 
 ## Checkpoint 2026-10-12 12:40 UTC
 
@@ -233,6 +241,37 @@ You are worker-wo-20261012-b800 on WO-20261012-b800. Read this checkpoint, then 
 Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 2. Read playbooks/worker.md and this checkpoint.
 The code, the note and the push are done; the only step left is pr.opened 100 with the head sha, then stop and wait for the reviewer.
 
+## Checkpoint 2026-10-12 12:19 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p72, run only through herdr/bin/testpane.sh with output sent to a file in the scratchpad.
+- Woken by the reviewer's 422 (record 20261012T022449Z-422-t39yq): attempt 1 of 3.
+
+#### Toolchain
+
+- The reviewer's first finding is fixed: factory/RUNBOOK.md has its Graph and Ticket lines back, verbatim from origin/main, after the contents list. 3c255dc had dropped them with no reason. The change is three added lines.
+- The reviewer's second finding needs a test.passed 201 for the new head from the tester, not code. make lint (all ok) and make -C factory test (14 passed, 0 failed) were run in the test pane on this tree before the commit.
+- A formatter hook rewrites Markdown tables on Edit and realigned all of RUNBOOK.md (109 changed lines for a three line fix). Apply Markdown edits through python replace in Bash so the diff stays reviewable.
+
+#### Active Tasks
+
+- Push this step, then post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Evidence in the ticket (AC-H1 to AC-H5) cites tree 8f72207; the tester's test.passed for the new head is what supersedes it. The ticket file is not edited again.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md, the reviewer record 20261012T022449Z-422-t39yq and this checkpoint. The RUNBOOK fix is pushed; post pr.opened 100 with sha and pr 21 if it is not posted, then hold. Run commands only through herdr/bin/testpane.sh.
+
 ## Checkpoint 2026-10-11 23:09 UTC
 
 ### Current state
@@ -254,6 +293,38 @@ The code, the note and the push are done; the only step left is pr.opened 100 wi
 
 ### Hydration prompt
 Resume WO-20261011-f896 as worker-wo-20261011-f896 in slot 9. Read playbooks/worker.md and this checkpoint. The merge of origin/main is staged; read the post-merge lint and suite log, commit, push, post pr.opened 100 and stop.
+
+## Checkpoint 2026-10-11 21:36 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 4, branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-. Test pane wD3:p1V, shared and serial: a command can wait 20 to 40 minutes behind other seats. Run it as a harness background job and poll its log; never resend.
+- The branch was rebuilt on origin/main on the architect's order (record 20261011T203650Z-422-4xk1v): the first cut came from the records branch and carried other tickets' files. Old tip kept locally as backup/4db1-old-base. The architect pushed the rebuilt branch (record 20261011T205133Z-100-12zp4); a worker may not push --force*.
+- The ticket file is not on origin/main (it was cut on the records branch), so the rebuilt branch does not carry it yet.
+
+#### Toolchain
+
+- All five steps are in code and RUNBOOK is written; origin/main (flow watch, PR 19) was merged into the branch, conflicts in CHANGELOG.md (rendered), CONTEXT_STATE.md (taken from main) and factory/RUNBOOK.md (both appended sections kept). make -C factory test and make lint are rerun on the merged tree before the PR.
+- Rebuild notes: events/bin/event.sh on main has no COQ_EVENTS_ROOT block (that is PR 15's), so only the --sha and --pr breadcrumb was kept. CHANGELOG.md is generated: restore from main, then bin/changelog.sh render.
+- A formatter hook rewrites .json files on Edit and Write. Use python replace through Bash.
+
+#### Active Tasks
+
+- Close-out: restore the ticket file (git checkout 74ace3b -- work-orders/WO-20261010-329d/WO-20261011-4db1-*.md), work-order.sh evidence --observed for AC-H1 to AC-H5, a retro note, work-order.sh submit --pr N after gh pr create, done, push the archive move, post pr.opened 100 with --sha and --pr.
+
+#### Blockers
+
+- None. WO-20261011-4562 in slot 6 also edits route.sh, event.sh and routes.json; the merge overlap is the architect's.
+
+### New this checkpoint
+
+- Findings for the retro: work.started 100 has no row (four 500s in the live log) and is left alone because an ignore row with no to would move a ticket's board line to the owner station (report/loop/lib/collect.jq route_of needs select(.do != "ignore")); ticket.cut still wakes a worker that does not exist yet; a bring-up can outlast stale_seconds (WO-20261011-5355); the merger is one shared seat so down merger is safe for one ticket at a time.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 4. Read playbooks/worker.md, the ticket and this checkpoint. Code and RUNBOOK are committed. Do the close-out in Active Tasks, run work-order.sh evidence per criterion, then open one PR. Run commands only through the scratchpad tp.sh as a background job.
 
 ## Checkpoint 2026-10-11 21:26 UTC
 

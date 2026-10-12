@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T010147Z-100-e1tgr",
+  "at": "2026-10-12T01:01:47Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4db1",
+  "kind": "work.started",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p6C",
+  "note": "work.started: WO-20261011-4db1 worker up in slot 3, test pane wD3:p1V; reading the ticket",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

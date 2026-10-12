@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T132317Z-201-tebq1",
+  "at": "2026-10-12T13:23:17Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261011-4db1",
+  "kind": "review.passed",
+  "ticket": "WO-20261011-4db1",
+  "pane": "wD3:p1V",
+  "note": "passed 49ab55b: merge of PR 20 is faithful, factory code and tests identical to 2c5f807, CONTEXT_STATE CHANGELOG and INDEX keep both sides, seat.sh contract the runner uses is intact. Merger still needs test.passed on this sha.",
+  "evidence": [],
+  "observations": [],
+  "to": "merger",
+  "sha": "49ab55b",
+  "pr": 21
+}

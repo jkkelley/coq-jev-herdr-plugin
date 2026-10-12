@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "STD-owner-sitrep-001",
+  "domain": "reporting",
+  "applies_to": [
+    "Any status report an agent gives the owner when they return: SITREP, status, update, where are we, what happened while I was gone",
+    "Delivered as one message on the owner's bearings page whose text is #SITREP/v1# and one JSON object; never Markdown or raw text in a chat bubble and never a link to anywhere else"
+  ],
+  "environment": {
+    "surface": "the bearings page of the tier the owner reads (tools/bearings), message type reply",
+    "payload": "standards/SITREP-PAYLOAD.md"
+  },
+  "rule": "Render the SITREP as a panel inside the bearings page itself, never as a link to anywhere else and never as Markdown or raw text in a chat bubble. Delivery is one message on the owner's bearings page whose text is the literal prefix #SITREP/v1# followed by a single JSON object, which the page renders as the panel; the chat bubble itself is textContent in a proportional font and can never carry styling, so the renderer, not the message, is what makes it look like anything. The document carries five blocks in this fixed order: 1 Executive Ground Truth, 2 Delta (Completed Work), 3 Active Operations (In Flight), 4 Queue Matrix, 5 Tactical Next Steps. Above them a header carrying the title, a status pill for NOMINAL, DEGRADED or BLOCKED with a pulsing ping in green, amber or red, an Updated stamp in YYYY-MM-DD HH:MM UTC, and a telemetry strip of metric cards. VISUAL STANDARD, set by the owner: deep charcoal glassmorphism on zinc-950 with zinc-800 borders and crisp contrast; monospace uppercase data headers with wide tracking against a clean sans body with generous line height; a grid of distinct cards using rounded-xl, p-6 and gap-6; pill badges with pulsing status pings and high contrast data chips instead of plain bullets; every queue shown as a compact metric stat card carrying its count, its delta and an urgency badge; every link rendered as an interactive badge or button and never as raw text. CONTENT DISCIPLINE, set by the owner on 2026-09-16 and measured, not judged: blocks 1, 2, 3 and 5 carry at most two items each. Every item is ONE sentence of FIFTEEN WORDS OR FEWER, with no semicolon and no second sentence. No ticket id and no ticket title ever appears inside that sentence: the reference goes on its own line beneath it, as the id followed by its full title taken from the row or design file itself, which is how the never-name-a-ticket-without-its-title rule is kept without paying for it in prose. The whole SITREP spends at most 120 words of prose, counting item sentences only and never the titles. Fewer is better every time: if a sentence needs a subordinate clause to survive, the item is not scoped right and the clause is the part to cut. Block 4 shows the count per queue plus the next five items in that queue, never the whole list. Nothing follows block 5: no sign-off, no explanation, no question.",
+  "why": "The owner reads this coming back in with no context, so the shape must be identical every time and their eye must land in the same place. A dense page, Markdown in a chat bubble, an artifact link and a briefing with forty word ticket titles inside its sentences were each rejected: the report is read under load and has to carry its meaning at a glance. The fixed block count and the two item cap stop it growing back into a wall of text; the visual standard stops it degrading into raw text.",
+  "good": [
+    "A queue rendered as a stat card: big count, delta chip, urgency pill, then five one-line items beneath",
+    "A status pill with a pulsing ping: amber ring, amber dot, DEGRADED in wide-tracked mono",
+    "A pull request rendered as a bordered badge that lights on hover, never as a bare URL",
+    "1 Immediate [T-0 to T+2h] and 2 Follow-on as the only two entries in block 5"
+  ],
+  "bad": [
+    "Three or more items in a block, or an item running to two sentences",
+    "A raw URL shown as text instead of a badge or button",
+    "A full queue listing instead of a count plus the next five",
+    "A sixth block, or any question or sign-off after block 5",
+    "Any figure not read from a queue file, a log or a git command in the same turn the report is written",
+    "Markdown or raw text, or a link to a published page, delivered instead of the panel"
+  ],
+  "check": {
+    "kind": "linter",
+    "how": "Before sending, run scripts/sitrep-check.mjs on the payload file; exit 1 means it is not sent. The checker counts: every item sentence 15 words or fewer, at most one sentence end, no semicolon, no ticket id (patterns in config/sitrep.json), no block with more than two items, the sum of item sentence words 120 or fewer, a full title on every ref and every queue entry, exactly the five blocks in order. bearings.sh <tier> sitrep runs the same check and refuses to send on a violation, and the builder (scripts/sitrep-build.mjs) assembles the payload from records so a figure is read, not typed."
+  },
+  "status": "active",
+  "verified_at": "2026-10-12T00:00:00Z",
+  "enforcement": [
+    {
+      "mechanism": "gate",
+      "ref": "tools/bearings/scripts/sitrep-check.mjs <payload-file>, exit 1 and the briefing is not sent",
+      "status": "live"
+    },
+    {
+      "mechanism": "gate",
+      "ref": "tools/bearings/scripts/bearings.sh <tier> sitrep --payload FILE runs the checker and refuses on a violation",
+      "status": "live"
+    },
+    {
+      "mechanism": "gate",
+      "ref": "tools/bearings/scripts/sitrep-build.mjs assembles the payload from events, work-orders and open pull requests, all inputs from config/sitrep.json",
+      "status": "live"
+    },
+    {
+      "mechanism": "gate",
+      "ref": "tools/bearings/assets/page.html, the sitrep node kind in drawThread, with its styles in theme.css",
+      "status": "live"
+    }
+  ],
+  "owner": "interface-agent"
+}

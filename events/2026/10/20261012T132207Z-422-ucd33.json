@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T132207Z-422-ucd33",
+  "at": "2026-10-12T13:22:07Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261012-668a",
+  "kind": "review.changes",
+  "ticket": "WO-20261012-668a",
+  "pane": "wD3:p7T",
+  "note": "PR 23 changes requested: 5 of 5 criteria have evidence, lint green, but 1 file is outside the ticket and 2 new docs lack GOOD and NEVER. Code, config, UTC and em dash checks are clean.",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/7b5de234-80fb-4340-8256-e6ec45e09f46/scratchpad/rev-lint.log"
+  ],
+  "observations": [
+    {
+      "path": ".claude/skills",
+      "line": 1,
+      "saw": "a symlink to /home/luna/.claude/skills, added by bf55ab9 and carried in the PR diff, outside the ticket and an absolute home path",
+      "expected": "no file outside the ticket paths, and the managed skills link stays untracked (AGENTS.md Skills section; .gitignore"
+    },
+    {
+      "path": "tools/bearings/RUNBOOK.md",
+      "line": 1,
+      "saw": "contents list present but no GOOD or NEVER lines, unlike factory/RUNBOOK.md and report/loop/RUNBOOK.md",
+      "expected": "a GOOD and a NEVER section"
+    },
+    {
+      "path": "tools/bearings/standards/SITREP-PAYLOAD.md",
+      "line": 1,
+      "saw": "contents list present but no GOOD or NEVER lines",
+      "expected": "a GOOD and a NEVER section showing a passing and a failing payload"
+    }
+  ],
+  "attempt": 1
+}

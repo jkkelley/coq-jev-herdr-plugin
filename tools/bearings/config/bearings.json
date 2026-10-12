@@ -15,6 +15,7 @@
   "max_body_bytes": 65536,
   "file_max_bytes": 26214400,
   "max_message_chars": 8000,
+  "max_reply_chars": 32000,
   "max_words_chars": 4000,
   "messages_window": 50,
   "open_label_prefix": "OPEN - any tool",
