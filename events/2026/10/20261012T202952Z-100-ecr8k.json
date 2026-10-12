@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T202952Z-100-ecr8k",
+  "at": "2026-10-12T20:29:52Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-da52",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:p8A",
+  "note": "aggregates only: merged origin/main, took main's CHANGELOG.md and INDEX.md and re-rendered both by script. No file of this ticket changed since 34ef520 (test jmeu9, review ledxo). Answers 409 h873y.",
+  "evidence": [],
+  "observations": [],
+  "sha": "17c7cb3",
+  "pr": 25
+}
