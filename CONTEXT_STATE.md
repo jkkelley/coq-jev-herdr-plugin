@@ -56,6 +56,23 @@
 
 
 
+
+## Checkpoint 2026-10-12 19:56 UTC
+
+### Current state
+#### Infrastructure
+Worker seat worker-wo-20261012-e36e, slot 9, test pane wD3:pHS. Branch feat/case-17-resume-checkpoint-passes-in-a-clean-chec.
+#### Toolchain
+make step, herdr/bin/testpane.sh, events/bin/event.sh via $COQ_REPO.
+#### Active Tasks
+WO-20261012-e36e - Case 17-resume-checkpoint passes in a clean checkout: the test brings its own checkpoint.sh instead of needing the gitignored skill copy.
+Done in this step: herdr/tests/fixtures/checkpoint.sh (read only, the real awk), case 17 installs it at the repo-copy path in its world, herdr/Makefile lint covers fixtures/.
+Reproduced the failure on HEAD in a clean worktree (checkpoint.sh was not found), and case 17-resume-checkpoint passes there with the change.
+#### Blockers
+none
+### Hydration prompt
+Resume line: run the full make -C herdr test in a fresh worktree of the pushed branch (no .claude/skills) via testpane.sh, then close out: evidence per AC, retro note, gh pr create, work-order.sh submit --pr N, done, push, post pr.opened 100 with sha and pr.
+
 ## Checkpoint 2026-10-12 19:06 UTC
 
 ### Current state
