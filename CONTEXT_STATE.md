@@ -47,6 +47,41 @@
 
 
 
+
+## Checkpoint 2026-10-12 12:40 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4562 on WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day.
+  Branch feat/break-glass-one-owner-authorised-action-at-a-tim, treehouse slot 2, test pane wD3:p1V through herdr/bin/testpane.sh only.
+  PR 22 is open; this step answers the architect record 20261012T121854Z-200-uqz6z (owner decision of 2026-10-12).
+
+#### Toolchain
+
+- Obs 1 reverted by owner order: break-glass-lib.sh sets defaultMode bypassPermissions on every flip, dontAsk seats included; breadcrumb 4 cites the record; RUNBOOK and seat.sh header say bypass again; case 13 asserts bypass on an orchestrator seat.
+- Kept: hook timeouts from break_glass.hook_pre_timeout_seconds and hook_post_timeout_seconds in herdr.json and its schema.
+- Obs 3 and 4: work-order note on WO-20261011-4562 re-homes the AC-H1 and AC-H3 live halves to WO-20261012-2a12 - Break glass live proof: the owner's first real grant through the interface card flips a live seat to bypass permissions, runs one action, and restores it.
+- Verified in the test pane: make lint, make -C herdr lint, CASES=13-break make -C herdr test (1 passed).
+
+#### Active Tasks
+
+- Merge origin/main (PR 20 test pane per seat, conflicts in case 04 and CONTEXT_STATE.md), re-run the herdr suite, push, post pr.opened 100 with the new head sha and PR 22, then stop.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Lesson: the test pane queues commands from every seat; wait on my own done file in a bounded foreground loop, never a Monitor or background shell (owner rule 2026-10-12).
+
+### Hydration prompt
+
+Resume WO-20261011-4562 as worker-wo-20261011-4562 in slot 2. Read playbooks/worker.md and this checkpoint.
+The code, the note and the push are done; the only step left is pr.opened 100 with the head sha, then stop and wait for the reviewer.
+
 ## Checkpoint 2026-10-11 23:09 UTC
 
 ### Current state

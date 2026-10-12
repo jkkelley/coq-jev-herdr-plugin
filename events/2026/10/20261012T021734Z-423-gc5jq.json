@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T021734Z-423-gc5jq",
+  "at": "2026-10-12T02:17:34Z",
+  "code": 423,
+  "seat": "worker-wo-20261011-4562",
+  "kind": "blocked",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p6R",
+  "note": "WO-20261011-4562 - Break glass: obs 1,2,5 fixed in 9b3d085; obs 3,4 (AC-H1, AC-H3 ticked, live halves unobserved) need owner: observe live or split and amend",
+  "evidence": [
+    "events/2026/10/20261012T013044Z-422-bjv02.json"
+  ],
+  "observations": [
+    {
+      "path": "work-orders/archive/2026/WO-20261011-4562-break-glass-one-owner-authorised-action-at-a-tim.md",
+      "line": 68,
+      "saw": "AC-H1 ticked, live run on a real seat not observed",
+      "expected": "needs owner Grant on the bearings page"
+    },
+    {
+      "path": "work-orders/archive/2026/WO-20261011-4562-break-glass-one-owner-authorised-action-at-a-tim.md",
+      "line": 72,
+      "saw": "AC-H3 ticked, owner card half not observed",
+      "expected": "needs PR 17 and owner answer"
+    }
+  ],
+  "attempt": 2,
+  "to": "architect"
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T015741Z-100-cj52r",
+  "at": "2026-10-12T01:57:41Z",
+  "code": 100,
+  "seat": "worker-wo-20261011-4562",
+  "kind": "work.started",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p6R",
+  "note": "worker resumed WO-20261011-4562; ticket already archived and PR 22 open, verifying state",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}
