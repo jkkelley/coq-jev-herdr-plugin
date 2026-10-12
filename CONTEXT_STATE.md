@@ -52,6 +52,23 @@
 
 
 
+
+## Checkpoint 2026-10-12 18:02 UTC
+
+### Current state
+#### Infrastructure
+WO-20261012-da52 - Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand.
+PR 25 answers reviewer record review.changes 422 3hdaj (attempt 3) under the architect's ruling on blocked 423 gg539 (attempt 4 allowed): merged origin/main 55e799e, removed the stale non-archive copies of 9b2c, b800 and da52 from the epic dir (the start script copied siblings onto each branch), reindexed and rendered the changelog.
+Merge fallout fixed: herdr cases 04 and 05 now count thirteen reserved panes and fifteen repaired nodes (main's three watches plus the bus); the user-cache path was reworded out of three b800 comments so AC-H2's grep finds none; 08-break-glass ordering sleep widened to 3 s (clock-step flake).
+#### Toolchain
+make lint ok; make -C factory test 17 passed; make -C herdr test 21 passed, in test pane wD3:p8C.
+#### Active Tasks
+Post pr.opened with --pr 25 --sha citing the ruling, then hold for the belt.
+#### Blockers
+None.
+### Hydration prompt
+Hold; wake on record.review_changes_requested or test.failed for WO-20261012-da52.
+
 ## Checkpoint 2026-10-12 16:44 UTC
 
 ### Current state
