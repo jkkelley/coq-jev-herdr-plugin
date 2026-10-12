@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T183006Z-100-9w1ph",
+  "at": "2026-10-12T18:30:06Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-da52",
+  "kind": "pr.opened",
+  "ticket": "WO-20261012-da52",
+  "pane": "wD3:p8A",
+  "note": "Attempt 5 per architect ruling on review.changes 9zlbt: merged origin/main f329478, bus pane on main's derived counts in cases 04 and 05, no literal. lint ok, factory 17/17, herdr 22/22.",
+  "evidence": [],
+  "observations": [],
+  "sha": "05b528f",
+  "pr": 25
+}
