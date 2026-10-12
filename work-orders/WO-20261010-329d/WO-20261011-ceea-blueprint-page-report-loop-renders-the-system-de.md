@@ -7,7 +7,7 @@
   "status": "in-progress",
   "priority": "p0",
   "created": "2026-10-11",
-  "updated": "2026-10-11",
+  "updated": "2026-10-12",
   "created_at": "2026-10-11T18:40:14+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/blueprint-page-report-loop-renders-the-system-de",
@@ -66,10 +66,14 @@ The owner asked on 2026-10-11 for the whole system design presented as a bluepri
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* GET /blueprint 200 on the dev tier shows every CMP node with its state and its RUN runbook link, and every locked DEC; a new node file appears within one watch pass
-- [ ] `AC-H2` *(human)* three tiers serve from three ports and out_dirs by config; make promote-uat and promote-stable move a build forward and the stable page shows the promoted build number
-- [ ] `AC-H3` *(human)* bringup.sh --check lists the three server panes ok; recover.sh restarts a killed one
-- [ ] `AC-H4` *(human)* the board page is unchanged pixel for pixel by this ticket (parity test); each collector has a unit test; suite and lint green
+- [x] `AC-H1` *(human)* GET /blueprint 200 on the dev tier shows every CMP node with its state and its RUN runbook link, and every locked DEC; a new node file appears within one watch pass
+  - observed `2026-10-12` Case 13-bp-view renders every CMP node with its state and RUN link and every locked DEC, and a node file added between two watch passes shows in the next one; case 15-bp-serve serves it at GET /blueprint 200. Green from test pane wD3:p1V 2026-10-12, loop suite 16 passed 0 failed.
+- [x] `AC-H2` *(human)* three tiers serve from three ports and out_dirs by config; make promote-uat and promote-stable move a build forward and the stable page shows the promoted build number
+  - observed `2026-10-12` Three tier configs dev 44910, uat 44911, stable 44912 with their own out_dir and pane label (case 15, tier.schema.json); case 14-bp-promote: promote-uat then promote-stable move dev build N forward and stable data.json and build.json carry that build number. Green 2026-10-12.
+- [x] `AC-H3` *(human)* bringup.sh --check lists the three server panes ok; recover.sh restarts a killed one
+  - observed `2026-10-12` herdr case 04: bringup lists pane-blueprint-dev, -uat, -stable ok after --check (slots 3.3.1 to 3.3.3); case 12-blueprint-panes kills the dev server, --check says FAILED pane-blueprint-dev, recover --apply says fixed pane-blueprint-dev and --check then reads ok. herdr suite 15 passed 0 failed 2026-10-12.
+- [x] `AC-H4` *(human)* the board page is unchanged pixel for pixel by this ticket (parity test); each collector has a unit test; suite and lint green
+  - observed `2026-10-12` make -C report/loop test-browser exit 0 (board pixel parity with the locked design); one unit test per collector (cases 08 to 12 plus tests/test_server.py); make lint exit 0, loop suite 16 passed, herdr suite 15 passed, factory suite 10 passed, all from the test pane 2026-10-12.
 
 ## Test plan
 
@@ -89,6 +93,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Retro: the branch was behind main by 3 merged tickets; merging origin/main put the runner and flow panes on 2.2.2 and 2.2.3, so the blueprint servers moved. First to 2.3.1 to 2.3.3, then to 3.3.1 to 3.3.3 because the owner's turn and record watches run at 2.3.1 and 2.3.2 (backlog 60l24). recover.sh's new pane step skips the belt slot, which step 5 owns. Jenkins runs the suite with LOOP_TEST_IN_CONTAINER=1 since the pod has no podman or make. A real ticket rarely names a CMP id, so in flight reads 0 today; the RUNBOOK says to name the id in title, Problem or Scope. graph/ is denied to this role: DEC-blueprint-server-tiers and a CMP node for the blueprint defined_in a RUN node are the architect's to add.
 - `2026-10-11` Owner 18:47Z: 'a separate local web client server for that blueprint that mimics the system design and blueprint, automatically updated; it needs a dev uat and stable version. Make files. Functional programming small scope easy testing. Full suite on CICD linting when smartly needed.' Folded into In, Degrees of freedom and ACs.
 
 ## Outcome
