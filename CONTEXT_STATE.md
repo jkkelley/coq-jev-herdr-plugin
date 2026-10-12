@@ -56,6 +56,35 @@
 
 
 
+
+## Checkpoint 2026-10-12 20:25 UTC
+
+### Summary
+
+WO-20261012-3cb1 - testpane.sh now sends `( cd <COQ_WORKTREE> && command )`, refusing exit 3 when COQ_WORKTREE is unset or not a directory.
+Case 07 updated, case 09 and 16 given a worktree, case 22 added.
+Full herdr suite green in the seat's test pane: 24 passed, 0 failed, and herdr lint clean.
+
+#### Infrastructure
+
+Seat worker-wo-20261012-3cb1, slot 7 leased to the ticket, test pane wD3:pHZ, branch feat/test-pane-runs-in-the-seat-s-worktree-testpane-s.
+
+#### Toolchain
+
+herdr/bin/testpane.sh, herdr/tests/cases 07, 09, 16, 22, work-order.sh, make step.
+
+#### Active Tasks
+
+Close out: root make lint in the test pane, commit, push, evidence per criterion, retro note, PR, submit, done, post pr.opened.
+
+#### Blockers
+
+None.
+
+### Hydration prompt
+
+Resume WO-20261012-3cb1 at close-out: the code and tests are done and green, the remaining steps are evidence AC-H1 and AC-H2, the retro note, the PR, work-order.sh submit and done, and the pr.opened 100 record.
+
 ## Checkpoint 2026-10-12 19:06 UTC
 
 ### Current state
