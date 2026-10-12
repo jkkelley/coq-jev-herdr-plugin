@@ -30,7 +30,9 @@
     "events/tests/*",
     "bin/state-root.sh",
     "config/state.json",
-    "config/state.schema.json"
+    "config/state.schema.json",
+    "factory/tests/lib/world.sh",
+    "herdr/tests/lib/world.sh"
   ]
 }
 ---
@@ -99,6 +101,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` Architect ruling on blocked record 20261012T231224Z-423-8cv0o: option B. Nothing merges red; no legacy switch. Add factory/tests/lib/world.sh and herdr/tests/lib/world.sh (and any test helper they strictly need, nothing under tests/cases) to the files list with claims.sh set; claims.sh start must exit 0. Each test world gives the test its own temp COQ_STATE, copies the resolver and its config, and event_count and friends read records from that state root. Both suites green except herdr case 17, which PR 80 fixes; after PR 80 merges, merge origin/main into the branch, retest the full plan, then open the PR.
 - `2026-10-12` Correction to the note above: the line in factory/tests/lib/world.sh that copies only events/bin and events/schema is line 24, not 25.
 - `2026-10-12` Retro and BLOCKER. Built and green in its own suite (events/tests, 3 cases, 114 checks, run in Podman through the test pane): bin/state-root.sh, config/state.json and config/state.schema.json, and event.sh add, list, tail and check on the state root (AC-H1 to AC-H4). The test plan in this ticket also names make -C factory test and make -C herdr test, and both go red because of the change itself, not a defect in it: factory 4 of 21 pass (the 17 failures are all event.sh exit 4, bin/state-root.sh is missing, because factory/tests/lib/world.sh line 25 copies only events/bin and events/schema), herdr 10 of 25 pass (14 failures are event_count reading $REPO/events while herdr/tests/lib/world.sh line 46 exports COQ_STATE=$STATE, so records land in $STATE/records; the 15th, 17-resume-checkpoint, fails on mkdir .claude/skills File exists because this slot's .claude/skills is a symlink to the installed skills, which is not A1). Neither file is in this ticket's files list, and making them read the new place needs route.sh and the seat scripts to read it too, which is item A2. Logs: tests/2026/10 under the state root, names 20261012231146-wo-20261012-7e13-*. Not run: scheduler Go tests (its testkit copies events/bin/event.sh and runs event.sh check). Other facts for A2: herdr.json state_dir is ~/.local/state/coq with no repo name, while the resolver gives ~/.local/state/coq/<repo>; a record's id field keeps the old shape, so the file name no longer equals the id. Recommended resolution: merge A1 with these suites known red and let A2 (WO-20261012-0229 - Roadmap A2) repair the worlds in the same change that switches the belt, keeping the live checkout off this event.sh until A2 lands. A fallback that writes the old tree when the resolver is missing was rejected: it would put records back in git silently.
 

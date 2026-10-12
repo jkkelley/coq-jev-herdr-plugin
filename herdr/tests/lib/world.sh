@@ -11,7 +11,31 @@ world_up() {
   local name="$1" filt="${2:-.}"
   WORLD="${COQ_CASE_WORK:-${WORK_ROOT:-/tmp}}/$name"; mkdir -p "$WORLD"
   REPO="$WORLD/repo"; cp -a "${REPO_ROOT:-/repo}/." "$REPO/"; rm -rf "$REPO/.git"
-  STATE="$WORLD/state"; EVENTS="$REPO/events"
+  # BREADCRUMB 2026-10-12 - WO-20261012-7e13 (Roadmap A1), same ruling. What broke: event.sh add now prints the new file's path (AC-H1),
+  #   and case 13-break-glass takes that output as the record id (`id=$("$EV" add ...)`, then `seat.sh --record $id` and
+  #   `--answer $id`), so seven refusals became "--record needs a record id" (seat.sh line 59). Why this fix: the real event.sh runs
+  #   as event-real.sh and the world's event.sh is a shim that runs it and prints the record's id field, the old stdout of add; the
+  #   record itself is written by the real writer, under COQ_STATE. Rejected: editing the case (tests/cases is not this ticket's) and
+  #   changing add to print the id (AC-H1 asks for the path). Cost: this world never exercises add's stdout; events/tests case 02 does.
+  mv "$REPO/events/bin/event.sh" "$REPO/events/bin/event-real.sh"
+  cat > "$REPO/events/bin/event.sh" <<'SHIM'
+#!/usr/bin/env bash
+# world shim for events/bin/event.sh (herdr/tests/lib/world.sh): the real writer, then the record's id on stdout instead of its path.
+real=$(dirname "$0")/event-real.sh
+[ "${1:-}" = add ] || exec "$real" "$@"
+args=(); json=0; for a in "$@"; do if [ "$a" = --json ]; then json=1; else args+=("$a"); fi; done
+p=$("$real" "${args[@]}") || exit $?
+if [ "$json" = 1 ]; then cat "$p"; else jq -r .id "$p"; fi
+SHIM
+  chmod +x "$REPO/events/bin/event.sh"
+  # BREADCRUMB 2026-10-12 - WO-20261012-7e13 (Roadmap A1), architect ruling on blocked record 20261012T231224Z-423-8cv0o. What broke:
+  #   event.sh add writes under the state root, and this world exports COQ_STATE="$STATE" (below) while EVENTS pointed at
+  #   $REPO/events, so event_count and every case that globs "$EVENTS"/2*/*/*.json counted 0 records (14 of 25 cases failed). Why this
+  #   fix: the world already gives the test its own temp COQ_STATE, so EVENTS is that state root's records tree, which has the same
+  #   YYYY/MM/*.json shape; the cases are unchanged and read the records the real event.sh wrote. Rejected: pointing COQ_STATE back at
+  #   the copy's events/ (the records would be written outside the layout under test). Cost: scripts that read $REPO/events directly
+  #   (recwatch, the belt) see nothing the seats record in this world until roadmap items A2 and A3 move them onto the state root.
+  STATE="$WORLD/state"; EVENTS="$STATE/records"
   # BREADCRUMB 2026-10-10 - WO-20261010-c274, cases 01-04 all failed on the first run of case 05. What broke: (1) every
   #   case seats WO-20261010-8777, which closed and moved to work-orders/archive/ (seat.sh line ~215 refuses a ticket it
   #   cannot find outside archive/: "no ticket ... (archived or never cut)"); (2) event_count read the copy's events/, which

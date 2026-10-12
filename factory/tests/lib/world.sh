@@ -17,11 +17,39 @@
 #   hcalls                   how many times the runner called herdr
 #   ids_of KIND              ids of the records of that kind in the copy's event log, one per line
 # Records are written one second apart by the cases that depend on order: ids sort by UTC second, then a random suffix.
+# BREADCRUMB 2026-10-12 - WO-20261012-7e13 (Roadmap A1), architect ruling on blocked record 20261012T231224Z-423-8cv0o. What broke: event.sh add
+#   now writes <state>/records/YYYY/MM/<timestamp>-<name>.json, and this world copied only events/bin and events/schema, so event.sh
+#   exited 4 (bin/state-root.sh missing) and 17 of 21 cases failed; and even with the resolver the belt would not see the record:
+#   route.sh keys its ledger on the record's file name (route.sh line ~264) and gate.sh finds a record by `find -name "$ID.json"`
+#   (gate.sh line 97), so a file that is not named by its id is lost to them until item A2 moves the belt onto the state root.
+#   Why this fix: the world copies the resolver and its config and runs the REAL event.sh as event-real.sh with its own temp
+#   COQ_STATE (recstate), and event.sh in the world is a ten line shim that runs it and moves the new record to the events/YYYY/MM/
+#   <id>.json place the belt reads, printing the id as before. Every case and the unmodified runner keep their old view; the real
+#   writer is still what makes the record. Rejected: a legacy switch in event.sh (AC-H1 forbids it) and editing cases (not this
+#   ticket's files). Cost: the world proves the belt against the old layout, not the state root, until A2 deletes this shim and
+#   points events_dir at the state root. A case that calls event.sh list sees only the moved records (the old tree), as before.
+world_event_shim() {
+  cp "$1/bin/state-root.sh" "$R/bin/"; cp "$1/config/state.json" "$1/config/state.schema.json" "$R/config/"
+  mv "$R/events/bin/event.sh" "$R/events/bin/event-real.sh"
+  sed -e "s|__RECSTATE__|$W/recstate|g" > "$R/events/bin/event.sh" <<'SHIM'
+#!/usr/bin/env bash
+# world shim for events/bin/event.sh (factory/tests/lib/world.sh, world_event_shim): the real writer into a temp state root, then the old place.
+ROOT=$(cd "$(dirname "$0")/.." && pwd); real=$ROOT/bin/event-real.sh
+export COQ_STATE=__RECSTATE__
+[ "${1:-}" = add ] || exec "$real" "$@"
+args=(); json=0; for a in "$@"; do if [ "$a" = --json ]; then json=1; else args+=("$a"); fi; done
+p=$("$real" "${args[@]}") || exit $?
+id=$(jq -r .id "$p"); ym=$(basename "$(dirname "$(dirname "$p")")")/$(basename "$(dirname "$p")")
+mkdir -p "$ROOT/$ym" && mv "$p" "$ROOT/$ym/$id.json" || exit 4
+if [ "$json" = 1 ]; then cat "$ROOT/$ym/$id.json"; else printf '%s\n' "$id"; fi
+SHIM
+  chmod +x "$R/events/bin/event.sh"
+}
 world_up() {
   W="${COQ_CASE_WORK:-${WORK_ROOT:-/tmp}}/$1"; R="$W/repo"; STATE="$W/state"; HLOG="$W/herdr.log"
-  rm -rf "$W"; mkdir -p "$R/events" "$R/queue" "$R/factory" "$W/bin" "$STATE"; : > "$HLOG"
+  rm -rf "$W"; mkdir -p "$R/events" "$R/queue" "$R/factory" "$R/bin" "$R/config" "$W/bin" "$STATE" "$W/recstate"; : > "$HLOG"
   local src="${REPO_ROOT:-/repo}"
-  cp -r "$src/events/bin" "$src/events/schema" "$R/events/"; cp -r "$src/roles" "$src/playbooks" "$R/"
+  cp -r "$src/events/bin" "$src/events/schema" "$R/events/"; world_event_shim "$src"; cp -r "$src/roles" "$src/playbooks" "$R/"
   cp -r "$src/queue/bin" "$src/queue/config" "$R/queue/"; cp -r "$src/factory/bin" "$src/factory/config" "$R/factory/"
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s"\nprintf "herdr %%s\\n" "$*" >> "%s/order.log"\n[ ! -e "%s/herdr.fail" ] || exit 1\n' "$HLOG" "$W" "$W" > "$W/bin/herdr"; chmod +x "$W/bin/herdr"
   mkdir -p "$R/herdr/bin" "$W/seats"; : > "$W/seat.log"; : > "$W/order.log"
