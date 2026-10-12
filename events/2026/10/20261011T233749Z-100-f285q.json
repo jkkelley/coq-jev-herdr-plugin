@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T233749Z-100-f285q",
+  "at": "2026-10-11T23:37:49Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p2",
+  "note": "PR 22 head 57dacf2 (main 55f4e22 merged by its worker); pr.opened zuzpn copied from slot 6 to the checkout so the belt wakes tester-wo-20261011-4562; reviewer wD3:p5Y seated and waits on the test record",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T001458Z-500-ju37x",
+  "at": "2026-10-12T00:14:57Z",
+  "code": 500,
+  "seat": "route-runner",
+  "kind": "note",
+  "ticket": "WO-20261011-4db1",
+  "pane": null,
+  "note": "route failed for review.passed 201, record 20261011T230148Z-201-4jzyp: herdr agent prompt merger failed",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

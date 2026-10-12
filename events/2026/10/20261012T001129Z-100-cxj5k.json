@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T001129Z-100-cxj5k",
+  "at": "2026-10-12T00:11:29Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261010-329d",
+  "pane": null,
+  "note": "owner.notified 500 00:10Z herdr restart and 423 WO-20261011-4562 23:23Z; first notice lacked titles, corrected",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

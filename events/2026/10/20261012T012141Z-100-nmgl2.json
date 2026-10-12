@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T012141Z-100-nmgl2",
+  "at": "2026-10-12T01:21:41Z",
+  "code": 100,
+  "seat": "tester-wo-20261011-f896",
+  "kind": "work.started",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p1V",
+  "note": "Tester seat up on test pane wD3:p1V; reading the ticket test plan before any run",
+  "evidence": [],
+  "observations": []
+}

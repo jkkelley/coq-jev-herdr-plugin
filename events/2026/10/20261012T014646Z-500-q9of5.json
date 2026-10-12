@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T014646Z-500-q9of5",
+  "at": "2026-10-12T01:46:46Z",
+  "code": 500,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "Records 83mfq kgzis 6t47u 4jzyp lost: held out of the checkout in /tmp scratchpad for their pr/sha fields, wiped by the WSL reboot. All superseded (PR 21 old head 3077b75). Held records now live in ~/.cache/coq-held-records.",
+  "evidence": [],
+  "observations": []
+}

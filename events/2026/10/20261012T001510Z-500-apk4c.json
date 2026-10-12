@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T001510Z-500-apk4c",
+  "at": "2026-10-12T00:15:10Z",
+  "code": 500,
+  "seat": "route-runner",
+  "kind": "note",
+  "ticket": "WO-20261011-f896",
+  "pane": null,
+  "note": "no route for work.started 100, record 20261011T213924Z-100-ovt4l",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}

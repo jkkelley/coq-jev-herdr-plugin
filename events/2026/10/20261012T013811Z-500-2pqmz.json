@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T013811Z-500-2pqmz",
+  "at": "2026-10-12T01:38:11Z",
+  "code": 500,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "WSL rebooted about 01:35Z (uptime 1 min at 01:36Z): every pane process died a second time in 2h. Bearings restarted with the same key, slot 4 ceea WIP saved to backup/ceea-wip-reboot-58118eb, recover.sh --apply running.",
+  "evidence": [],
+  "observations": []
+}

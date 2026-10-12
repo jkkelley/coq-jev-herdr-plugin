@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T232426Z-100-ojvfk",
+  "at": "2026-10-11T23:24:26Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p2",
+  "note": "423 0dxtc: tester-wo-20261011-4562 ran the suite in the main checkout, not the PR head; told to wait for the worker's new pr.opened (merge of main in progress in the shared slot 6 worktree, 17 files dirty) and test that sha once",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T012036Z-100-1oa42",
+  "at": "2026-10-12T01:20:36Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p2",
+  "note": "PR 20 gates on 52ca9fa: test tp3vf + review kxs2a (written 01:02Z into slot 2, unseen); kxs2a moved to the checkout, belt woke the merger 01:20Z; reviewer told to drop its duplicate rerun. PR 22 test uza56 likewise moved from slot 1",
+  "evidence": [],
+  "observations": []
+}

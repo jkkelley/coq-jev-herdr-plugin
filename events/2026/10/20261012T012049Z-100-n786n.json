@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T012049Z-100-n786n",
+  "at": "2026-10-12T01:20:49Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "note",
+  "ticket": "WO-20261011-f896",
+  "pane": null,
+  "note": "merger held: PR 20 head 52ca9fa has review.passed 201 kxs2a but no test.passed 201 on that sha (the 4562 test pass is on 57dacf2). No merge attempted.",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

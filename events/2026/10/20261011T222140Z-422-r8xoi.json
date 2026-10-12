@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T222140Z-422-r8xoi",
+  "at": "2026-10-11T22:21:40Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261011-f896",
+  "kind": "review.changes",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p5P",
+  "note": "AC-H1..H5 evidenced, lint ok, herdr suite 13 passed from wD3:p1V. Changes: SOP-0002 misses contents, GOOD/NEVER, verification; PR 20 head 6deb5e6 CONFLICTING, merge c05c7fe unpushed",
+  "evidence": [
+    "docs/sops/SOP-0002-give-a-seat-its-own-test-pane-and-repair-it-when-it-is-lost.md"
+  ],
+  "observations": [
+    {
+      "path": "docs/sops/SOP-0002-give-a-seat-its-own-test-pane-and-repair-it-when-it-is-lost.md",
+      "line": 1,
+      "saw": "no Contents block after the H1",
+      "expected": "Contents list from bin/md-contents.sh --fix"
+    },
+    {
+      "path": "docs/sops/SOP-0002-give-a-seat-its-own-test-pane-and-repair-it-when-it-is-lost.md",
+      "line": 37,
+      "saw": "no GOOD or NEVER examples",
+      "expected": "GOOD and NEVER examples per AGENTS.md"
+    },
+    {
+      "path": "docs/sops/SOP-0002-give-a-seat-its-own-test-pane-and-repair-it-when-it-is-lost.md",
+      "line": 34,
+      "saw": "Verification holds only the template sentences",
+      "expected": "what the successful run printed, per living-docs"
+    },
+    {
+      "path": "pr-20",
+      "line": 0,
+      "saw": "pushed head 6deb5e6 is CONFLICTING against main",
+      "expected": "unpushed merge c05c7fe pushed so the PR is mergeable"
+    }
+  ],
+  "attempt": 1,
+  "to": "architect"
+}

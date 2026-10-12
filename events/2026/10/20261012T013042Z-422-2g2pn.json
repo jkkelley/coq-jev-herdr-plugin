@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T013042Z-422-2g2pn",
+  "at": "2026-10-12T01:30:42Z",
+  "code": 422,
+  "seat": "reviewer-wo-20261011-4562",
+  "kind": "review.changes",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p1V",
+  "note": "changes requested on 57dacf2 after test.passed: WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day. Same 5 observations.",
+  "evidence": [
+    "events/2026/10/20261012T011159Z-201-uza56.json",
+    "events/2026/10/20261012T005706Z-422-gk4ng.json"
+  ],
+  "observations": [
+    {
+      "path": "herdr/bin/break-glass-lib.sh",
+      "line": 122,
+      "saw": "defaultMode forced to bypassPermissions for every role, yet the monitor, orchestrator and interface-agent roles are dontAsk, so for up to ttl_seconds any command or Edit outside a lifted deny rule runs, not only the one action",
+      "expected": "a second command still denied (ticket degrees of freedom, herdr/RUNBOOK.md lines 39 and 118), so keep the role mode or fence every other tool call on a dontAsk seat"
+    },
+    {
+      "path": "herdr/tests/cases/13-break-glass.test.sh",
+      "line": 15,
+      "saw": "15 cases pass but only the worker role (bypassPermissions) is flipped, so the dontAsk flip and an unrelated command on that seat are never exercised",
+      "expected": "a case on a dontAsk seat proving an unrelated Bash command and an Edit outside the action are still refused after the flip"
+    },
+    {
+      "path": "work-orders/archive/2026/WO-20261011-4562-break-glass-one-owner-authorised-action-at-a-tim.md",
+      "line": 68,
+      "saw": "AC-H1 is ticked while its own evidence says the live run on a real seat is NOT observed and still owed",
+      "expected": "an open criterion stays open until the live run is observed, or the owner amends the criterion"
+    },
+    {
+      "path": "work-orders/archive/2026/WO-20261011-4562-break-glass-one-owner-authorised-action-at-a-tim.md",
+      "line": 72,
+      "saw": "AC-H3 is ticked while the owner Grant and Refuse card and the answer to 200 or 423 step are NOT observed (needs PR 17)",
+      "expected": "the criterion stays open until that half is observed, or the owner splits it out"
+    },
+    {
+      "path": "herdr/bin/break-glass-lib.sh",
+      "line": 125,
+      "saw": "hook timeouts 10 and 30 seconds are literals in the script",
+      "expected": "read from herdr/config/herdr.json beside break_glass.ttl_seconds (config not literals)"
+    }
+  ],
+  "attempt": 2
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T005830Z-100-b3ujd",
+  "at": "2026-10-12T00:58:30Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261011-f896",
+  "kind": "review",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p1V",
+  "note": "review.started: reviewer seat reviewing PR 20 against the ticket acceptance criteria",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T235337Z-100-pm9r4",
+  "at": "2026-10-11T23:53:37Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "note",
+  "ticket": "WO-20261011-f896",
+  "pane": null,
+  "note": "owner notified for 500 s1ap5: PR 20 test.passed tp3vf; reviewer woken 23:52:01Z, stall 23:53:29Z",
+  "evidence": [],
+  "observations": []
+}

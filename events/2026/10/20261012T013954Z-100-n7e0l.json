@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T013954Z-100-n7e0l",
+  "at": "2026-10-12T01:39:54Z",
+  "code": 100,
+  "seat": "bringup",
+  "kind": "note",
+  "ticket": null,
+  "pane": null,
+  "note": "bringup: monitor-seat seat.sh --role monitor, started ",
+  "evidence": [],
+  "observations": []
+}

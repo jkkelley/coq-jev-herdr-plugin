@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T005427Z-422-vqicl",
+  "at": "2026-10-12T00:54:27Z",
+  "code": 422,
+  "seat": "tester-wo-20261011-4562",
+  "kind": "test",
+  "ticket": "WO-20261011-4562",
+  "pane": "wD3:p1V",
+  "note": "test.failed: WO-20261011-4562 - Break glass: one owner-authorised action at a time flips one seat to bypass permissions and back, recorded, never a session or a day. Host podman broken, no case ran (make -C herdr test exit 2).",
+  "evidence": [
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/2dfb168b-384f-4028-aa5d-fe9e1f259755/scratchpad/4562-make-herdr-test-worktree.log",
+    "/tmp/claude-1000/-home-luna--treehouse-coq-jev-herdr-plugin-f314e6-1-coq-jev-herdr-plugin/2dfb168b-384f-4028-aa5d-fe9e1f259755/scratchpad/4562-podman-diagnostic.log"
+  ],
+  "observations": []
+}

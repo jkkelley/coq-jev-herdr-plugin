@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T012120Z-100-s4l94",
+  "at": "2026-10-12T01:21:20Z",
+  "code": 100,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p2",
+  "note": "merger hold n786n is right: test tp3vf names no sha and counted 13 cases where 52ca9fa has 15, so it ran on c05c7fe; review kxs2a on 52ca9fa stands; a fresh tester-wo-20261011-f896 is seated for one run on 52ca9fa (pr.opened j41sm)",
+  "evidence": [],
+  "observations": []
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T205924Z-423-rcw8j",
+  "at": "2026-10-11T20:59:24Z",
+  "code": 423,
+  "seat": "worker-wo-20261011-f896",
+  "kind": "blocked",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p52",
+  "note": "rebased on origin/main locally (ticket start 5335cdb + work uncommitted, step queued); remote branch still a63c457, my role denies push --force-with-lease: architect please force-push or say how",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

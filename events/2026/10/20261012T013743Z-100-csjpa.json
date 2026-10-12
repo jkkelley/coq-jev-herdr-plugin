@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T013743Z-100-csjpa",
+  "at": "2026-10-12T01:37:43Z",
+  "code": 100,
+  "seat": "monitor",
+  "kind": "escalation",
+  "ticket": "WO-20261011-f896",
+  "pane": null,
+  "note": "owner notified for 423 rcw8j: force-push of f896 branch still unanswered; 500 route-runner cluster 00:14Z-01:21Z also reported in same notice",
+  "evidence": [],
+  "observations": [],
+  "to": "architect"
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T001015Z-500-lv8ry",
+  "at": "2026-10-12T00:10:15Z",
+  "code": 500,
+  "seat": "architect",
+  "kind": "note",
+  "ticket": "WO-20261010-329d",
+  "pane": "wD3:p2",
+  "note": "herdr server restarted 23:58:40Z (pid 451424): all pane processes died, 15 seats, bearings stable, belt, flow watch; layout restored, processes not. Work kept: backup/4db1-merge-8ee2c45, backup/ceea-wip-3c7864f. Recovery: recover.sh --apply",
+  "evidence": [],
+  "observations": []
+}

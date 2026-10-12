@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T010213Z-201-kxs2a",
+  "at": "2026-10-12T01:02:13Z",
+  "code": 201,
+  "seat": "reviewer-wo-20261011-f896",
+  "kind": "review.passed",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p1V",
+  "note": "review.passed PR 20 at 52ca9fa: AC-H1 to H5 evidenced, files in scope, no em dash, lint ok bar xmllint absent on host. Suite not re-run (podman broken); no test.passed 201 at this sha, merger gate needs it.",
+  "evidence": [],
+  "observations": [
+    {
+      "path": "herdr/layouts/layout.schema.json",
+      "line": 5,
+      "saw": "'at most one slot of kind test' is prose only and seat.sh",
+      "expected": "611 takes the first test slot"
+    },
+    {
+      "path": "work-orders/archive/2026/WO-20261011-f896-test-pane-per-seat-seat-sh-opens-a-labelled-test.md",
+      "line": 78,
+      "saw": "AC-H5 cites 'new 14' and a 12-case run from before the renumber to 16 and two merges of main",
+      "expected": "tester re-run on 52ca9fa gives the current count, non-blocking"
+    }
+  ],
+  "attempt": 1
+}

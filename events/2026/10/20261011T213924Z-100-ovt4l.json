@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261011T213924Z-100-ovt4l",
+  "at": "2026-10-11T21:39:24Z",
+  "code": 100,
+  "seat": "reviewer-wo-20261011-f896",
+  "kind": "work.started",
+  "ticket": "WO-20261011-f896",
+  "pane": "wD3:p5P",
+  "note": "reviewer seat up on PR 20, reading AC-H1 to AC-H5 evidence; test pane wD3:p1V",
+  "evidence": [],
+  "observations": []
+}

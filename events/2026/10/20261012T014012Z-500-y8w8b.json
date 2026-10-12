@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T014012Z-500-y8w8b",
+  "at": "2026-10-12T01:40:12Z",
+  "code": 500,
+  "seat": "route-runner",
+  "kind": "note",
+  "ticket": "WO-20261011-4562",
+  "pane": null,
+  "note": "route failed for review.changes 422, record 20261012T005706Z-422-gk4ng: herdr agent prompt worker-wo-20261011-4562 failed",
+  "evidence": [],
+  "observations": [],
+  "to": "monitor"
+}
