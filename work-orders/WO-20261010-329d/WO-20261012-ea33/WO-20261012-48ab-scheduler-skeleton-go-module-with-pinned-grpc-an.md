@@ -82,10 +82,14 @@ Nothing can be built against the scheduler design until the shared contracts exi
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* make -C scheduler build, test, lint and image each exit 0 and each runs inside a podman container (the recipe shows podman run; nothing invokes go on the host)
-- [ ] `AC-H2` *(human)* scheduler/internal/core declares every type and interface named in SPEC-16 s-contracts with the fields listed there, and nothing a domain spec does not name
-- [ ] `AC-H3` *(human)* the generated code equals a fresh generation (make -C scheduler proto leaves git diff empty) and the proto matches SPEC-16.H h-proto service by service and field by field
-- [ ] `AC-H4` *(human)* go test ./internal/testkit passes case k-t1 and the record builder's output is accepted by events/bin/event.sh check
+- [x] `AC-H1` *(human)* make -C scheduler build, test, lint and image each exit 0 and each runs inside a podman container (the recipe shows podman run; nothing invokes go on the host)
+  - observed `2026-10-12` 2026-10-12 UTC in ~/.cache/wt-sched-w1: make -C scheduler build, test, lint and image each exit 0. Every Go command is a podman run of golang@sha256:116d58cb (build, lint, proto) or localhost/coq-scheduler-test:1 built FROM it (test); test and lint run --network=none -e GOPROXY=off. build: file reports dist/scheduler ELF 64-bit statically linked. image: 1.6 MB scratch image, user 65532, entrypoint /scheduler; 'version' answers and --entrypoint /bin/sh fails, checked inside the target.
+- [x] `AC-H2` *(human)* scheduler/internal/core declares every type and interface named in SPEC-16 s-contracts with the fields listed there, and nothing a domain spec does not name
+  - observed `2026-10-12` scheduler/internal/core declares Record (every c-record field, Attempt 1 when absent), Ref and ErrUnreadable (SPEC-16.A a-source), Row with Match and its Canonical identity (c-row), Plan with PlanVerdict routed/ignored/unrouted/own/unreadable (c-plan), JobSpec and Job with JobState and JobKey (c-job, 16.D d-states, d-idem-key), Verdict (c-verdict), Seat with SeatStatus (c-seat), the eight interfaces Source, Ledger, Executor, Clock, Table, JobStore, SeatObserver, Latches, plus Counters and StatusSnapshot (16.I i-status). Row deliberately has no When/Supersede: routes.schema.json has them but no spec names them.
+- [x] `AC-H3` *(human)* the generated code equals a fresh generation (make -C scheduler proto leaves git diff empty) and the proto matches SPEC-16.H h-proto service by service and field by field
+  - observed `2026-10-12` make -C scheduler proto && git -C scheduler diff --exit-code exits 0 on the committed tree (protoc 3.21.12 asserted, protoc-gen-go v1.36.12 from go.mod, protoc-gen-go-grpc v1.6.2 pinned in the Makefile); a second regeneration was also cmp-identical. scheduler.proto: package coq.scheduler.v1; Executor Run/Health; Scheduler Health/Status/Reload/Drain/Retry, no streaming; RunRequest, RunResponse, ExecutorHealth, SchedulerHealth, ReloadResponse and RetryRequest field by field as h-proto; StatusResponse carries the i-status counters and lists.
+- [x] `AC-H4` *(human)* go test ./internal/testkit passes case k-t1 and the record builder's output is accepted by events/bin/event.sh check
+  - observed `2026-10-12` make -C scheduler test PKG='-v ./internal/testkit' passes 9 cases: answers by pattern, refuses, logs calls in order, injects a timeout (scripted and by context), health on demand, clock advances, the builder's 6 records (every optional field, break.glass and policy.applied included) pass the real events/bin/event.sh check ('events ok: 6 files'), and the builder's file equals the real writer's byte for byte apart from id and at.
 
 ## Test plan
 
@@ -142,6 +146,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Retro: built and tested only in Podman; every case green on the first full run. Three decisions a later ticket should know. (1) tests/Containerfile adds python3-jsonschema beside bash, jq and shellcheck, because events/bin/event.sh check needs it; breadcrumb in the file. (2) core.Row omits when and supersede, which routes.schema.json gained in WO-20261012-3bb0 but SPEC-16 c-row does not name; the routes ticket WO-20261012-32fe needs them, so that is a question for the architect, not an edit of core. (3) The Makefile has a contract target running tests/contract/run.sh for WO-20261012-379f to own, and status needs STATE_DIR=<dir>; go.mod carries four // indirect requires that go mod tidy adds for grpc, direct requires are grpc and protobuf only.
 
 ## Outcome
 
