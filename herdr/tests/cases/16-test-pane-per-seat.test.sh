@@ -51,8 +51,8 @@ COQ_TEST_PANE="$tpB" "$TP" "$tpA" 'true' >/dev/null 2>"$WORLD/err"; rc=$?
 assert_eq "B running in A's pane: exit 3" "$rc" 3
 COQ_TEST_PANE="$tpA" "$TP" "$WORLD_TEST_PANE" 'true' >/dev/null 2>"$WORLD/err"; rc=$?
 assert_eq "A running in the architect tab's pane: exit 3" "$rc" 3
-COQ_TEST_PANE="$tpA" "$TP" "$tpA" "echo ran-in-a > $WORLD/ran-a" >/dev/null 2>&1; assert_eq "A running in its own pane: exit 0" "$?" 0
-COQ_TEST_PANE="$tpB" "$TP" "$tpB" "echo ran-in-b > $WORLD/ran-b" >/dev/null 2>&1
+COQ_WORKTREE="$SLOT_A" COQ_TEST_PANE="$tpA" "$TP" "$tpA" "echo ran-in-a > $WORLD/ran-a" >/dev/null 2>&1; assert_eq "A running in its own pane: exit 0" "$?" 0
+COQ_WORKTREE="$SLOT_B" COQ_TEST_PANE="$tpB" "$TP" "$tpB" "echo ran-in-b > $WORLD/ran-b" >/dev/null 2>&1
 for _ in $(seq 1 20); do [ -f "$WORLD/ran-a" ] && [ -f "$WORLD/ran-b" ] && break; sleep 0.5; done
 assert_eq "the command ran in A's pane" "$(cat "$WORLD/ran-a" 2>/dev/null)" ran-in-a
 assert_eq "and B's ran in B's, at the same time" "$(cat "$WORLD/ran-b" 2>/dev/null)" ran-in-b
