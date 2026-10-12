@@ -1,0 +1,246 @@
+{
+  "$id": "urn:coq:scheduler:config:scheduler",
+  "title": "scheduler configuration",
+  "description": "Every tunable of the Go scheduler (SPEC-16.G g-keys). Every key is required and no other key is allowed, because Go holds no default (g-nodefault). Keys are flat and dotted, exactly as g-keys spells them: the registry names both seat (a string) and seat.busy_regex and its siblings, so nesting by the dot would put two values under one name; flat keys also make the loader's error name the key as the spec does. Strings may carry ${repo}, ${state_dir}, ${host_repo}, ${HOME} or ${ENV:NAME}, resolved by the loader at start (g-vars); every path value starts with one of them, so no host path is written here. This file validates before resolution, so mode and herdr_session accept their ENV form. No $schema keyword: the directory's test plan greps every file here for a scheme separator, and jsonschema validates an unmarked schema with its newest draft, 2020-12, the draft every config schema in this repo names.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "mode",
+    "seat",
+    "herdr_session",
+    "repo",
+    "host_repo",
+    "state_dir",
+    "routes_file",
+    "policies_file",
+    "flow_file",
+    "roles_dir",
+    "playbooks_dir",
+    "halt_flag",
+    "drain_seconds",
+    "intake.poll_seconds",
+    "intake.roots",
+    "intake.since",
+    "intake.runner_seats",
+    "seat.busy_regex",
+    "seat.done_regex",
+    "seat.read_lines",
+    "seat.cap_wait_seconds",
+    "seat.absent_wait_seconds",
+    "seat.idle_seconds",
+    "retry.max_attempts",
+    "retry.base_seconds",
+    "retry.factor",
+    "retry.max_seconds",
+    "retry.jitter",
+    "jobs.in_flight",
+    "jobs.keep_days",
+    "wake.ack_seconds",
+    "wake.max_attempts",
+    "stall.deadline_seconds",
+    "stall.visible_within_seconds",
+    "belt.file",
+    "belt.stale_seconds",
+    "executor.socket",
+    "executor.dial_seconds",
+    "executor.health_seconds",
+    "control.socket",
+    "notify.min_code",
+    "housekeeping.queue_sweep_seconds",
+    "housekeeping.glass_sweep_seconds",
+    "housekeeping.prune_seconds",
+    "shadow.dir",
+    "shadow.parity_min_records",
+    "log.level"
+  ],
+  "$defs": {
+    "env": {
+      "type": "string",
+      "pattern": "^\\$\\{ENV:[A-Z][A-Z0-9_]*\\}$",
+      "description": "exactly one environment variable, set by the run wrapper, the only place that knows the host (SPEC-16.H h-run-env)"
+    },
+    "path": {
+      "type": "string",
+      "pattern": "^\\$\\{(repo|state_dir|host_repo|HOME|ENV:[A-Z][A-Z0-9_]*)\\}(/[^\\s]*)?$",
+      "description": "a path that starts with a variable, so the file lifts to another host unchanged (g-vars-portable)"
+    },
+    "seat": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+      "description": "a seat name as events/schema/event.schema.json accepts it"
+    },
+    "seconds": { "type": "integer", "minimum": 1, "maximum": 86400 }
+  },
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "mode": {
+      "anyOf": [
+        { "enum": ["off", "shadow", "active"] },
+        { "$ref": "#/$defs/env" }
+      ],
+      "description": "off, shadow or active (SPEC-16.J j-mode); an ENV variable so the pane wrapper sets it, and the loader checks the resolved value against the three words"
+    },
+    "seat": {
+      "$ref": "#/$defs/seat",
+      "description": "the scheduler's seat on every record it writes; must equal executor.json seat, which the record verb forces"
+    },
+    "herdr_session": {
+      "anyOf": [
+        { "type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$" },
+        { "$ref": "#/$defs/env" }
+      ],
+      "description": "the herdr session the executor addresses; same variable as executor.json herdr_session"
+    },
+    "repo": {
+      "$ref": "#/$defs/env",
+      "description": "the repository as mounted in the container, for reading (g-vars-two-repos)"
+    },
+    "host_repo": {
+      "$ref": "#/$defs/env",
+      "description": "the repository on the host, used only in text typed or run there; COQ_REPO is the name the host shell and executor.json already use for it"
+    },
+    "state_dir": {
+      "$ref": "#/$defs/env",
+      "description": "ledger, jobs, latches, belt, shadow; the shadow's own in shadow mode and the bash belt's when active (SPEC-16.J j-active-adopt), so the wrapper sets it"
+    },
+    "routes_file": { "$ref": "#/$defs/path" },
+    "policies_file": { "$ref": "#/$defs/path" },
+    "flow_file": { "$ref": "#/$defs/path" },
+    "roles_dir": { "$ref": "#/$defs/path" },
+    "playbooks_dir": {
+      "$ref": "#/$defs/path",
+      "description": "a host path: it is written on the wake line the seat reads, so it hangs off host_repo, not repo"
+    },
+    "halt_flag": {
+      "$ref": "#/$defs/path",
+      "description": "the same file herdr/config/herdr.json names (its state_dir plus HALT), because the supervisor reads the same flag (SPEC-16.F f-halt)"
+    },
+    "drain_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 300,
+      "description": "how long running jobs may finish at shutdown"
+    },
+    "intake.poll_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 30,
+      "description": "seconds between ticks; the bound matches factory/config/runner.json poll_seconds"
+    },
+    "intake.roots": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/path" },
+      "description": "root patterns in priority order, globs allowed; the first is the checkout's log (SPEC-16.A a-roots)"
+    },
+    "intake.since": { "enum": ["now", "start"] },
+    "intake.runner_seats": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/seat" },
+      "description": "seats whose records are own: the scheduler's seat and the bash runner's seat (factory/config/runner.json runner_seat)"
+    },
+    "seat.busy_regex": {
+      "type": "string",
+      "minLength": 1,
+      "description": "pane footer pattern meaning busy, as herdr/bin/turnwatch.sh matches it"
+    },
+    "seat.done_regex": {
+      "type": "string",
+      "minLength": 1,
+      "description": "pane footer pattern meaning a turn ended, as herdr/bin/turnwatch.sh matches it"
+    },
+    "seat.read_lines": { "type": "integer", "minimum": 1, "maximum": 200 },
+    "seat.cap_wait_seconds": { "$ref": "#/$defs/seconds" },
+    "seat.absent_wait_seconds": {
+      "$ref": "#/$defs/seconds",
+      "description": "at least the supervisor's re-seat window (herdr/config/herdr.json reseat.window_seconds), so a prompt outlives one re-seat"
+    },
+    "seat.idle_seconds": { "type": "integer", "minimum": 1, "maximum": 3600 },
+    "retry.max_attempts": { "type": "integer", "minimum": 1, "maximum": 20 },
+    "retry.base_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 3600
+    },
+    "retry.factor": { "type": "number", "minimum": 1, "maximum": 10 },
+    "retry.max_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 86400
+    },
+    "retry.jitter": {
+      "type": "number",
+      "minimum": 0,
+      "exclusiveMaximum": 1,
+      "description": "fraction of a delay added or removed; below 1 so a delay never reaches zero"
+    },
+    "jobs.in_flight": { "type": "integer", "minimum": 1, "maximum": 64 },
+    "jobs.keep_days": { "type": "integer", "minimum": 1, "maximum": 365 },
+    "wake.ack_seconds": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9-]{0,31}$" },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 3600
+      },
+      "description": "confirmation window per role; the loader checks every role file in roles_dir has one (g-val-cross), so the role list lives in roles/ and nowhere here"
+    },
+    "wake.max_attempts": { "type": "integer", "minimum": 1, "maximum": 10 },
+    "stall.deadline_seconds": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z]+(\\.[a-z]+)*$" },
+      "additionalProperties": { "$ref": "#/$defs/seconds" },
+      "description": "stall deadline per gate kind; the loader checks every kind in the flow file's gates has one (g-val-cross)"
+    },
+    "stall.visible_within_seconds": {
+      "$ref": "#/$defs/seconds",
+      "description": "the loader refuses a file whose intake.poll_seconds plus the smallest deadline passes this bound"
+    },
+    "belt.file": {
+      "$ref": "#/$defs/path",
+      "description": "the name the bash runner uses under its state dir (factory/bin/route.sh BELT), so going active continues the same file"
+    },
+    "belt.stale_seconds": {
+      "type": "integer",
+      "minimum": 30,
+      "maximum": 120,
+      "description": "the bound of factory/config/runner.json stale_seconds, because the status words and comparison are the bash runner's"
+    },
+    "executor.socket": {
+      "$ref": "#/$defs/path",
+      "description": "the executor socket as mounted in the container; the wrapper mounts the runtime dir at the same path"
+    },
+    "executor.dial_seconds": { "type": "integer", "minimum": 1, "maximum": 60 },
+    "executor.health_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 60,
+      "description": "at most intake.poll_seconds, checked by the loader"
+    },
+    "control.socket": {
+      "$ref": "#/$defs/path",
+      "description": "the scheduler's own unix socket, in the state directory (SPEC-16.H h-proto-sockets)"
+    },
+    "notify.min_code": { "type": "integer", "minimum": 100, "maximum": 599 },
+    "housekeeping.queue_sweep_seconds": { "$ref": "#/$defs/seconds" },
+    "housekeeping.glass_sweep_seconds": {
+      "$ref": "#/$defs/seconds",
+      "description": "15 is the period of today's glass watcher loop in herdr/config/monitors.json"
+    },
+    "housekeeping.prune_seconds": { "$ref": "#/$defs/seconds" },
+    "shadow.dir": { "$ref": "#/$defs/path" },
+    "shadow.parity_min_records": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100000
+    },
+    "log.level": { "enum": ["debug", "info", "warn", "error"] }
+  }
+}

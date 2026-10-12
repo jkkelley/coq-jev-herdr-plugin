@@ -70,10 +70,14 @@ The scheduler holds no default for any key, so the two files and their schemas m
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* make lint reports configs: schema ok with both files validated against their schemas
-- [ ] `AC-H2` *(human)* every key named in SPEC-16.G g-keys and g-executor is present with the stated type; a key the specs do not name is absent
-- [ ] `AC-H3` *(human)* no line of either file matches the forbidden patterns of specs/scheduler/config/check.json (home path, host, key, person, ticket id)
-- [ ] `AC-H4` *(human)* every verb of SPEC-16.H h-verbs is in the table with the argv, timeout and final codes the spec states
+- [x] `AC-H1` *(human)* make lint reports configs: schema ok with both files validated against their schemas
+  - observed `2026-10-12` make lint in Podman (coq-lint:1): 'configs: schema ok' and 'lint: all ok'. The step reaches scheduler/config: with a relative $id it failed on scheduler.schema.json (RefResolutionError) before the urn $id fix.
+- [x] `AC-H2` *(human)* every key named in SPEC-16.G g-keys and g-executor is present with the stated type; a key the specs do not name is absent
+  - observed `2026-10-12` Script in the lint image parsed SPEC-16.G XML: scheduler.json keys == g-keys (48), executor.json keys == g-executor (9), both schemas' required == the registries. Schemas refuse a missing key, an unknown key, a literal path, mode 'on', jitter 1, log level 'verbose'.
+- [x] `AC-H3` *(human)* no line of either file matches the forbidden patterns of specs/scheduler/config/check.json (home path, host, key, person, ticket id)
+  - observed `2026-10-12` TP-2 in the pinned lint image: grep -nE '/home/|localhost|://' scheduler/config/*.json; test $? -eq 1 -> exit 0. Every line of both files checked against all 8 forbidden regexes of specs/scheduler/config/check.json: no match.
+- [x] `AC-H4` *(human)* every verb of SPEC-16.H h-verbs is in the table with the argv, timeout and final codes the spec states
+  - observed `2026-10-12` Script compared executor.json verbs to SPEC-16.H h-verbs XML: 15 of 15 names, argv (split on spaces), timeout_seconds and final equal; record flags == h-verbs-record-flags (13). Schema refuses a missing verb, an extra 'shell' verb, record flag 'seat', a verb without final, an argv ${repo}.
 
 ## Test plan
 
@@ -116,6 +120,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-12` Retro: keys are flat and dotted because g-keys names both seat (string) and seat.busy_regex; nesting would collide. $schema is omitted because TP-2 greps every file for '://' (jsonschema 4.10 defaults to 2020-12); $id is a urn because a relative $id broke $ref resolution in the lint. host_repo is ${ENV:COQ_REPO} in both files; repo, state_dir, mode and session are ENV variables the run wrapper sets. Free values: poll 2, deadlines 600-900 within visible 900, tester ack 180 over reviewer 120.
 
 ## Outcome
 
