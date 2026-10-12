@@ -17,6 +17,9 @@
     "retire_poll_seconds",
     "nudge_wait_seconds",
     "nudge_settle_seconds",
+    "session_wait_seconds",
+    "claude_sessions_dir",
+    "guard_watch_interval_seconds",
     "max_agents",
     "bringup_gate",
     "require_guard",
@@ -83,6 +86,21 @@
       "type": "integer",
       "minimum": 1,
       "description": "WO-20261011-dc0d: after the ack, how long seat.sh polls agent_status for a stable idle; idle sends the one continue prompt, still working at the end sends none"
+    },
+    "session_wait_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "WO-20261012-ee9c: how long seat.sh waits after a claude start for the pane's process to have a session file before it leaves claude_session null (guardwatch.sh fills it on a later tick)"
+    },
+    "claude_sessions_dir": {
+      "type": "string",
+      "minLength": 1,
+      "description": "WO-20261012-ee9c: where Claude Code writes <pid>.json (sessionId) for each running session; a pane's claude pid names the file. Leading ~ is expanded"
+    },
+    "guard_watch_interval_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "WO-20261012-ee9c: seconds between ticks of herdr/bin/guardwatch.sh --watch, the process in monitor slot 1.1.2"
     },
     "max_agents": {
       "type": "integer",

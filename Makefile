@@ -5,6 +5,7 @@
 #   make graph-check     graph/bin/graph.sh check + index
 #   make lint-image-push  build lint/Containerfile for amd64+arm64 and push ghcr.io/jkkelley/coq-lint:1 (Jenkins pulls it)
 #   make changelog       bin/changelog.sh render (CHANGELOG.md from changelog/YYYY/MM/*.md)
+#   make aggregates      render every gitignored aggregate: CHANGELOG.md and work-orders/INDEX.md plus the READMEs (WO-20261012-0677)
 #   make step MSG=.. TYPE=.. TITLE=.. [TICKET=..] [TEXT=..] [CP=body.md]   one step: lint, changelog, commit, push, checkpoint, /compact
 #   make contents        regenerate the Contents block of every AGENTS.md
 #   make bearings-*      delegate to tools/bearings (serve, stop, status, url, test)
@@ -16,7 +17,7 @@ HERE := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 LINT_IMAGE := localhost/coq-lint:1
 TOOLS := $(wildcard $(HERE)tools/*/Makefile) $(wildcard $(HERE)report/*/Makefile)
 
-.PHONY: lint-image-push step changelog help lint test graph-check contents images bearings-% event
+.PHONY: lint-image-push step changelog aggregates help lint test graph-check contents images bearings-% event
 help:
 	@sed -n '1,9p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
 images:
@@ -37,6 +38,9 @@ event:
 	$(HERE)events/bin/event.sh add --code "$(CODE)" --seat "$(SEAT)" --ticket "$(TICKET)" --note "$(NOTE)"
 changelog:
 	bash $(HERE)bin/changelog.sh render
+# CHANGELOG.md, work-orders/INDEX.md and the work-orders READMEs are gitignored renders, so no PR can carry them (.gitignore).
+aggregates: changelog
+	bash $(HERE).claude/skills/work-order/scripts/work-order.sh reindex --project $(HERE)
 step:
 	bash $(HERE)bin/step.sh --msg "$(MSG)" --type "$(TYPE)" --title "$(TITLE)" $(if $(TICKET),--ticket $(TICKET)) $(if $(TEXT),--text "$(TEXT)") $(if $(CP),--cp-body $(CP))
 LINT_IMAGE ?= ghcr.io/jkkelley/coq-lint:1
