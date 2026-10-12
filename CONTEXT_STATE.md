@@ -52,6 +52,41 @@
 
 
 
+
+## Checkpoint 2026-10-12 18:18 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-277d on WO-20261012-277d - Supervisor judges a pane busy by the processes in its foreground, so a live bearings wait loop is never called dead and restarted.
+  Branch feat/supervisor-judges-a-pane-busy-by-the-processes-i, treehouse slot 2, test pane wD3:pE4 through herdr/bin/testpane.sh only.
+
+#### Toolchain
+
+- herdr/bin/seat-lib.sh sl_pane_busy is the one busy rule: foreground group differs from the shell, or a foreground process whose argv[0] is not in herdr.json "shells".
+  supervisor.sh pane_busy and monitors.sh busy both call it.
+- Cases 17 and 19 gained the node-in-the-shell's-group reproduction (set +m; sleep 600 & p=$!; wait); both failed before the fix and pass after.
+- Full make -C herdr test: 20 passed on the first run, the one failure was my own assertion (fg_process names the shell first); 17 and 19 re-run green, make lint and make -C herdr lint green.
+- Live: make -C herdr supervisor CHECK=1 from the test pane printed ok bearings while the wait loop ran.
+
+#### Active Tasks
+
+- Commit and push, open the PR, work-order.sh submit --pr N then done, push the archive move, post pr.opened with the sha and pr.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: the old group-id test stays as an OR beside the argv test, because bash script.sh and ( ... ) subshells have a shell argv[0] but are jobs.
+- Found on main, not caused here: case 04 prints jq: parse error: Invalid numeric literal at line 1, column 14 during the monitors step and still passes.
+
+### Hydration prompt
+
+You are worker-wo-20261012-277d on WO-20261012-277d. Read this checkpoint and playbooks/worker.md. Next: finish the close-out (PR, submit, done, pr.opened), then idle.
+
 ## Checkpoint 2026-10-12 16:44 UTC
 
 ### Current state
