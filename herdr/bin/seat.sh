@@ -108,6 +108,15 @@ want_labels() { local i n; n="$(slot_count)"; for ((i = 0; i < n; i++)); do slot
 #   files in this change (a worker's fence denies roles/, and the architect owns that migration) and accepting only
 #   "${worktree}" (it would leave the architect, monitor and deny paths with a literal token). Cost: two spellings render the
 #   same until the role files and roles/schema move to "${worktree}" alone. Case 01 asserts no "${" survives. Record: WO-20261011-4c5e.
+# BREADCRUMB 2026-10-12 - WO-20261012-8fb2, the hooks key. What broke: after a compaction a seat saw only compaction-guard's
+#   generic checkpoint, never its own newest CONTEXT_STATE.md one (AGENTS.md:37 puts the resume line there). Why this fix: the
+#   rendered settings carry the SessionStart entry with matcher "compact" that runs herdr/bin/resume-checkpoint.sh, so a seat
+#   gets it from the same --settings file as its fence, and .claude/settings.json carries the identical command string so a
+#   seat started without --settings still has it; Claude Code merges identical hook commands into one run (not proved here: if it
+#   did not, the checkpoint would print twice, which costs tokens, not correctness). Rejected: a path under
+#   $wt (it would differ from the project file's string and run twice) and putting it in the owner's global hooks (not this
+#   repo's). Cost: every live seat's settings.json now differs from this render, so --check names the drift and recover.sh
+#   repairs it at the next restart. Record: WO-20261012-8fb2.
 # render_settings: the role's allow and deny as Claude Code permission rules, deterministic so --check and --audit can
 # cmp it with the file on disk. ${worktree} (alias ${repo}) in a path is the seat's worktree, a relative path is under it, a
 # trailing slash means the whole directory. allow.paths and deny.paths become Edit rules (Edit covers Write), so bare Write and Edit
@@ -115,7 +124,7 @@ want_labels() { local i n; n="$(slot_count)"; for ((i = 0; i < n; i++)); do slot
 # A command holding a * renders as Bash(<cmd>) and Bash(<cmd> *) (bearings-v2 F-23: Claude Code never matches a :*
 # rule with a * mid-pattern); a plain command keeps the Bash(<cmd>:*) prefix form.
 render_settings() {
-  jq --arg wt "$wt" '
+  jq --arg wt "$wt" --arg resume '"$CLAUDE_PROJECT_DIR"/herdr/bin/resume-checkpoint.sh' '
     def ab: gsub("\\$\\{(worktree|repo)\\}"; $wt) | if startswith("/") then . else $wt + "/" + . end;
     def cmd: if contains("*") then "Bash(\(.))", "Bash(\(.) *)" else "Bash(\(.):*)" end;
     def rule($t): ab as $a | "\($t)(/\($a)\(if ($a | endswith("/")) then "**" else "" end))";
@@ -123,7 +132,8 @@ render_settings() {
     | (((.allow.tools // []) | any(. == "Write" or . == "Edit"))) as $edits
     | {permissions: {defaultMode: .permission_mode,
         allow: ($bare + (if $edits then [(.allow.paths // [])[] | rule("Edit")] else [] end) + [(.allow.commands // [])[] | cmd]),
-        deny: ((.deny.tools // []) + [(.deny.commands // [])[] | cmd] + [(.deny.paths // [])[] | rule("Edit")])}}' "$role_file"
+        deny: ((.deny.tools // []) + [(.deny.commands // [])[] | cmd] + [(.deny.paths // [])[] | rule("Edit")])},
+      hooks: {SessionStart: [{matcher: "compact", hooks: [{type: "command", command: $resume, timeout: 10}]}]}}' "$role_file"
 }
 
 load_seat() {
