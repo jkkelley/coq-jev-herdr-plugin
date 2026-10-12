@@ -46,6 +46,38 @@
 
 
 
+
+## Checkpoint 2026-10-12 12:19 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261011-4db1 on WO-20261011-4db1 - Belt seats the line: route.sh brings a role seat up before a wake, takes a seat down after its gate record, and ignores housekeeping records by table. Treehouse slot 3 (lease holder is this ticket), branch feat/belt-seats-the-line-route-sh-brings-a-role-seat-, PR 21 open. Test pane wD3:p72, run only through herdr/bin/testpane.sh with output sent to a file in the scratchpad.
+- Woken by the reviewer's 422 (record 20261012T022449Z-422-t39yq): attempt 1 of 3.
+
+#### Toolchain
+
+- The reviewer's first finding is fixed: factory/RUNBOOK.md has its Graph and Ticket lines back, verbatim from origin/main, after the contents list. 3c255dc had dropped them with no reason. The change is three added lines.
+- The reviewer's second finding needs a test.passed 201 for the new head from the tester, not code. make lint (all ok) and make -C factory test (14 passed, 0 failed) were run in the test pane on this tree before the commit.
+- A formatter hook rewrites Markdown tables on Edit and realigned all of RUNBOOK.md (109 changed lines for a three line fix). Apply Markdown edits through python replace in Bash so the diff stays reviewable.
+
+#### Active Tasks
+
+- Push this step, then post pr.opened 100 with the new head sha and pr 21 so the route table wakes the tester. Then stop and hold.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Evidence in the ticket (AC-H1 to AC-H5) cites tree 8f72207; the tester's test.passed for the new head is what supersedes it. The ticket file is not edited again.
+
+### Hydration prompt
+
+Resume WO-20261011-4db1 as worker-wo-20261011-4db1 in slot 3. Read playbooks/worker.md, the reviewer record 20261012T022449Z-422-t39yq and this checkpoint. The RUNBOOK fix is pushed; post pr.opened 100 with sha and pr 21 if it is not posted, then hold. Run commands only through herdr/bin/testpane.sh.
+
 ## Checkpoint 2026-10-11 21:36 UTC
 
 ### Current state
