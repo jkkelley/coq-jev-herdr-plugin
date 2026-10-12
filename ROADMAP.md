@@ -141,6 +141,26 @@ A phase that runs past its size is reported on the page with the reason.
 
 Each lettered item is cut as one ticket under the roadmap epic, with its files declared, in the order shown.
 
+Epic: WO-20261012-cf8d.
+Tickets, with the order their declared files force:
+
+| Item | Ticket | Waits on |
+| --- | --- | --- |
+| A1 | WO-20261012-7e13 | none |
+| A2 | WO-20261012-0229 | A1 |
+| A3 | WO-20261012-541a | A2 |
+| A4 | WO-20261012-99d6 | A3 |
+| G | WO-20261012-aac3 | none |
+| F | WO-20261012-41a3 | A4, G |
+| H | WO-20261012-6c76 | none |
+| L | WO-20261012-be64 | no open pull request on graph/ |
+| B | WO-20261012-6f13 | A3 |
+| D | WO-20261012-da1e | B, A2 |
+| E | WO-20261012-7a46 | D |
+| C | WO-20261012-e970 | E, G |
+
+Item A is split into A1 to A4 so each stays small (Law: scope small, integrate in CI).
+
 ### Phase 1
 
 - Records pull request 32 merged with only never-started tickets, `ROADMAP.md` and these laws; the records branch retired.
