@@ -55,14 +55,15 @@ echo "-- AC-H1: --check on a healthy world prints ok per object and exits 0"
 run --check
 echo "$out" | sed 's/^/    /'
 assert_eq "--check exits 0" "$rc" 0
-assert_match "herdr, monitors, the monitor seat and the worker are ok, in that order" "$(tr '\n' ' ' <<<"$out")" "^ok herdr ok monitors ok monitor ok $N "
+assert_match "herdr, monitors, the monitor seat, the belt and the worker are ok, in that order" "$(tr '\n' ' ' <<<"$out")" "^ok herdr ok monitors ok monitor ok belt ok $N "
 assert_match "the guard ran and was ok" "$out" "^ok compaction-guard$"
 assert_match "the ticket nobody holds is warned, with its title" "$out" "^WARN $T2 - fixture ticket nobody holds \(no live seat"
 assert_eq "the ticket with a seat is not warned" "$(grep -c "^WARN $T " <<<"$out")" 0
 assert_eq "--check called the guard once, without --apply" "$(grep -c '^recover$' "$GUARD_LOG")" 1
-# Ten since WO-20261011-ceea: monitors, the monitor seat and eight reserved panes (lease and guard joined events and queue in
-# WO-20261010-8fa8, the factory board watch in WO-20261011-616c, the three blueprint servers in WO-20261011-ceea).
-assert_eq "--check wrote no note 100 beyond bringup's ten" "$(( $(event_count note 100) - notes0 ))" 10
+# Twelve since WO-20261011-ceea: monitors, the monitor seat and ten reserved panes (lease and guard joined events and queue in
+# WO-20261010-8fa8, the factory board watch in WO-20261011-616c, the route runner and the flow watch in WO-20261011-6842, the
+# three blueprint servers in WO-20261011-ceea).
+assert_eq "--check wrote no note 100 beyond bringup's twelve" "$(( $(event_count note 100) - notes0 ))" 12
 
 echo "-- AC-H3: the halt flag stops both modes and changes nothing"
 touch "$STATE/HALT"; before="$(find "$EVENTS" -name '*.json' | wc -l)"; : > "$GUARD_LOG"
@@ -84,8 +85,8 @@ run --check
 echo "$out" | sed 's/^/    /'
 assert_eq "--check exits 1" "$rc" 1
 assert_match "it names the seat and the reason" "$out" "^FAILED $N \(agent gone\)$"
-# Four objects (herdr, monitors, the monitor seat, the guard) plus the eight reserved panes recover.sh also checks since WO-20261011-ceea.
-assert_eq "the healthy objects still print ok" "$(grep -c '^ok ' <<<"$out")" 12
+# Five objects (herdr, monitors, the monitor seat, the belt, the guard) plus the nine reserved panes (all but the runner, which the belt covers) recover.sh also checks since WO-20261011-ceea.
+assert_eq "the healthy objects still print ok" "$(grep -c '^ok ' <<<"$out")" 14
 assert_eq "no event was written" "$(find "$EVENTS" -name '*.json' | wc -l)" "$before"
 assert_eq "the seat record has no ended_at" "$(jq -r '.ended_at // "null"' "$STATE/seats/$N/seat.json")" null
 assert_eq "no seat.down was recorded" "$(( $(event_count seat.down 100) - downs0 ))" 0

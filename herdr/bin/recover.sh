@@ -8,12 +8,14 @@
 #   2 herdr          the session answers (never started here: systemd owns it on the host, the world owns it in the suite)
 #   3 monitors       monitors.sh status                      (apply: monitors.sh grid)
 #   4 monitor seat   seat.sh --check <monitor_seat>          (apply: bringup.sh)
-#   5 every seat     each seat record with no ended_at: seat.sh --check
+#   5 belt           the route runner pane in use and the belt fresh (config .belt)
+#                    otherwise check FAILED belt (why); apply monitors.sh take <slot>, wait for a fresh belt, fixed belt
+#   6 every seat     each seat record with no ended_at: seat.sh --check
 #                    "agent not running" -> check FAILED <name> (agent gone); apply seat.sh --down, fixed <name>
 #                    any other difference -> FAILED <name> (<difference>), reported in both modes and never repaired
-#   5b panes         every reserved monitors.json slot with a command: label up and its `check` passing, else restarted (apply)
-#   6 guard          compaction-guard recover [--apply], once, only when config .require_guard is true
-#   7 tickets        one WARN per in-progress ticket with no live seat (the queue resumes it; WARN never fails the run)
+#   6b panes         every reserved monitors.json slot with a command: label up and its `check` passing, else restarted (apply)
+#   7 guard          compaction-guard recover [--apply], once, only when config .require_guard is true
+#   8 tickets        one WARN per in-progress ticket with no live seat (the queue resumes it; WARN never fails the run)
 # Lines: ok <object> | fixed <object> (what) | skipped <object> (why) | FAILED <object> (why) | WARN <ticket> - <title> (..)
 # Exit: 0 nothing FAILED (HALTED included), 1 something FAILED, 2 usage. DRY_RUN=1 prints every mutating call, writes nothing.
 #
@@ -108,7 +110,42 @@ else
   else failln "$mseat" "bringup.sh: $(tail -n 1 <<<"$out")"; fi
 fi
 
-# 5. every other seat record that was never ended. A record with ended_at is history and is not read.
+# 5. the belt (WO-20261011-6842). The runner pane is in use (the monitors.sh status line for the slot) and config .belt.status
+#    exits 0. Repair is the same call bringup.sh makes for that slot, so the pane, label and command come from monitors.json.
+# BREADCRUMB 2026-10-11 - WO-20261011-6842. What broke: 2026-10-11 18:01Z to 18:23Z the route runner was not running, so every
+#   gate record sat unrouted and recover.sh printed ok for everything it checked, because it checked health and not flow.
+#   Why this fix: a node that asks monitors.sh whether the runner slot is in use and route.sh status whether the belt moves, and
+#   restarts the slot through monitors.sh take (it hands a running job back clean first, so a hung runner restarts in its own
+#   pane). Rejected: killing the runner by pid (a process under no pane is the thing the herdr-first law forbids) and a
+#   second definition of stale here (route.sh status owns stale_seconds). Cost: a restart does not replay the interrupted record,
+#   route.sh writes a 500 for it on start; and the settle wait is a sleep loop of at most .belt.settle_seconds.
+bslot="$(sl_cfg .belt.slot)"; bsettle="$(sl_cfg .belt.settle_seconds)"; bstat="$(sl_cfg .belt.status)"; bstat="${bstat//\$\{repo\}/$SL_REPO}"
+MC="${COQ_MONITORS_CONFIG:-$SL_HERDR/config/monitors.json}"
+bwhat="$(jq -r --arg n "$bslot" '[.tabs[].reserved[] | select(.name == $n)] | first | .what // empty' "$MC")"
+bcmd="$(jq -r --arg n "$bslot" '[.tabs[].reserved[] | select(.name == $n)] | first | .command // empty' "$MC")"; bcmd="${bcmd//\$\{repo\}/$SL_REPO}"
+# belt_state: 0 when the runner pane is in use and the belt is fresh; else 1 with BELT_WHY.
+belt_state() {
+  local st out bs
+  st="$("$MON" status 2>/dev/null)"
+  if ! grep -qF " $bwhat - $bslot  [" <<<"$st"; then BELT_WHY="runner pane missing (slot $bslot is not running $bwhat)"; return 1; fi
+  read -ra bs <<<"$bstat"
+  if out="$("${bs[@]}" 2>&1)"; then BELT_WHY=""; return 0; fi
+  BELT_WHY="belt $(head -n 1 <<<"$out" | sed -E 's/^belt: //')"; return 1
+}
+if [ -z "$bwhat" ] || [ -z "$bcmd" ]; then failln belt "monitors.json has no slot $bslot with a command"
+elif belt_state; then okln belt
+elif ! apply; then failln belt "$BELT_WHY"
+else
+  why="$BELT_WHY"
+  if [ "$DRY" = 1 ]; then fixedln belt "dry run: would restart slot $bslot ($why)"
+  elif "$MON" take "$bslot" "$bslot" -- "$bcmd" >/dev/null 2>&1; then
+    for ((i = 0; i < bsettle; i++)); do belt_state && break; sleep 1; done
+    if belt_state; then fixedln belt "runner restarted through monitors.sh take $bslot ($why)"
+    else failln belt "restart left no fresh belt in ${bsettle}s: $BELT_WHY"; fi
+  else failln belt "monitors.sh take $bslot failed ($why)"; fi
+fi
+
+# 6. every other seat record that was never ended. A record with ended_at is history and is not read.
 for f in "$STATE"/seats/*/seat.json; do
   [ -f "$f" ] || continue
   [ -z "$(jq -r '.ended_at // empty' "$f")" ] || continue
@@ -121,7 +158,7 @@ for f in "$STATE"/seats/*/seat.json; do
   else failln "$n" "$SEAT_WHY"; fi
 done
 
-# 5b. the reserved monitor panes that carry a command in monitors.json (event tail, queue list, board watch, the three blueprint
+# 6b. the reserved monitor panes that carry a command in monitors.json (event tail, queue list, board watch, the three blueprint
 #    servers). Same rule as bringup.sh's loop: a slot is ok when its label is up and its `check`, when it has one, passes; a slot
 #    that is down or fails its check is restarted by `monitors.sh take` in apply mode and FAILED in check mode.
 # BREADCRUMB 2026-10-11 - WO-20261011-ceea. What broke: recover.sh repaired the grid, the monitor seat and the seats, and no
@@ -129,8 +166,8 @@ done
 #   (AC-H3: recover.sh restarts a killed one). Why this fix: the loop is the same few lines as bringup.sh's, kept here so recover
 #   needs no second bringup run (bringup also repairs the monitor seat and sends its own notification). Rejected: calling
 #   bringup.sh from here for panes (it stops at its first failure and its note records would double recover's). It runs after
-#   the seats so the order of the lines above it is unchanged. Cost: the loop exists twice; monitors.json is the one source.
-MC="${COQ_MONITORS_CONFIG:-$SL_HERDR/config/monitors.json}"
+#   the seats so the order of the lines above it is unchanged. The belt slot is left out: step 5 owns the runner pane and its
+#   freshness. Cost: the loop exists twice; monitors.json is the one source.
 while IFS=$'\t' read -r pname pwhat pcmd pchk; do
   pcmd="${pcmd//\$\{repo\}/$SL_REPO}"; pchk="${pchk//\$\{repo\}/$SL_REPO}"
   pst="$("$MON" status 2>/dev/null)"
@@ -139,9 +176,9 @@ while IFS=$'\t' read -r pname pwhat pcmd pchk; do
   elif ! apply; then failln "pane-$pname" "$([ "$pup" = 1 ] && echo "slot is up but its check failed" || echo "slot is not running $pwhat")"
   elif "$MON" take "$pname" "$pname" -- "$pcmd" >/dev/null 2>&1; then fixedln "pane-$pname" "$pwhat $([ "$pup" = 1 ] && echo restarted || echo 'plugged in')"
   else failln "pane-$pname" "monitors.sh take $pname failed"; fi
-done < <(jq -r '.tabs[].reserved[] | select(.command != null) | [.name, .what, .command, (.check // "")] | @tsv' "$MC")
+done < <(jq -r --arg belt "$bslot" '.tabs[].reserved[] | select(.command != null and .name != $belt) | [.name, .what, .command, (.check // "")] | @tsv' "$MC")
 
-# 6. the guard, once. The count is of sessions whose pane is gone and that the guard can re-arm; see the breadcrumb for why
+# 7. the guard, once. The count is of sessions whose pane is gone and that the guard can re-arm; see the breadcrumb for why
 #    that is a WARN and not a FAILED.
 if [ "$(sl_cfg .require_guard)" = true ]; then
   if ! command -v compaction-guard >/dev/null 2>&1; then failln compaction-guard "not on PATH"
@@ -157,7 +194,7 @@ if [ "$(sl_cfg .require_guard)" = true ]; then
   fi
 else skipln compaction-guard "require_guard is false"; fi
 
-# 7. tickets left open. In progress with no seat record that is open and answered for by herdr: the queue resumes it.
+# 8. tickets left open. In progress with no seat record that is open and answered for by herdr: the queue resumes it.
 #    A ticket file starts with a JSON frontmatter between two --- lines (work-order skill); archive/ is closed work.
 while IFS= read -r tf; do
   fm="$(awk 'NR == 1 && $0 == "---" { on = 1; next } on && $0 == "---" { exit } on' "$tf")"

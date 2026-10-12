@@ -80,6 +80,14 @@ fi
 #   plugs in every reserved slot that has one, needed no change; a new loop for watchers would be a second way to start a
 #   pane. JSON has no comments, so the reason lives here. Cost: bringup now fails (500) when it cannot start either
 #   pane, and the watcher panes need unfreeze.sh and compaction-guard on PATH wherever herdr was started.
+# BREADCRUMB 2026-10-11 - WO-20261011-6842. What broke: on 2026-10-11 nothing started the route runner or watched the flow, so a
+#   line sat still for 22 minutes with every gate record posted (18:01Z to 18:23Z) and nothing said so. Why this fix: monitors.json
+#   slots 2.2.2 (runner) and 2.2.3 (flow) carry factory/bin/route.sh run and factory/bin/flow.sh run, in that order because the
+#   flow watch judges the belt the runner keeps; this loop already plugs in every reserved slot that has a command, so it needed
+#   no change and recover.sh's belt node restarts the same slot through monitors.sh take. Rejected: a second start path for the
+#   runner (WO-20261011-5355 - Belt on: bringup.sh starts the route runner in its own pane before any seat and seat.sh refuses a
+#   seat while the belt is stopped still owns the refusal of a seat while the belt is stopped). Cost: bringup now fails (500)
+#   when either pane cannot be plugged in, and both need jq and herdr on PATH where herdr was started.
 MC="${COQ_MONITORS_CONFIG:-$SL_HERDR/config/monitors.json}"
 # BREADCRUMB 2026-10-11 - WO-20261011-ceea. What broke: this loop judged a pane by its label alone, and the label outlives the
 #   process: a blueprint server killed in its pane left "2.2.2 blueprint dev server - blueprint-dev [..] in use", so --check said ok

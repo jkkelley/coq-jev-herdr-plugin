@@ -60,20 +60,32 @@
         },
         {
           "pos": "2.2.2",
+          "name": "runner",
+          "what": "route runner",
+          "command": "${repo}/factory/bin/route.sh run"
+        },
+        {
+          "pos": "2.2.3",
+          "name": "flow",
+          "what": "flow watch",
+          "command": "${repo}/factory/bin/flow.sh run"
+        },
+        {
+          "pos": "2.3.1",
           "name": "blueprint-dev",
           "what": "blueprint dev server",
           "command": "${repo}/report/blueprint/serve.sh dev",
           "check": "${repo}/report/blueprint/serve.sh --check dev"
         },
         {
-          "pos": "2.2.3",
+          "pos": "2.3.2",
           "name": "blueprint-uat",
           "what": "blueprint uat server",
           "command": "${repo}/report/blueprint/serve.sh uat",
           "check": "${repo}/report/blueprint/serve.sh --check uat"
         },
         {
-          "pos": "2.3.1",
+          "pos": "2.3.3",
           "name": "blueprint-stable",
           "what": "blueprint stable server",
           "command": "${repo}/report/blueprint/serve.sh stable",
