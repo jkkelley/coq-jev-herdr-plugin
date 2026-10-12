@@ -53,6 +53,46 @@
 
 
 
+
+## Checkpoint 2026-10-12 16:59 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-ee9c on WO-20261012-ee9c - Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each pane resolved to the Claude session running in it every tick. Treehouse slot 8, branch feat/scoped-guard-watch-monitor-slot-1-1-2-runs-the-g, no PR yet. Test pane wD3:pB7, run only through herdr/bin/testpane.sh.
+
+#### Toolchain
+
+- Code is complete: seat-lib.sh resolver and target list, guardwatch.sh, unfreeze.sh sessions_of, seat.sh claude_session_set, herdr.json keys with schema, monitors.json slot 1.1.2, stub claude and stub guard, cases 04, 06, 17.
+- Full suite green from the test pane: tests: 17 passed, 0 failed. Live read-only check of sl_pane_session on the stable herdr session resolved this seat's own pane to its own session id.
+- docs/sops/SOP-0003 documents the watch (docs.sh verify ok).
+
+#### Active Tasks
+
+- Steps A (a14c459), B (04c338f) landed; step C (seat.sh claude_session, SOP-0003) is this commit.
+- Next: close-out per AGENTS.md. work-order.sh evidence --observed for AC-H1..AC-H5, retro note, push, one PR with the criteria as the body, work-order.sh submit --pr N, work-order.sh done, push the archive move, post pr.opened 100 with sha and pr, stop.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+#### Decisions
+
+- seat.sh polls sl_pane_session up to session_wait_seconds after the start branch; a null claude_session is filled by the next guardwatch tick.
+- Backlog item lh51y is not moved to done by this ticket; its done-when is proven by case 17 and the architect closes it after the merge.
+- recover.sh is unchanged.
+
+#### Lessons Learned
+
+- A wait loop in a Bash call that outlasts 120 s is moved to a harness background job; poll the test pane output file in bursts under 100 s.
+
+### Hydration prompt
+
+Resume WO-20261012-ee9c at close-out: read the ticket, record evidence --observed for AC-H1..AC-H5 from the case 17, 06, 04 output in the scratchpad (a1.out, b1.out, full1.out), add the retro note, open one PR, submit, done, post pr.opened 100.
+
 ## Checkpoint 2026-10-12 16:47 UTC
 
 ### Current state
