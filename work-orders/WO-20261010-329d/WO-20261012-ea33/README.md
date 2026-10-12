@@ -8,4 +8,4 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261012-8d87` | ready | p0 | - | [Replay fixtures: one golden case per routes row and per policies row under scheduler/testdata/replay, derived from the factory suite's cases, synthetic, with a schema and a check script](WO-20261012-8d87-replay-fixtures-one-golden-case-per-routes-row-a.md) |
+| `WO-20261012-8d87` | in-progress | p0 | - | [Replay fixtures: one golden case per routes row and per policies row under scheduler/testdata/replay, derived from the factory suite's cases, synthetic, with a schema and a check script](WO-20261012-8d87-replay-fixtures-one-golden-case-per-routes-row-a.md) |
