@@ -51,6 +51,22 @@
 
 
 
+
+## Checkpoint 2026-10-12 15:44 UTC
+
+### Current state
+#### Infrastructure
+WO-20261012-da52 - Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand.
+PR 25 open; review 422 62gz9 on AC-H2 answered with a ticket note and a RUNBOOK cut-over section.
+#### Toolchain
+Docs-only change since the last green run (factory and herdr suites, 16 cases each).
+#### Active Tasks
+Post pr.opened with --pr 25 --sha, then hold.
+#### Blockers
+The cut-over (stop slot 2.3.3, delete the interim script, start the repo bus) is the architect's, after the merge.
+### Hydration prompt
+Hold; wake on record.review_changes_requested for WO-20261012-da52.
+
 ## Checkpoint 2026-10-12 15:32 UTC
 
 ### Current state
