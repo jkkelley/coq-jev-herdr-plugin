@@ -11,7 +11,7 @@ export TREEHOUSE_STUB_LOG="$WORLD/treehouse.log"; : > "$TREEHOUSE_STUB_LOG"
 T=WO-20261010-8777; N=verifier-wo-20261010-8777
 ORIGIN="$WORLD/origin.git"; SEED="$WORLD/seed"
 git init -q --bare "$ORIGIN"; git clone -q "$ORIGIN" "$SEED" 2>/dev/null
-git -C "$SEED" commit -q --allow-empty -m "seed main" && git -C "$SEED" push -q origin main || { echo "case 17: could not seed the origin"; exit 1; }
+git -C "$SEED" commit -q --allow-empty -m "seed main" && git -C "$SEED" push -q origin main || { echo "case 22: could not seed the origin"; exit 1; }
 export TREEHOUSE_STUB_ORIGIN="$ORIGIN"
 held() { treehouse status --json | jq --arg h "$1" '[.[] | select(.lease_holder == $h)] | length'; }
 f="$(find "$REPO/work-orders" -name "$T-*.md" -not -path '*/archive/*' | head -1)"

@@ -1,0 +1,17 @@
+# coq-supervisor.service - one supervisor tick (WO-20261012-b800). Rendered by herdr/bin/supervisor-units.sh, never copied by hand:
+# @REPO@ is the main checkout and @PATH@ the directories of the commands a tick calls (jq, herdr, treehouse, node, podman, ...).
+[Unit]
+Description=coq supervisor tick: herdr, podman, the monitor panes, the belt, the owner page and the seats
+Documentation=file://@REPO@/docs/sops/
+After=herdr-stable.service
+
+[Service]
+Type=oneshot
+Environment=HOME=%h
+Environment=PATH=@PATH@
+WorkingDirectory=@REPO@
+ExecStart=@REPO@/herdr/bin/supervisor.sh
+# Every step inside a tick is killed after supervisor.step_timeout_seconds (herdr.json); this is the backstop for the tick as a whole,
+# so a tick that hangs is killed and the timer starts the next one instead of waiting for it for ever.
+TimeoutStartSec=420
+KillMode=control-group

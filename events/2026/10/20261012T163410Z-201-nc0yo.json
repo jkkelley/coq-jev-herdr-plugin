@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T163410Z-201-nc0yo",
+  "at": "2026-10-12T16:34:10Z",
+  "code": 201,
+  "seat": "reviewer-72a0",
+  "kind": "review.passed",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:pAZ",
+  "note": "PR 29 passes: AC-H1 and AC-H2 have evidence, AC-H2 accepted on architect ruling 15:51Z (4 escalation rows stay, owned by 9b2c); make lint ok, no em dash",
+  "evidence": [],
+  "observations": [],
+  "to": "merger",
+  "sha": "4d5dbac6e7b398f9b3851655dee07f9fbbbd38f7",
+  "pr": 29
+}

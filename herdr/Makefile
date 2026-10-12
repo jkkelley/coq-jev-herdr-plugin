@@ -6,6 +6,8 @@
 #   make -C herdr check NAME=..   / down NAME=..  / audit
 #   make -C herdr bringup         the bring-up DAG (bin/bringup.sh); recover [MODE=--check|--apply]
 #   make -C herdr monitors        the three 3x3 monitoring tabs (bin/monitors.sh grid)
+#   make -C herdr supervisor [CHECK=1]   one supervisor tick now (bin/supervisor.sh); CHECK=1 changes nothing
+#   make -C herdr supervisor-install / supervisor-uninstall / supervisor-status   the systemd units that run it at boot and every 30 s (owner or architect, not a seat)
 #   make -C herdr unfreeze SEAT=.. [FORCE=1] / unfreeze-all   break glass for a stuck compaction-guard lease (bin/unfreeze.sh)
 SHELL := /usr/bin/env bash
 .SHELLFLAGS := -euo pipefail -c
@@ -13,9 +15,9 @@ SHELL := /usr/bin/env bash
 HERE := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 WORKTREE ?= $(abspath $(HERE)..)
 MODE ?= --check
-.PHONY: help test image lint up check down audit bringup recover monitors unfreeze unfreeze-all
+.PHONY: help test image lint up check down audit bringup recover monitors unfreeze unfreeze-all supervisor supervisor-install supervisor-uninstall supervisor-status
 help:
-	@sed -n '1,8p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
+	@sed -n '1,12p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
 test:
 	bash $(HERE)tests/run.sh
 image:
@@ -46,3 +48,11 @@ unfreeze:
 	$(HERE)bin/unfreeze.sh $(SEAT) $(if $(FORCE),--force)
 unfreeze-all:
 	$(HERE)bin/unfreeze.sh --all
+supervisor:
+	$(HERE)bin/supervisor.sh $(if $(CHECK),--check)
+supervisor-install:
+	$(HERE)bin/supervisor-units.sh install
+supervisor-uninstall:
+	$(HERE)bin/supervisor-units.sh uninstall
+supervisor-status:
+	$(HERE)bin/supervisor-units.sh status

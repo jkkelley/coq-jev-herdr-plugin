@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T172143Z-100-dqqvf",
+  "at": "2026-10-12T17:21:43Z",
+  "code": 100,
+  "seat": "worker-wo-20261012-72a0",
+  "kind": "work.started",
+  "ticket": "WO-20261012-72a0",
+  "pane": "wD3:p8D",
+  "note": "worker: PR 29 CONFLICTING with main 55e799e (PR 26) after review; merging origin/main by owner order, no 409 round trip",
+  "evidence": [],
+  "observations": []
+}
