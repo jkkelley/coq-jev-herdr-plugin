@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<factory-spec version="2.0.0" supersedes="1.1.0" generated="2026-10-12T18:25:45Z" basis="main f329478" source-repo="coq-jev-herdr-plugin">
+<factory-spec version="2.0.0" supersedes="1.1.0" generated="2026-10-12T19:46:02Z" basis="main f7a891c" source-repo="coq-jev-herdr-plugin">
   <contents>
     <entry ref="purpose">purpose: what the factory is, in one sentence</entry>
     <entry ref="copy-rule">copy rule: what this file never carries, how it is checked, with GOOD and NEVER</entry>
-    <entry ref="changes">changes since 1.1.0: 7 rules dropped, 46 updated, 52 added</entry>
+    <entry ref="changes">changes since 1.1.0: 7 rules dropped, 51 updated, 68 added</entry>
     <entry ref="amendments">amendments: 2 refusals of requested wording, carried from 1.1.0</entry>
     <entry ref="glossary">glossary: the terms every section uses</entry>
-    <entry ref="S1">S1 small-loop: roles, stations, briefs, records, codes, queue, gates, build board (81 rules)</entry>
-    <entry ref="S2">S2 big-loop: route runner, rows and actions, ledger, belt, flow watch, standing policies, pages (66 rules)</entry>
-    <entry ref="S3">S3 herdr: panes, grids, seat lifecycle, test panes, adopt, supervisor, watches, break glass, compaction (87 rules)</entry>
+    <entry ref="S1">S1 small-loop: roles, stations, briefs, records, codes, queue, gates, build board (84 rules)</entry>
+    <entry ref="S2">S2 big-loop: route runner, rows and actions, gate rules, ledger, belt, flow watch, standing policies, pages (77 rules)</entry>
+    <entry ref="S3">S3 herdr: panes, grids, seat lifecycle, test panes, adopt, supervisor, watches, break glass, compaction (89 rules)</entry>
     <entry ref="S4">S4 a2a: record fields, kinds, prose limits, receipts, head and break glass fields (28 rules)</entry>
     <entry ref="S5">S5 determinism: scripts own formats, config, lint, CI, schemas, graph, checked exports (44 rules)</entry>
     <entry ref="S6">S6 port-notes: each primitive in bash and in PowerShell 5.1 (42 rules)</entry>
     <entry ref="S7">S7 agents: the nine role files in full: model, effort, permissions, inputs, outputs, records, wakes, steps</entry>
-    <entry ref="S8">S8 workflows: every routes row as an edge, the actions, flow gates, policies and mermaid diagrams</entry>
+    <entry ref="S8">S8 workflows: every routes row as an edge, the actions, gate predicates, flow gates, policies and mermaid diagrams</entry>
     <entry ref="S9">S9 runbooks-and-sops: every runbook and SOP step list, in order</entry>
     <entry ref="S10">S10 schemas-and-codes: event, factory record, role and routes schemas, status codes, exit codes</entry>
   </contents>
@@ -45,6 +45,8 @@
     <change rule="S1-045" action="updated" source="graph/nodes/STC-http-shaped.json">Updated to match main: 200 DONE.</change>
     <change rule="S1-046" action="updated" source="graph/nodes/STC-http-shaped.json">Updated to match main: 201 PASSED.</change>
     <change rule="S1-047" action="updated" source="graph/nodes/STC-http-shaped.json">Updated to match main: 300 ROUTED.</change>
+    <change rule="S1-048" action="updated" source="factory/config/routes.json">Updated to match main: 409 CONFLICT.</change>
+    <change rule="S1-049" action="updated" source="factory/config/routes.json">Updated to match main: 422 FAILED.</change>
     <change rule="S1-050" action="updated" source="factory/config/routes.json">Updated to match main: 423 BLOCKED.</change>
     <change rule="S1-052" action="updated" source="factory/bin/route.sh">Updated to match main: 500 FAILURE.</change>
     <change rule="S1-059" action="updated" source="herdr/layouts/seat-1x2.json">Updated to match main: Seat tab layout.</change>
@@ -57,6 +59,7 @@
     <change rule="S1-041" action="updated" source="events/bin/event.sh">Updated to match main: One events root.</change>
     <change rule="S2-001" action="updated" source="factory/bin/route.sh">Re-cited to a file on main: System runs the loop.</change>
     <change rule="S2-002" action="updated" source="AGENTS.md">Re-cited to a file on main: Hand steps become rows.</change>
+    <change rule="S2-003" action="updated" source="factory/bin/route.sh">Updated to match main: Route runner.</change>
     <change rule="S2-006" action="updated" source="factory/config/routes.schema.json">Updated to match main: Row shape.</change>
     <change rule="S2-008" action="updated" source="factory/RUNBOOK.md">Updated to match main: wake.</change>
     <change rule="S2-012" action="updated" source="factory/bin/route.sh">Updated to match main: with names the subject.</change>
@@ -67,12 +70,14 @@
     <change rule="S2-028" action="updated" source="factory/RUNBOOK.md">Updated to match main: Runner on another repo.</change>
     <change rule="S2-054" action="updated" source="factory/config/routes.json">Updated to match main: Routine rows.</change>
     <change rule="S3-012" action="updated" source="herdr/config/monitors.json">Updated to match main: Four monitoring grids.</change>
+    <change rule="S3-017" action="updated" source="herdr/bin/monitors.sh">Updated to match main: Busy pane.</change>
     <change rule="S3-018" action="updated" source="herdr/config/monitors.json">Updated to match main: Reserved cells.</change>
     <change rule="S3-023" action="updated" source="herdr/bin/seat.sh">Updated to match main: Seat variables.</change>
     <change rule="S3-041" action="updated" source="herdr/bin/seat.sh">Updated to match main: Down.</change>
     <change rule="S3-045" action="updated" source="herdr/bin/bringup.sh">Updated to match main: Bring-up order.</change>
     <change rule="S3-046" action="updated" source="herdr/bin/recover.sh">Updated to match main: Recovery.</change>
     <change rule="S3-048" action="updated" source="herdr/bin/unfreeze.sh">Updated to match main: Guard lease release.</change>
+    <change rule="S3-052" action="updated" source=".claude/settings.json">Updated to match main: Guard hooks.</change>
     <change rule="S3-056" action="updated" source="herdr/bin/seat.sh">Updated to match main: Ack stall.</change>
     <change rule="S4-002" action="updated" source="events/schema/event.schema.json">Updated to match main: Event record fields.</change>
     <change rule="S4-004" action="updated" source="events/schema/event.schema.json">Updated to match main: System kinds.</change>
@@ -84,9 +89,9 @@
     <change rule="S5-023" action="updated" source="Jenkinsfile">Updated to match main: Tests in containers.</change>
     <change rule="S5-041" action="updated" source="graph/bin/graph.sh">Updated to match main: Component runbook edge.</change>
     <change rule="S5-042" action="updated" source="factory/config/routes.schema.json">Updated to match main: Ignore action.</change>
-    <change rule="S1-082" to="S1-083" action="added" source="factory/bin/route.sh">2 rules added for what main built since 1.1.0.</change>
-    <change rule="S2-055" to="S2-070" action="added" source="factory/RUNBOOK.md">16 rules added for what main built since 1.1.0.</change>
-    <change rule="S3-064" to="S3-087" action="added" source="herdr/config/monitors.json">24 rules added for what main built since 1.1.0.</change>
+    <change rule="S1-082" to="S1-086" action="added" source="factory/bin/gate.sh">5 rules added for what main built since 1.1.0.</change>
+    <change rule="S2-055" to="S2-081" action="added" source="factory/RUNBOOK.md">27 rules added for what main built since 1.1.0.</change>
+    <change rule="S3-064" to="S3-089" action="added" source="herdr/config/monitors.json">26 rules added for what main built since 1.1.0.</change>
     <change rule="S4-025" to="S4-028" action="added" source="factory/bin/route.sh">4 rules added for what main built since 1.1.0.</change>
     <change rule="S5-043" to="S5-045" action="added" source="specs/bin/export-check.sh">3 rules added for what main built since 1.1.0.</change>
     <change rule="S6-040" to="S6-042" action="added" source="herdr/bin/supervisor-units.sh">3 rules added for what main built since 1.1.0.</change>
@@ -161,11 +166,11 @@
     <rule id="S1-045" title="200 DONE" level="MUST" source="graph/nodes/STC-http-shaped.json">200 DONE: an integration or an owner action finished: merged, a break glass the owner granted, and policy.applied, a standing default taken.</rule>
     <rule id="S1-046" title="201 PASSED" level="MUST" source="graph/nodes/STC-http-shaped.json">201 PASSED: a gate passed: test.passed, review.passed, verified, and the one command of a break glass finished.</rule>
     <rule id="S1-047" title="300 ROUTED" level="MUST" source="graph/nodes/STC-http-shaped.json">300 ROUTED: a record moved on: request.forwarded, a break glass request on its way to the owner, and the route runner's record.routed receipt.</rule>
-    <rule id="S1-048" title="409 CONFLICT" level="MUST" source="factory/config/routes.json">409 CONFLICT: merge.conflict; the routes table wakes the worker with the record.</rule>
-    <rule id="S1-049" title="422 FAILED" level="MUST" source="factory/config/routes.json">422 FAILED: test.failed or review.changes, attempt 1 to 3. Attempts 1 and 2 wake the worker; attempt 3 is escalated to the architect as 423.</rule>
+    <rule id="S1-048" title="409 CONFLICT" level="MUST" source="factory/config/routes.json">409 CONFLICT: merge.conflict; the routes table wakes the worker with the PR, the head sha and the words merge main (fetch, merge origin/main, fix the conflicts, push, post pr.opened), then downs the merger.</rule>
+    <rule id="S1-049" title="422 FAILED" level="MUST" source="factory/config/routes.json">422 FAILED: test.failed or review.changes, attempt 1 to 3. Attempts 1 and 2 wake the worker; attempt 3 is escalated to the architect as 423. A test.failed on a head the worker has since moved past is held.</rule>
     <rule id="S1-050" title="423 BLOCKED" level="MUST" source="factory/config/routes.json">423 BLOCKED: blocked or escalated. The first 423 on a ticket goes to the architect, the second to the owner as a decision card; a standing policy may answer one with its default once its deadline passes.</rule>
     <rule id="S1-051" title="429 REFUSED" level="MUST" source="herdr/bin/seat.sh">429: a seat refused over a cap, its role's max_seats or the host's max_agents. The refusal is recorded as a 429 note and nothing is built.</rule>
-    <rule id="S1-052" title="500 FAILURE" level="MUST" source="factory/bin/route.sh">500: the system failed: no route, a failed route action, an unreadable or interrupted record, a failed bring-up node, a stalled line, belt or runner pane, a stalled or hand-started agent. Every code of 500 or more wakes the monitor.</rule>
+    <rule id="S1-052" title="500 FAILURE" level="MUST" source="factory/bin/route.sh">500: the system failed: no route, a failed route action or gate check, an unreadable or interrupted record, a failed bring-up node, a stalled line, belt or runner pane, a stalled or hand-started agent. Any 500 or more wakes the monitor.</rule>
     <rule id="S1-053" title="400 REJECTED" level="MUST" source="playbooks/orchestrator.md" status="draft">400: the orchestrator rejects a request that fails the request schema, naming the failing key. No request schema exists in the source yet.</rule>
     <rule id="S1-054" title="412 GATE_FAILED" level="SHOULD" source="graph/nodes/STC-http-shaped.json" status="draft">412 GATE_FAILED is in the locked code set, but no script or role emits it yet.</rule>
     <rule id="S1-055" title="Queue item file" level="MUST" source="queue/bin/queue.sh">The queue is a directory of files &lt;p0..p3&gt;-&lt;YYYYMMDDTHHMMSSZ&gt;-&lt;ticket&gt;.json holding ticket, priority, enqueued, from (a record id) and lease. Enqueue is a write; one item per ticket; no lock.</rule>
@@ -195,30 +200,33 @@
     <rule id="S1-079" title="B5 interface agent" level="SHOULD" source="playbooks/interface-agent.md" status="draft">B5: the interface agent owns the page; owner requests become records and the done line comes from a verified record. Its script is not in the source yet.</rule>
     <rule id="S1-080" title="B6 first ticket" level="SHOULD" source="report/loop/config/board.json" status="draft">B6: a first ticket goes through the line with a seat at every station and no record written by hand.</rule>
     <rule id="S1-081" title="B7 foundation" level="SHOULD" source="report/loop/config/board.json" status="draft">B7: the foundation branch goes through the line: a reviewer seat passes the core specs for the first gate.</rule>
-    <rule id="S1-082" title="Gate records name the head" level="MUST" source="factory/bin/route.sh">pr.opened, test.passed and review.passed carry the PR number and head sha as fields (event writer --pr, --sha), so the merger compares the two 201s by field, never by note.</rule>
-    <rule id="S1-083" title="Station seats come up by route" level="MUST" source="factory/config/routes.json">pr.opened brings the tester up, test.passed the reviewer and review.passed the merger through seat rows; ticket.cut only wakes a worker, which is still brought up by the seat script.</rule>
+    <rule id="S1-082" title="Gate records name the head" level="MUST" source="factory/bin/gate.sh">pr.opened, test.passed and review.passed carry the PR number and head sha as fields (event writer --pr, --sha), so the gate script compares heads by field, never by note.</rule>
+    <rule id="S1-083" title="Station seats come up by route" level="MUST" source="factory/config/routes.json">pr.opened brings the tester up, test.passed on the current head the reviewer, and review.passed on a tested head the merger, through seat rows; ticket.cut only wakes a worker, still brought up by the seat script.</rule>
+    <rule id="S1-084" title="Merge only a tested head" level="MUST" source="factory/RUNBOOK.md">The merger is seated only when the review names the head of the newest test.passed before it and of the ticket's newest pr.opened; a review on any other head is held, and the flow watch notes it as a stall.</rule>
+    <rule id="S1-085" title="A moved head drops the older run" level="MUST" source="factory/RUNBOOK.md">A pr.opened on a new head while the older head has no tester result wakes the tester with that older record to drop; a tester result on any head but the newest pr.opened is held.</rule>
+    <rule id="S1-086" title="Same sha or same head" level="SHOULD" source="roles/merger.json" status="draft">The merger's role asks for both 201s on the same sha, while heads_match seats it when the two heads differ only under events/; until the role says same head, the two rules can disagree.</rule>
   </section>
 
   <section id="S2" name="big-loop">
     <rule id="S2-001" title="System runs the loop" level="MUST" source="factory/bin/route.sh">The system runs the loop, never an agent: a record wakes the next seat with no human or architect prompt, a seat that posted its record is taken down by the system, and the board shows green from records only.</rule>
     <rule id="S2-002" title="Hand steps become rows" level="MUST" source="AGENTS.md">Every hand step seen while running the small loop becomes a routes row or a ticket, never a habit; an idle agent and a by-hand nudge are defects.</rule>
-    <rule id="S2-003" title="Route runner" level="MUST" source="factory/bin/route.sh">The route runner (the belt) reads each new record, matches it against the routes table top to bottom, performs the first matching row and writes one record.routed 300 receipt addressed to that row's role.</rule>
+    <rule id="S2-003" title="Route runner" level="MUST" source="factory/bin/route.sh">The route runner (the belt) reads each new record, matches the routes table top to bottom, asks the first matching row's when predicate if any, then acts or holds, and writes one record.routed 300 receipt to the row's role.</rule>
     <rule id="S2-004" title="The table is the behaviour" level="MUST" source="factory/RUNBOOK.md">No runner line reads a kind, code or note except to match a row. New behaviour is a new row plus lint and a PR; only a new action verb needs runner code, and that is a design change.</rule>
     <rule id="S2-005" title="Rows live next tick" level="MUST" source="factory/RUNBOOK.md">The runner rereads the routes file every tick, so a new row is live on the next tick with no restart and no change to the runner.</rule>
-    <rule id="S2-006" title="Row shape" level="MUST" source="factory/config/routes.schema.json">A row is match, do and to, plus with, code, line, down or priority_from. match keys: kind, code, code_gte, attempt, attempt_lt, escalations, escalations_lt. do: enqueue, wake, seat, escalate, notify_owner, break-glass, ignore or none.</rule>
+    <rule id="S2-006" title="Row shape" level="MUST" source="factory/config/routes.schema.json">Row: match, do, to; optional with, code, line, down, when, supersede, priority_from. match: kind, code, code_gte, attempt, attempt_lt, escalations, escalations_lt. do: enqueue, wake, seat, escalate, notify_owner, break-glass, ignore, none.</rule>
     <rule id="S2-007" title="Matching" level="MUST" source="factory/bin/route.sh">A row matches when every key it sets holds. A record without attempt counts as 1; escalations counts the escalated records the runner wrote for the ticket before this record. First match wins.</rule>
-    <rule id="S2-008" title="wake" level="MUST" source="factory/RUNBOOK.md">wake prompts the seat the row's role names (the role file's label with the ticket lowercased) with exactly 'record &lt;id&gt; playbook &lt;playbooks dir&gt;/&lt;role&gt;.md'; a with pr row adds ' pr N' and ' sha S' after the id.</rule>
+    <rule id="S2-008" title="wake" level="MUST" source="factory/RUNBOOK.md">wake prompts the seat of the row's role (the role file's label with the ticket lowercased) with exactly 'record &lt;id&gt; playbook &lt;dir&gt;/&lt;role&gt;.md'; with pr, with merge-main and supersede add their words after the id.</rule>
     <rule id="S2-009" title="notify_owner" level="MUST" source="factory/RUNBOOK.md">notify_owner sends the same prompt to the interface agent with 'line done' or 'line decision' between the record id and the playbook path.</rule>
     <rule id="S2-010" title="enqueue" level="MUST" source="factory/bin/route.sh">enqueue puts the record's ticket on the queue with the record id as from, and the record's priority when it carries p0 to p3; a record without a ticket cannot be enqueued.</rule>
     <rule id="S2-011" title="escalate" level="MUST" source="factory/bin/route.sh">escalate writes an escalated record with the row's code, the row's role as addressee and the same ticket, under the runner's own seat name.</rule>
-    <rule id="S2-012" title="with names the subject" level="MUST" source="factory/bin/route.sh">with ticket, record or verify says what the woken seat acts on; with pr also carries the record's pr and sha on the wake line. Nothing else of a record is typed into a prompt.</rule>
-    <rule id="S2-013" title="Forward rows" level="MUST" source="factory/config/routes.json">Rows: request.forwarded 300 enqueue for architect; ticket.cut 100 wake worker; pr.opened 100 seat tester; test.passed 201 seat reviewer; review.passed 201 seat merger; merged 200 wake architect to verify.</rule>
-    <rule id="S2-014" title="Kickback rows" level="MUST" source="factory/config/routes.json">Rows: test.failed or review.changes 422 below attempt 3 wake the worker, at attempt 3 escalate 423 to the architect; merge.conflict 409 wakes the worker; each also downs its gate seat. verified 201 notifies the owner, line done.</rule>
+    <rule id="S2-012" title="with names the subject" level="MUST" source="factory/bin/route.sh">with ticket, record or verify says what the woken seat acts on; with pr carries the record's pr and sha on the wake line, and with merge-main those plus the words merge main. Nothing else of a record is typed into a prompt.</rule>
+    <rule id="S2-013" title="Forward rows" level="MUST" source="factory/config/routes.json">Rows: request.forwarded 300 enqueue architect; ticket.cut 100 wake worker; pr.opened 100 seat tester, supersede; test.passed 201 when head_current seat reviewer; review.passed 201 when heads_match seat merger; merged 200 wake architect.</rule>
+    <rule id="S2-014" title="Kickback rows" level="MUST" source="factory/config/routes.json">Rows: test.failed 422 (when head_current) and review.changes 422 below attempt 3 wake the worker, at attempt 3 escalate 423 to the architect; merge.conflict 409 wakes it with merge-main; each downs its gate seat. verified 201: line done.</rule>
     <rule id="S2-015" title="Blocked and failure rows" level="MUST" source="factory/config/routes.json">Rows: blocked 423 with no earlier escalation escalates to the architect; with one, it notifies the owner, line decision; seat.down 500 and any code at or above 500 wake the monitor.</rule>
     <rule id="S2-016" title="Max attempts" level="MUST" source="factory/config/routes.schema.json">The routes schema fixes max_attempts at 3.</rule>
     <rule id="S2-017" title="No match, failed action" level="MUST" source="factory/bin/route.sh">A record no row matches and an action that fails each become a 500 note addressed to the monitor. The runner never retries a failed action.</rule>
     <rule id="S2-018" title="Own records" level="NEVER" source="factory/bin/route.sh">The runner never routes a record carrying its own seat name, which keeps a receipt from being routed again. Never write a record under the runner's seat name by hand: it is never routed.</rule>
-    <rule id="S2-019" title="Claim then act" level="MUST" source="factory/bin/route.sh">The runner claims a record by creating state/routed/&lt;id&gt; exclusively before acting, then writes the outcome: done &lt;action&gt;, own, ignored, unrouted, failed, interrupted or unreadable. A claimed record is never routed again.</rule>
+    <rule id="S2-019" title="Claim then act" level="MUST" source="factory/bin/route.sh">The runner claims a record by creating state/routed/&lt;id&gt; exclusively before acting, then writes the outcome: done &lt;action&gt;, own, ignored, held &lt;predicate&gt;, unrouted, failed, interrupted or unreadable. It is never routed again.</rule>
     <rule id="S2-020" title="Interrupted claims" level="MUST" source="factory/bin/route.sh">At start, a ledger entry still 'claimed' means the runner died mid-action: it writes a 500 naming the record and marks it interrupted. It never repeats that wake.</rule>
     <rule id="S2-021" title="Route again on purpose" level="MUST" source="factory/RUNBOOK.md">To route a record again, delete its ledger file. That is the only supported way, and it is a decision, not a retry loop.</rule>
     <rule id="S2-022" title="First-start boundary" level="MUST" source="factory/bin/route.sh">On first start the runner writes the UTC stamp to state/since and routes only records named after it, so old records wake nobody; --from-start writes a zero boundary and routes the whole log.</rule>
@@ -251,7 +259,7 @@
     <rule id="S2-053" title="Lease TTLs" level="MUST" source="herdr/config/leases.json" status="draft">Every exclusive thing is a lease with a TTL (slot 14400 s, tier 86400 s, ticket 7200 s, seat 900 s) that the monitor releases on expiry with seat.stalled 500. Configured, but no script reads this file yet.</rule>
     <rule id="S2-054" title="Routine rows" level="MUST" source="factory/config/routes.json">Rows: seat.up 100, seat.down 100, note 100 and record.routed 300 do ignore: no seat is woken and no receipt is written, so a runner 500 under S2-017 means a real gap or a failed action, never routine traffic.</rule>
     <rule id="S2-055" title="seat action" level="MUST" source="factory/RUNBOOK.md">seat runs the seat script for the row's role on the record's ticket, then the same wake line. A live seat is left as it is, so the table never asks whether a seat is up.</rule>
-    <rule id="S2-056" title="down field" level="MUST" source="factory/bin/route.sh">A row's down names a role whose seat for the ticket the runner takes down after the row's action, even when that action failed; a failure of either is one 500.</rule>
+    <rule id="S2-056" title="down field" level="MUST" source="factory/bin/route.sh">A row's down names a role whose seat for the ticket the runner takes down after the row's action, even when that action failed; a failure of either is one 500. A held record skips the down.</rule>
     <rule id="S2-057" title="break-glass and none" level="MUST" source="factory/bin/route.sh">break-glass runs the seat script's break glass verb with the 200 record's id, and its exit 3 is a refusal already recorded as 423; none only writes the receipt. Neither reads a note.</rule>
     <rule id="S2-058" title="Serial runner" level="MUST" source="factory/RUNBOOK.md">The runner is serial: a seat row holds every later record until the seat script returns, about 45 s for a bring-up. Its pane must sit in a tab that holds a test pane, or every bring-up is refused.</rule>
     <rule id="S2-059" title="One merger" level="SHOULD" source="factory/RUNBOOK.md">The merger is one shared seat, so the down on merged and merge.conflict is safe only while one ticket merges at a time.</rule>
@@ -266,6 +274,17 @@
     <rule id="S2-068" title="Blueprint tiers" level="MUST" source="report/loop/RUNBOOK.md">Blueprint tiers dev, uat and stable: dev rebuilds its page every watch_seconds; uat and stable serve only a promoted build behind a current link. A page moves forward only by the promote script.</rule>
     <rule id="S2-069" title="Briefings from records" level="MUST" source="tools/bearings/RUNBOOK.md">An owner briefing is built from tickets, records and open PRs by a script and checked against the owner standard (words per item, prose budget, full titles); a violation refuses the whole send.</rule>
     <rule id="S2-070" title="In flight means in flight" level="MUST" source="tools/bearings/RUNBOOK.md">An in flight figure counts tickets an open PR names plus tickets in-progress or in-review on the checkout, once per id; a ticket started on its branch stays ready on main until its PR lands.</rule>
+    <rule id="S2-071" title="when predicate" level="MUST" source="factory/bin/route.sh">A row's when names a gate script predicate asked before the action: exit 0 routes the record, 1 holds it, and any other exit is a 500 naming the predicate and its exit code, never a silent hold.</rule>
+    <rule id="S2-072" title="Held record" level="MUST" source="factory/RUNBOOK.md">A held record gets one record.routed 300 receipt, 'held &lt;kind&gt; &lt;code&gt; (&lt;id&gt;): &lt;reason&gt;', and the ledger entry held &lt;predicate&gt;; nothing else: no wake, no seat, no down, no 500.</rule>
+    <rule id="S2-073" title="Why a hold skips down" level="MUST" source="factory/RUNBOOK.md">A hold skips the row's down on purpose: the tester seat is named per ticket and by then runs the newer head, so taking it down would end the run that counts.</rule>
+    <rule id="S2-074" title="Same head" level="MUST" source="factory/bin/gate.sh">Two shas are one head when they are equal, one is a prefix of the other, or their trees differ only under events/. A sha the repo lacks after one fetch from origin is an error (exit 4), never a difference.</rule>
+    <rule id="S2-075" title="head_current" level="MUST" source="factory/bin/gate.sh">head_current passes a record on the head of the ticket's newest pr.opened, and passes when there is none, either has no sha, or the record is that pr.opened; a record on any other head is held.</rule>
+    <rule id="S2-076" title="heads_match" level="MUST" source="factory/bin/gate.sh">heads_match holds a review with no sha, with no test.passed before it on the ticket or one with no sha, or on another head than that test's; then it asks head_current: a merge needs a tested, current head.</rule>
+    <rule id="S2-077" title="supersede" level="MUST" source="factory/bin/gate.sh">A supersede row asks the gate script for the ticket's older pr.opened that has a sha, no tester result after it (test.passed, test.failed or blocked) and another head; the wake line names it.</rule>
+    <rule id="S2-078" title="merge main" level="MUST" source="factory/bin/route.sh">with merge-main adds, after ' pr N sha S', ' merge main (git fetch origin, git merge origin/main, fix the conflicts, push, post pr.opened with the new sha)' to the worker's wake line.</rule>
+    <rule id="S2-079" title="Supersedes on the wake line" level="MUST" source="factory/bin/route.sh">When the gate script names an older record, a supersede row's wake line ends ' supersedes &lt;id&gt; (drop that run and post nothing for it)'; a malformed id or a gate failure is a 500.</rule>
+    <rule id="S2-080" title="Steps ride the wake line" level="SHOULD" source="factory/RUNBOOK.md" status="draft">The tester and worker role files do not yet mention supersedes or merge main, so the steps ride on the wake line in brackets; once the roles carry them the line can shrink to the bare tokens.</rule>
+    <rule id="S2-081" title="Busy consumer" level="MUST" source="factory/RUNBOOK.md">A gate record is not a stall while the consumer role's seat for the ticket reports agent_status working, until the record is busy_grace_seconds old; it is skipped without the latch, and a seat the multiplexer cannot report counts as idle.</rule>
   </section>
 
   <section id="S3" name="herdr">
@@ -285,7 +304,7 @@
     <rule id="S3-014" title="Never split after grid" level="NEVER" source="herdr/bin/monitors.sh">Never split a monitoring tab after its grid is drawn and never close a pane or tab there. A tab holding more than nine panes is reported and left alone; a busy unlabelled pane is never taken.</rule>
     <rule id="S3-015" title="No agent in a monitoring tab" level="NEVER" source="herdr/bin/monitors.sh">take refuses an agent command in a monitoring tab and grid reports any agent pane it finds there; agents come up only through the seat script, each in its own tab.</rule>
     <rule id="S3-016" title="Restart in place" level="MUST" source="herdr/bin/monitors.sh">The same job asking again restarts in the cell it already holds, released clean first, so a re-arm never takes a second cell. With no free cell of the kind, take exits 1 and lists what holds the cells.</rule>
-    <rule id="S3-017" title="Busy pane" level="MUST" source="herdr/bin/monitors.sh">A pane is busy when its foreground process group differs from its shell pid; release sends an interrupt only to a busy pane.</rule>
+    <rule id="S3-017" title="Busy pane" level="MUST" source="herdr/bin/monitors.sh">A pane is busy when its foreground process group is not its shell's, or a foreground process is not one of the shells the herdr config lists; release sends an interrupt only to a busy pane.</rule>
     <rule id="S3-018" title="Reserved cells" level="MUST" source="herdr/config/monitors.json">Reserved in tabs 1 and 2: 1.1.1 guard lease watcher, 1.1.2 guard watch, 1.1.3 orchestrator compaction watcher, 2.1.1 event tail, 2.1.2 queue list, 2.1.3 seat audit, 2.2.1 board watch, 2.2.2 route runner, 2.2.3 flow watch.</rule>
     <rule id="S3-019" title="Tool panes claim OPEN cells" level="MUST" source="tools/bearings/scripts/bearings.sh">The page server and its wait loop each claim the first pane of the caller's tab labelled with the OPEN tool prefix and relabel it; stop restores the old labels and closes nothing; a seat with no free OPEN cell is refused, exit 3.</rule>
     <rule id="S3-020" title="One door for seats" level="MUST" source="herdr/bin/seat.sh">The seat script is the one way a seat comes up, is checked, is taken down and is audited. Door 1 is a ticket (the ticket names the seat); door 2 is a fixed seat with a task.</rule>
@@ -320,7 +339,7 @@
     <rule id="S3-049" title="Exemptions" level="MUST" source="herdr/config/exemptions.schema.json">An exemption lifts one rule (seat.audit, guard.freeze or bringup.gate) for one seat or pane until a UTC time, with the owner's card id and a reason; the schema rejects one without a card id.</rule>
     <rule id="S3-050" title="Scratch sessions" level="MUST" source="herdr/tests/lib/world.sh">Seat tests run each case against its own headless scratch session with a private HOME and config and a stub agent on PATH, then stop and delete the session on exit.</rule>
     <rule id="S3-051" title="One compaction owner" level="MUST" source="bin/step.sh">Compaction has one owner, compaction-guard: a Claude seat compacts when its turn has ended and its context is at or over the role threshold (30 percent). Codex seats are exempt.</rule>
-    <rule id="S3-052" title="Guard hooks" level="MUST" source=".claude/settings.json">Five hooks (SessionStart, Stop, PreCompact, PostCompact, PreToolUse) call the guard hook and the status line calls the guard tap; they live in the project settings, so every worktree carries them.</rule>
+    <rule id="S3-052" title="Guard hooks" level="MUST" source=".claude/settings.json">Five hook events (SessionStart, Stop, PreCompact, PostCompact, PreToolUse) call the guard hook, SessionStart on compact also runs the resume checkpoint script, and the status line calls the guard tap; all live in the project settings.</rule>
     <rule id="S3-053" title="Tap or no seat" level="NEVER" source="graph/nodes/RSK-compaction-sensor.json">Never start a seat without the guard's status-line tap: its sensor reads 0 percent and the seat never compacts. The seat script refuses a Claude seat when the guard is not on PATH.</rule>
     <rule id="S3-054" title="Guard cycle" level="MUST" source="specs/SPEC-05-compaction-and-checkpoint.xml">At turn end over threshold the guard's Stop hook writes its checkpoint, freezes tool calls, types one /compact into the seat's own pane behind a composer check, and after PostCompact sends the resume card.</rule>
     <rule id="S3-055" title="Seat duties" level="MUST" source="specs/SPEC-05-compaction-and-checkpoint.xml">A seat's only compaction duties: answer a refused tool call (RES-400) in text and end the turn, and reply with the ack line, once, to the guard's GOV-100 memo.</rule>
@@ -356,6 +375,8 @@
     <rule id="S3-085" title="Restore" level="MUST" source="herdr/RUNBOOK.md">The role's settings come back when the command's 201 lands or after break_glass.ttl_seconds (600, at most 3599); a sweep pane restores every 15 s, and a seat that keeps bypass is a 500 in the audit.</rule>
     <rule id="S3-086" title="Every flip is bypass" level="MUST" source="herdr/RUNBOOK.md">Every break glass flips the seat to bypassPermissions, a dontAsk seat included; the guard hook fences the lifted territory and the ttl bounds the rest.</rule>
     <rule id="S3-087" title="Halt stops the supervisor" level="MUST" source="herdr/bin/supervisor.sh">The halt flag stops the supervisor as it stops recovery: a tick that finds it prints HALTED and changes nothing until the flag is removed.</rule>
+    <rule id="S3-088" title="Resume from own checkpoint" level="MUST" source="herdr/bin/resume-checkpoint.sh">After a compaction a SessionStart hook (matcher compact) prints the seat's own newest CONTEXT_STATE.md checkpoint into its context, so it resumes from its own resume line; it always exits 0, a miss is one line.</rule>
+    <rule id="S3-089" title="Compact hook in seat settings" level="MUST" source="herdr/config/herdr.json">A seat's rendered settings carry the same compact hook, bounded by resume_checkpoint.hook_timeout_seconds (10); the shells key lists the shell names a busy pane is judged against.</rule>
   </section>
 
   <section id="S4" name="a2a">
@@ -380,7 +401,7 @@
     <rule id="S4-019" title="Owner lines" level="MUST" source="graph/nodes/DEC-page-only-owner-channel.json">Owner-facing text is one or two lines plus a link, and every ticket in it carries its id and full title, never a bare id or a pointer such as 'the blocked one'.</rule>
     <rule id="S4-020" title="Blocked, never asked" level="MUST" source="specs/SPEC-03-dag-and-node-contract.xml">A node that lacks something posts blocked 423 with observations; it never asks the next seat.</rule>
     <rule id="S4-021" title="Black box" level="MUST" source="specs/SPEC-03-dag-and-node-contract.xml">A seat is replaceable by another runtime (Claude, Codex, System One) because only the record crosses the boundary.</rule>
-    <rule id="S4-022" title="Receipts" level="MUST" source="factory/bin/route.sh">Every routed record but an ignored one gets one record.routed 300 receipt naming kind, code, record id, action, addressee and any down, with the routed record's path as evidence.</rule>
+    <rule id="S4-022" title="Receipts" level="MUST" source="factory/bin/route.sh">Every routed record but an ignored one gets one record.routed 300 receipt naming kind, code, record id, action, addressee and any down, or held and why, with the routed record's path as evidence.</rule>
     <rule id="S4-023" title="Code families" level="MUST" source="specs/SPEC-01-conventions.xml">Every record a node, seat, gate or monitor emits carries one code. Factory records use the HTTP-shaped set; guard records use families GOV, CMP, RES, RCV, OPS: 1xx-2xx normal, 3xx controller, 4xx pushback, 5xx recovery.</rule>
     <rule id="S4-024" title="Role kinds outside the enum" level="SHOULD" source="roles/architect.json" status="draft">Some kinds the role files list (spec.proposed, owner.answer, owner.message, recovered, owner.notified, routed, turn, death, stuck) are outside the writer's enum, which refuses them; seats post them as note.</rule>
     <rule id="S4-025" title="Head fields" level="MUST" source="factory/bin/route.sh">sha (7 to 40 hex) and pr (an integer from 1) name the PR head a record is about; the runner refuses a malformed one with a 500 and types nothing into the seat.</rule>
@@ -410,7 +431,7 @@
     <rule id="S5-018" title="Make is the entry point" level="MUST" source="graph/nodes/DEC-makefiles-entry-point.json">Every directory with executable code has a Makefile; a target is a thin call into a script, so the same thing runs from a pane, CI and a container; make help lists the targets.</rule>
     <rule id="S5-019" title="Image pins" level="MUST" source="lint/Containerfile">Every Containerfile base is pinned by digest, never by a bare tag; the lint image names its human tag in a comment and is built for amd64 and arm64, so CI agents of either kind can run it.</rule>
     <rule id="S5-020" title="Schema version pins" level="MUST" source="factory/config/runner.schema.json">Every schema sets additionalProperties false, so an unknown key fails validation. Record and config schemas pin schema_version with a const (1.0.0); the page tool's takes a semver, and layouts and graph nodes carry none.</rule>
-    <rule id="S5-021" title="Closed enums" level="MUST" source="factory/config/routes.schema.json">Closed enums: record kinds, roles, route actions (enqueue, wake, seat, escalate, notify_owner, break-glass, ignore, none), with (ticket, pr, record, verify), line (done, decision), down roles, runtimes, effort, modes.</rule>
+    <rule id="S5-021" title="Closed enums" level="MUST" source="factory/config/routes.schema.json">Closed enums: kinds, roles, route actions (enqueue, wake, seat, escalate, notify_owner, break-glass, ignore, none), with (ticket, pr, record, verify, merge-main), when (head_current, heads_match), line, down, runtimes, effort, modes.</rule>
     <rule id="S5-022" title="Tool version pins" level="SHOULD" source="herdr/bin/monitors.sh">Pin the multiplexer and guard releases the scripts were proven against (the source parses herdr 0.9.0 JSON shapes and runs compaction-guard 1.2.8); a new release is proven by the suites first.</rule>
     <rule id="S5-023" title="Tests in containers" level="MUST" source="Jenkinsfile">Suites run in Podman with no network, the multiplexer stubbed or a scratch session. Locally run only the cases that prove the change; CI runs lint on every push to main and the blueprint suite when its inputs change.</rule>
     <rule id="S5-024" title="Test plan first" level="MUST" source="AGENTS.md">The architect writes the test plan into the ticket before work starts and the tester runs exactly it. Test templates are schema-based and reused before a new one is written.</rule>
@@ -432,7 +453,7 @@
     <rule id="S5-041" title="Component runbook edge" level="MUST" source="graph/bin/graph.sh">Graph check fails when a Component node has no defined_in edge to a Runbook node, except a closed grandfathered list in the graph config, so a new component ships with its runbook.</rule>
     <rule id="S5-042" title="Ignore action" level="MUST" source="factory/config/routes.schema.json">Route action ignore marks the ledger entry ignored and writes nothing else, no receipt and no 500. An ignore row has no to, which the schema enforces, so nothing reads a station from it.</rule>
     <rule id="S5-043" title="Exports are checked" level="MUST" source="specs/bin/export-check.sh">A spec export leaves the repo, so lint checks it: it parses, every element's text is under 240 chars and cites a source, and it holds no home path, host, key, email, ticket id or record id.</rule>
-    <rule id="S5-044" title="One schema per file" level="SHOULD" source="factory/schema/routes.schema.json" status="draft">Lint validates the routes table against the schema beside it; a second routes schema in the factory schema dir lacks break-glass and none and is stale. Keep one schema per file.</rule>
+    <rule id="S5-044" title="Two routes schemas" level="SHOULD" source="factory/schema/routes.schema.json">The routes schema is kept twice, beside the table and in the factory schema dir; on main the two are identical, and the factory lint validates the table against the one beside it, so a change lands in both.</rule>
     <rule id="S5-045" title="Watchers are tables" level="MUST" source="factory/bin/policy.sh">The flow and policy watches read every tunable from schema-checked configs and branch on no kind, code or note outside a table row, as the runner does; a new stall or default is a row.</rule>
   </section>
 
@@ -831,7 +852,12 @@
     <rule id="S8-002" title="Max attempts" level="MUST" source="factory/config/routes.json">max_attempts is 3: a gate failure at attempt 3 is escalated, never woken to the worker again.</rule>
     <rule id="S8-003" title="Matching" level="MUST" source="factory/RUNBOOK.md">kind, code and attempt compare to the record (no attempt counts as 1); code_gte is a floor; escalations counts the escalated records the runner wrote for the ticket before this one.</rule>
     <rule id="S8-004" title="Diagrams join" level="SHOULD" source="factory/config/routes.json">Each diagram below is a standalone mermaid flowchart of a few rows; join their edge lines under one 'flowchart LR' header to draw the whole line. Node ids are the same in every diagram.</rule>
-    <action name="wake" source="factory/RUNBOOK.md">Prompt the seat of the row's role: 'record ID playbook DIR/ROLE.md', plus ' pr N sha S' on a with pr row; the seat name is the role file's label with the ticket lowercased.</action>
+    <rule id="S8-005" title="Gate predicates" level="MUST" source="factory/config/routes.json">A row's when names the gate predicate asked before its action, head_current or heads_match, and supersede true asks for an older head to drop. Putting an existing predicate on another row needs no runner change.</rule>
+    <rule id="S8-006" title="Held, not failed" level="MUST" source="factory/bin/route.sh">Predicate exit 0 routes the record; 1 holds it with one held receipt and the ledger entry held &lt;predicate&gt;, skipping the action and the down; any other exit is a 500, never a silent hold.</rule>
+    <rule id="S8-007" title="Gate script" level="MUST" source="factory/bin/gate.sh">The gate script reads the event log and git and writes nothing. Verbs: same-head A B, when &lt;predicate&gt; --id ID, supersedes --id ID. Exit 0 ok, 1 hold or differ, 2 usage, 4 io or an unresolvable sha.</rule>
+    <rule id="S8-008" title="A held merge is a stall" level="MUST" source="factory/RUNBOOK.md">A held review.passed has no consumer record, so the flow watch notes it as a stall after stall_seconds: that is the alarm a held merge raises.</rule>
+    <rule id="S8-009" title="Busy grace" level="MUST" source="factory/config/flow.json">busy_grace_seconds (1800): a gate record whose consumer role's seat for the ticket reports working is not a stall, and is judged again next tick, until the record is that old.</rule>
+    <action name="wake" source="factory/RUNBOOK.md">Prompt the seat of the row's role (its label, ticket lowercased): 'record ID playbook DIR/ROLE.md'; after the id, with pr adds ' pr N sha S', with merge-main those and ' merge main (...)', supersede ' supersedes ID (...)'.</action>
     <action name="seat" source="factory/RUNBOOK.md">Run the seat script for the row's role on the record's ticket, then send the wake line; a seat already up is left as it is.</action>
     <action name="notify_owner" source="factory/RUNBOOK.md">The wake line to the interface agent with 'line done' or 'line decision' between the record id and the playbook path.</action>
     <action name="enqueue" source="factory/RUNBOOK.md">Put the record's ticket on the queue with the record id as from, and the record's priority p0 to p3 when it carries one.</action>
@@ -841,15 +867,15 @@
     <action name="none" source="factory/RUNBOOK.md">Nothing but the record.routed receipt: the record was seen.</action>
     <route n="1" kind="request.forwarded" code="300" do="enqueue" to="architect" priority_from="request" source="factory/config/routes.json">An owner request the interface agent forwarded waits in the queue for the architect.</route>
     <route n="2" kind="ticket.cut" code="100" do="wake" to="worker" source="factory/config/routes.json" with="ticket">A cut ticket wakes its worker. This row only prompts: the worker seat is still brought up through the seat script.</route>
-    <route n="3" kind="pr.opened" code="100" do="seat" to="tester" source="factory/config/routes.json" with="pr">The worker opened a PR. The tester seat for the ticket is brought up if it is not, and woken with the PR and head sha.</route>
-    <route n="4" kind="test.passed" code="201" do="seat" to="reviewer" down="tester" source="factory/config/routes.json" with="pr">The tester passed the PR. The reviewer is brought up and woken with the PR and head sha, then the tester is taken down.</route>
-    <route n="5" kind="test.failed" code="422" attempt_lt="3" do="wake" to="worker" down="tester" source="factory/config/routes.json" with="record">The tester failed the PR. The worker is woken with the record, then the tester is taken down.</route>
-    <route n="6" kind="test.failed" code="422" attempt="3" do="escalate" to="architect" down="tester" escalate_code="423" source="factory/config/routes.json">The third failure is not woken to the worker again: it is an escalated 423 to the architect, and the tester is taken down.</route>
-    <route n="7" kind="review.passed" code="201" do="seat" to="merger" down="reviewer" source="factory/config/routes.json" with="pr">The reviewer passed the PR. The merger is brought up and woken with the head sha, then the reviewer is taken down.</route>
+    <route n="3" kind="pr.opened" code="100" do="seat" to="tester" supersede="true" source="factory/config/routes.json" with="pr">The worker opened a PR. The tester seat for the ticket is brought up if it is not, and woken with the PR and head sha, and with the older head it replaces when one is still being tested.</route>
+    <route n="4" kind="test.passed" code="201" when="head_current" do="seat" to="reviewer" down="tester" source="factory/config/routes.json" with="pr">The tester passed the PR on the current head. The reviewer is brought up and woken with the PR and head sha, then the tester is taken down. A pass on a head the worker moved past is held.</route>
+    <route n="5" kind="test.failed" code="422" attempt_lt="3" when="head_current" do="wake" to="worker" down="tester" source="factory/config/routes.json" with="record">The tester failed the PR on the current head. The worker is woken with the record, then the tester is taken down. A failure on a head the worker moved past is held.</route>
+    <route n="6" kind="test.failed" code="422" attempt="3" when="head_current" do="escalate" to="architect" down="tester" escalate_code="423" source="factory/config/routes.json">The third failure on the current head is not woken to the worker again: it is an escalated 423 to the architect, and the tester is taken down.</route>
+    <route n="7" kind="review.passed" code="201" when="heads_match" do="seat" to="merger" down="reviewer" source="factory/config/routes.json" with="pr">The reviewer passed the PR on the head a test passed, or one that differs only under events/. The merger is brought up and woken with the head sha, then the reviewer is taken down. Any other head is held.</route>
     <route n="8" kind="review.changes" code="422" attempt_lt="3" do="wake" to="worker" down="reviewer" source="factory/config/routes.json" with="record">The reviewer asked for changes. The worker is woken with the record, then the reviewer is taken down.</route>
     <route n="9" kind="review.changes" code="422" attempt="3" do="escalate" to="architect" down="reviewer" escalate_code="423" source="factory/config/routes.json">The third change request is an escalated 423 to the architect, and the reviewer is taken down.</route>
     <route n="10" kind="merged" code="200" do="wake" to="architect" down="merger" source="factory/config/routes.json" with="verify">The merger merged. The architect is woken to verify main, then the merger is taken down.</route>
-    <route n="11" kind="merge.conflict" code="409" do="wake" to="worker" down="merger" source="factory/config/routes.json" with="record">The merge conflicted. The worker is woken with the record, then the merger is taken down.</route>
+    <route n="11" kind="merge.conflict" code="409" do="wake" to="worker" down="merger" source="factory/config/routes.json" with="merge-main">The merge conflicted. The worker is woken with the PR, the head sha and the words merge main, then the merger is taken down.</route>
     <route n="12" kind="verified" code="201" do="notify_owner" to="interface-agent" line="done" source="factory/config/routes.json">The architect verified the merge. The interface agent gets the done line for the owner.</route>
     <route n="13" kind="blocked" code="423" escalations_lt="1" do="escalate" to="architect" escalate_code="423" source="factory/config/routes.json">A seat is blocked. The first 423 for a ticket is escalated to the architect.</route>
     <route n="14" kind="blocked" code="423" escalations="1" do="notify_owner" to="interface-agent" line="decision" source="factory/config/routes.json">A second blocked 423 for the ticket: the interface agent gets a decision line for the owner.</route>
@@ -877,18 +903,18 @@
     <diagram id="S8-D1" format="mermaid" title="forward line, rows 1 to 4" source="factory/config/routes.json"><![CDATA[flowchart LR
 IA[interface-agent] -->|request.forwarded 300 enqueue| AR[architect]
 AR -->|ticket.cut 100 wake| WK[worker]
-WK -->|pr.opened 100 seat| TS[tester]
-TS -->|test.passed 201 seat, down tester| RV[reviewer]]]></diagram>
+WK -->|pr.opened 100 seat, supersede| TS[tester]
+TS -->|test.passed 201 head_current: seat, down tester| RV[reviewer]]]></diagram>
     <diagram id="S8-D2" format="mermaid" title="merge and done, rows 7, 10, 12" source="factory/config/routes.json"><![CDATA[flowchart LR
-RV[reviewer] -->|review.passed 201 seat, down reviewer| MG[merger]
+RV[reviewer] -->|review.passed 201 heads_match: seat, down reviewer| MG[merger]
 MG -->|merged 200 wake verify, down merger| AR[architect]
 AR -->|verified 201 notify_owner done| IA[interface-agent]]]></diagram>
     <diagram id="S8-D3" format="mermaid" title="kickbacks, rows 5, 8, 11" source="factory/config/routes.json"><![CDATA[flowchart LR
-TS[tester] -->|test.failed 422 below 3: wake, down tester| WK[worker]
+TS[tester] -->|test.failed 422 below 3 head_current: wake, down tester| WK[worker]
 RV[reviewer] -->|review.changes 422 below 3: wake| WK
-MG[merger] -->|merge.conflict 409 wake, down merger| WK]]></diagram>
+MG[merger] -->|merge.conflict 409 wake merge-main, down merger| WK]]></diagram>
     <diagram id="S8-D4" format="mermaid" title="escalations, rows 6, 9, 13, 14" source="factory/config/routes.json"><![CDATA[flowchart LR
-TS[tester] -->|test.failed 422 at 3: escalate 423| AR[architect]
+TS[tester] -->|test.failed 422 at 3 head_current: escalate| AR[architect]
 RV[reviewer] -->|review.changes at 3: escalate| AR
 SE[seat] -->|blocked 423 first: escalate| AR
 SE -->|blocked 423 second: decision| IA[interface-agent]]]></diagram>
@@ -901,6 +927,10 @@ SE[seat] -->|break.glass 300 decision| IA[interface-agent]
 IA -->|break.glass 200: break-glass| OR[orchestrator]
 SE -->|break.glass 423 wake| MO[monitor]
 SE -->|break.glass 100, 201, 204: none| MO]]></diagram>
+    <diagram id="S8-D7" format="mermaid" title="held records, rows 4 to 7" source="factory/config/routes.json"><![CDATA[flowchart LR
+TS[tester] -->|result on an older head: held receipt only| NO[nothing]
+RV[reviewer] -->|review.passed 201 on an untested head: held| FW[flow-watch]
+FW -->|stall 500 after stall_seconds| MO[monitor]]]></diagram>
   </section>
 
   <section id="S9" name="runbooks-and-sops">
@@ -1099,15 +1129,17 @@ SE -->|break.glass 100, 201, 204: none| MO]]></diagram>
       <field name="schema_version" required="yes" source="factory/config/routes.schema.json">const "1.0.0"</field>
       <field name="description" required="yes" source="factory/config/routes.schema.json">string</field>
       <field name="max_attempts" required="yes" source="factory/config/routes.schema.json">const 3</field>
-      <field name="routes" required="yes" source="factory/config/routes.schema.json">array; min items 1; items objects of match, do, to, down, with, code, priority_from, line, required match, do</field>
+      <field name="routes" required="yes" source="factory/config/routes.schema.json">array; min items 1; items objects of match, do, to, down, with, code, priority_from, line, when, supersede, required match, do</field>
       <field name="routes[].match" required="yes" source="factory/config/routes.schema.json">object; keys kind, code, code_gte, attempt, attempt_lt, escalations, escalations_lt</field>
       <field name="routes[].do" required="yes" source="factory/config/routes.schema.json">one of enqueue, wake, seat, escalate, notify_owner, break-glass, ignore, none</field>
       <field name="routes[].to" required="no" source="factory/config/routes.schema.json">one of interface-agent, orchestrator, architect, worker, tester, reviewer, merger, player, monitor</field>
       <field name="routes[].down" required="no" source="factory/config/routes.schema.json">one of tester, reviewer, merger; the role whose seat for this ticket is taken down by seat.sh --down once the row's own action has been tried</field>
-      <field name="routes[].with" required="no" source="factory/config/routes.schema.json">one of ticket, pr, record, verify</field>
+      <field name="routes[].with" required="no" source="factory/config/routes.schema.json">one of ticket, pr, record, verify, merge-main</field>
       <field name="routes[].code" required="no" source="factory/config/routes.schema.json">integer</field>
       <field name="routes[].priority_from" required="no" source="factory/config/routes.schema.json">string</field>
       <field name="routes[].line" required="no" source="factory/config/routes.schema.json">one of done, decision</field>
+      <field name="routes[].when" required="no" source="factory/config/routes.schema.json">one of head_current, heads_match; a gate.sh predicate: 0 routes the record, 1 holds it (a receipt that says why and nothing else), other is a 500</field>
+      <field name="routes[].supersede" required="no" source="factory/config/routes.schema.json">boolean; the wake line names the older head gate.sh says this record replaces</field>
       <field name="routes[].to when do is ignore" required="no" source="factory/config/routes.schema.json">A row whose do is ignore must not have to; every other row must have one.</field>
     </schema>
     <code value="100" name="ACCEPTED" source="graph/nodes/STC-http-shaped.json">Work taken or started: seat.up, seat.down, work.started, ticket.cut, pr.opened, note, and a break glass in effect. Housekeeping 100s are ignored by the table.</code>
@@ -1116,12 +1148,12 @@ SE -->|break.glass 100, 201, 204: none| MO]]></diagram>
     <code value="204" name="RESTORED" source="herdr/RUNBOOK.md">A break glass is over: the role settings are restored and verified.</code>
     <code value="300" name="ROUTED" source="graph/nodes/STC-http-shaped.json">A record moved on: request.forwarded, a break.glass request, the runner's record.routed receipt.</code>
     <code value="400" name="REJECTED" source="roles/orchestrator.json" status="draft">A request that fails the request schema, naming the failing key. No request schema exists in the source yet.</code>
-    <code value="409" name="CONFLICT" source="factory/config/routes.json">merge.conflict: the worker is woken with the record and the merger is taken down.</code>
+    <code value="409" name="CONFLICT" source="factory/config/routes.json">merge.conflict: the worker is woken with the PR, the head sha and the words merge main, and the merger is taken down.</code>
     <code value="412" name="GATE_FAILED" source="graph/nodes/STC-http-shaped.json" status="draft">In the locked set; no script or role emits it yet.</code>
     <code value="422" name="FAILED" source="factory/config/routes.json">test.failed or review.changes, attempt 1 to 3, and the architect's rejected. Attempts 1 and 2 wake the worker; attempt 3 is escalated as 423.</code>
     <code value="423" name="BLOCKED" source="factory/config/routes.json">blocked, escalated, a refused break glass, a stuck player. First to the architect, second to the owner as a decision; a policy may answer it after its deadline.</code>
     <code value="429" name="REFUSED" source="herdr/bin/seat.sh">A seat refused over a cap, its role's max_seats or the host's max_agents; recorded as a 429 note and nothing is built.</code>
-    <code value="500" name="FAILURE" source="factory/bin/route.sh">The system failed: no route, a failed action, an unreadable or interrupted record, a failed node, a stall, a stalled or hand-started agent. Every 500 or more wakes the monitor.</code>
+    <code value="500" name="FAILURE" source="factory/bin/route.sh">The system failed: no route, a failed action or gate check, an unreadable or interrupted record, a failed node, a stall, a stalled or hand-started agent. Every 500 or more wakes the monitor.</code>
     <family name="guard" source="graph/nodes/STC-guard-families.json">Guard records use families GOV, CMP, RES, RCV and OPS: 1xx to 2xx normal, 3xx controller, 4xx pushback, 5xx recovery.</family>
     <exit value="0" source="AGENTS.md">ok</exit>
     <exit value="1" source="herdr/bin/seat.sh">a soft result: differences found, a stale belt, nothing free, something FAILED, a stall or a due default</exit>

@@ -55,6 +55,38 @@
 
 
 
+
+## Checkpoint 2026-10-12 19:06 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-277d on WO-20261012-277d - Supervisor judges a pane busy by the processes in its foreground, so a live bearings wait loop is never called dead and restarted.
+  Branch feat/supervisor-judges-a-pane-busy-by-the-processes-i, PR 34, treehouse slot 2, test pane wD3:pE4.
+
+#### Toolchain
+
+- origin/main merged into the branch at the architect's order (PR 34 lands first, PR 31 follows).
+  Conflicts were only in CHANGELOG.md, CONTEXT_STATE.md and work-orders/INDEX.md: main's side taken, CHANGELOG.md re-rendered with bin/changelog.sh render, INDEX.md and epic READMEs with work-order.sh reindex.
+- make lint, make -C herdr lint and make -C herdr test after the merge: 23 passed, 0 failed.
+
+#### Active Tasks
+
+- Push, git switch --detach, post pr.opened with the new sha and --pr 34.
+
+#### Blockers
+
+- None.
+
+### New this checkpoint
+
+- Decision: aggregates are never merged by hand; main's side is taken and they are re-rendered with their scripts.
+
+### Hydration prompt
+
+You are worker-wo-20261012-277d on WO-20261012-277d. Read this checkpoint and playbooks/worker.md. Next: repost pr.opened for PR 34 with the pushed sha, then idle.
+
 ## Checkpoint 2026-10-12 18:30 UTC
 
 ### Current state

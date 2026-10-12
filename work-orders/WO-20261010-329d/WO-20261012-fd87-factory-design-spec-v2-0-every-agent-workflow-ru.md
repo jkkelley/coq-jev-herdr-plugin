@@ -90,6 +90,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-12` v2.0.0 revised for accuracy against main f7a891c (review 4899t): S1, S2 and S8 now state the gate rules from routes.json, flow.json and gate.sh (when head_current and heads_match, supersede, with merge-main, held records, busy grace); S3 adds the compact resume hook and the new busy-pane rule; S5-044 is no longer draft, the two routes schemas are identical. check ok, version 2.0.0, sections S1..S10, 1087 elements, longest 239; coverage 103 sources, 26 of 26 required files; make lint all ok. New draft S1-086: the merger role asks for the same sha while heads_match accepts heads that differ only under events/.
 - `2026-10-12` Final figures after correcting S1-041 and S3-023 to main (main's seat.sh exports no COQ_EVENTS_ROOT and main's event.sh ignores it; only the records branch has both): check ok, version 2.0.0, sections S1..S10, 1058 elements, longest 239 chars; coverage 101 sources, 26 of 26 required files; make lint all ok. specs/exports/factory-spec.xml also sits in PR 32 as v1.1.0: v2.0.0 supersedes it, so PR 32 drops its copy or takes this one before merge.
 
 ## Outcome
