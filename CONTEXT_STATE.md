@@ -53,6 +53,34 @@
 
 
 
+
+## Checkpoint 2026-10-12 17:15 UTC
+
+### Current state
+
+#### Infrastructure
+
+- Worker seat worker-wo-20261012-3bb0 on WO-20261012-3bb0 - Gate rules as code: a test on a head that differs only by records counts, a head that moves re-wakes the tester, and a PR conflicting with main gets main merged by its worker. Treehouse slot 7, branch feat/gate-rules-as-code-a-test-on-a-head-that-differs, PR 28 open. Test pane wD3:p8J, run only through herdr/bin/testpane.sh.
+- The tester failed da00764 with test.failed 422 (record 20261012T160201Z-422-bs49j, attempt 2): factory cases 08-break-glass and 02-no-route failed intermittently. Architect linked it to backlog disva.
+
+#### Toolchain
+
+- Causes found, three, all the same family. (1) The host clock steps back about a second, so "sleep 1 between records" does not keep ids in order: a later record landed in the same second as and sorted before an earlier one (08-break-glass read the 300 receipt as the 200 receipt; 10-sha ran a review before its test; 03-escalate counted escalations wrong). (2) A real bug in gate.sh log_all: under pipefail the fallback loop's status was the last file's jq status, so an unreadable record file that find listed last made the whole read fail and the pr.opened route to a 500 (02-no-route, about one run in three).
+- Fix: world.sh evo now gives every record an id strictly after every other record in the world (including the runner's own) and rec goes through it; 08-break-glass reads the receipt by content; gate.sh adds || true; case 12-gate gained a test of one good and nine unreadable record files. Before the fix 5 runs gave 3 failures; after it 20 consecutive runs of make -C factory test gave 18 passed 0 failed each.
+- Incident: I ran pkill -f loop.sh in the test pane, which also matched report/loop/loop.sh watch processes of other seats; the supervisor respawned them within seconds. Not repeated.
+
+#### Active Tasks
+
+- Post pr.opened 100 with --pr 28 and the new head sha, then hold.
+
+#### Blockers
+
+- None.
+
+### Hydration prompt
+
+Resume WO-20261012-3bb0 as worker-wo-20261012-3bb0 in slot 7. Read playbooks/worker.md and this checkpoint. Post pr.opened 100 with pr 28 and the head sha if not posted, then hold.
+
 ## Checkpoint 2026-10-12 15:46 UTC
 
 ### Current state
