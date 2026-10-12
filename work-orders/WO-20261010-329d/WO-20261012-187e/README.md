@@ -8,6 +8,6 @@ One level down only. A child of a child is listed in its own directory, not here
 
 | ID | status | pri | waiting on | title |
 |---|---|---|---|---|
-| `WO-20261012-0677` | ready | p0 | - | [No file is ever touched by two open PRs: a ticket declares its files, start refuses an overlap with any open PR, and generated aggregates never ride a PR](WO-20261012-0677-no-file-is-ever-touched-by-two-open-prs-a-ticket.md) |
+| `WO-20261012-0677` | in-progress | p0 | - | [No file is ever touched by two open PRs: a ticket declares its files, start refuses an overlap with any open PR, and generated aggregates never ride a PR](WO-20261012-0677-no-file-is-ever-touched-by-two-open-prs-a-ticket.md) |
 | `WO-20261012-da52` | ready | p0 | - | [Record bus: every slot's new records reach the checkout events/ within ten seconds, so the belt routes seat records with no copy by hand](WO-20261012-da52-record-bus-every-slot-s-new-records-reach-the-ch.md) |
 | `WO-20261012-72a0` | ready | p0 | - | [Verifier seat: a merged record wakes a verifier that checks the merge on main against the ticket's criteria and posts verified or rejected, so no merge waits on the architect](WO-20261012-72a0-verifier-seat-a-merged-record-wakes-a-verifier-t.md) |
