@@ -9,6 +9,7 @@
 - links
 - queues, block 4 only
 - How it is made and sent
+- GOOD and NEVER
 
 The page that draws this is `assets/page.html` (`sitrepEl`); the rules it is held to are `STD-owner-sitrep-001.json`; the limits are `config/sitrep.json`.
 
@@ -89,3 +90,28 @@ A stale tab once printed `[object Object]` because only the structured form was 
 `scripts/sitrep-check.mjs` measures a payload against the standard and exits 1 on a violation.
 `scripts/bearings.sh <tier> sitrep --payload FILE` checks, then sends it as a reply, and refuses when the check fails.
 `tests/fixtures/sitrep-sent-ok.txt` is a real briefing that was sent: 8 items, 70 words of prose, 0 violations.
+
+## GOOD and NEVER
+
+GOOD: a passing item, one sentence of 15 words or fewer, the ticket on its own line with its full title.
+
+```json
+{"label":"FRICTION","tone":"bad","text":"The newest unresolved failure record is code 423, filed 4 hours ago.","ref":"WO-20261001-bb01","ref_title":"Synthetic in progress ticket one"}
+```
+
+GOOD: a queue that sends both forms, the structured `next_items` and the plain `next`, at most five of each.
+
+```json
+{"name":"STARTABLE","count":"2","delta":"-1","tone":"good","urgency":"2 P0","next_items":[{"id":"WO-20261001-aa01","title":"Synthetic ready ticket one"}],"next":["WO-20261001-aa01 - Synthetic ready ticket one"]}
+```
+
+NEVER: an item that fails the checker; each line below breaks a rule, and `tests/fixtures/sitrep-bad.json` holds these three.
+
+```json
+{"label":"LONG","text":"This single sentence runs on and on well past the fifteen word limit that the standard sets for every item."}
+{"label":"SEMI","text":"One thing happened; then another."}
+{"label":"IDS","text":"WO-20261001-aa01 is done.","ref":"WO-20261001-aa01"}
+```
+
+NEVER: a third item in a block, a sixth block, a `ref` with no `ref_title`, or a `links` entry that is not an http or https url.
+NEVER: a payload sent around `bearings.sh <tier> sitrep`; the checker runs there and a violation sends nothing.

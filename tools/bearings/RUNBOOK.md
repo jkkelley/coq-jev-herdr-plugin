@@ -14,6 +14,7 @@
 - 6. Prove it
 - Changing the panel
 - When it goes wrong
+- GOOD and NEVER
 
 ## Rules that bind
 
@@ -119,3 +120,15 @@ The suite checks the rules against a SITREP that was really sent (`tests/fixture
 - The panel shows as a bubble of braces: the sender is not the agent (a bubble is the owner's), or the JSON does not parse; run the checker on the file.
 - A figure looks wrong: it is a fact from a record; read the ticket frontmatter or the event it came from, then fix that record.
 - `open pull requests could not be read`: `gh auth status`, or pass `--prs-json` with a saved listing.
+
+## GOOD and NEVER
+
+GOOD: a briefing from `make sitrep-build`, then `make sitrep-check`, then `make sitrep`, so every figure came from a record and the check ran before the send.
+GOOD: a new sentence added to `config/sitrep.template.json` and the build run at once, so a sentence over 15 words fails the build and never reaches the owner.
+GOOD: both `next_items` and `next` in every queue, so a tab that has not reloaded still shows text and not `[object Object]`.
+GOOD: a build in a repository with no pull requests, run with `--prs-json` on a file holding `[]`, giving a briefing with an empty OPEN PRS queue.
+NEVER: typing a count, a title or a ticket id into a payload by hand; the title comes from the ticket file and the figure from a record.
+NEVER: raising `max_words_per_item` or `max_prose_words` to make a briefing pass; cut the clause that needs a subordinate clause to survive.
+NEVER: a ticket id inside a sentence, or a ticket named without its full title; the reference goes on its own line under the sentence.
+NEVER: sending a briefing by writing to `messages.jsonl` or around `bearings.sh sitrep`; the refusal on a violation is what keeps it short.
+NEVER: a link, a published page or Markdown in a bubble in place of the panel; the owner reads it on the page or not at all.
