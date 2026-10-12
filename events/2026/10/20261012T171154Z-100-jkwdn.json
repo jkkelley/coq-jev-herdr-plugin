@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T171154Z-100-jkwdn",
+  "at": "2026-10-12T17:11:54Z",
+  "code": 100,
+  "seat": "merger",
+  "kind": "seat.up",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pCC",
+  "note": "merger seat up for PR 31; checking review.passed and test.passed on one sha before any merge",
+  "evidence": [],
+  "observations": []
+}

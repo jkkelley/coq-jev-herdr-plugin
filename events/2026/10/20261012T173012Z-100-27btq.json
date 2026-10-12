@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "id": "20261012T173012Z-100-27btq",
+  "at": "2026-10-12T17:30:12Z",
+  "code": 100,
+  "seat": "tester-ee9c",
+  "kind": "test",
+  "ticket": "WO-20261012-ee9c",
+  "pane": "wD3:pD9",
+  "note": "tester started: test plan make -C herdr test in test pane wD3:pD9 via testpane.sh",
+  "evidence": [],
+  "observations": []
+}
