@@ -20,10 +20,20 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [],
+  "depends_on": [
+    "WO-20261013-0bc0"
+  ],
   "blocks": [],
   "files": [
     "bin/test-cases.sh",
+    "events/tests/run.sh",
+    "factory/tests/run.sh",
+    "herdr/tests/run.sh",
+    "line/tests/run.sh",
+    "report/loop/tests/run.sh",
+    "scheduler/host/tests/run.sh",
+    "tools/bearings/tests/run-tests.sh",
+    "Makefile",
     "line/bin/reap-containers.sh",
     "line/tests/cases/reap-containers.test.sh"
   ]
@@ -52,7 +62,7 @@ Four test containers from the 03:32Z crash (coq-herdr-test 929c91e2b026 and 29c1
 
 **In**
 
-- bin/test-cases.sh and the suite runners: podman run with --rm and --label coq.run=<suite>:<epoch>
+- bin/test-cases.sh (WO-20261013-0bc0 - Test speed: one shared case runner, merged and done) and the podman run sites of the suite runners: events/tests/run.sh, factory/tests/run.sh, herdr/tests/run.sh, line/tests/run.sh, report/loop/tests/run.sh, scheduler/host/tests/run.sh, tools/bearings/tests/run-tests.sh and the lint run in Makefile: podman run with --rm and --label coq.run=<suite>:<epoch>
 - line/bin/reap-containers.sh: remove coq.run containers older than the suite budget from config, log each removal, retry 3 times then report
 - line/tests/cases/reap-containers.test.sh: a labelled container past its budget is removed, a younger one and an unlabelled one are kept
 

@@ -56,7 +56,7 @@ Reported by spec-author-d127: claims.sh start checks open PRs and in-progress ti
 
 **Out - non-goals**
 
-- PR overlap logic (WO-20260012-0677 behaviour unchanged)
+- PR overlap logic (the behaviour of WO-20261012-0677 - No file is ever touched by two open PRs stays unchanged)
 
 ## Degrees of freedom
 
