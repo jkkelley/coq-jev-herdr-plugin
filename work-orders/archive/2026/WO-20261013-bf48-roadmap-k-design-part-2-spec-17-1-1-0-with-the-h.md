@@ -4,7 +4,7 @@
   "slug": "roadmap-k-design-part-2-spec-17-1-1-0-with-the-h",
   "title": "Roadmap K design, part 2: SPEC-17 1.1.0 with the hierarchy and flow diagrams, the two loops of card C26, the maintenance-worker role, the Kubernetes controller model and probes as code, input-to-output nodes, the one-minute idle limit, seats that leave after their output, and systemd supervision",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner 2026-10-13 02:41Z (record ay9lm) and 02:50Z (record lvvtd) via the architect: the herdr board is the delivery model and SPEC-16 is the engine; lavish prohibited for Claude seats",
@@ -26,7 +26,8 @@
     "specs/SPEC-17-orchestrator-and-agent-health.xml",
     "specs/SPEC-00-index.xml",
     "ROADMAP.md"
-  ]
+  ],
+  "superseded_by": "WO-20261013-74ae"
 }
 ---
 
@@ -108,4 +109,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: split under the size rule into eight SPEC-17 1.1.0 parts chained on the spec file; ROADMAP.md rows wait for the owner
+- superseded by: `WO-20261013-74ae`
+
+No branch, no PR and no merge commit exist for this work order.
+
