@@ -4,7 +4,7 @@
   "slug": "roadmap-k2-health-watch-the-system-checks-every-",
   "title": "Roadmap K2 - Health watch: the system checks every agent each tick, alive, stuck, out of context and at capacity, with three retries and one repair per retry, exactly one of each system process, the nudge and the health line",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner accepted SPEC-17 on card C25; lavish prohibited for Claude seats",
@@ -33,7 +33,8 @@
     "line/config/health.schema.json",
     "line/tests/cases/health-*.sh",
     "herdr/config/monitors.json"
-  ]
+  ],
+  "superseded_by": "WO-20261013-b296"
 }
 ---
 
@@ -101,4 +102,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: owner 02:50Z (lvvtd): probes and the reaper are SPEC-16.F and C, not new bash; the interim is the patrol already on main (PR 86) until SPEC-16.F is active; T04 to T07 move to SPEC-16.K
+- superseded by: `WO-20261013-b296`
+
+No branch, no PR and no merge commit exist for this work order.
+

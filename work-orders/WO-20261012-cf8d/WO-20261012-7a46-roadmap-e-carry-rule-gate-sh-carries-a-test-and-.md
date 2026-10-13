@@ -21,15 +21,16 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261013-70c4"
+    "WO-20261013-bed2"
   ],
   "blocks": [
     "WO-20261012-e970",
-    "WO-20261013-f52a"
+    "WO-20261013-f52a",
+    "WO-20261013-8ed9"
   ],
   "files": [
     "factory/bin/gate.sh",
-    "factory/tests/cases/*"
+    "factory/tests/cases/*gate-carry*"
   ]
 }
 ---

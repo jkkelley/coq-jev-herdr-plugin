@@ -21,7 +21,9 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-58c9"
+  ],
   "files": [
     "roles/compliance-officer.json",
     "playbooks/compliance-officer.md",

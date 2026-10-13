@@ -4,7 +4,7 @@
   "slug": "roadmap-k7-routes-and-lint-one-row-per-record-ki",
   "title": "Roadmap K7 - Routes and lint: one row per record kind and attempt, the owner seat read from the ticket, the router posts to the board and nudges with the lane, 429 and 500 rows to the orchestrator lane, merged 200 to the merger and the orchestrator, the stall policy, the architect digest and counter, and lint that every code of the SPEC-17 map has a row (widens item D)",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner accepted SPEC-17 on card C25; lavish prohibited for Claude seats",
@@ -25,9 +25,7 @@
     "WO-20261012-6f13",
     "WO-20261012-0229"
   ],
-  "blocks": [
-    "WO-20261012-7a46"
-  ],
+  "blocks": [],
   "files": [
     "factory/config/routes.json",
     "factory/config/routes.schema.json",
@@ -37,7 +35,8 @@
     "factory/config/flow.schema.json",
     "factory/bin/digest.sh",
     "factory/tests/cases/*"
-  ]
+  ],
+  "superseded_by": "WO-20261013-44aa"
 }
 ---
 
@@ -106,4 +105,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: owner 03:00Z size rule: split into WO-20261013-44aa, WO-20261013-bed2, WO-20261013-04b8, WO-20261013-a7e6; the architect digest dropped for the 02:41Z delivery model
+- superseded by: `WO-20261013-44aa`
+
+No branch, no PR and no merge commit exist for this work order.
+

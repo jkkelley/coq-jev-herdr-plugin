@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p2",
   "created": "2026-10-12",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "created_at": "2026-10-12T22:14:00+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -20,10 +20,25 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [],
+  "depends_on": [
+    "WO-20261013-18d6",
+    "WO-20261013-223e",
+    "WO-20261013-3aea",
+    "WO-20261013-4ce5",
+    "WO-20261013-7fa3",
+    "WO-20261013-b296",
+    "WO-20261013-badd",
+    "WO-20261013-c17f",
+    "WO-20261013-c64d",
+    "WO-20261013-e3f6",
+    "WO-20261013-fe37"
+  ],
   "blocks": [],
   "files": [
-    "graph/*"
+    "graph/nodes/DEC-roadmap-c*.json",
+    "graph/nodes/DEC-nats-jetstream-grpc.json",
+    "graph/INDEX.md",
+    "graph/GRAPH.mmd"
   ]
 }
 ---
