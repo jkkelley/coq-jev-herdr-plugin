@@ -73,7 +73,7 @@ Cause 2wbaq (record 20261013T163817Z-423-2wbaq): the worker role denies writes t
 
 ## Acceptance criteria
 
-- [x] `AC-H1` *(human)* a SPEC-16 per-file ticket seats spec-author on claude-opus-5-5 and its worker can write specs/ and graph/ but not roles/; the playbook check in lint reports no drift; the case passes
+- [x] `AC-H1` *(human)* a SPEC-16 per-file ticket seats spec-author on claude-opus-5-5 and its worker can write specs/, graph/ and roles/; the playbook check in lint reports no drift; the case passes
   - observed `2026-10-13` herdr case 35 in Podman (state root test-output/2026/10/20261013200845-d127-herdr-cases.log): seat.sh --ticket T --role spec-author on a ticket whose every file is under specs/ and graph/ seats worker-wo-20261013-35a1 as spec-author, claude started with --model claude-opus-5-5, settings deny no edit under specs/, graph/ or roles/ (roles/ writable per architect ruling 19:55Z); a mixed ticket worker still denies all three; tests: 3 passed, 0 failed with cases 01 and 26. make lint: all ok, roles: schema + playbooks in sync (no drift). The automatic pick from the ticket files is the follow-up after WO-20261013-a0e2 (see the scope-split note).
 
 ## Test plan
