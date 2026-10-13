@@ -45,9 +45,9 @@ RESULT_JQ "with no pane list the owner station is not claimed live" '.lines[0].s
 # The belt: live while the route runner's state file is young, stale after belt_max_age_seconds.
 panes "$S=wD3:p5" "bearings-stable=wD3:p1N"
 belt 5; collect
-RESULT_JQ "a young belt state file runs the belt" '.lines[0].belt == "live" and (.headline | contains("belt running")) and (.sources | contains("belt state (running)"))'
+RESULT_JQ "a young belt state file runs the belt" '.lines[0].belt == "live" and (.headline | contains("belt running")) and (.sources | contains("belt file (running)"))'
 belt 100; collect
-RESULT_JQ "an old belt state file is a stopped belt, said as stale" '.lines[0].belt == "stopped" and (.sources | contains("belt state (stale, over 30s old)"))'
+RESULT_JQ "an old belt state file is a stopped belt, said as stale" '.lines[0].belt == "stopped" and (.sources | contains("belt file (stale, over 30s old)"))'
 
 # Blocked: a 423 escalates to the architect, whose station holds the work and says why; a path in the note never reaches the page.
 ev 2026-10-11T14:40:00Z "$S" blocked 423 "$T" wD3:p5 "stuck: cannot read /home/someone/secret/file.txt today"

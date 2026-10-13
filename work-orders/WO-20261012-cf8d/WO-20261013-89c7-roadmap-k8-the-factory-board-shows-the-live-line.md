@@ -72,9 +72,12 @@ The owner asked 2026-10-13 00:55Z where the new line with the work is. The facto
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* with pull request 83 open for WO-20261012-7e13 the board shows that ticket as live with its branch and pull request, and a ticket started in the test fixture shows the same way
-- [ ] `AC-H2` *(human)* loop.sh validate exits 3 naming a fixture ticket that is in-progress with no branch and no pull request and exits 0 once it is closed; no in-progress ticket on main is left without a branch or a pull request
-- [ ] `AC-H3` *(human)* with route.sh running the board says the belt is fresh within belt_max_age_seconds and stopped once the belt file is older; make lint and make -C report/loop test pass in Podman
+- [x] `AC-H1` *(human)* with pull request 83 open for WO-20261012-7e13 the board shows that ticket as live with its branch and pull request, and a ticket started in the test fixture shows the same way
+  - observed `2026-10-13` 2026-10-13 case 16-live from wD3:pT1: a ready ticket WO-20261012-7e13 with an open pull request 83 on feat/a1-state-root is a line with sub 'in-review · feat/a1-state-root · PR 83'; a ready ticket whose branch is on origin shows in-progress; a pull request for a ticket main lacks is drawn from its title
+- [x] `AC-H2` *(human)* loop.sh validate exits 3 naming a fixture ticket that is in-progress with no branch and no pull request and exits 0 once it is closed; no in-progress ticket on main is left without a branch or a pull request
+  - observed `2026-10-13` 2026-10-13 case 16-live: an in-progress ticket with no branch and no pull request is listed in stale and loop.sh validate exits 3 naming it, exit 0 once done; the repository's own tickets validate clean after WO-20261011-38c7 was closed done (PR 14) and WO-20261010-eaa3 cancelled; WO-20261011-23df keeps its live branch on origin
+- [x] `AC-H3` *(human)* with route.sh running the board says the belt is fresh within belt_max_age_seconds and stopped once the belt file is older; make lint and make -C report/loop test pass in Podman
+  - observed `2026-10-13` 2026-10-13 case 16-live: a belt file 5s old is running, 31s old and absent are stopped, state_dir ${tree:run} finds the belt under the state root; make lint exit 0 and make -C report/loop test 18 passed 0 failed in Podman from wD3:pT1
 
 ## Test plan
 
@@ -93,6 +96,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: deferred the SPEC-17 board lane and health line because K1 to K3 do not exist yet; the pull request and branch merge stands in and RUNBOOK.md says so. Stale check is a validate verb on the entry, not part of collect, so one stale ticket never blanks the page. After A2 (PR 88) merges runner.json state_dir is ${tree:run}; belt_file resolves it through bin/state-root.sh.
 
 ## Outcome
 

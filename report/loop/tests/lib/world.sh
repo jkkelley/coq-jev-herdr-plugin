@@ -5,7 +5,8 @@
 #   ev AT SEAT KIND CODE TICKET PANE NOTE     one event record, one file, as events/bin/event.sh writes it
 #   ticket ID STATUS BRANCH PR [TITLE]        one ticket file with a JSON frontmatter (PR: a number or null)
 #   panes LABEL=ID...                  the herdr pane list: one pane per LABEL=ID, in herdr's JSON shape; no argument: an empty list
-#   belt AGE                           the route runner's state file, AGE seconds old at NOW
+#   belt AGE                           the route runner's belt file ($STATE/belt, state_dir of the fixture runner.json), AGE seconds old at NOW
+#   live PRS BRANCHES                  the live line: PRS a JSON array of {number, headRefName, title}, BRANCHES a JSON array of names; without it collect runs --no-live
 #   collect [ARGS]                     loop.sh collect against the world at NOW, with the pane list, into $W/entry.json
 #   q EXPR                             jq -e EXPR against $W/entry.json, quietly
 #   RESULT_JQ DESC EXPR                an assertion: the expression is true of the entry
@@ -18,6 +19,8 @@ world_init() {
   cp -r "$REPO_ROOT/roles" "$REPO_ROOT/playbooks" "$ROOT_FIX/"
   cp "$REPO_ROOT/factory/config/routes.json" "$ROOT_FIX/factory/config/routes.json"
   cp "$REPO_ROOT/report/loop/config/board.json" "$W/board.json"
+  echo '{"state_dir": "${repo}/factory/state"}' > "$ROOT_FIX/factory/config/runner.json"
+  rm -f "$W/live.json"
   panes
 }
 
@@ -46,12 +49,16 @@ panes() {
 
 belt() {
   mkdir -p "$ROOT_FIX/factory/state"
-  : > "$ROOT_FIX/factory/state/runner.json"
-  touch -d "@$(($(date -u -d "$NOW" +%s) - $1))" "$ROOT_FIX/factory/state/runner.json"
+  : > "$ROOT_FIX/factory/state/belt"
+  touch -d "@$(($(date -u -d "$NOW" +%s) - $1))" "$ROOT_FIX/factory/state/belt"
 }
 
+live() { jq -n --argjson p "$1" --argjson b "$2" '{prs: $p, branches: $b}' > "$W/live.json"; }
+
 collect() {
-  LOOP_ROOT="$ROOT_FIX" LOOP_CONFIG="$W/board.json" "$LOOP" collect --now "$NOW" --panes "$W/panes.json" "$@" > "$W/entry.json" 2> "$W/collect.err"
+  local lv=--no-live; [ ! -f "$W/live.json" ] || lv="--live $W/live.json"
+  # shellcheck disable=SC2086 # $lv is one flag or a flag and a path
+  LOOP_ROOT="$ROOT_FIX" LOOP_CONFIG="$W/board.json" "$LOOP" collect --now "$NOW" --panes "$W/panes.json" $lv "$@" > "$W/entry.json" 2> "$W/collect.err"
 }
 q() { jq -e "$1" "$W/entry.json" >/dev/null 2>&1; }
 RESULT_JQ() { if q "$2"; then pass "$1"; else flunk "$1 ($2)"; jq -c "${3:-.}" "$W/entry.json" | head -c 1500 >&2; echo >&2; fi; }

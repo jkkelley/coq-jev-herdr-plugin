@@ -12,7 +12,7 @@
     "roles_dir": "roles",
     "playbooks_dir": "playbooks",
     "herdr_config": "herdr/config/herdr.json",
-    "belt_state": "factory/state/runner.json",
+    "runner_config": "${repo}/factory/config/runner.json",
     "belt_max_age_seconds": 30,
     "owner_pane_label": "bearings-stable"
   },

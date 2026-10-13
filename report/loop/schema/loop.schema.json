@@ -21,6 +21,7 @@
     "sources"
   ],
   "properties": {
+    "stale": { "type": "array", "items": { "type": "string" }, "description": "tickets main holds in-progress with no branch on origin and no open pull request; loop.sh validate exits 3 on a non-empty list" },
     "schema_version": { "const": "1.0.0" },
     "number": {
       "type": "integer",
