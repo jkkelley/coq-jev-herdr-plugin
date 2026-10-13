@@ -79,9 +79,12 @@ Records reach seats through watches, copies and prompts that carry content; on 2
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* an item posted to lane tester is pulled once by one holder, a second pull exits 6, done moves it to the done tree, and the item id equals the record id (T01)
-- [ ] `AC-H2` *(human)* fifty records posted to the architect lane produce at most one nudge within digest_seconds (T02) and twenty queued nudges to one seat collapse into one pull with nothing lost (T03)
-- [ ] `AC-H3` *(human)* board check exits 3 naming the key on a missing key or a literal path (T14), and make lint passes
+- [x] `AC-H1` *(human)* an item posted to lane tester is pulled once by one holder, a second pull exits 6, done moves it to the done tree, and the item id equals the record id (T01)
+  - observed `2026-10-13` make -C line test in the test pane: board-t01-post-pull pass; a posted tester item is pulled once, a second pull exits 6, done moves it to board/done/YYYY/MM/<stamp>-<id>.json, item id equals record id; twelve parallel pullers lease eight items exactly once
+- [x] `AC-H2` *(human)* fifty records posted to the architect lane produce at most one nudge within digest_seconds (T02) and twenty queued nudges to one seat collapse into one pull with nothing lost (T03)
+  - observed `2026-10-13` make -C line test: board-t02-nudge-once and board-t03-compaction-replay pass; fifty posts with a nudge call after each sent one prompt (fifty parallel callers also one); twenty nudge attempts collapsed into one pull with all twenty items still on the lane
+- [x] `AC-H3` *(human)* board check exits 3 naming the key on a missing key or a literal path (T14), and make lint passes
+  - observed `2026-10-13` make -C line test: board-t14-config pass, every required key removed gives exit 3 naming it, literal paths exit 3; make lint: all ok; tests: 4 passed, 0 failed
 
 ## Test plan
 
@@ -101,6 +104,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro. Built line/bin/board.sh on queue.sh's contract, plus a claim-by-rename on every mutation (queue.sh rewrites in place and can double-lease). The suite caught find on a missing done tree failing health under pipefail. NOT done: items_dir of queue/config/queue.json is unchanged, because queue.sh only substitutes ${repo} and the move needs a change to queue/bin/queue.sh, which this ticket does not declare; a follow-up ticket is needed. Also deferred by scope: nothing posts to the board yet (router, K7) and nothing calls nudge (health watch, K2).
 
 ## Outcome
 
