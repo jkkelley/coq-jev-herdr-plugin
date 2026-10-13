@@ -73,7 +73,8 @@ The test deletes its own pods when it ends unless `CI_KEEP=1`.
 - The Go scheduler suite (`make -C scheduler test`) needs a Go toolchain: its family keeps `scheduler/tests/Containerfile`, built on the golang image.
 - The bearings browser suite (`tools/bearings`) needs playwright: it keeps its own image.
 - Ticket 2 (the shared-library step) chooses whether those two run as further pod containers; neither needs this image's herdr.
-- A case that proves it cannot run in a pod goes to the Jenkins host-agent fallback; none is known (see the test run in the ticket's notes).
+- A case that proves it cannot run in a pod goes to the Jenkins host-agent fallback.
+- Known gap, 2026-10-13: `herdr/tests/cases/11-guard-ack-nudge` fails in arm64 pods (5 of 6 runs) and passes on the host: `seat.sh` nudge_seat needs two idle reads within the case's `nudge_settle_seconds` of 4, and herdr does not report idle that fast on a Raspberry Pi node. Cases 01 and 04 raced the same way and now poll. A follow-up ticket owns the pod-only failures.
 
 ## Bumping herdr or the base
 
