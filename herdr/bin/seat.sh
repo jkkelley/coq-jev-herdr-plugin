@@ -533,8 +533,8 @@ fi
 #   file takes effect at the next start of this seat. --session is checked against the session herdr reports for the pane when
 #   it reports one, because a wrong id would make that next start resume somebody else's conversation. Rejected: a second
 #   script (two writers for seat.json) and `agent start` on the running pane (it types into the live TUI). Cost: the agent's
-#   environment has no COQ_SEAT, COQ_ROLE or COQ_EVENTS_ROOT (a process cannot be given them from outside), so it posts records
-#   with its own --seat, and --audit matches it by pane instead of by environment; the other layout panes are not built.
+#   environment has no COQ_SEAT, COQ_ROLE or COQ_STATE (a process cannot be given them from outside), so it posts records into the
+#   default state root (events/bin/event.sh resolves it, never the repository's events/; WO-20261013-496d) with its own --seat, and --audit matches it by pane instead of by environment; the other layout panes are not built.
 if [ "$mode" = adopt ]; then
   [ -n "$adopt_pane" ] || sl_die "--adopt needs --pane"
   [ -n "$claude_sid" ] || sl_die "--adopt needs --session (the claude session id the live agent runs)"
