@@ -27,7 +27,8 @@
   "files": [
     "events/bin/event.sh",
     "events/schema/event.schema.json",
-    "events/tests/*"
+    "events/tests/*",
+    "factory/tests/lib/world.sh"
   ]
 }
 ---
@@ -94,6 +95,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Claim extended 2026-10-13 22:39Z by architect ruling: files gains factory/tests/lib/world.sh, which this PR already changes (34 lines) so the harness world accepts the sha the writer now requires. Tooling has no files setter (amend takes no files), so the frontmatter was edited directly in this ticket file; not split, no other change.
 - `2026-10-13` Retro: K5 landed as PR 90 and was reverted (PR 95) because 16 factory cases post bare gate records and codes outside the map. Reland keeps the writer strict and puts the difference in the fixture, factory/tests/lib/world.sh event-fixture.sh, with a breadcrumb. Open for the architect: roles/compliance-officer.json and playbooks/compliance-officer.md report code 450, which the writer now refuses (SPEC-17 puts seat findings at 500); one live record (20261013134301-review-changes-pr-92-wo-20261013-b221.json) has 7 observations over the schema max of 5 and fails events check on main already.
 
 ## Outcome
