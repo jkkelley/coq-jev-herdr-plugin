@@ -9,7 +9,7 @@
   },
   "effort": "high",
   "context_threshold_percent": 30,
-  "max_seats": 4,
+  "max_seats": 6,
   "pane_layout": "seat-1x2",
   "inputs": [
     "ticket"
@@ -100,6 +100,7 @@
     "running anything in a pane other than the test pane your brief names; testpane.sh refuses every other pane"
   ],
   "breadcrumbs": [
-    "2026-10-11 WO-20261011-9639. What broke: allow.commands listed work-order.sh note|evidence only, so a worker could never run submit or done and every ticket reached its PR still in-progress; the architect then ran submit, evidence, done and cleanup from main by hand for WO-20261011-c077, WO-20261011-36d7 and WO-20261011-4c5e, playing reviewer and merger (AGENTS.md close-out flow says the ticket reaches done on the work branch, then one PR). Why this fix: the two verbs join the same allow entry and the close-out order is a must line, so the playbook renders it. Rejected: a separate closer seat (one more seat to close a record the worker already holds every fact for). Cost: a worker can mark its own ticket done before review; reopen exists for a rejected PR, and the reviewer verifies the evidence, not the status."
+    "2026-10-11 WO-20261011-9639. What broke: allow.commands listed work-order.sh note|evidence only, so a worker could never run submit or done and every ticket reached its PR still in-progress; the architect then ran submit, evidence, done and cleanup from main by hand for WO-20261011-c077, WO-20261011-36d7 and WO-20261011-4c5e, playing reviewer and merger (AGENTS.md close-out flow says the ticket reaches done on the work branch, then one PR). Why this fix: the two verbs join the same allow entry and the close-out order is a must line, so the playbook renders it. Rejected: a separate closer seat (one more seat to close a record the worker already holds every fact for). Cost: a worker can mark its own ticket done before review; reopen exists for a rejected PR, and the reviewer verifies the evidence, not the status.",
+    "2026-10-13 owner message m-20261013161912217-3d6g0 (\"15 seats available, why idle\", via the architect, P0). What broke: worker seats sat idle while ready tickets queued behind the cap of 4 (roles/worker.json max_seats), so the line ran under capacity with free herdr slots. Why it mattered: free capacity went unused while work waited. Why this fix: max_seats 4 to 6, nothing else changes. Rejected: leaving the cap and adding seats of another role (the idle capacity is in this role's lane). Cost: 6 concurrent seats of this role share the same test pane and Podman budget; the playbook text is rendered from this file by roles/bin/render-playbook.sh."
   ]
 }

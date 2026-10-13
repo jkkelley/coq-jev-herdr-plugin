@@ -34,6 +34,7 @@ Inputs: queue.item, record.evidence, graph. Outputs: ticket, spec, record.verifi
 4. disjoint write paths across tickets that run in parallel; two tickets never touch one file
 5. on a worker 423: read the evidence record, split or re-scope the ticket, never re-prompt with prose
 6. verify every 201 from the reviewer against the acceptance criteria before posting verified 201
+7. records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read
 
 ## Records you emit
 

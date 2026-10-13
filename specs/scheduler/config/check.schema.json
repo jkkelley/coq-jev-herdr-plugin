@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/specs/scheduler/config/check.schema.json",
+  "title": "scheduler spec check config",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "description", "specs", "spec_set", "schema", "specs_dir", "graph_nodes", "routes", "max_lines", "under_chars", "codes", "forbidden"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "description": { "type": "string" },
+    "specs": { "type": "string" },
+    "spec_set": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "object", "additionalProperties": false, "required": ["file", "id"], "properties": { "file": { "type": "string", "pattern": "^SPEC-16[A-Za-z0-9.-]*\\.xml$" }, "id": { "type": "string", "pattern": "^SPEC-16(\\.[A-Z])?$" } } } },
+    "schema": { "type": "string" },
+    "specs_dir": { "type": "string" },
+    "graph_nodes": { "type": "string" },
+    "routes": { "type": "string" },
+    "max_lines": { "type": "integer", "minimum": 100, "maximum": 1000 },
+    "under_chars": { "type": "integer", "minimum": 80 },
+    "codes": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["value", "name"], "properties": { "value": { "type": "integer", "minimum": 100, "maximum": 599 }, "name": { "type": "string", "pattern": "^[A-Z_]+$" } } } },
+    "forbidden": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["name", "regex"], "properties": { "name": { "type": "string" }, "regex": { "type": "string" } } } }
+  }
+}

@@ -246,13 +246,7 @@ lease_up() {
 #   flag is what the next hurried run would reach for) and killing the foreign process here (it is somebody's shell). Cost:
 #   treehouse lists by cwd, so a process holding the slot only through a bind mount or an open file is not listed and the
 #   return can still end it; the ticket's second kill looked like that, with nothing listed. This guards the listed case only.
-# pid_tree PID: PID and every process under it, one pid per line (empty when ps is unavailable).
-pid_tree() {
-  ps -e -o pid= -o ppid= 2>/dev/null | awk -v r="$1" 'BEGIN { keep[r] = 1 } { p[NR] = $1; q[NR] = $2 }
-    END { do { ch = 0; for (i = 1; i <= NR; i++) if (!(p[i] in keep) && (q[i] in keep)) { keep[p[i]] = 1; ch = 1 } } while (ch); for (k in keep) print k }'
-}
-# pid_live PID: true while PID exists and is not a zombie.
-pid_live() { local st; st="$(ps -o stat= -p "$1" 2>/dev/null)" || return 1; case "$st" in "" | Z*) return 1 ;; esac; }
+# pid_tree and pid_live live in seat-lib.sh now (WO-20261013-50a4: retire.sh needs them too).
 # seat_pids: the pane shells of this seat's tab and everything under them, space separated. Taken before the panes are closed.
 seat_pids() {
   local p sp out=""
@@ -364,7 +358,15 @@ if [ "$mode" = down ]; then
   if [ "$DRY" != 1 ]; then date +%s > "$sd/down.lock"; trap 'rm -f "$sd/down.lock"' EXIT; fi
   [ "$lease_owned" != true ] || sl_require treehouse
   seat_own=""; [ "$lease_owned" != true ] || seat_own="$(seat_pids)"
-  "$SL_HERE/retire.sh" "$name" --pane "$agent_pane" || sl_log "seat $name: retire did not finish cleanly; closing the tab anyway"
+  # The slot goes to retire.sh only when this seat leased it: its claudes are swept by cwd there, and a shared checkout never is.
+  slot_arg=(); [ "$lease_owned" != true ] || slot_arg=(--slot "$wt"); rrc=0
+  "$SL_HERE/retire.sh" "$name" --pane "$agent_pane" ${slot_arg[@]+"${slot_arg[@]}"} || rrc=$?
+  # BREADCRUMB 2026-10-13 - WO-20261013-50a4, cause g. A process of the seat that three rounds of SIGTERM and SIGKILL could not end (retire.sh
+  #   exit 3, a 500 note naming the pid) stops --down before the tab close and seat.down: writing ended_at over a live claude is how the
+  #   slot stayed held, and the seat staying un-ended is what makes a rerun retry. Rejected: carrying on as an unfinished retire does
+  #   (exit 1 still closes the tab, as before). Cost: --down exits 4 with the seat open until the process is gone.
+  [ "$rrc" != 3 ] || SL_EXIT=4 sl_die "seat $name: a process of the seat survived retire.sh (see the 500 note); the seat stays un-ended, rerun --down once it is gone"
+  [ "$rrc" = 0 ] || sl_log "seat $name: retire did not finish cleanly; closing the tab anyway"
   sl_run sleep "$(sl_cfg .down_wait_seconds)"
   sl_mut tab close "$tab" >/dev/null 2>&1 || true
   if [ "$lease_owned" = true ]; then

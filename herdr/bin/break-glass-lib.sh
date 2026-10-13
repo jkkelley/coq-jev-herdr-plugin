@@ -84,7 +84,7 @@ bg_active_state() {
 bg_copy_of() { printf '%s/settings.break-glass.json' "$(dirname "$(jq -r .settings "$1")")"; }
 
 bg_grant() {
-  local seat=$1 recid=$2 all rec code req_id req action rseat dir line choice decide sf ttl tpre tpost exp now base lifted=() heads=() d inner h hs ls
+  local seat=$1 recid=$2 sr rr all rec code req_id req action rseat dir line choice decide sf ttl tpre tpost exp now base lifted=() heads=() d inner h hs ls
   [[ $recid =~ $BG_ID_RE ]] || bg_refuse "$seat" "" "" "--record must be a record id"
   all=$(bg_events) || bg_refuse "$seat" "" "" "the event log could not be read"
   rec=$(jq -c --arg id "$recid" 'map(select(.id == $id and .kind == "break.glass")) | first // empty' <<<"$all")
@@ -115,6 +115,10 @@ bg_grant() {
   [ -f "$(sl_seat_record "$seat")" ] || bg_refuse "$seat" "$action" "$req_id" "no seat named $seat under $STATE/seats"
   load_seat "$seat"
   [ -z "$ended_at" ] || bg_refuse "$seat" "$action" "$req_id" "seat $seat is down since $ended_at"
+  # the roots are resolved before the one-use file exists, so a resolver failure refuses cleanly and burns no answer (see the
+  # BREADCRUMB of 2026-10-13 above the grant file's jq)
+  sr=$("$SL_REPO/bin/state-root.sh" state) && rr=$("$SL_REPO/bin/state-root.sh" tree records) \
+    || bg_refuse "$seat" "$action" "$req_id" "the state root could not be resolved by bin/state-root.sh"
   mkdir -p "$BG_DIR"; sf="$BG_DIR/$req_id.json"
   if [ "$DRY" != 1 ]; then ( set -C; : > "$sf" ) 2>/dev/null || bg_refuse "$seat" "$action" "$req_id" "the answer $req_id was already used for one action ($sf); a second action needs a second answer"; fi
 
@@ -141,10 +145,22 @@ bg_grant() {
       | .permissions.allow += ["Bash(\($a))"]
       | .hooks += {PreToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $pre, timeout: $tpre}]}],
                   PostToolUse: [{matcher: "Bash", hooks: [{type: "command", command: $post, timeout: $tpost}]}]}' <<<"$base" > "$sd/settings.break-glass.json"
+  # BREADCRUMB 2026-10-13 - WO-20261013-5c06 (Roadmap A3, split from WO-20261012-541a). What broke: the grant file below stored
+  #   events_root as ${COQ_EVENTS_ROOT:-$SL_REPO/events} (the line this replaces), the events/ of whichever slot ran the grant, and
+  #   break-glass-guard.sh post handed that to event.sh as COQ_EVENTS_ROOT. Since WO-20261012-7e13 (Roadmap A1) event.sh ignores
+  #   COQ_EVENTS_ROOT and writes under the state root, so the field was dead and misleading, and any writer that honoured it would
+  #   have put the closing break.glass 201 into a slot's events/ tree (in git) when the seat ran in one. Why this fix: the grant
+  #   file stores the records tree from bin/state-root.sh (tree records) and the state root it hangs from (state), resolved once
+  #   here where COQ_STATE and COQ_REPO are the seat's; the guard runs inside Claude Code's hook environment, which may resolve a
+  #   different root (no COQ_STATE, another repo name), so it takes both from the file and never re-resolves. Rejected: keeping
+  #   events_root and pointing it at the state root (the name would still say events/), and resolving in the guard (a hook can
+  #   resolve another root than the grant did). Cost: a grant file written before this change has no records_root; the guard then
+  #   falls back to its own resolution, which is today's behaviour. The test world's seat state_dir is COQ_STATE, so case 13 sees
+  #   no difference; on the live system seat state (herdr.json state_dir) and this root differ until roadmap item A2.
   jq -n --arg req "$req_id" --arg seat "$seat" --arg a "$action" --arg grant "$recid" --argjson lifted "$ls" --argjson heads "$hs" --arg now "$now" --arg exp "$exp" \
-    --arg settings "$settings" --arg eb "$SL_REPO/events/bin/event.sh" --arg er "${COQ_EVENTS_ROOT:-$SL_REPO/events}" --arg t "$id" \
+    --arg settings "$settings" --arg eb "$SL_REPO/events/bin/event.sh" --arg rr "$rr" --arg sr "$sr" --arg t "$id" \
     '{request: $req, seat: $seat, ticket: $t, action: $a, grant_record: $grant, lifted: $lifted, heads: $heads, started_at: $now, expires_at: $exp,
-      used_at: null, done_at: null, status: "active", settings: $settings, events_bin: $eb, events_root: $er}' > "$sf.tmp" && mv -f "$sf.tmp" "$sf"
+      used_at: null, done_at: null, status: "active", settings: $settings, events_bin: $eb, records_root: $rr, state_root: $sr}' > "$sf.tmp" && mv -f "$sf.tmp" "$sf"
   cp "$sd/settings.break-glass.json" "$settings.tmp" && mv "$settings.tmp" "$settings"
   sl_record break.glass 100 "$seat" ${id:+--ticket "$id"} --action "$action" --answer "$req_id" --note "in effect until $exp"
   sl_mut agent prompt "$seat" "Break glass $req_id: the owner authorised exactly one command, once, for you: $action . Run it, nothing else; its record closes the break glass and your role settings return. It expires at $exp." >/dev/null \

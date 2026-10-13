@@ -9,6 +9,7 @@
 - Hard rule: dated entry files, one file per entry
 - Law: runtime data never lives in git
 - Law: agents are never gates
+- Law: three loops, always
 - Law: talking to the owner
 - Law: the chain of command
 - Law: tooling in the repository, artifacts documented
@@ -131,6 +132,21 @@ The architect receives one digest of items addressed to it, never a copy of ever
 
 GOOD: a pull request reposted after a main merge with byte-identical own files carries its test and review by rule.
 NEVER: a watch that forwards every record to one agent, or a merge that waits for the architect to notice it.
+
+## Law: three loops, always
+
+Owner order, 2026-10-13 UTC (message m-20261013162710557-e4nos): there is always a system loop for fixes.
+The line runs three loops at once, and each is always staffed.
+
+- **Build:** a ticket to a merged pull request: worker, tester, reviewer, then `line/bin/merge.sh`.
+- **Verify:** a merged pull request to verified or reverted: `line/bin/verify-main.sh` on the new main, and a rejected main holds every merge until it is green again.
+- **System:** every hand fix and every cause a seat or the patrol finds becomes a ticket under the system epic `WO-20261013-16f1`, then a fix, through the same gates.
+
+Two worker slots are reserved for system tickets and are never filled with build work, so a fix to the line never waits behind the work the line is stuck on.
+A hand fix without a system ticket is a defect; the seat that made it files the ticket before its turn ends.
+
+GOOD: a seat leaks after its down, the orchestrator kills it and files the cause under `WO-20261013-16f1`, and a reserved worker fixes `seat.sh` the same hour.
+NEVER: every worker slot on build tickets while the belt cannot seat gates, or a cause that lives only in a note.
 
 ## Law: talking to the owner
 

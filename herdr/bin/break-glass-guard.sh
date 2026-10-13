@@ -38,8 +38,22 @@ case $mode in
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
     jq --arg now "$now" '.done_at = $now' "$sf" > "$sf.tmp" && mv -f "$sf.tmp" "$sf"
     t=$(jq -r '.ticket // empty' "$sf")
-    COQ_EVENTS_ROOT=$(jq -r .events_root "$sf") "$(jq -r .events_bin "$sf")" add --code 201 --seat "$seat" --kind break.glass \
-      ${t:+--ticket "$t"} --action "$action" --answer "$req" --note "the one authorised command finished" >/dev/null
+    # BREADCRUMB 2026-10-13 - WO-20261013-5c06 (Roadmap A3). What broke: this line passed COQ_EVENTS_ROOT=<the slot's events/>, which
+    #   the grant file stored (break-glass-lib.sh bg_grant), but event.sh stopped reading that variable in WO-20261012-7e13 and
+    #   resolves the records tree from COQ_STATE, so the closing 201 went wherever this hook's own environment resolved to, and a
+    #   writer that honoured the variable would have filed it in a slot's events/ (in git). Why this fix: the grant file holds the
+    #   state root and records tree it resolved when it was granted; COQ_STATE is the only variable event.sh reads, so the 201 is
+    #   posted with the stored state root and must land under records_root, else the guard prints the mismatch on stderr (the hook
+    #   shows it to the seat) and still restores. Rejected: re-resolving here (a hook may see another COQ_STATE or COQ_REPO than the
+    #   grant did) and exiting 2 on a mismatch (the 201 is not worth a seat stuck in bypass; the sweep restores on ttl either way).
+    #   Cost: a grant file from before this change has no state_root; the guard then posts with its own environment, as it did.
+    #   Not fixed here: the restore below runs seat.sh, which records its 204 with its own resolution (COQ_STATE, else herdr.json
+    #   state_dir) and takes its seats directory from the same variable, so passing COQ_STATE would break the restore until roadmap item A2.
+    sroot=$(jq -r '.state_root // empty' "$sf"); rroot=$(jq -r '.records_root // empty' "$sf")
+    e=(); [ -z "$sroot" ] || e=(env COQ_STATE="$sroot")
+    rec=$("${e[@]+"${e[@]}"}" "$(jq -r .events_bin "$sf")" add --code 201 --seat "$seat" --kind break.glass \
+      ${t:+--ticket "$t"} --action "$action" --answer "$req" --note "the one authorised command finished")
+    [ -z "$rroot" ] || case $rec in "$rroot"/*) ;; *) printf 'break glass %s: the closing 201 landed at %s, not under %s\n' "$req" "$rec" "$rroot" >&2 ;; esac
     "$(dirname "$(readlink -f "$0")")/seat.sh" --break-glass-restore "$seat" --why "done" >/dev/null 2>&1 || true
     exit 0 ;;
   *) exit 0 ;;

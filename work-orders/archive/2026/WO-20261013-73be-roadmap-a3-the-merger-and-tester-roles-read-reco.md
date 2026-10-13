@@ -4,15 +4,15 @@
   "slug": "roadmap-a3-the-merger-and-tester-roles-read-reco",
   "title": "Roadmap A3 - The merger and tester roles read records from the state root: one step in each role and its playbook re-rendered",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T14:11:24+00:00",
   "parent": "WO-20261012-cf8d",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/roadmap-a3-the-merger-and-tester-roles-read-reco",
+  "pr": 105,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect P1 order 2026-10-13: A3 split under the owner size rule (03:00Z); lavish prohibited for Claude seats",
@@ -69,8 +69,10 @@ Seats searched their own slot's events/ and missed records (the merger on 2026-1
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* roles/merger.json and roles/tester.json each carry the state-root step, and the playbook check reports no drift
-- [ ] `AC-H2` *(human)* neither role nor playbook names a repository or slot events/ path for reading records; make lint passes
+- [x] `AC-H1` *(human)* roles/merger.json and roles/tester.json each carry the state-root step, and the playbook check reports no drift
+  - observed `2026-10-13` roles/merger.json and roles/tester.json each carry the state-root step as their last must entry; roles/bin/render-playbook.sh roles playbooks --check exits 0 (no drift), run in test pane
+- [x] `AC-H2` *(human)* neither role nor playbook names a repository or slot events/ path for reading records; make lint passes
+  - observed `2026-10-13` grep of the four files finds only events/bin/event.sh (the writer) and the new step's 'never read' clause; no records read path; make lint ok (LINT_RC=0), roles tests 60 passed 0 failed
 
 ## Test plan
 
@@ -89,6 +91,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: the ticket's test plan names make -C roles test, which has no Makefile; ran make lint, roles/tests/compliance-officer.test.sh and render-playbook.sh --check in the test pane instead.
 
 ## Outcome
 

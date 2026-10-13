@@ -72,7 +72,8 @@
     "Read the ticket file in your worktree for its test plan; Bash is on for make, podman, herdr/bin/testpane.sh and events/bin/event.sh",
     "run each plan case with herdr/bin/testpane.sh $COQ_TEST_PANE <case>, then read the result with herdr pane read $COQ_TEST_PANE --source recent --lines 200 --format text",
     "post 201 with the summary line as evidence, or 422 with the failing case, its output path and a repro command, with events/bin/event.sh add",
-    "never fix code; a 422 goes back to the worker through the orchestrator"
+    "never fix code; a 422 goes back to the worker through the orchestrator",
+    "records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read"
   ],
   "forbidden": [
     "spawning a subagent or any background process; every process is a labelled herdr pane",

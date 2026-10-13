@@ -5,7 +5,9 @@
 # that still runs (the hook must block it); a second use of one answer (AC-H3); a restore that does not verify with --check
 # (AC-H1); an expired break glass that is not restored or not called out by --audit; a follow-up 201 that does not restore;
 # a dontAsk seat (orchestrator) that is not flipped to bypassPermissions (owner order of 2026-10-12, record 20261012T121854Z-200-uqz6z);
-# hook timeouts that are literals in the script instead of break_glass.hook_*_timeout_seconds in herdr.json.
+# hook timeouts that are literals in the script instead of break_glass.hook_*_timeout_seconds in herdr.json;
+# a grant file that stores a slot's events/ instead of the state root's records tree, or a closing 201 that lands anywhere but
+# under COQ_STATE/records (WO-20261013-5c06, Roadmap A3).
 # Real headless herdr and a stub claude; the bearings page is a stub script (BEARINGS) over a directory holding answers.jsonl.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -76,6 +78,12 @@ assert_eq "--check reports the difference" "$rc" 1; assert_match "and says it is
 
 echo "-- the hook: the one command once, nothing else"
 SF="$STATE/break-glass/$r6.json"; GUARD="$REPO/herdr/bin/break-glass-guard.sh"
+# WO-20261013-5c06 (AC-H1): the grant file names the state root's records tree, never a slot's events/
+assert_eq "the grant file is under the state root" "$(test -f "$SF" && echo 1 || echo 0)" 1
+assert_eq "the grant file stores the records tree" "$(jq -r .records_root "$SF")" "$STATE/records"
+assert_eq "the grant file stores the state root" "$(jq -r .state_root "$SF")" "$STATE"
+assert_eq "the grant file has no events_root" "$(jq 'has("events_root")' "$SF")" false
+assert_eq "the 100 in effect is a file under COQ_STATE/records" "$(find "$STATE/records" -name '*.json' -exec jq -r 'select(.kind == "break.glass" and .code == 100) | .id' {} + | wc -l | tr -d ' ')" 1
 hook() { jq -nc --arg t "$2" --arg c "${3:-}" '{tool_name:$t, tool_input:{command:$c}}' | "$GUARD" "$1" "$SF" 2>"$WORLD/hook.err"; }
 hook pre Bash 'ls -la'; assert_eq "a command outside the lifted territory is not its business" "$?" 0
 hook pre Read ''; assert_eq "a tool that is not Bash is not its business" "$?" 0
@@ -95,12 +103,31 @@ assert_eq "another command under the same answer" "$rc" 3
 echo "-- the follow-up record restores the role settings, verified by --check"
 hook post Bash "$ACTION"; assert_eq "post exits 0" "$?" 0
 assert_eq "break.glass 201 action done was recorded" "$(event_count break.glass 201)" 1
+assert_eq "the closing 201 is a file under COQ_STATE/records" "$(find "$STATE/records" -name '*.json' -exec jq -r 'select(.kind == "break.glass" and .code == 201) | .id' {} + | wc -l | tr -d ' ')" 1
+assert_eq "no break glass record is under a slot's events/" "$(find "$REPO/events" -name '20*.json' -exec grep -l '"break.glass"' {} + 2>/dev/null | wc -l | tr -d ' ')" 0
 assert_eq "break.glass 204 restored was recorded" "$(event_count break.glass 204)" 1
 assert_eq "the seat's settings are the role's again" "$(same_as_role)" 1
 "$SEAT" --check "$N" >/dev/null; assert_eq "--check is clean within the ttl" "$?" 0
 assert_eq "the state stays, marked restored, so the answer cannot be used again" "$(jq -r .status "$SF")" restored
 g=$(grant200 "$ACTION" "$r6"); glass "$g" >/dev/null; assert_eq "a replay after the restore is still refused" "$?" 3
 assert_eq "restored seat: the deny rule is back" "$(jq -r '.permissions.deny | any(. == "Bash(gh pr merge *)")' "$S")" true
+
+echo "-- WO-20261013-5c06: the guard posts the 201 with the state root the grant stored, not the hook's own environment"
+# A hook runs in Claude Code's environment, which need not carry the grant's COQ_STATE. A stub event.sh reports the COQ_STATE it was given.
+SF2="$WORLD/grant2.json"; cp "$SF" "$SF2"; mkdir "$SF2.used"
+cat > "$WORLD/event-spy.sh" <<SPY
+#!/usr/bin/env bash
+printf '%s' "\${COQ_STATE-unset}" > "$WORLD/spy.state"; echo "\$COQ_STATE/records/x.json"
+SPY
+chmod +x "$WORLD/event-spy.sh"
+jq --arg b "$WORLD/event-spy.sh" '.done_at = null | .events_bin = $b' "$SF2" > "$SF2.tmp" && mv "$SF2.tmp" "$SF2"
+jq -nc --arg c "$ACTION" '{tool_name:"Bash", tool_input:{command:$c}}' | env COQ_STATE=/nonexistent/decoy "$GUARD" post "$SF2" 2>"$WORLD/hook.err"
+assert_eq "the 201 is posted with the grant's state root, not the hook's COQ_STATE" "$(cat "$WORLD/spy.state")" "$STATE"
+assert_eq "a 201 that lands under the stored records tree prints nothing" "$(wc -c < "$WORLD/hook.err" | tr -d ' ')" 0
+jq -nc --arg c "$ACTION" '{tool_name:"Bash", tool_input:{command:$c}}' > "$WORLD/hook2.in"
+jq '.done_at = null | .records_root = "/elsewhere/records"' "$SF2" > "$SF2.tmp" && mv "$SF2.tmp" "$SF2"
+"$GUARD" post "$SF2" < "$WORLD/hook2.in" 2>"$WORLD/hook.err"; assert_eq "a 201 that lands elsewhere still exits 0 (the restore must not be skipped)" "$?" 0
+assert_match "and the seat is told where it landed" "$(cat "$WORLD/hook.err")" "not under /elsewhere/records"
 
 echo "-- ttl: an expired break glass is called out by --audit and restored by the sweep"
 r7=$(req "$ACTION"); answer "$r7" Grant "$ACTION"; g7=$(grant200 "$ACTION" "$r7"); glass "$g7" >/dev/null; assert_eq "granted again with a new answer" "$?" 0

@@ -88,7 +88,8 @@
     "every ticket: problem, in, out, degrees of freedom, acceptance criteria a junior seat can evidence, a generated test plan, model and runtime chosen for the task",
     "disjoint write paths across tickets that run in parallel; two tickets never touch one file",
     "on a worker 423: read the evidence record, split or re-scope the ticket, never re-prompt with prose",
-    "verify every 201 from the reviewer against the acceptance criteria before posting verified 201"
+    "verify every 201 from the reviewer against the acceptance criteria before posting verified 201",
+    "records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read"
   ],
   "forbidden": [
     "spawning a subagent or any background process; every process is a labelled herdr pane",
