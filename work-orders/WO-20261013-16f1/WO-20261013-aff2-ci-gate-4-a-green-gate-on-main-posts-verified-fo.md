@@ -56,13 +56,13 @@ Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/2026101319
 
 **In**
 
-- ci/bin/main-gate.sh: the handler for one GitHub status event payload on stdin; it ignores every context but coq/gate and every sha that is not a main commit. On success it posts verified per merged pull request in the range since the last verified sha. On failure it posts rejected naming the failing suite and sets the hold. Retry 3 times then report, per the ladder; a red or error status already carries its log link and page from ticket 2, so this script adds none
+- ci/bin/main-gate.sh: the handler for one GitHub status event payload on stdin, run by the listener from WO-20261013-ca2a (the coq/gate record it writes pipes the same payload to this script); it ignores every context but coq/gate and every sha that is not a main commit. On success it posts verified per merged pull request in the range since the last verified sha. On failure it posts rejected naming the failing suite and sets the hold. Retry 3 times then report, per the ladder; a red or error status already carries its log link and page from ticket 2, so this script adds none
 - ci/tests/cases/04-main-gate.test.sh
 
 **Out - non-goals**
 
 - removing line/bin/verify-main.sh (a follow-up)
-- the listener that delivers the webhook payload to the handler (see ticket 3)
+- the listener that delivers the webhook payload to the handler: ticket WO-20261013-ca2a - CI gate 6 owns it, and its line/config/hook.json already names ci/bin/main-gate.sh as the handler of a coq/gate status event, so this ticket edits no listener file
 
 ## Degrees of freedom
 

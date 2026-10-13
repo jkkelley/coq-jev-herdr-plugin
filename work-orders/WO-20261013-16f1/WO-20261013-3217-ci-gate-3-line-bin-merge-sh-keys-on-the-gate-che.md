@@ -59,14 +59,14 @@ Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/2026101319
 **In**
 
 - line/bin/merge.sh: read the coq/gate status of the head sha with gh, merge only on success, hold on failure, error or pending; its gh calls keep their 3 retries and then post blocked 423, so the ladder ends in a report and never in a loop
-- ci/bin/pr-gate-hook.sh: the handler for one GitHub status event payload on stdin; it ignores every context but coq/gate and every sha that is not the head of an open pull request, resolves the pull request for the sha, and on state success runs line/bin/merge.sh --pr N
+- ci/bin/pr-gate-hook.sh: the handler for one GitHub status event payload on stdin; it is run by the listener from WO-20261013-ca2a (the coq/gate record it writes pipes the same payload to this script on stdin), it ignores every context but coq/gate and every sha that is not the head of an open pull request, resolves the pull request for the sha, and on state success runs line/bin/merge.sh --pr N
 - line/tests/cases/merge-gate-check.test.sh and ci/tests/cases/03-pr-gate-hook.test.sh
 
 **Out - non-goals**
 
 - routes (ticket 5)
 - the main verdict records (ticket 4)
-- the listener that delivers the webhook payload to the handler (ticket 2 records the webhook in ci/README.md; a listener is its own ticket if the line has none)
+- the listener that delivers the webhook payload to the handler: ticket WO-20261013-ca2a - CI gate 6 owns it, and its line/config/hook.json already names ci/bin/pr-gate-hook.sh as the handler of a coq/gate status event, so this ticket edits no listener file
 
 ## Degrees of freedom
 

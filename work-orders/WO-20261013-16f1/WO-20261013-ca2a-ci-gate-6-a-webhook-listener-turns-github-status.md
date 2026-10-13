@@ -33,6 +33,7 @@
     "line/config/hook.schema.json",
     "line/units/coq-hook-forward.service",
     "line/units/coq-hook-listener.service",
+    "line/units/coq-hook-page.service",
     "line/tests/cases/hook-listener.test.sh"
   ]
 }
@@ -60,10 +61,11 @@ Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/2026101319
 
 **In**
 
-- line/bin/hook-listener.sh: listen on a localhost port from config, parse the event, post a record through events/bin/event.sh (coq/gate status on a head sha, check_run, pull_request opened or synchronize), retry 3 times then report
-- line/config/hook.json and its schema: port, repo, event list (no literals in the script)
-- line/units/coq-hook-forward.service and coq-hook-listener.service: systemd --user, Restart=always, ladder of 3 restarts then a page
-- line/tests/cases/hook-listener.test.sh: post a sample status payload to the listener, assert one record with the head sha
+- line/bin/hook-listener.sh: listen on a localhost port from config, parse the event, post a record through events/bin/event.sh (coq/gate status on a head sha, check_run, pull_request opened or synchronize), retry 3 times then report; after the record is written it runs every handler hook.json names for that event, piping the raw payload to the handler on stdin and skipping, with a logged note, a handler file that does not exist yet (tickets WO-20261013-3217 and WO-20261013-aff2 land after this one)
+- line/config/hook.json and its schema: port, repo, event list, and a handlers list mapping a status event for coq/gate to ci/bin/pr-gate-hook.sh (WO-20261013-3217 - CI gate 3) and ci/bin/main-gate.sh (WO-20261013-aff2 - CI gate 4); this ticket owns the file, so neither handler ticket edits it (no literals in the script)
+- line/units/coq-hook-forward.service and coq-hook-listener.service: systemd --user, Restart=always, StartLimitBurst=3, and OnFailure= coq-hook-page.service, which pages the orchestrator
+- line/units/coq-hook-page.service: a oneshot that posts the page, see AC-H2
+- line/tests/cases/hook-listener.test.sh: post a sample status payload to the listener, assert one record with the head sha and that a stub handler named in a test hook.json received the same payload on stdin
 
 **Out - non-goals**
 
@@ -77,7 +79,8 @@ Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/2026101319
 ## Acceptance criteria
 
 - [ ] `AC-H1` *(human)* A status event for coq/gate on a head sha produces one record carrying the sha and state
-- [ ] `AC-H2` *(human)* Killing the listener restarts it up to 3 times then pages the orchestrator
+- [ ] `AC-H2` *(human)* Killing the listener restarts it up to 3 times, then coq-hook-page.service pages the orchestrator by running `events/bin/event.sh add --kind blocked --code 423 --seat hook-listener --to orchestrator --note "<unit> failed 3 restarts"`; the page is that blocked 423 record, which factory/config/routes.json already routes (escalate to the architect, then the owner page), not a message to a pane
+- [ ] `AC-H3` *(human)* The listener pipes the status payload to each handler hook.json names for the event, and skips a missing handler file with a logged note
 
 ## Test plan
 
