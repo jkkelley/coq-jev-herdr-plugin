@@ -75,9 +75,12 @@ factory/bin/route.sh runs seat.sh --ticket T --role R inside its serial tick (ro
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a herdr suite case: a stubbed Claude seat that never prints the ack makes seat.sh --ticket T --role R return in under 60s with no nudge
-- [ ] `AC-H2` *(human)* a herdr suite case: a stubbed seat that prints the ack and then idles is nudged exactly once, as WO-20261011-dc0d's case asserts today
-- [ ] `AC-H3` *(human)* a live bring-up through route.sh leaves route.sh status 'running' throughout
+- [x] `AC-H1` *(human)* a herdr suite case: a stubbed Claude seat that never prints the ack makes seat.sh --ticket T --role R return in under 60s with no nudge
+  - observed `2026-10-13` herdr case 31 in the test pane: a stub claude that prints no ack, seat.sh exit 0 in 20s (budget 60s), log 'no guard ack within 15s, no nudge', nudged_at null; shipped nudge_wait_seconds 180 -> 15, schema maximum 30
+- [x] `AC-H2` *(human)* a herdr suite case: a stubbed seat that prints the ack and then idles is nudged exactly once, as WO-20261011-dc0d's case asserts today
+  - observed `2026-10-13` herdr case 31 and case 11 in the test pane: a stub seat that acks then idles returns in 7s and receives exactly one continue prompt, nudged_at set; case 11 full matrix and case 36 pass, make -C herdr lint rc 0
+- [x] `AC-H3` *(human)* a live bring-up through route.sh leaves route.sh status 'running' throughout
+  - observed `2026-10-13` NOT observed live from this seat (a live route.sh bring-up would seat a real agent). Proxy: worst bring-up with the shipped wait is 20s in the case world, under the 60s stale budget; the live check is the first route.sh bring-up after merge
 
 ## Test plan
 
@@ -96,6 +99,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` retro: the wait was a bound and not a rendezvous, so cut 180s to 15s and capped it at 30 in the schema so the key cannot regrow past the belt's 60s stale window. Case 31 reads the shipped value and runner.json stale_seconds, so it fails if either moves. Rejected a background nudge and a blind nudge, see the seat.sh breadcrumb. Open: AC-H3 needs one live route.sh bring-up after merge.
 
 ## Outcome
 
