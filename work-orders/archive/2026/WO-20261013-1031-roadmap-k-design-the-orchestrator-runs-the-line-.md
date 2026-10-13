@@ -4,15 +4,15 @@
   "slug": "roadmap-k-design-the-orchestrator-runs-the-line-",
   "title": "Roadmap K - Design: the orchestrator runs the line and the system checks every agent, written as SPEC-17 with an inventory of every hand fix, a mermaid DAG with a checklist per node and a status code map, lined up with the SPEC-16 scheduler design",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T00:10:01+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": "feat/roadmap-k-design-the-orchestrator-runs-the-line-",
-  "pr": null,
-  "closed": null,
+  "pr": 84,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner cards C23 and C24 on Getting My Bearings 2026-10-13; lavish is prohibited for Claude seats",
@@ -69,9 +69,12 @@ Owner 2026-10-12 23:54Z to 2026-10-13 00:09Z: the chain is owner, architect, orc
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* SPEC-17 validates against spec.xsd and make lint passes in Podman
-- [ ] `AC-H2` *(human)* every hand fix in the inventory maps to a named rule, seat or check
-- [ ] `AC-H3` *(human)* every DAG node has a checklist and every status code in the map names who acts and the retry
+- [x] `AC-H1` *(human)* SPEC-17 validates against spec.xsd and make lint passes in Podman
+  - observed `2026-10-13` specs/SPEC-17-orchestrator-and-agent-health.xml (367 lines) is on main via PR 84 merge d3e5c6a; make lint in Podman on origin/main 964e464 prints 'specs: well-formed + schema ok' and 'lint: all ok'
+- [x] `AC-H2` *(human)* every hand fix in the inventory maps to a named rule, seat or check
+  - observed `2026-10-13` SPEC-17 s-inventory lists H01 to H26, every 2026-10-12 hand fix, each with 'Replaced by' a named rule, seat or check (halt/resume command, O2-O7 orchestrator duties, checks C1-C5, board lanes, roadmap items A to J)
+- [x] `AC-H3` *(human)* every DAG node has a checklist and every status code in the map names who acts and the retry
+  - observed `2026-10-13` SPEC-17 s-dag has node sections n-cut through n-card each with a checklist, b-nodes holds the bring-up checklist, and s-codes maps 100 to 503 with who acts and the retry per code
 - [x] `AC-H4` *(human)* the owner reads it on the bearings page and accepts it on a card
   - observed `2026-10-13` Owner answered Accept on bearings card C25 at 2026-10-13T00:48:02Z; the coq architect posted record 20261013T004802Z-100-12wlf on this ticket: AC-H4 met
 
