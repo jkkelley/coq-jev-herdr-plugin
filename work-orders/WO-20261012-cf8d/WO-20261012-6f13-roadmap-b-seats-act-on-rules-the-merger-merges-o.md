@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261012-541a"
+    "WO-20261013-496d",
+    "WO-20261013-73be"
   ],
   "blocks": [
     "WO-20261012-da1e",
@@ -33,7 +34,8 @@
     "herdr/bin/seat-lib.sh",
     "roles/merger.json",
     "playbooks/merger.md",
-    "herdr/tests/cases/*"
+    "herdr/tests/cases/*merger-gate*",
+    "herdr/tests/cases/*seat-branch-origin*"
   ]
 }
 ---

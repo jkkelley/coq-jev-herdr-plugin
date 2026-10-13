@@ -30,7 +30,7 @@
   ],
   "files": [
     "factory/bin/gate.sh",
-    "factory/tests/cases/*"
+    "factory/tests/cases/*gate-carry*"
   ]
 }
 ---

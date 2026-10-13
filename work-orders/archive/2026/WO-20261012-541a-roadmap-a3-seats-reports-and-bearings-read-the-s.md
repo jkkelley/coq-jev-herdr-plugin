@@ -4,15 +4,15 @@
   "slug": "roadmap-a3-seats-reports-and-bearings-read-the-s",
   "title": "Roadmap A3 - Seats, reports and bearings read the state root: seat.sh, the watches, the roles and playbooks, the loop board and the sitrep read records from the one state root",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-12",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "created_at": "2026-10-12T22:13:20+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner locked ROADMAP.md 2026-10-12 (cards C9 to C22) and gave USERGO; Getting My Bearings is the review surface, lavish is prohibited",
@@ -23,10 +23,7 @@
   "depends_on": [
     "WO-20261012-0229"
   ],
-  "blocks": [
-    "WO-20261012-99d6",
-    "WO-20261012-6f13"
-  ],
+  "blocks": [],
   "files": [
     "herdr/bin/*",
     "herdr/config/*",
@@ -37,7 +34,8 @@
     "report/loop/*",
     "tools/bearings/config/sitrep.json",
     "tools/bearings/scripts/sitrep-build.mjs"
-  ]
+  ],
+  "superseded_by": "WO-20261013-496d"
 }
 ---
 
@@ -100,4 +98,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: superseded under the size rule (owner 03:00Z, architect P1 order): split into ten parts with explicit files, five readers and five role pairs; this one claimed whole directories
+- superseded by: `WO-20261013-496d`
+
+No branch, no PR and no merge commit exist for this work order.
+
