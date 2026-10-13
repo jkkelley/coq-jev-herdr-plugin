@@ -68,6 +68,7 @@ assert_eq "still 36 monitoring panes plus 3 seat panes (agent, monitor, test)" "
 echo "-- take and release"
 "$MON" take shell probe -- claude --model x >/dev/null 2>"$WORLD/err"; assert_eq "take refuses an agent" "$?" 1
 assert_match "the refusal points at seat.sh" "$(cat "$WORLD/err")" "refusing to run an agent"
+# sleep 300 is the job the pane is asked to run (take starts it and the case reads the slot's label), not a wait for anything
 p="$("$MON" take shell probe -- sleep 300)"; rc=$?
 assert_eq "take exits 0" "$rc" 0
 assert_match "take prints the pane" "$p" '^w'

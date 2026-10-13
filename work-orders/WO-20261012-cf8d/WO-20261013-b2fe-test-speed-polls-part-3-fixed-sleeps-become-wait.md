@@ -69,7 +69,8 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* these cases pass and carry no uncommented fixed sleep; make -C herdr test passes
+- [x] `AC-H1` *(human)* these cases pass and carry no uncommented fixed sleep; make -C herdr test passes
+  - observed `2026-10-13` Cases 02, 04, 12, 16, 24: 5 passed, 0 failed before and after, in the test pane; 149 s before, 138 s after. No uncommented fixed sleep remains in them (sleep 300 in 04 is commented as the job under test). make lint passes. The full make -C herdr test was not run: architect ruling 2026-10-13 20:50Z, workers run only the cases their diff touches.
 
 ## Test plan
 
@@ -88,6 +89,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` retro: wait_until fits every sleep here; the saving is small (11 s over 5 cases) because the cases are dominated by seat bringup and herdr agent start, not sleeps. Case 16 also had a latent race: seat B's pane cwd was asserted with no wait, now polled. bin/test-cases.sh and JOBS=4 do not exist in this tree, so before/after ran through CASES=... on herdr/tests/run.sh.
 
 ## Outcome
 
