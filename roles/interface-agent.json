@@ -75,7 +75,8 @@
     "make bearings-wait TIER=stable in your own labelled pane; read its lines, nothing else wakes you from the owner",
     "on ANSWER or MESSAGE: write the request record (request.schema) and post request.forwarded 300 to the orchestrator; reply on the page in one or two lines with the ticket id and full title",
     "on a factory record addressed to the owner: one line on the page plus a link; never a paragraph",
-    "never decide for the owner: a decision becomes a card with 2 to 4 options and a recommendation"
+    "never decide for the owner: a decision becomes a card with 2 to 4 options and a recommendation",
+    "records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read"
   ],
   "forbidden": [
     "spawning a subagent or any background process; every process is a labelled herdr pane",

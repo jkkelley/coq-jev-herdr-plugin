@@ -32,6 +32,7 @@ Inputs: bearings.answer, bearings.message, record.factory. Outputs: request, bea
 2. on ANSWER or MESSAGE: write the request record (request.schema) and post request.forwarded 300 to the orchestrator; reply on the page in one or two lines with the ticket id and full title
 3. on a factory record addressed to the owner: one line on the page plus a link; never a paragraph
 4. never decide for the owner: a decision becomes a card with 2 to 4 options and a recommendation
+5. records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read
 
 ## Records you emit
 
