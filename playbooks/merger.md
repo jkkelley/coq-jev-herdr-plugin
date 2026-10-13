@@ -31,6 +31,7 @@ Inputs: record.review, record.test. Outputs: record.merged.
 1. merge only a PR with review.passed 201 and test.passed 201 on the same sha
 2. on conflict: 409 with the files; never resolve by hand
 3. after merge: work-order.sh cleanup, slot.sh release, post merged 200
+4. records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read
 
 ## Records you emit
 
