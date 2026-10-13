@@ -50,6 +50,14 @@ write_hold() { jq -n --arg sha "$B" --arg reason "main ${B12} is red: ${2:-unit}
   '{schema_version:"1.0.0", sha:$sha, at:"2026-10-13T10:00:00Z", prs:[94], suites:["unit"], logs:[], reason:$reason}' > "$1"; }
 all_recs() { find "$W/state/records" -name '*.json' -exec cat {} + 2>/dev/null; }
 posted() { all_recs | jq -s --arg k "$1" '[.[] | select(.seat == "merge-script" and .kind == $k)] | length'; }
+# BREADCRUMB 2026-10-13 - PR 144 rework (WO-20261013-2d35). What broke: the "note says unreadable" assertion (below) failed 2 runs in 6
+#   standalone and once in the full suite, because it read posted_field blocked note, which is `sort_by(.id) | last`. A record id is
+#   <UTC second>-<code>-<random suffix> (events/bin/event.sh), so the first hold's 423 and the "unreadable" hold's 423, posted in the
+#   same second, sort by the random suffix and the "last" one is either. Why this fix: ask for the record by what it says
+#   (posted_note_count) instead of by an order the ids cannot give. Rejected: sleeping a second between the two holds (it slows the
+#   case and only narrows the window) and sorting by file name or `at` (also one-second resolution). Cost: none; the other
+#   posted_field callers read the only blocked record that exists at that point.
+posted_note_count() { all_recs | jq -s --arg k "$1" --arg p "$2" '[.[] | select(.seat == "merge-script" and .kind == $k and (.note | test($p)))] | length'; }
 posted_field() { all_recs | jq -rs --arg k "$1" --arg f "$2" '[.[] | select(.seat == "merge-script" and .kind == $k)] | sort_by(.id) | last | .[$f] // empty'; }
 gh_calls() { wc -l < "$D/calls.log" | tr -d ' '; }
 mergecalls() { grep -c "^pr merge $1 " "$D/calls.log" || true; }
@@ -90,7 +98,7 @@ echo 'not json' > "$HOLD"
 out=$(merge --pr 11 2>&1); assert_eq "exit 3" "$?" 3
 assert_eq "no gh pr merge" "$(mergecalls 11)" 0
 assert_eq "a second blocked record, for the new reason" "$(posted blocked)" 2
-assert_match "the note says unreadable" "$(posted_field blocked note)" "unreadable or empty"
+assert_eq "the new blocked record's note says unreadable" "$(posted_note_count blocked 'unreadable or empty')" 1
 
 echo "-- AC-H1: the hold lifted: the same pull request merges, one merged 200"
 rm -f "$HOLD"
