@@ -69,9 +69,12 @@ On 2026-10-12 a tester's test.passed carried no sha and the reviewer's pass was 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a test.passed without --sha exits 3 naming the flag and writes nothing
-- [ ] `AC-H2` *(human)* a record with a code outside the map exits 3 naming the code; every code of the map is accepted
-- [ ] `AC-H3` *(human)* make lint passes with the schema change and events check still validates every existing record
+- [x] `AC-H1` *(human)* a test.passed without --sha exits 3 naming the flag and writes nothing
+  - observed `2026-10-13` events/tests/cases/04-refusals.test.sh: all nine gate kinds without --sha exit 3 with 'event: --sha is required on a <kind> record', and no record is written; suite 'tests: 4 passed, 0 failed'
+- [x] `AC-H2` *(human)* a record with a code outside the map exits 3 naming the code; every code of the map is accepted
+  - observed `2026-10-13` 04-refusals: codes 101,150,199,202,203,301,401,410,424,450,499,501,502,504,599 exit 3 naming the code, nothing written; all 13 codes of SPEC-17 s-codes accepted; schema enum compared with the spec text; line.halted/draining/resumed validate
+- [x] `AC-H3` *(human)* make lint passes with the schema change and events check still validates every existing record
+  - observed `2026-10-13` make lint: 'lint: all ok' with 'events: every file valid ok'; events/bin/event.sh check passes in 03-read ('events ok: 12 files')
 
 ## Test plan
 
@@ -90,6 +93,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro. Cost for the architect to rule on: factory/tests and herdr/tests post gate kinds with no --sha and codes 150/250 (07-other-repo, others), so 01-wake, 02-no-route, 03-escalate, 04-restart, 05-new-row, 07, 08-ignore, 09, 10-sha, 11-down fail on the new refusal; those files belong to PR 88 (A2) so not touched here, fix after A2 merges. roles/compliance-officer.json reports code 450, outside the map (s-codes puts seat findings at 500). Existing state-root records: 150/450 uses were test fixtures only; 03-read fixture moved to code 100.
 
 ## Outcome
 
