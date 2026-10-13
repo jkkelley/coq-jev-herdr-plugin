@@ -85,6 +85,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Scope added by architect ruling 19:20Z: gate-tickets.sh runs work-order.sh reindex BEFORE reindex --check, because work-orders/INDEX.md is gitignored (.gitignore:114) and a fresh checkout is always stale until reindexed.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
