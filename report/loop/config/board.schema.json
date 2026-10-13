@@ -49,8 +49,11 @@
       ],
       "properties": {
         "events_dir": {
-          "$ref": "#/$defs/relpath",
-          "description": "the event log: YYYY/MM/<utc>-<code>-<suffix>.json"
+          "oneOf": [
+            { "$ref": "#/$defs/relpath" },
+            { "const": "${tree:records}" }
+          ],
+          "description": "the event log: YYYY/MM/<name>.json. ${tree:records} is the state root's records tree (bin/state-root.sh), where events/bin/event.sh writes; a relative path is read under the repository root, the old reading"
         },
         "events_days": {
           "type": "integer",

@@ -36,7 +36,7 @@ collect
 RESULT_JQ "a seat.down record ends the seat" '.lines[0].st.worker.status == "building" and (.lines[0].st.worker.parts | any(.[0] == "todo" and .[1] == "seat up"))'
 
 # Without herdr the board trusts the records alone and says so; it neither hangs nor invents a pane list.
-find "$ROOT_FIX/events" -name '*-100-x0003.json' -delete
+find "$ROOT_FIX/events/" -name '*-100-x0003.json' -delete
 LOOP_ROOT="$ROOT_FIX" LOOP_CONFIG="$W/board.json" "$LOOP" collect --now "$NOW" --no-panes > "$W/entry.json" 2>"$W/collect.err"
 RESULT_JQ "with no pane list the state says so" '.state == "HERDR PANES UNAVAILABLE" and (.sources | contains("herdr pane list (unavailable)"))'
 RESULT_JQ "with no pane list a seat record alone counts" '.lines[0].st.worker.status == "live"'
