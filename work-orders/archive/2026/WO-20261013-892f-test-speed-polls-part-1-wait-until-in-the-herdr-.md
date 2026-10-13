@@ -4,15 +4,15 @@
   "slug": "test-speed-polls-part-1-wait-until-in-the-herdr-",
   "title": "Test speed, polls part 1: wait_until in the herdr test world, and the fixed sleeps of 20-reseat and 10-down-slot-processes become polls",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T15:51:04+00:00",
   "parent": "WO-20261012-cf8d",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/test-speed-polls-part-1-wait-until-in-the-herdr-",
+  "pr": 117,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect P0 order 2026-10-13 (owner m-20261013154808303-p0c28: test suites cannot be the bottleneck); lavish prohibited for Claude seats",
@@ -70,7 +70,8 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the two cases pass, carry no uncommented fixed sleep and run faster than before; make -C herdr test passes
+- [x] `AC-H1` *(human)* the two cases pass, carry no uncommented fixed sleep and run faster than before; make -C herdr test passes
+  - observed `2026-10-13` Cases 10 and 20 pass (CASES='10 20', tests: 2 passed, 0 failed) in 180 s against 220 s for the same two cases on the unmodified base, run in the test pane through testpane.sh; every sleep left in them is commented (sleep 3016 and 3017 are the processes under test, world.sh's sleep 30 is an idle slot command, wait_until's 0.2 s is the poll interval). make lint passes. make -C herdr test: 26 passed, 1 failed - 12-blueprint-panes, which fails identically on the unmodified base (dev server serves 'no page yet (nothing promoted)'); its files are another ticket's, so it is reported, not fixed here.
 
 ## Test plan
 
@@ -89,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro. Worked: probing the monitor pane's process-info once showed the interrupt condition (foreground pid equals shell_pid); grace waits poll the supervisor's own dead marker, with the previous tick's end as the stand-in for a seat the tick skipped. Slow: the full suite takes about 19 minutes, so the proof loop was cases 10 and 20 alone (3 min). Found: 12-blueprint-panes fails on main (dev serves no page, nothing promoted) - needs its own ticket; its two fixed-sleep loops are for parts 2 to 5. The treehouse lease check in playbooks/worker.md step 1 cannot hold for a work-order start worktree (path start-WO-..., not a pool slot) - the brief named this worktree, so I proceeded; the playbook line wants updating. The work.started record was posted with seat worker-892f because COQ_SEAT (worker-wo-20261013-892f) was not read before posting.
 
 ## Outcome
 
