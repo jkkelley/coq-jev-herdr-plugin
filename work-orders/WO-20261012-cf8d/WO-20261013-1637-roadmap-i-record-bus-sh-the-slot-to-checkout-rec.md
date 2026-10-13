@@ -4,14 +4,14 @@
   "slug": "roadmap-i-record-bus-sh-the-slot-to-checkout-rec",
   "title": "Roadmap I - record-bus.sh, the slot-to-checkout record copier moves from ~/.cache/coq-watch/record-bus.sh into line/bin/record-bus.sh with its test; the live copy runs from the repo and the cache copy is deleted",
   "type": "chore",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T17:53:15+00:00",
   "parent": "WO-20261012-cf8d",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/roadmap-i-record-bus-sh-the-slot-to-checkout-rec",
+  "pr": 120,
   "closed": null,
   "approval": {
     "via": "override",
@@ -69,7 +69,8 @@ Owner 2026-10-12 22:49Z (m-20261012224955626-rjghl): every script lives in the p
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/record-bus.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+- [x] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/record-bus.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+  - observed `2026-10-13` line/bin/record-bus.sh + line/tests/cases/record-bus.sh. Case record-bus passes in pane wD3:p16P (copy once, second tick copies nothing, held/broken/old skipped, --target and state-root bridge each once, no .tmp, files only under the state root). Breaking the already-copied check makes it FAIL on 3 assertions. grep '/home/luna|.cache/coq-watch' in the script: 0. make lint ok, make -C line test: 6 passed, 0 failed. AC-H1 clause 'every file lands under COQ_STATE' holds for the default target; the cache copy wrote into the checkout events/, so the live instance needs --target <checkout>/events (see note).
 - [ ] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/record-bus.sh is empty, ~/.cache/coq-watch/record-bus.sh is gone, and the archive path is in a 200 note on this ticket
 
 ## Test plan
@@ -89,6 +90,9 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro. Went well: the port was paths-only plus one flag set (--slots --target --held --window --interval --once) so the real script runs in the scratch world; a mutation of the already-copied check fails the case. Cost found on the way: the state-root block copies by id name, so with the default target it would have re-copied every record in; it is skipped when target equals the state records tree. Playbook step 1 (lease_holder check) does not fit a seat on a start-WO worktree with no treehouse lease; I went on from the brief's worktree.
+- `2026-10-13` For the orchestrator lane (AC-H2): the default --target is the state root records tree (AC-H1: every file lands under the state root). The cache copy wrote into the checkout events/, which digest.sh and aq.sh still read, so start the live instance as: bash $COQ_REPO/line/bin/record-bus.sh --target $COQ_REPO/events. Without --target the belt and patrol see slot records in the state root but digest.sh and aq.sh do not. The live cache instance (pid 2814830, pane wD3:p14 at time of writing) is still running and untouched.
 
 ## Outcome
 
