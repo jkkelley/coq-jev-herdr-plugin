@@ -160,6 +160,8 @@ Tickets, with the order their declared files force:
 | D | WO-20261012-da1e | B, A2 |
 | E | WO-20261012-7a46 | D |
 | C | WO-20261012-e970 | E, G |
+| I | WO-20261012-90ce | none; first when a slot frees (owner addition 2026-10-12 22:55Z) |
+| J | WO-20261012-136f | I, A1 (owner addition 2026-10-12 23:00Z) |
 | K | WO-20261013-1031 (design) | none; its build tickets are cut after the owner's card |
 
 Item A is split into A1 to A4 so each stays small (Law: scope small, integrate in CI).
@@ -190,6 +192,8 @@ Owner order, 2026-10-13 UTC: drain the line, design the system, build and check 
 - **G - `make aggregates` works in a clean checkout,** without the gitignored skill copy it calls today.
 - **H - Backlog to GitHub issues (C14).** Each item becomes an issue with a priority label; `backlog.sh` files issues; `backlog/` leaves git.
 - **L - Laws and design graph.** The decision nodes for C10 to C22 added to `graph/`, the NATS decision node marked deferred (C15), and the bus ticket WO-20261010-539f re-scoped or cancelled.
+- **I - Line scripts live in the repository.** The merge watch, digest, route retry, record bus, ticket start, seat queue and main verify scripts move from the watch cache into `line/`, and everything they write goes to the state root (owner, 2026-10-12 22:55Z: no script outside the project; ticket WO-20261012-90ce).
+- **J - Every artifact is documented and cleanable.** One manifest names each runtime artifact, where it sits and what writes it, and one command lists, sizes and cleans them past their retention (owner, 2026-10-12 23:00Z; ticket WO-20261012-136f, after I and A1).
 
 ### Phase 3
 
