@@ -70,7 +70,7 @@ Starting a ticket (bin/wo-start.sh, work-order start) edits the ticket frontmatt
 ## Test plan
 
 ```sh
-bash factory/tests/cases/22-wo-start-leaves-checkout-clean.test.sh   # runs wo-start on a ready ticket in a scratch repo, asserts git status --porcelain is empty and git log on the branch shows the frontmatter commit
+make lint && make -C factory test   # in Podman through the repository targets; case 22 runs wo-start on a ready ticket in a scratch repo, asserts git status --porcelain is empty and git log on the branch shows the frontmatter commit
 ```
 
 ## Assumptions
@@ -84,6 +84,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Rework of PR 122: Scope In names bin/wo-start.sh and the stray line is gone (e9c6c4b); the test plan is now the repository command, make lint && make -C factory test, because the bare case file only runs inside the Podman runner. Amend refuses a ready ticket and reopen needs done, so the one test plan line was edited by hand.
 
 ## Outcome
 
