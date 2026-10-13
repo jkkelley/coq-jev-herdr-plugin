@@ -69,7 +69,8 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* these cases pass and carry no uncommented fixed sleep; make -C herdr test passes
+- [x] `AC-H1` *(human)* these cases pass and carry no uncommented fixed sleep; make -C herdr test passes
+  - observed `2026-10-13` Cases 01, 03, 05, 08 and 15 pass (tests: 5 passed, 0 failed) before and after, in the test pane (CASES='01 03 05 08 15' bash herdr/tests/run.sh); 4:12 before, 3:42 after on a host busy with other seats; grep shows no uncommented sleep left in the five files; make lint all ok. Per architect ruling 20:50Z the full make -C herdr test is verify's job after merge and was stopped.
 
 ## Test plan
 
@@ -88,6 +89,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: each fixed sleep was a guess at when a stub agent had echoed its first prompt (01, 03, 08, 15) or a 1 s loop step (05 gone); all became wait_until on the prompt text or herdr no longer answering for the agent, with an agent_shows/agent_absent helper local to each case since world.sh is out of scope. Full suite not run by this seat (architect ruling 20:50Z); baseline timing is noisy because other seats' suites share the host.
 
 ## Outcome
 

@@ -7,6 +7,12 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../lib/assert.sh"; . "$HERE/../lib/world.sh"
 world_up seat || exit 1
 T=WO-20261010-8777; N=worker-wo-20261010-8777
+# BREADCRUMB 2026-10-13 - WO-20261013-0904 (test speed, polls part 4; design d-shape 5). What broke: a fixed `sleep 1` before "the brief
+#   was the first prompt", a guess at when the stub agent had received and echoed its first prompt (too short on a slow container, idle
+#   on a fast one). Why this fix: wait_until on what the assertion reads, the brief on the agent's recent output (agent_shows), for at
+#   most 15 s; the assertion is unchanged, so a brief that never arrives still fails it after wait_until names the pattern.
+#   Rejected: a longer sleep (cost on every run) and dropping the wait (an early read is an empty screen). Cost: none.
+agent_shows() { h agent read "$1" --source recent-unwrapped --lines 200 | grep -qE "$2"; }
 
 echo "-- a layout with no test slot still needs the labelled test pane in the tab it was started from (WO-20261011-f896 AC-H4)"
 notest_layout; role_layout worker seat-nt
@@ -49,7 +55,7 @@ assert_eq "a seat.up 100 event was recorded" "$(event_count seat.up 100)" 1
 R="$STATE/seats/$N/seat.json"
 assert_eq "the seat record names the agent pane" "$(jq -r .pane "$R")" "$agent"
 assert_eq "the seat record has no ended_at" "$(jq -r '.ended_at // "null"' "$R")" null
-sleep 1
+wait_until 15 agent_shows "$N" "$T - herdr seat scripts.*Playbook playbooks/worker.md"
 assert_match "the brief was the first prompt and names the ticket and playbook" "$(h agent read "$N" --source recent-unwrapped --lines 200)" "$T - herdr seat scripts.*Playbook playbooks/worker.md"
 
 echo "-- --check on a healthy seat"
