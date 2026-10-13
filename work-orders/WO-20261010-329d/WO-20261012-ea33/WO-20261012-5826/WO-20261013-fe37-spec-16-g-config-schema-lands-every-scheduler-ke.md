@@ -4,13 +4,13 @@
   "slug": "spec-16-g-config-schema-lands-every-scheduler-ke",
   "title": "SPEC-16.G config schema lands: every scheduler key, revised for the state root and for the keys the other domains add",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p1",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T03:24:46+00:00",
   "parent": "WO-20261012-5826",
-  "branch": null,
+  "branch": "feat/spec-16-g-config-schema-lands-every-scheduler-ke",
   "pr": null,
   "closed": null,
   "approval": {
@@ -76,7 +76,8 @@ Owner 2026-10-13 03:00Z (record 57h60): pull request 37 (WO-20261012-5826, the S
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* check.sh check passes in Podman; the file stays under 1000 lines, generic (no paths, keys or hostnames) and every element cites its source; make lint passes (graph check and sync-specs)
+- [x] `AC-H1` *(human)* check.sh check passes in Podman; the file stays under 1000 lines, generic (no paths, keys or hostnames) and every element cites its source; make lint passes (graph check and sync-specs)
+  - observed `2026-10-13` check.sh check in localhost/coq-lint:1 printed 'ok specs/scheduler/SPEC-16.G-config-schema.xml (180 lines)', exit 0; no paths, keys or hostnames (forbidden patterns pass); every word element cites a source; make lint ended 'lint: all ok' with graph check + specs agree ok
 
 ## Test plan
 
