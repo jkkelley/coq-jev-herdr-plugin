@@ -62,7 +62,8 @@ Main 85e91d3 failed herdr case 17-pane-health once in suite order (a repeat insi
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* AC-H1: five consecutive full herdr suite runs show case 17-pane-health pass. AC-H2: any order dependence found is fixed in the case or its helper with a breadcrumb comment. AC-H3: make lint and make -C herdr test exit 0
+- [x] `AC-H1` *(human)* AC-H1: five consecutive full herdr suite runs show case 17-pane-health pass. AC-H2: any order dependence found is fixed in the case or its helper with a breadcrumb comment. AC-H3: make lint and make -C herdr test exit 0
+  - observed `2026-10-13` AC-H1: five consecutive full herdr suite runs at the fix, each 'tests: 32 passed, 0 failed' with '17-pane-health: pass' (logs fix-1..5.log in the seat scratchpad; five baseline runs at main also passed, so the flake needs load). AC-H2: cause was the 500 text carrying monitors.sh fg_process (bash/clear/jq/sleep by instant), which sl_report_500 dedups on exactly; herdr/bin/bringup.sh now records 'runs a job'; case 17 pins it with an assert that failed before the fix (got 'runs sleep') and passes after; breadcrumbs in both files. AC-H3: make lint rc=0 and make -C herdr lint clean before each of the five make -C herdr test runs, all rc=0.
 
 ## Test plan
 
@@ -81,6 +82,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: five idle-host baseline suite runs at main all passed, so the case 17 flake only shows under load. Fixed the cause (volatile process name in the 500 text defeating sl_report_500's exact-text dedup) in herdr/bin/bringup.sh rather than loosening the test, and added a deterministic assert. Ticket files list named only the case; bringup.sh is herdr/bin, inside the ticket's allowed scope. Treehouse lease check in worker step 1 did not apply: this seat's worktree is a git worktree under ~/.cache/coq, not a treehouse slot.
 
 ## Outcome
 
