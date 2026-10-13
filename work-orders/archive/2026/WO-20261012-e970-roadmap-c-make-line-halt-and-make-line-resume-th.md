@@ -4,15 +4,15 @@
   "slug": "roadmap-c-make-line-halt-and-make-line-resume-th",
   "title": "Roadmap C - make line-halt and make line-resume: the halt flag the supervisor honours, USERHALT, and bearings stable always left running",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-12",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "created_at": "2026-10-12T22:13:55+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner locked ROADMAP.md 2026-10-12 (cards C9 to C22) and gave USERGO; Getting My Bearings is the review surface, lavish is prohibited",
@@ -31,7 +31,8 @@
     "herdr/bin/supervisor.sh",
     "herdr/tests/cases/*",
     "docs/runbooks/line-halt-resume.md"
-  ]
+  ],
+  "superseded_by": "WO-20261013-f52a"
 }
 ---
 
@@ -94,4 +95,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: superseded by WO-20261013-f52a: Roadmap K4 widens item C with drain and line-check per SPEC-17 s-build
+- superseded by: `WO-20261013-f52a`
+
+No branch, no PR and no merge commit exist for this work order.
+

@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-12",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "created_at": "2026-10-12T22:13:51+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -21,10 +21,11 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261012-da1e"
+    "WO-20261013-70c4"
   ],
   "blocks": [
-    "WO-20261012-e970"
+    "WO-20261012-e970",
+    "WO-20261013-f52a"
   ],
   "files": [
     "factory/bin/gate.sh",
