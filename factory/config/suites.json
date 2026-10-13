@@ -31,7 +31,15 @@
   "rows": [
     {
       "paths": [
-        "work-orders/*",
+        "work-orders/*"
+      ],
+      "suites": [
+        "reindex",
+        "herdr"
+      ]
+    },
+    {
+      "paths": [
         "changelog/*"
       ],
       "suites": [
@@ -194,7 +202,8 @@
         "graph/*"
       ],
       "suites": [
-        "loop"
+        "loop",
+        "herdr"
       ]
     },
     {

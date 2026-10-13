@@ -2,7 +2,7 @@
 # Catches (WO-20261013-f1ff): a path-to-suite map that maps a path to the suite under it and no further. 32fc429 changed events/bin and broke the
 # factory suite, which a per-directory map would not have run (architect ruling b99ta, record 7c3dq). AC-H1: a change to events/bin/event.sh or
 # events/schema plans the events, factory and herdr suites (and line, whose merge.sh calls event.sh), and dropping one from the row fails this
-# case. AC-H2: a tickets-only diff plans lint and reindex only, a path no row maps plans the full set, a missing key exits 3. Also: a command in
+# case. AC-H2: a changelog-only diff plans lint and reindex only, a tickets or graph diff also plans herdr (case 12's blueprint server reads them), a path no row maps plans the full set, a missing key exits 3. Also: a command in
 # the map that does not exist, a suite on disk that no command runs, and the plan depending on the order git lists the files.
 set -uo pipefail
 SRC="${REPO_ROOT:-/repo}"
@@ -61,11 +61,24 @@ assert_eq "a scheduler host change plans lint and the host suite only (make -C s
 plan scheduler/config/scheduler.json
 check "scheduler config plans both scheduler suites (host/lib/config.sh reads it)" "$([ "$(has "$OUT" "$SCHED")$(has "$OUT" "$SCHEDHOST")" = 11 ] && echo 1 || echo 0)"
 
-echo "-- AC-H2: a tickets-only diff plans lint and reindex and nothing else"
-plan work-orders/EPIC/WO-20261013-aaaa-t.md changelog/2026/10/20261013-x.md work-orders/archive/y.md
+echo "-- AC-H2: a changelog-only diff plans lint and reindex and nothing else"
+plan changelog/2026/10/20261013-x.md
 assert_eq "exit 0" "$RC" 0
 assert_eq "exactly lint then reindex" "$(tr '\n' '|' <<<"$OUT")" "$LINT|$REINDEX|"
 assert_eq "no complaint on stderr" "$ERR" ""
+
+echo "-- the blueprint dev server reads graph/ and work-orders/, so herdr case 12 must run for them (tester test.failed on PR 109)"
+plan work-orders/EPIC/WO-20261013-aaaa-t.md work-orders/archive/y.md
+assert_eq "a tickets-only diff plans lint, reindex and herdr" "$(tr '\n' '|' <<<"$OUT")" "$LINT|$REINDEX|$HERDR|"
+plan graph/nodes/n.json
+assert_eq "a graph/ diff plans lint, herdr and loop" "$(sort <<<"$OUT" | tr '\n' '|')" "$(printf '%s\n' "$LINT" "$HERDR" "$LOOP" | sort | tr '\n' '|')"
+cp "$CFG" "$W/full.json"; jq '(.rows[] | select(.paths | index("graph/*")) | .suites) -= ["herdr"]' "$W/full.json" > "$CFG"
+plan graph/nodes/n.json
+assert_eq "with herdr dropped from the graph/ row the plan lacks herdr (the check above is not vacuous)" "$(has "$OUT" "$HERDR")" 0
+jq '(.rows[] | select(.paths | index("work-orders/*")) | .suites) -= ["herdr"]' "$W/full.json" > "$CFG"
+plan work-orders/EPIC/WO-20261013-aaaa-t.md
+assert_eq "with herdr dropped from the work-orders/ row the plan lacks herdr" "$(has "$OUT" "$HERDR")" 0
+cp "$W/full.json" "$CFG"
 
 echo "-- AC-H2: a path no row maps plans the full set, and the message names the path"
 plan Jenkinsfile; assert_eq "exit 0" "$RC" 0

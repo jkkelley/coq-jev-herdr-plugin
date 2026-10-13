@@ -24,11 +24,20 @@
 #      top-level path runs everything until someone adds its row.
 #   2. Rows union instead of first-match wins: a more specific row can never hide the suites a broader one demands. Cost: no row can
 #      take a suite away, so the broad `herdr/*` row cannot be narrowed by a later one.
-#   3. `make lint` is in `always`, so a tickets-only diff plans exactly lint and reindex; lint is the one check that reads every file.
+#   3. `make lint` is in `always`, so a changelog-only diff plans exactly lint and reindex; lint is the one check that reads every file.
+#      A diff that touches work-orders/ or graph/ also plans herdr (see 7).
 #   4. A diff is `merge-base(B,H)..H` with renames split into delete and add, so a file moved out of a mapped path still plans it.
 #   5. The plan names commands; it never runs them (verify-main.sh runs the full set, the tester runs the plan).
 #   6. work-order.sh is the managed skill copy, which is gitignored: the reindex command names the project path, and a worktree
 #      without it fails at run time; bin/aggregates.sh has the lookup that finds the machine copy.
+#   7. BREADCRUMB 2026-10-13 - WO-20261013-f1ff, tester test.failed on PR 109. What broke: config/suites.json mapped graph/* to loop
+#      only and work-orders/* to reindex only, but herdr case 12 (herdr/tests/cases/12-blueprint-panes.test.sh) starts the real
+#      report/blueprint/serve.sh, whose dev tier refreshes its page from graph/ and work-orders/ (report/blueprint/config/
+#      tier.schema.json) and asserts "dev serves a built page"; no row sent a graph/ or tickets change to herdr, a hidden coupling
+#      that would merge a broken blueprint page green. Fix: herdr joins the work-orders/* and graph/* rows, and work-orders/* is
+#      split from changelog/* (which nothing but reindex reads) so changelog stays reindex-only. Rejected: a `report/blueprint/*`
+#      reverse row (the trigger is the input data, not the server's code) and dropping the coupling from case 12. Cost: a
+#      tickets-only diff now plans herdr, the slowest suite, until case 12 reads a fixture instead of live data; case 19 pins the rows.
 set -uo pipefail
 export LC_ALL=C
 HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
