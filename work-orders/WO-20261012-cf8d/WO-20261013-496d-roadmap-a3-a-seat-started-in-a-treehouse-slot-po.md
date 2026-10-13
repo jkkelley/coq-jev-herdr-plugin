@@ -68,8 +68,10 @@ On 2026-10-12 22:05Z a seat in a slot wrote and searched records in the slot's e
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the case passes and fails when event.sh is pointed back at the slot's events/
-- [ ] `AC-H2` *(human)* make -C herdr test passes with COQ_STATE at a temp dir; make lint passes
+- [x] `AC-H1` *(human)* the case passes and fails when event.sh is pointed back at the slot's events/
+  - observed `2026-10-13` CASES=26 make -C herdr test: 13 checks ok. The case's last block rewrites the world's event-real.sh to write into the slot's events/ (recs=$ROOT) and then sees one record in the slot and none new in the state root, so the case's checks fail for that fault.
+- [x] `AC-H2` *(human)* make -C herdr test passes with COQ_STATE at a temp dir; make lint passes
+  - observed `2026-10-13` make lint: all ok. make -C herdr test with COQ_STATE at a temp dir: 27 passed, 1 failed. The one failure is 12-blueprint-panes ('dev serves a built page', got 'ok dev up, no page yet'); it fails identically on an untouched checkout of main (HEAD 65a4f02), touches none of this ticket's files, so it is NOT fixed here and needs its own ticket. Case 26 passes.
 
 ## Test plan
 
@@ -88,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: the world already exports COQ_STATE and shims event.sh, so case 26 needed no world.sh change. The seat is brought up with --worktree on the world copy, which stands in for the slot. Pre-existing: herdr case 12 fails on main (dev tier has no build after the case removes report/blueprint/out); cut a ticket for it.
 
 ## Outcome
 
