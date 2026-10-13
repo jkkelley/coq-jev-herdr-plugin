@@ -86,12 +86,12 @@ if [ "${CI_POD:-0}" = 1 ]; then
   }
 
   echo "== pod: tools, architecture and environment of $image at $SHA in namespace $NS"
-  if run_pod tools "command -v podman && exit 9; uname -m; herdr --version; env | sort"; then
+  if run_pod tools "command -v podman && exit 9; uname -m; herdr --version; ls /var/run/secrets/kubernetes.io 2>&1 | sed s/^/SATOKEN:/; env | sort"; then
     envs="$(cat "$OUT/tools.log")"
     ok "a pod runs the image (no podman in it); node $(awk '{print $1}' "$OUT/tools.node"), $(printf '%s\n' "$envs" | grep -E '^(x86_64|aarch64)$' | head -1)"
     check "the pod environment holds no AWS variable" "$(printf '%s\n' "$envs" | grep -qE '^AWS_' && echo 0 || echo 1)"
     check "the pod environment holds no page key or token" "$(printf '%s\n' "$envs" | grep -qiE '^[A-Z_]*(PAGE_KEY|TOKEN|SECRET|PASSWORD|KEY)[A-Z_]*=' && echo 0 || echo 1)"
-    check "the pod has no service account token mounted" "$(printf '%s\n' "$envs" | grep -qE '^KUBERNETES_SERVICE_HOST=' && echo 0 || echo 1)"
+    check "the pod has no service account token mounted" "$(printf '%s\n' "$envs" | grep -qE '^SATOKEN:.*(serviceaccount|token)' && echo 0 || echo 1)"
   else bad "the tools pod ran"; cat "$OUT/tools.log"; fi
 
   echo "== pod: every herdr case in its own pod, $JOBS at a time"
