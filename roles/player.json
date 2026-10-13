@@ -75,7 +75,8 @@
     "read one state record, emit one action record; nothing in between",
     "every action carries a one-line reason to the trace pane",
     "on an unknown UI screen: stuck 423 with a screenshot path; the adapter owns recovery",
-    "after death: write the post-mortem record and wait for the next life"
+    "after death: write the post-mortem record and wait for the next life",
+    "records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read"
   ],
   "forbidden": [
     "spawning a subagent or any background process; every process is a labelled herdr pane",
@@ -86,5 +87,8 @@
     "naming a ticket without its full title in any owner-facing line",
     "pressing keys directly; actions go through the adapter",
     "reading pixels when structured state exists"
+  ],
+  "breadcrumbs": [
+    "BREADCRUMB 2026-10-13 - WO-20261013-58c9 (Roadmap A3). What broke: seats searched their own slot's events/ and missed records (the merger, 2026-10-12 22:05Z); since A1 (WO-20261012-7e13) events/bin/event.sh writes every record under the state root (bin/state-root.sh tree records), but the must list in this file never said so. Why it mattered: a seat reads its playbook as the whole of its law, so a records home no playbook names is one a seat can get wrong, and it then waits on a record that was already posted. Why this fix: the last must step, in the same words every other role gained in its own A3 part (roles/worker.json, roles/architect.json), so playbooks/player.md carries it once roles/bin/render-playbook.sh re-renders. Rejected: editing playbooks/player.md by hand (render-playbook.sh --check calls that drift) and a records path in allow.paths (a literal path goes stale; event.sh resolves it). Cost: one more step read each turn; allow and deny are unchanged."
   ]
 }

@@ -32,6 +32,7 @@ Inputs: game.state. Outputs: game.action, trace.line, postmortem.
 2. every action carries a one-line reason to the trace pane
 3. on an unknown UI screen: stuck 423 with a screenshot path; the adapter owns recovery
 4. after death: write the post-mortem record and wait for the next life
+5. records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read
 
 ## Records you emit
 
