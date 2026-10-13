@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-12",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "created_at": "2026-10-12T22:13:17+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -25,7 +25,8 @@
   ],
   "blocks": [
     "WO-20261012-541a",
-    "WO-20261012-da1e"
+    "WO-20261012-da1e",
+    "WO-20261013-70c4"
   ],
   "files": [
     "factory/bin/*",
