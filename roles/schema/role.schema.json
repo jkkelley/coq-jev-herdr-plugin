@@ -39,6 +39,7 @@
         "orchestrator",
         "architect",
         "worker",
+        "spec-author",
         "tester",
         "reviewer",
         "merger",

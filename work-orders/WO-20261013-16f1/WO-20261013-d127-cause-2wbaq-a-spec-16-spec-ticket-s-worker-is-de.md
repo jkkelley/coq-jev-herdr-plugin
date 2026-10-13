@@ -29,7 +29,7 @@
   "files": [
     "roles/spec-author.json",
     "playbooks/spec-author.md",
-    "herdr/bin/seat.sh",
+    "roles/schema/role.schema.json",
     "herdr/tests/cases/35-spec-author-role.test.sh"
   ]
 }
@@ -72,7 +72,8 @@ Cause 2wbaq (record 20261013T163817Z-423-2wbaq): the worker role denies writes t
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a SPEC-16 per-file ticket seats spec-author on claude-opus-5-5 and its worker can write specs/ and graph/ but not roles/; the playbook check in lint reports no drift; the case passes
+- [x] `AC-H1` *(human)* a SPEC-16 per-file ticket seats spec-author on claude-opus-5-5 and its worker can write specs/ and graph/ but not roles/; the playbook check in lint reports no drift; the case passes
+  - observed `2026-10-13` herdr case 35 in Podman (state root test-output/2026/10/20261013200845-d127-herdr-cases.log): seat.sh --ticket T --role spec-author on a ticket whose every file is under specs/ and graph/ seats worker-wo-20261013-35a1 as spec-author, claude started with --model claude-opus-5-5, settings deny no edit under specs/, graph/ or roles/ (roles/ writable per architect ruling 19:55Z); a mixed ticket worker still denies all three; tests: 3 passed, 0 failed with cases 01 and 26. make lint: all ok, roles: schema + playbooks in sync (no drift). The automatic pick from the ticket files is the follow-up after WO-20261013-a0e2 (see the scope-split note).
 
 ## Test plan
 
@@ -91,6 +92,9 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: the role is a jq derivation of roles/worker.json, so its shape cannot drift from the worker; case 35 pins the fence by the rendered settings, not by the playbook text. Change next time: claims.sh start must see tickets live in treehouse slots (cause posted to the architect); a harness Edit on a tracked JSON file reflowed the whole schema through a formatter hook, so JSON edits go through sed or jq.
+- `2026-10-13` Bootstrap spec-author seat architect-you-are-the-spec-df73 (architect fence allows roles/), after worker-wo-20261013-d127 was denied roles/ (record 20261013T194359Z-423-kihec). Architect ruling 19:55Z applied: spec-author is the role for specs/, graph/ and roles/ changes, so its deny.paths is empty. Label worker-${ticket}, so route.sh seat_of, flow.sh and the patrol reach the seat (breadcrumb in roles/spec-author.json). Scope split: WO-20261013-a0e2 is live in slot 3 with an uncommitted edit to the same herdr/bin/seat.sh block, started 13 s after this ticket because claims.sh start cannot see treehouse slots, and no file is touched by two open PRs. So herdr/bin/seat.sh left this ticket files and the automatic pick is a follow-up after WO-20261013-a0e2 merges: seat.sh seats --role worker as spec-author when every file of the ticket is under specs/, graph/, roles/ or playbooks/ (playbooks/ because a role change re-renders its playbook), and case 35 gains the pick assertions. roles/schema/role.schema.json joined the files for the name enum. Until the pick lands, seat a spec ticket with seat.sh --ticket T --role spec-author.
 
 ## Outcome
 
