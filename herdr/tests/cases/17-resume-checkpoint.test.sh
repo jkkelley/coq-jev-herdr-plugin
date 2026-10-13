@@ -14,6 +14,17 @@ CPSH="$REPO/.claude/skills/context-compaction/scripts/checkpoint.sh"
 # WO-20261012-e36e: .claude/skills/ is gitignored (skill-sync installs it), so a clean checkout has no checkpoint.sh. The world
 # gets the tracked fixture at the path the hook falls back to, whatever the copy held; the real hook then runs unmodified.
 mkdir -p "$(dirname "$CPSH")"; cp "$REPO/herdr/tests/fixtures/checkpoint.sh" "$CPSH"
+# BREADCRUMB 2026-10-12 - WO-20261012-9f5d. What broke: the "live seat gets its own newest checkpoint" block below read
+#   $REPO/CONTEXT_STATE.md, which world_up copies from the checkout. PR 36 made that file a
+#   gitignored local render, so a clean worktree, CI and a fresh clone have none: on main c22cb99 four assertions failed
+#   ("has a checkpoint to show", "opens by saying whose checkpoint it is", "and not the second one", "appears once"). A seat
+#   slot always has one, which is why PR 40 passed its gates and the architect's verify of main caught it. Why this fix: the
+#   world writes the two-checkpoint file it asserts on, in the shape checkpoint.sh produces, over whatever the copy held, so
+#   the case needs nothing outside tracked files and the real resume-checkpoint.sh runs unmodified. Rejected: tracking
+#   CONTEXT_STATE.md again (PR 36 ignored it on purpose) and skipping when it is absent (a green run that proved nothing).
+#   Cost: the fixture's heading shape follows checkpoint.sh's; if that changes the "verbatim" and "not the second" lines fail
+#   loudly. Record: WO-20261012-9f5d.
+printf '# CONTEXT_STATE.md\n\n## Checkpoint 2026-10-12 22:00 UTC\ntop checkpoint resume line\n\n## Checkpoint 2026-10-12 21:00 UTC\nsecond checkpoint resume line\n' > "$REPO/CONTEXT_STATE.md"
 WT="$WORLD/wt"; mkdir -p "$WT"
 
 # run_hook PANE: the hook's stdout and exit code with a private HOME, so only COQ_CHECKPOINT_SH or the repo copy can answer.

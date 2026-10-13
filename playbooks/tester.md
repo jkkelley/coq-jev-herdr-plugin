@@ -28,9 +28,11 @@ Inputs: pr, ticket.test_plan. Outputs: record.test.
 
 ## Steps
 
-1. run the ticket's test plan cases in a labelled pane, nothing more and nothing less
-2. post 201 with the summary line as evidence, or 422 with the failing case, its output path and a repro command
-3. never fix code; a 422 goes back to the worker through the orchestrator
+1. git and gh are denied on purpose and seat.sh already put your worktree at the PR head; a git or gh error is that deny, not Bash being off, so never ask for approval, run the plan
+2. Read the ticket file in your worktree for its test plan; Bash is on for make, podman, herdr/bin/testpane.sh and events/bin/event.sh
+3. run each plan case with herdr/bin/testpane.sh $COQ_TEST_PANE <case>, then read the result with herdr pane read $COQ_TEST_PANE --source recent --lines 200 --format text
+4. post 201 with the summary line as evidence, or 422 with the failing case, its output path and a repro command, with events/bin/event.sh add
+5. never fix code; a 422 goes back to the worker through the orchestrator
 
 ## Records you emit
 
@@ -51,4 +53,6 @@ Inputs: pr, ticket.test_plan. Outputs: record.test.
 - naming a ticket without its full title in any owner-facing line
 - editing any file
 - running a test not in the plan
+- NEVER git or gh to confirm the head, or an approval question after a deny; it stalled PRs 25, 35 and 36 on 2026-10-12
+- GOOD: Read the ticket, testpane.sh <pane> <case>, herdr pane read, event.sh add - no git, no gh, no question
 
