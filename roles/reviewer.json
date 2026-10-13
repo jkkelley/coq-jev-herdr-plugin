@@ -25,7 +25,7 @@
   "owner_channel": false,
   "name": "reviewer",
   "title": "Reviewer",
-  "purpose": "Checks the PR against the acceptance criteria and the conventions, and posts one record: passed or changes requested with observations.",
+  "purpose": "Reads the PR diff and its ticket, checks them against the acceptance criteria and the conventions, runs nothing, and posts one record: passed or changes requested with observations.",
   "model": {
     "claude": "claude-sonnet-5-5",
     "architect_may_override": true
@@ -46,7 +46,6 @@
     "commands": [
       "gh pr view|diff",
       "gh pr review",
-      "make lint",
       "events/bin/event.sh add"
     ]
   },
@@ -60,7 +59,10 @@
     "paths": [],
     "commands": [
       "gh pr merge *",
-      "git push *"
+      "git push *",
+      "make *",
+      "podman *",
+      "herdr/bin/testpane.sh *"
     ]
   },
   "records": {
@@ -68,6 +70,7 @@
     "review.changes": 422
   },
   "must": [
+    "read only the PR diff (gh pr diff), the files it changes and the ticket file; run no test, suite, case, lint or make target: the tester's 201 on this head is the test evidence and main verify runs the full set",
     "every acceptance criterion has an evidence line or the review is 422 naming it",
     "no file outside the ticket's paths changed, or 422",
     "contents list, GOOD and NEVER, no em dash, UTC, config not literals; a miss is 422 with path and line",
@@ -82,9 +85,11 @@
     "editing files outside your allowed paths",
     "naming a ticket without its full title in any owner-facing line",
     "fixing the code yourself",
-    "approving with an open criterion"
+    "approving with an open criterion",
+    "running any test, suite, case, lint or make target, or an approval question after the fence denies one; the review reads only"
   ],
   "breadcrumbs": [
-    "2026-10-13 owner message m-20261013161912217-3d6g0 (\"15 seats available, why idle\", via the architect, P0). What broke: reviewer seats capped at 2 (roles/reviewer.json max_seats) so a gated PR waited for a reviewer while more workers produced PRs; this supersedes the reviewer-cap part of the 9c50 capacity split in PR 96. Why it mattered: free capacity went unused while work waited. Why this fix: max_seats 2 to 4, nothing else changes. Rejected: leaving the cap and adding seats of another role (the idle capacity is in this role's lane). Cost: 4 concurrent seats of this role share the same test pane and Podman budget; the playbook text is rendered from this file by roles/bin/render-playbook.sh."
+    "2026-10-13 owner message m-20261013161912217-3d6g0 (\"15 seats available, why idle\", via the architect, P0). What broke: reviewer seats capped at 2 (roles/reviewer.json max_seats) so a gated PR waited for a reviewer while more workers produced PRs; this supersedes the reviewer-cap part of the 9c50 capacity split in PR 96. Why it mattered: free capacity went unused while work waited. Why this fix: max_seats 2 to 4, nothing else changes. Rejected: leaving the cap and adding seats of another role (the idle capacity is in this role's lane). Cost: 4 concurrent seats of this role share the same test pane and Podman budget; the playbook text is rendered from this file by roles/bin/render-playbook.sh.",
+    "BREADCRUMB 2026-10-13 - WO-20261013-b6f3 (architect ruling 22:28Z). What broke: the reviewer on PR 145 (WO-20261013-f298) ran test suites for about 12 minutes before it judged the diff, because no step of this role said a review runs nothing and make lint sat on its allowed commands. Why it mattered: the route seats a reviewer only after test.passed on the current head (factory/config/routes.json, when head_current), so the suites had already passed in the tester's gate, and a second run held the reviewer seat and its test pane for no new evidence while the next pull request waited for a review. Why this fix: step 1 says the review reads the diff and the ticket only, make lint left the allowed commands (lint is in every plan the tester runs: always in factory/config/suites.json), and make, podman and herdr/bin/testpane.sh joined the denied commands, so the fence refuses the run that a line of prose did not stop. Rejected: a forbidden line alone (an order in prose did not hold on PR 145) and keeping make lint as a cheap check (a second lint is a second run of the tester's evidence). Cost: a reviewer cannot reproduce a test result itself; a doubt about one is a 422 that names it, and the tester or main verify answers it. Proof: roles/tests/tester-plan.test.sh fails if step 1, the deny entries or the allowed make lint come back."
   ]
 }
