@@ -72,7 +72,8 @@ Owner 2026-10-12 23:54Z to 2026-10-13 00:09Z: the chain is owner, architect, orc
 - [ ] `AC-H1` *(human)* SPEC-17 validates against spec.xsd and make lint passes in Podman
 - [ ] `AC-H2` *(human)* every hand fix in the inventory maps to a named rule, seat or check
 - [ ] `AC-H3` *(human)* every DAG node has a checklist and every status code in the map names who acts and the retry
-- [ ] `AC-H4` *(human)* the owner reads it on the bearings page and accepts it on a card
+- [x] `AC-H4` *(human)* the owner reads it on the bearings page and accepts it on a card
+  - observed `2026-10-13` Owner answered Accept on bearings card C25 at 2026-10-13T00:48:02Z; the coq architect posted record 20261013T004802Z-100-12wlf on this ticket: AC-H4 met
 
 ## Test plan
 
