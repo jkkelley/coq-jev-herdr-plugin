@@ -33,7 +33,8 @@
     "factory/config/*",
     "factory/schema/*",
     "factory/tests/*",
-    "factory/RUNBOOK.md"
+    "factory/RUNBOOK.md",
+    "herdr/tests/cases/13-recover-belt.test.sh"
   ]
 }
 ---
@@ -99,6 +100,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Review fix 2026-10-13: the reviewer found herdr/tests/cases/13-recover-belt.test.sh outside the files field (gate.sh pr-files). Declared it with claims.sh set; claims.sh diff --base origin/main exits 0. Merged origin/main into the branch to clear a conflict on the ticket file (main had it under the epic directory, the branch under archive/); the merge was clean.
 - `2026-10-13` Retro: the belt (route.sh, flow.sh, policy.sh, gate.sh) now resolves records, ledger, belt, since and latches through bin/state-root.sh via a new factory/bin/paths.sh and a ${tree:NAME} placeholder in the configs; --state DIR is the state root. Ledger is keyed on the record file name, routing still in id order, gate.sh finds a record by its id field. Forced outside the declared files: herdr/tests/cases/13-recover-belt.test.sh BELT path (one line; no open PR touches it). Not done, belongs to A3: report/loop board.json belt_state still names factory/state/runner.json, and .gitignore still lists factory/state/. Since the orchestrator's ruling 4sryn, every record is posted with the checkout writer until this merges. The world no longer moves records into events/; its event.sh wrapper only prints the id.
 
 ## Outcome
