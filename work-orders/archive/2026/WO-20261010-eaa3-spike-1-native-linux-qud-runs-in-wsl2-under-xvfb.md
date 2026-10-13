@@ -4,15 +4,15 @@
   "slug": "spike-1-native-linux-qud-runs-in-wsl2-under-xvfb",
   "title": "Spike 1: native Linux Qud runs in WSL2 under Xvfb or WSLg",
   "type": "feature",
-  "status": "in-progress",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-10",
-  "updated": "2026-10-11",
+  "updated": "2026-10-13",
   "created_at": "2026-10-10T19:24:17+00:00",
   "parent": "WO-20261010-da54",
   "branch": "feat/spike-1-native-linux-qud-runs-in-wsl2-under-xvfb",
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect: sure of it; owner 2026-10-10 UTC: approval is the architect's job, Lavish is prohibited for this project",
@@ -23,7 +23,8 @@
   "depends_on": [],
   "blocks": [
     "WO-20261010-d58d"
-  ]
+  ],
+  "superseded_by": null
 }
 ---
 
@@ -84,4 +85,9 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: Closed by WO-20261013-89c7 (Roadmap K8): no pull request was ever opened and its branch on origin carries no commit beyond main and no captured title screen or result record, so neither criterion has proof; Qud runs natively under WSLg today, so the spike is superseded.
+
+No branch, no PR and no merge commit exist for this work order.
+

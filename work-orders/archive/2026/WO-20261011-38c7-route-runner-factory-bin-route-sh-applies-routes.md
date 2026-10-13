@@ -4,15 +4,15 @@
   "slug": "route-runner-factory-bin-route-sh-applies-routes",
   "title": "Route runner: factory/bin/route.sh applies routes.json to every new record and nothing else",
   "type": "feature",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-11",
-  "updated": "2026-10-11",
+  "updated": "2026-10-13",
   "created_at": "2026-10-11T14:39:37+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/route-runner-factory-bin-route-sh-applies-routes",
-  "pr": null,
-  "closed": null,
+  "pr": 14,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
@@ -100,6 +100,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Closed by WO-20261013-89c7 (Roadmap K8): the work is on main through pull request 14 (8a13f5b), every criterion already carries evidence, and the ticket was left in-progress on main.
 - `2026-10-11` Retro. Built in 5 steps (event.sh kinds and --to, runner config, route.sh, 7 Podman cases, runbook and graph). Decisions: the runner never routes records written by its own seat (else record.routed and the 500 receipt loop); claim-then-perform ledger under factory/state/routed so a killed runner is reported not repeated; first start routes only new records unless --from-start. Scope touched beyond factory/: events/bin/event.sh and events/schema gained the factory record kinds and an optional --to addressee, because the runner cannot route a pr.opened that event.sh refuses to write (breadcrumb at KINDS). Known limit: escalations counts by record id order, so two blocked records in the same UTC second could miscount. Seats still post factory records as kind note until WO-20261011-9639 or a later ticket moves them to the real kinds.
 
 ## Outcome

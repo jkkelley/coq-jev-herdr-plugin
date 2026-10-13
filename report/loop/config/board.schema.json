@@ -43,7 +43,7 @@
         "roles_dir",
         "playbooks_dir",
         "herdr_config",
-        "belt_state",
+        "runner_config",
         "belt_max_age_seconds",
         "owner_pane_label"
       ],
@@ -72,9 +72,10 @@
           "$ref": "#/$defs/relpath",
           "description": "carries .session and .workspace_label, the herdr workspace whose panes are listed"
         },
-        "belt_state": {
-          "$ref": "#/$defs/relpath",
-          "description": "the route runner's state file; the belt runs while its age is within belt_max_age_seconds. Under factory/state, gitignored"
+        "runner_config": {
+          "type": "string",
+          "pattern": "^[$][{]repo[}]/[^/].*[.]json$",
+          "description": "the route runner's config, with ${repo} the checkout; its state_dir plus /belt is the belt file route.sh touches, and the belt runs while that file's age is within belt_max_age_seconds"
         },
         "belt_max_age_seconds": { "type": "integer", "minimum": 1 },
         "owner_pane_label": {

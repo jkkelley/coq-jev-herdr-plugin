@@ -11,11 +11,12 @@
 #   by hand             a ticket with a PR in its frontmatter and no pr.opened record: the worker station says so, and the PR
 #                       waits at the tester.
 #   a seat is up        its newest record is not seat.down and, when the pane list is available, its pane is still in it.
-#   the belt            the route runner's state file is no older than belt_max_age_seconds.
+#   the belt            the route runner's belt file (runner.json state_dir plus /belt) is no older than belt_max_age_seconds.
+#   the live line       tickets come from lib/live.jq: open pull requests and ticket branches over the main checkout (WO-20261013-89c7).
 
 ($cfg_f[0]) as $cfg | ($routes_f[0]) as $routes | ($roles_f[0]) as $roles | ($playbooks_f[0]) as $playbooks
 | ($panes_f[0]) as $pn | ($pn.ok) as $panes_ok | ($pn.panes) as $panes | ($belt_f[0]) as $belt
-| ($tickets_f[0]) as $tickets
+| ($tickets_f[0]) as $tickets | ($stale_f[0]) as $stale | ($live_f[0]) as $live
 
 # A free-text value from a record or a ticket: a leading-slash path is replaced and the length is capped, so no absolute path
 # reaches the page whatever a seat wrote in a note.
@@ -144,9 +145,10 @@
 
   | {schema_version: "1.0.0", number: $number, at: $now, actor: $cfg.actor,
      state: (if $panes_ok then "LIVE" else "HERDR PANES UNAVAILABLE" end),
-     headline: (if ($lines | length) == 0
+     headline: ((if ($lines | length) == 0
                 then "Floor: no ticket in progress or in review, belt \(if $belt.running then "running" else "stopped" end)"
-                else "Floor: \($lines | length) \(if ($lines | length) == 1 then "line" else "lines" end), \($nblocked) blocked, belt \(if $belt.running then "running" else "stopped" end)" end),
+                else "Floor: \($lines | length) \(if ($lines | length) == 1 then "line" else "lines" end), \($nblocked) blocked, belt \(if $belt.running then "running" else "stopped" end)" end)
+                + (if ($stale | length) > 0 then ", \($stale | length) stale in-progress without a branch or pull request" else "" end)),
      poll_seconds: $cfg.poll_seconds,
      stations: ($cfg.stations | map(. as $s | (role_file($s.role)) as $rf
        | {id: $s.id, role: ($s.title // ($rf | .title) // $s.role // $s.id),
@@ -156,7 +158,7 @@
        | (first($routes.routes[] | select(.match.kind == $k.route.kind and .match.code == $k.route.code and .do == $k.route.do))
           // error("kickback \($k.from) to \($k.to) names no row of the routes table")) as $row
        | {from: $k.from, to: $k.to, tag: tag($row)} + (if $k.esc == true then {esc: true} else {} end))),
-     lines: $lines, glass: $glass}
+     lines: $lines, glass: $glass, stale: $stale}
     + (if $cfg.board_title != null then {board_title: $cfg.board_title} else {} end)
     + {board: $board,
        legend: ($legend + $cfg.legend_notes),
@@ -165,4 +167,4 @@
        # state until the route runner exists) and rewrote the page for nothing, which AC-H4 forbids. The age is not in the entry
        # at all now: "over N s old" says the same thing and holds still. Rejected: ignoring `sources` in watch's comparison, which
        # would hide a real change in what was read. Cost: the page no longer says how stale; the state file's mtime does.
-       sources: ("\($cfg.inputs.events_dir) (\($ev | length) records in \($cfg.inputs.events_days) days, \($routed) with a route) · \($cfg.inputs.work_orders_dir) (\($tickets | length) tickets) · \($cfg.inputs.roles_dir)/*.json · \($cfg.inputs.routes) · herdr pane list (\(if $panes_ok then "\($panes | length) panes" else "unavailable" end)) · belt state (\(if $belt.running then "running" elif $belt.age != null then "stale, over \($cfg.inputs.belt_max_age_seconds)s old" else "absent" end))")}
+       sources: ("\($cfg.inputs.events_dir) (\($ev | length) records in \($cfg.inputs.events_days) days, \($routed) with a route) · \($cfg.inputs.work_orders_dir) (\($tickets | length) tickets) · \($cfg.inputs.roles_dir)/*.json · \($cfg.inputs.routes) · herdr pane list (\(if $panes_ok then "\($panes | length) panes" else "unavailable" end)) · \(if $live.ok then "\($live.prs | length) open pull requests, \($live.branches | length) branches" else "pull requests unavailable" end) · belt file (\(if $belt.running then "running" elif $belt.age != null then "stale, over \($cfg.inputs.belt_max_age_seconds)s old" else "absent" end))")}

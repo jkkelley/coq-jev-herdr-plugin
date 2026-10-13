@@ -19,7 +19,7 @@
 
 ## Rules that bind
 
-- The page is drawn from records, tickets, roles, routes, the herdr pane list and the belt state file; no value on it is typed in.
+- The page is drawn from records, tickets, roles, routes, the herdr pane list, the open pull requests and ticket branches, and the belt file; no value on it is typed in.
 - The watcher runs in a labelled pane, never detached.
 - The template is owner-locked: no formatter, no hand edit that moves it off the design.
 - The config is the only thing a second repository changes.
@@ -68,8 +68,9 @@ These are the ones to change:
 | `out_dir`                              | Where `index.html` and `data.json` are written, relative to the repository root. Gitignore it.                                             |
 | `poll_seconds`, `watch_seconds`        | Between 5 and 30 each, and their sum at most 30.                                                                                           |
 | `actor`                                | Who the page says built it.                                                                                                                |
-| `inputs.*`                             | Where the records, tickets, roles, routes, playbooks, herdr config and the belt state file are, relative to the repository root.           |
-| `inputs.belt_max_age_seconds`          | How old the route runner's state file may be before the belt reads as stopped.                                                             |
+| `inputs.*`                             | Where the records, tickets, roles, routes, playbooks, herdr config are, relative to the repository root.                                  |
+| `inputs.runner_config`                 | The route runner's config, with `${repo}`. Its `state_dir` plus `/belt` is the belt file `route.sh` touches; `${repo}` and `${tree:NAME}` work. |
+| `inputs.belt_max_age_seconds`          | How old the belt file may be before the belt reads as stopped.                                                                             |
 | `inputs.owner_pane_label`              | The label of the pane that serves the owner's page; while it is in the pane list the owner station reads live.                             |
 | `line_statuses`                        | A ticket in one of these statuses is a line on the floor.                                                                                  |
 | `stations`                             | The stations in order: an `id`, the `role` file it belongs to (null for a station with no seat), what it `does` and the record it `emits`. |
@@ -213,3 +214,17 @@ CI runs this directory's suite and lint when its files change: `Jenkinsfile` sta
 
 The tool is the node `CMP-factory-board` and this runbook is `RUN-factory-board`, joined by a `defined_in` edge.
 `make lint` fails when a new Component node has no `defined_in` edge to a Runbook node; see `graph/config/component-runbook-grandfathered.json` for the older Components that have not got one yet.
+
+## The live line and stale tickets
+
+Ticket status is read from the main checkout, then corrected from the live line (`lib/live.jq`).
+An open pull request makes its ticket in review, with that pull request and branch.
+A ready ticket whose branch is on origin is in progress.
+A pull request naming a ticket main has no file for is drawn from its title.
+`collect` asks `gh pr list` and `git ls-remote --heads origin`; `--live FILE` or `LOOP_LIVE_FILE` supplies a saved `{prs, branches}` and `--no-live` skips both.
+With no live line, nothing is promoted and the sources line says the pull requests are unavailable.
+
+A ticket main holds in-progress with no open pull request and no branch on origin is stale.
+The page still draws, and the headline counts the stale tickets; `loop.sh validate FILE` exits 3 naming each one, and case 16 fails the repository's tests on one.
+The fix is to close the ticket with the work-order tool (done with evidence, or cancelled with the reason), never to edit the file.
+Not yet wired: the SPEC-17 board lane and health line (K1 to K3), which do not exist; the pull requests and branches stand in until they do.
