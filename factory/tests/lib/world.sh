@@ -34,16 +34,44 @@
 #   the wake line, the receipts and gate.sh --id carry) and keeping the move (it hides exactly the A2 defect). Cost: a case that
 #   needs the path of a record asks rec_file; a record file is named <timestamp>-<kind>-..., so find -name '*-500-*' no longer
 #   finds the runner's 500 notes, files_code does.
+# BREADCRUMB 2026-10-13 - WO-20261013-f298 (Roadmap K5 reland). What broke: K5 (PR 90) made the real writer refuse a gate record with no --sha
+#   and any --code outside SPEC-17 s-codes, and this world's cases post bare gate records and probe codes the routes file maps to nothing
+#   (deploy 250, note 299, work.started 101, gate 150 in 01-wake .. 22-no-route-noise), so 16 cases failed and main broke (revert PR 95).
+#   Why this fix: the world keeps posting the records it always posted, through event-fixture.sh, a wrapper that hands the real writer a
+#   record it accepts and then undoes the difference: a gate kind with no --sha is written with a placeholder sha and the key deleted, and a
+#   code outside the schema's enum is written as 100 and the code and the id's code part rewritten. The runner under test then reads exactly
+#   the records it reads on the host from a seat that predates K5 or a hand-edited file, which is what 22-no-route-noise and 10-sha prove.
+#   The refusals themselves are proven where they live, events/tests/cases/04-refusals.test.sh. Rejected: giving every fixture a sha (10-sha
+#   asserts the plain wake line of a record that has none), a bypass flag in the real writer (a flag that skips the refusal is the hole K5
+#   closes) and rewriting 16 cases (the cases are about routing, not about posting). Cost: a fixture record can be one the real writer
+#   would refuse, so a case that wants the writer's behaviour calls event-real.sh itself, as 10-sha does for the malformed sha.
 world_event_shim() {
   cp "$1/bin/state-root.sh" "$R/bin/"; cp "$1/config/state.json" "$1/config/state.schema.json" "$R/config/"
   mv "$R/events/bin/event.sh" "$R/events/bin/event-real.sh"
+  cat > "$R/events/bin/event-fixture.sh" <<'FIX'
+#!/usr/bin/env bash
+# event-fixture.sh add ARGS: event-real.sh add, but a gate record with no --sha and a code outside the schema's enum are accepted; prints the path.
+ROOT=$(cd "$(dirname "$0")/.." && pwd); real=$ROOT/bin/event-real.sh
+code=""; kind=""; sha=0; args=(); set -- "$@"; [ "${1:-}" != add ] || shift
+while [ $# -gt 0 ]; do case $1 in --code) code=$2; shift 2;; --kind) kind=$2; args+=(--kind "$2"); shift 2;; --sha) sha=1; args+=(--sha "$2"); shift 2;; *) args+=("$1"); shift;; esac; done
+unmapped=0; jq -e --argjson c "${code:-0}" '.properties.code.enum | index($c) | not' "$ROOT/schema/event.schema.json" >/dev/null 2>&1 && unmapped=1
+bare=0; [[ $kind =~ ^(pr\.opened|test\.passed|test\.failed|review\.passed|review\.changes|merged|merge\.conflict|verified|rejected)$ && $sha = 0 ]] && bare=1
+[ "$unmapped" = 0 ] || args+=(--code 100); [ "$unmapped" = 1 ] || args+=(--code "$code")
+[ "$bare" = 0 ] || args+=(--sha 0000000)
+p=$("$real" add "${args[@]}") || exit $?
+if [ "$unmapped" = 1 ] || [ "$bare" = 1 ]; then
+  jq --argjson c "${code:-100}" --argjson un "$unmapped" --argjson bare "$bare" '(if $un == 1 then .code = $c | .id |= sub("-100-"; "-\($c)-") else . end) | (if $bare == 1 then del(.sha) else . end)' "$p" > "$p.t" && mv "$p.t" "$p"
+fi
+printf '%s\n' "$p"
+FIX
+  chmod +x "$R/events/bin/event-fixture.sh"
   cat > "$R/events/bin/event.sh" <<'SHIM'
 #!/usr/bin/env bash
-# world wrapper for events/bin/event.sh (factory/tests/lib/world.sh, world_event_shim): the real writer, but add prints the record's id.
+# world wrapper for events/bin/event.sh (factory/tests/lib/world.sh, world_event_shim): add goes through event-fixture.sh and prints the record's id.
 ROOT=$(cd "$(dirname "$0")/.." && pwd); real=$ROOT/bin/event-real.sh
 [ "${1:-}" = add ] || exec "$real" "$@"
 args=(); json=0; for a in "$@"; do if [ "$a" = --json ]; then json=1; else args+=("$a"); fi; done
-p=$("$real" "${args[@]}") || exit $?
+p=$("$ROOT/bin/event-fixture.sh" "${args[@]}") || exit $?
 if [ "$json" = 1 ]; then cat "$p"; else jq -r .id "$p"; fi
 SHIM
   chmod +x "$R/events/bin/event.sh"
@@ -90,7 +118,7 @@ rec() {
 evo() {
   local id last rc p
   for _ in $(seq 1 20); do
-    p=$("$R/events/bin/event-real.sh" add "$@"); rc=$?; [ "$rc" = 0 ] || return "$rc"
+    p=$("$R/events/bin/event-fixture.sh" add "$@"); rc=$?; [ "$rc" = 0 ] || return "$rc"
     id=$(jq -r .id "$p")
     # the newest id of ANY other record in the world: the runner's own escalated and receipt records count too, since the table's
     # `escalations` counts the ones with an id before the record (03-escalate failed when a blocked 423 sorted before one).
