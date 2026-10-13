@@ -4,7 +4,7 @@
   "slug": "the-dead-man-s-switch-counts-the-patrol-s-own-no",
   "title": "The dead man's switch counts the patrol's own notes as records, so it never fired in a 9.5h outage",
   "type": "bug",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261013-16f1",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect P0 order 2026-10-13 (owner m-20261013162710557-e4nos: always a system loop), approved by the architect in the owner place (card C29); lavish prohibited for Claude seats",
@@ -25,7 +25,8 @@
   "files": [
     "line/watchdog.sh",
     "line/tests/cases/watchdog-quiet.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261013-bf70"
 }
 ---
 
@@ -88,4 +89,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: architect ruling ykne9: re-cut after the patrol and watchdog moves, at line/bin/watchdog.sh with a runnable plan; amend refuses an approved ticket
+- superseded by: `WO-20261013-bf70`
+
+No branch, no PR and no merge commit exist for this work order.
+
