@@ -26,7 +26,8 @@
   "blocks": [],
   "files": [
     "specs/scheduler/SPEC-16.D-jobs-retries-confirmation.xml",
-    "graph/nodes/REQ-wake-confirmed REQ-job-durable-idempotent.json"
+    "graph/nodes/REQ-wake-confirmed.json",
+    "graph/nodes/REQ-job-durable-idempotent.json"
   ]
 }
 ---
@@ -53,7 +54,7 @@ Owner 2026-10-13 03:00Z (record 57h60): pull request 37 (WO-20261012-5826, the S
 
 **In**
 
-- specs/scheduler/SPEC-16.D-jobs-retries-confirmation.xml with REQ-wake-confirmed REQ-job-durable-idempotent from 012fa41
+- specs/scheduler/SPEC-16.D-jobs-retries-confirmation.xml with graph/nodes/REQ-wake-confirmed.json and graph/nodes/REQ-job-durable-idempotent.json from 012fa41
 - revisions: d-confirm confirms the one prompt per status change; the merge is a job: squash with a head guard, merged 200 with the merge sha, merge.conflict 409 to the worker lane (03:02Z); three retries with backoff and jitter, then the dead letter and one owner card, as written
 
 **Out - non-goals**
