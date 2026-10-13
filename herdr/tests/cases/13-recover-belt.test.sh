@@ -18,7 +18,16 @@ RC="$REPO/herdr/bin/recover.sh"; BU="$REPO/herdr/bin/bringup.sh"; MON="$REPO/her
 #   the change is forced by the ticket, so it rides the same pull request (noted in the ticket's retro).
 BELT="$STATE/run/belt"; STATUS="$REPO/factory/bin/route.sh"
 run() { "$RC" "$1" > "$WORLD/out" 2>&1; rc=$?; out="$(cat "$WORLD/out")"; }
-fresh() { for _ in $(seq 1 25); do "$STATUS" status >/dev/null 2>&1 && return 0; sleep 1; done; return 1; }
+# BREADCRUMB 2026-10-13 - WO-20261013-2b64 (test speed, polls part 2). What broke: fresh() polled with `sleep 1` (up to 25 looks), and two
+#   more fixed sleeps (2 s after the runner's C-c, 1 s after the pane close) were paid in full on every run. Why this fix: fresh() is
+#   wait_until 25 on the same `route.sh status` look, 0.2 s apart; the 2 s becomes a wait for the runner pane to be a bare shell, which
+#   is the reason it was there (the runner must have stopped touching the belt before the belt is backdated); the 1 s becomes a wait for
+#   the pane to leave `pane list`. Rejected: leaving the belt backdate where it was (a runner that exits late re-touches the file and
+#   "the belt is still stale" fails by timing). Cost: none; the asserts are unchanged.
+belt_fresh() { "$STATUS" status >/dev/null 2>&1; }
+fresh() { wait_until 25 belt_fresh; }
+pane_bare() { h pane process-info --pane "$1" | jq -e '.result.process_info | .foreground_process_group_id == .shell_pid and all(.foreground_processes[]?; ((.argv // [.name])[0] | split("/") | last | ltrimstr("-")) | IN("bash", "zsh", "sh"))' >/dev/null; }
+pane_gone() { [ "$(h pane list | jq -r --arg p "$1" '[.result.panes[] | select(.pane_id == $p)] | length')" = 0 ]; }
 runner_pane() { "$MON" status | sed -nE 's/^ +2\.2\.2 route runner - runner +\[([^]]+)\] +in use$/\1/p'; }
 
 echo "-- bringup starts the real runner in 2.2.2 and its belt moves"
@@ -31,7 +40,7 @@ run --check; assert_eq "--check exits 0" "$rc" 0
 assert_match "ok belt is in the output" "$out" "^ok belt$"
 
 echo "-- the runner stops and the belt goes stale: --check says FAILED belt and changes nothing"
-h pane send-keys "$pane" C-c >/dev/null 2>&1; sleep 2; touch -d '-100 seconds' "$BELT"
+h pane send-keys "$pane" C-c >/dev/null 2>&1; wait_until 10 pane_bare "$pane"; touch -d '-100 seconds' "$BELT"
 # BREADCRUMB 2026-10-12 - WO-20261011-ceea. What broke: this count took every file in events/, and the flow watch pane that bringup
 #   starts in this same world (seat flow-watch, factory/bin/flow.sh, every 15 seconds) writes its own 500 "stall" note while the
 #   belt is stale, which is what it is for. On the branch of WO-20261011-ceea, with the three blueprint servers started by the same
@@ -60,7 +69,7 @@ assert_match "the closing note says one repair" "$(jq -rs '[.[] | select(.seat =
 run --check; assert_eq "the next --check exits 0" "$rc" 0
 
 echo "-- the runner pane itself is gone: --check names it, --apply draws the grid and restarts the runner"
-h pane close "$pane" >/dev/null 2>&1; sleep 1
+h pane close "$pane" >/dev/null 2>&1; wait_until 10 pane_gone "$pane"
 run --check; echo "$out" | sed 's/^/    /'
 assert_eq "--check exits 1" "$rc" 1
 assert_match "FAILED belt says the runner pane is missing" "$out" "^FAILED belt \(runner pane missing"
