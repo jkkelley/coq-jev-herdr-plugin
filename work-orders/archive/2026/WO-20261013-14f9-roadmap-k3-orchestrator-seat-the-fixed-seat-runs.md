@@ -4,7 +4,7 @@
   "slug": "roadmap-k3-orchestrator-seat-the-fixed-seat-runs",
   "title": "Roadmap K3 - Orchestrator seat: the fixed seat runs the line by rule, re-routes refused seats, downs finished seats, cleans up after a merge from the checkout, owns the verify on main and holds capacity, with its playbook rendered from the role",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner accepted SPEC-17 on card C25; lavish prohibited for Claude seats",
@@ -29,7 +29,8 @@
     "playbooks/orchestrator.md",
     "line/bin/orchestrate.sh",
     "line/tests/cases/orchestrate-*.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261013-a91a"
 }
 ---
 
@@ -95,4 +96,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: owner 02:50Z shim flag and 03:00Z size rule: orchestrate.sh duties are SPEC-16 B, C, D and F; shrunk to the role and playbook
+- superseded by: `WO-20261013-a91a`
+
+No branch, no PR and no merge commit exist for this work order.
+

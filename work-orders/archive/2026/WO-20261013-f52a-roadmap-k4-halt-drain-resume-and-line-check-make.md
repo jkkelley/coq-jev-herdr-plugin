@@ -4,7 +4,7 @@
   "slug": "roadmap-k4-halt-drain-resume-and-line-check-make",
   "title": "Roadmap K4 - Halt, drain, resume and line-check: make line-halt, line-drain, line-resume and line-check with the flags in the state root's run directory, the preflight by rule, the bring-up checklist, USERHALT and USERGO, and a supervisor that keeps only bearings stable alive while halted (widens item C)",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner accepted SPEC-17 on card C25; lavish prohibited for Claude seats",
@@ -35,7 +35,8 @@
     "line/bin/line-resume.sh",
     "line/bin/line-check.sh",
     "line/tests/cases/line-*.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261013-fd7d"
 }
 ---
 
@@ -104,4 +105,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: owner 03:00Z size rule: split into WO-20261013-fd7d, WO-20261013-ced5, WO-20261013-8ed9, WO-20261013-8e0c
+- superseded by: `WO-20261013-fd7d`
+
+No branch, no PR and no merge commit exist for this work order.
+
