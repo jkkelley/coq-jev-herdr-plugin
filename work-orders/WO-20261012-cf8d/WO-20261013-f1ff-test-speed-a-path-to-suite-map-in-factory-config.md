@@ -22,7 +22,8 @@
   "surfaces": [],
   "depends_on": [],
   "blocks": [
-    "WO-20261013-dd11"
+    "WO-20261013-dd11",
+    "WO-20261013-ab25"
   ],
   "files": [
     "factory/config/suites.json",

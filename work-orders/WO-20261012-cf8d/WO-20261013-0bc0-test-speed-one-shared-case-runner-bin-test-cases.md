@@ -23,7 +23,8 @@
   "depends_on": [],
   "blocks": [
     "WO-20261013-7757",
-    "WO-20261013-74b6"
+    "WO-20261013-74b6",
+    "WO-20261013-ab25"
   ],
   "files": [
     "bin/test-cases.sh",
