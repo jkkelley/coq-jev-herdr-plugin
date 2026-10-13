@@ -4,7 +4,7 @@
   "slug": "roadmap-k8-the-factory-board-shows-the-live-line",
   "title": "Roadmap K8 - The factory board shows the live line: ticket status read from open pull requests and ticket branches (or the SPEC-17 board lane once K1 lands), no in-progress ticket on main without a branch or a pull request and a check that fails on one, and the belt judged from the runner's real belt file",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner accepted SPEC-17 on card C25; lavish prohibited for Claude seats",
@@ -28,7 +28,8 @@
     "work-orders/WO-20261010-329d/WO-20261011-38c7-*",
     "work-orders/archive/2026/WO-20261010-eaa3-*",
     "work-orders/archive/2026/WO-20261011-38c7-*"
-  ]
+  ],
+  "superseded_by": "WO-20261013-1e65"
 }
 ---
 
@@ -96,4 +97,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: owner 03:00Z size rule: split into WO-20261013-1e65, WO-20261013-e537, WO-20261013-17a1, WO-20261013-19d9, WO-20261013-f15d
+- superseded by: `WO-20261013-1e65`
+
+No branch, no PR and no merge commit exist for this work order.
+

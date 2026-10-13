@@ -4,7 +4,7 @@
   "slug": "roadmap-k1-board-one-board-in-the-state-root-is-",
   "title": "Roadmap K1 - Board: one board in the state root is the single intake, with a lane per role, leases, pull, done, sweep, digest and the health line, built on the queue script's contract",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner accepted SPEC-17 on card C25; lavish prohibited for Claude seats",
@@ -34,7 +34,8 @@
     "line/tests/lib/*",
     "line/tests/cases/board-*.sh",
     "queue/config/queue.json"
-  ]
+  ],
+  "superseded_by": "WO-20261013-3a07"
 }
 ---
 
@@ -104,4 +105,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: owner 03:00Z size rule: split into WO-20261013-3a07, WO-20261013-d6e1, WO-20261013-e522, WO-20261013-3796, WO-20261013-4309
+- superseded by: `WO-20261013-3a07`
+
+No branch, no PR and no merge commit exist for this work order.
+
