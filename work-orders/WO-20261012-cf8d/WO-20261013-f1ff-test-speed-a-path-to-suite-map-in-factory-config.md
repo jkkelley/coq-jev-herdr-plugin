@@ -15,7 +15,7 @@
   "closed": null,
   "approval": {
     "via": "override",
-    "reason": "architect P0 order 2026-10-13 (owner m-20261013154808303-p0c28: test suites cannot be the bottleneck); lavish prohibited for Claude seats",
+    "reason": "architect P0 order 2026-10-13 (owner p0c28); design approved on card C29 with two conditions; lavish prohibited for Claude seats",
     "at": "2026-10-13"
   },
   "evidence": null,
@@ -49,19 +49,19 @@
 
 ## Problem
 
-Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cases one after another, every pull request reruns whole suites main already ran, and herdr cases wait on fixed sleeps. Design: $COQ_STATE/plans/2026/10/20261013160000-test-speed-design.md (section d-shape 1)
+Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cases one after another, every pull request reruns whole suites main already ran, and herdr cases wait on fixed sleeps. Design: $COQ_STATE/plans/2026/10/20261013160000-test-speed-design.md (section d-shape 1). Condition 1 of the architect's approval (card C29): a path maps to every suite that exercises it, not only the suite under it; 32fc429 changed events/bin and broke the factory suite, which a per-directory map would not have run (ruling b99ta, record 7c3dq).
 
 ## Scope
 
 **In**
 
-- factory/config/suites.json and suites.schema.json: rows of path pattern to make targets; a tickets-only set (work-orders/, changelog/) maps to make lint and work-order.sh reindex --check; a path with no row means the full set
+- factory/config/suites.json and suites.schema.json: rows of path pattern to every make target whose suite exercises that path, not only the suite under it: events/bin and events/schema map to the events, factory and herdr suites; bin/state-root.sh and config/ to every suite that sources them; a tickets-only set (work-orders/, changelog/) maps to make lint and work-order.sh reindex --check; a path with no row means the full set
 - factory/bin/suites.sh plan --base B --head H prints one command per line; full prints the full set; exit codes per section d-codes
-- factory/tests/cases/suites-map.test.sh
+- factory/tests/cases/suites-map.test.sh asserts the cross-suite rows: a change to events/bin/event.sh plans events, factory and herdr
 
 **Out - non-goals**
 
-- the tester's role (its own ticket)
+- the tester's role (WO-20261013-dd11)
 - running the suites (verify-main.sh, WO-20261013-9bdd)
 
 ## Degrees of freedom
@@ -70,7 +70,8 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a tickets-only diff plans lint and reindex only; a herdr/bin change plans lint and the herdr suite; an unmapped path plans the full set; a missing key exits 3
+- [ ] `AC-H1` *(human)* a change to events/bin/event.sh or events/schema plans the events, factory and herdr suites, and the test fails if one is dropped
+- [ ] `AC-H2` *(human)* a tickets-only diff plans lint and reindex only; an unmapped path plans the full set; a missing key exits 3
 
 ## Test plan
 
