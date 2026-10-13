@@ -4,15 +4,15 @@
   "slug": "gate-models-the-tester-and-merger-roles-run-on-c",
   "title": "Gate models: the tester and merger roles run on claude-sonnet-5-5 instead of claude-haiku-5-5, playbooks re-rendered and pinned by a test",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T14:35:52+00:00",
   "parent": "WO-20261012-cf8d",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/gate-models-the-tester-and-merger-roles-run-on-c",
+  "pr": 125,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect orders 2026-10-13, re-cut on review yv8xi; lavish prohibited for Claude seats",
@@ -68,7 +68,8 @@ Haiku testers and mergers misread test plans and gate records on 2026-10-12 and 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* both roles name claude-sonnet-5-5, the playbook check in lint reports no drift and the case fails on haiku
+- [x] `AC-H1` *(human)* both roles name claude-sonnet-5-5, the playbook check in lint reports no drift and the case fails on haiku
+  - observed `2026-10-13` roles/tester.json and roles/merger.json model.claude is claude-sonnet-5-5; playbooks/tester.md and merger.md re-rendered by roles/bin/render-playbook.sh (render --check reports no drift, make lint green); herdr case 27-gate-models passes, and fails (rc=1, model and drift assertions) when roles/tester.json is set back to claude-haiku-5-5; full herdr suite green except case 12, fixed on main by #113 and green after rebase
 
 ## Test plan
 
@@ -87,6 +88,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: playbooks/worker.md step 1 says treehouse status must show the ticket as lease_holder at $COQ_WORKTREE, but work-order start seats now work in ~/.cache/coq/.../worktrees/start-<ticket>, which treehouse never lists, so that check cannot pass as written; I followed the brief's worktree and did not post blocked 423. Case 12 failed on the pre-rebase branch only because main already carried #113.
 
 ## Outcome
 

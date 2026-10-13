@@ -26,7 +26,7 @@
   "title": "Tester",
   "purpose": "Runs exactly the ticket's test plan in Podman and records pass or fail with evidence paths.",
   "model": {
-    "claude": "claude-haiku-5-5",
+    "claude": "claude-sonnet-5-5",
     "architect_may_override": true
   },
   "permission_mode": "bypassPermissions",

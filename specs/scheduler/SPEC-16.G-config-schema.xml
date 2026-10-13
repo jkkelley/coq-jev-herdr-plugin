@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-16.G" domain="config" version="1.1.0" title="Config and schema: the two files, variables, validation and hot reload" status="proposed" updated="2026-10-13T19:00Z">
+  <!-- 1.1.0, 2026-10-13: the 1.0.0 draft read records from an array of roots (the repository's events tree and every treehouse
+       slot), resolved a HOME variable and kept one state_dir of its own, and held no key for the probes, the idle limit, the
+       per-kind timings or the loops. That broke against the locked decisions: runtime data left git for one state root (cards C10,
+       C11, C15), probes are code against config keys (owner 2026-10-13 02:50Z), an idle seat goes within sixty seconds (owner
+       02:01Z), and system and product work run on two loops with their own budgets (card C26). The revision replaces intake.roots
+       with one records root, HOME and state_dir with the state_root and cache_root variables, stall deadlines with the per-kind
+       table, and adds the probe, seat, loop, digest and record writer keys. Rejected: keeping intake.roots with one entry (an array
+       that invites a second root, which is the copying C17 closed). Cost: a scheduler.json written for 1.0.0 fails at load by name. -->
+  <contents>
+    <item ref="g-purpose" title="What the config domain decides"/>
+    <item ref="g-files" title="The files"/>
+    <item ref="g-vars" title="Variables"/>
+    <item ref="g-nodefault" title="No defaults, no unknown keys"/>
+    <item ref="g-validate" title="Validation at start"/>
+    <item ref="g-reload" title="Hot reload of the tables"/>
+    <item ref="g-keys" title="The key registry of scheduler.json"/>
+    <item ref="g-domain-keys" title="The keys the other domains add"/>
+    <item ref="g-executor" title="The key registry of executor.json"/>
+    <item ref="g-tests" title="Cases the build ticket proves"/>
+    <item ref="g-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose source="node:DEC-no-hardcode-config-s3; spec:SPEC-01#s-config; spec:SPEC-16#l-config">Every tunable is a key in one JSON file with a schema beside it; the executor's verb table is a second file. The loader resolves variables, refuses a missing or unknown key by name, validates at start, and reloads the tables.</purpose>
+
+  <section id="g-purpose" title="What the config domain decides">
+    <node id="SCH-scheduler-config" status="proposed">
+      <title>scheduler/config/scheduler.json and executor.json: every tunable of the scheduler and the verb table of the executor, validated by the schemas beside them, variables resolved at load, the state root by variable, no default in Go</title>
+      <source kind="node" id="DEC-no-hardcode-config-s3"/>
+      <source kind="spec" id="SPEC-16.G" at="2026-10-13T19:00Z"/>
+      <source kind="owner" id="card-C10"/>
+      <source kind="owner" id="card-C26"/>
+      <edge kind="implements" to="DEC-no-hardcode-config-s3"/>
+      <edge kind="depends_on" to="SCH-routes"/>
+    </node>
+    <text id="g-in" source="lint/lint.sh; spec:SPEC-16#b-domains">In: the two files and the tables they name. Out: one typed configuration value every domain reads, and a reload signal with the new table versions. The repository lint validates the files against their schemas.</text>
+    <text id="g-registry" level="MUST" source="spec:SPEC-16#l-config; owner:bearings:2026-10-13T02:50Z">This spec is the one registry of scheduler keys. A domain spec that needs a tunable names its key here; a key used in Go and absent from this registry is a defect of the build ticket that added it.</text>
+  </section>
+
+  <section id="g-files" title="The files">
+    <text id="g-files-sched" level="MUST" source="spec:SPEC-16.G#g-keys">scheduler.json in the scheduler's config directory, with scheduler.schema.json beside it: the scheduler's own settings, the keys each domain adds, and the paths of the tables it reads.</text>
+    <text id="g-files-exec" level="MUST" source="spec:SPEC-16.G#g-executor">executor.json with executor.schema.json beside it: the socket, the host paths, the seat the record verb writes as, the record writer, and the verb table.</text>
+    <text id="g-files-tables" source="factory/config/routes.json; factory/config/policies.json; factory/config/flow.json">The tables stay where they are and keep their schemas: routes, policies, the flow gates, the role files. The scheduler reads them by the paths its own file names and never carries a copy.</text>
+    <text id="g-files-lint" source="lint/lint.sh">The repository lint validates every config file that has a schema beside it, so the two new files are covered by the existing step with no lint change.</text>
+    <text id="g-files-interim" source="owner:bearings:2026-10-13T02:50Z; spec:SPEC-16#p-end; spec:SPEC-16.J">The interim bash line reads its own files (flow, runner, board, leases) until the cut-over. After it these keys are the only home of each value; the cut-over retires the interim copies, never merges them.</text>
+  </section>
+
+  <section id="g-vars" title="Variables">
+    <text id="g-vars-set" level="MUST" source="spec:SPEC-01#s-config; bin/state-root.sh">A string value may carry repo, host_repo, state_root, cache_root or ENV:NAME in the variable form; the loader resolves them after reading, and an unknown variable or an unset environment name is exit 3 naming it.</text>
+    <text id="g-vars-root" level="MUST" source="ROADMAP.md#Where runtime data lives; spec:SPEC-16#l-state; bin/state-root.sh">state_root is the one state root of the repository, from COQ_STATE; cache_root is the cache root, from COQ_CACHE. Every runtime path is a tree under one of them, never a directory of its own.</text>
+    <text id="g-vars-nohome" level="NEVER" source="ROADMAP.md#Where runtime data lives; spec:SPEC-16#l-state">No HOME variable and no pattern under it: one state root serves every worktree and slot, so the scheduler reads no slot and no home directory, and the container mounts neither.</text>
+    <text id="g-vars-two-repos" level="MUST" source="spec:SPEC-16.H">repo is the repository as mounted in the container, read-only; host_repo is the repository on the host, for the executor. The scheduler uses host_repo only in text run on the host, such as a playbook path.</text>
+    <text id="g-vars-env" level="MUST" source="spec:SPEC-16.H; bin/state-root.sh">The environment names are fixed so the wrapper and the files agree: COQ_SCHED_MODE for mode, COQ_SCHED_REPO for repo, COQ_REPO for host_repo, COQ_STATE, COQ_CACHE, COQ_HERDR_SESSION.</text>
+    <text id="g-vars-same" level="MUST" source="spec:SPEC-16#l-state; spec:SPEC-16.H">COQ_STATE and XDG_RUNTIME_DIR name the same path on both sides of the mount, so a state-root path or the executor socket in a record or a log reads the same in the container and on the host.</text>
+    <text id="g-vars-env-digest" level="MUST" source="spec:SPEC-16.H; specs/scheduler/config/check.json">COQ_SCHED_IMAGE_DIGEST carries the digest the wrapper resolved from the configured tag at start; the digest key reads it through the variable form, so no file ever holds a digest.</text>
+    <text id="g-vars-portable" source="node:DEC-no-hardcode-config-s3">No absolute path, host name or user name inside the file: every machine-specific value comes in through a variable, so the file lifts to another host or to object storage unchanged.</text>
+  </section>
+
+  <section id="g-nodefault" title="No defaults, no unknown keys">
+    <text id="g-nodefault-rule" level="MUST" source="node:DEC-no-hardcode-config-s3; factory/bin/route.sh">A key the scheduler reads and the file lacks is exit 3 naming the key. A key the file carries and the scheduler does not know is exit 3 naming the key. Go holds no fallback value for any key.</text>
+    <text id="g-nodefault-why" source="herdr/bin/supervisor.sh">A silent default is a literal nobody can find; the supervisor's fourteen literals were the last time this was learned.</text>
+    <text id="g-nodefault-owner" level="MUST" source="owner:bearings:2026-10-13T02:01Z; ROADMAP.md#Guardrails against a repeat">A value the owner fixed (sixty idle seconds, three attempts, four tickets in flight) is still a key: the schema pins it with a const or a maximum, so a test can lower it and nobody can raise it by accident.</text>
+  </section>
+
+  <section id="g-validate" title="Validation at start">
+    <text id="g-val-shape" level="MUST" source="spec:SPEC-16.G#g-keys">Shape: every key present with its type, ranges that the schema states, mode one of off, shadow, active.</text>
+    <text id="g-val-cross" level="MUST" source="spec:SPEC-16.D; spec:SPEC-16.F">Cross checks: every role has an acknowledgement window; every kind a routes row wakes a seat for has a kinds entry; poll plus the smallest start-to-close stays within the visible bound.</text>
+    <text id="g-val-root" level="MUST" source="spec:SPEC-16#l-state; bin/state-root.sh">The state root and every tree the file names under it exist and are writable, and the records root is readable; a missing tree is exit 3 naming it, never created silently by the loader.</text>
+    <text id="g-val-budget" level="MUST" source="herdr/config/herdr.json; spec:SPEC-17#s-health">The three seat budgets (system, product, shared) sum to at most max_agents of the herdr config the file names; a larger sum is exit 3 naming the sum, so the machine never refuses what the config promised.</text>
+    <text id="g-val-tables" source="spec:SPEC-16.B; spec:SPEC-16.E">The tables are loaded and checked by their own domains at start; a failure there is exit 3 with the file, the row and the key.</text>
+    <text id="g-val-verbs" source="spec:SPEC-16.F; spec:SPEC-16.H">The verbs the scheduler can emit are a fixed list in the executor domain; the executor's Health names the verbs its table holds, and a missing one blocks going active rather than failing at the first job.</text>
+  </section>
+
+  <section id="g-reload" title="Hot reload of the tables">
+    <text id="g-reload-what" level="MUST" source="factory/config/routes.json">The routes, policies and flow tables and the role files reload while running: each tick compares a file's size and modification time, re-reads a changed file, runs its checks, and swaps it in whole or not at all.</text>
+    <text id="g-reload-fail" level="MUST" source="spec:SPEC-16.F">A changed file that fails its checks is kept out: the loaded table stays, one 500 note names the file and the reason, latched by file name until a later change loads.</text>
+    <text id="g-reload-not" source="spec:SPEC-16.G#g-files">scheduler.json and executor.json do not reload; a change to either is a restart of the process it configures, because the socket, the roots, the budgets and the mode are not things to swap under running jobs.</text>
+    <text id="g-reload-rpc" source="spec:SPEC-16.H">The Reload call forces the comparison now and answers with the versions loaded.</text>
+  </section>
+
+  <section id="g-keys" title="The key registry of scheduler.json">
+    <text id="g-runtime-group" level="MUST" source="spec:SPEC-16.H; spec:SPEC-16.G#g-nodefault">The keys image, memory and container_name are read by the wrapper with a JSON tool before any process runs, so they carry no variable; the loader knows the whole group and reports it in Status.</text>
+    <key name="schema_version" type="string" source="spec:SPEC-01#s-config">The file's schema version; 1.1.0 for this revision.</key>
+    <key name="mode" type="string: off, shadow, active" source="spec:SPEC-16.J">What the scheduler may do; a variable so the run wrapper can set it from the environment.</key>
+    <key name="seat" type="string" source="factory/config/runner.json">The scheduler's own seat name on the records it writes.</key>
+    <key name="herdr_session" type="string" source="factory/config/runner.json">The herdr session the executor addresses; carried to the executor's configuration too.</key>
+    <key name="herdr_config" type="string" source="herdr/config/herdr.json">The herdr config the budget check reads max_agents from; the scheduler never carries its own copy of the agent cap.</key>
+    <key name="repo, host_repo" type="string" source="spec:SPEC-16.G#g-vars-two-repos">The repository as mounted for reading, and on the host for text run there.</key>
+    <key name="state_root, cache_root" type="string: the variables" source="spec:SPEC-16.G#g-vars-root">The state root and the cache root; every path below is a tree under one of them.</key>
+    <key name="records_root" type="string" source="ROADMAP.md#Where runtime data lives; spec:SPEC-16.A">The records tree, the state root's records directory, read in its year and month folders; replaces the array of roots.</key>
+    <key name="ledger_dir, jobs_dir, latch_dir, run_dir, log_dir, shadow_dir" type="string" source="ROADMAP.md#Where runtime data lives; spec:SPEC-16#sh-state">The routed ledger, one file per job, the latches, the run directory (flags, locks, the belt), the log tree and the shadow decisions, each under the state root.</key>
+    <key name="routes_file, policies_file, flow_file" type="string" source="factory/config/runner.json">The tables.</key>
+    <key name="roles_dir, playbooks_dir, tickets_dir" type="string" source="factory/config/runner.json; ROADMAP.md#Rules that keep agents from being gates">Role files, playbooks (a host path on the wake line) and the work orders, read from the repo mount so routing takes the owner seat from the ticket.</key>
+    <key name="halt_flag, drain_flag, drain_seconds" type="string, string, integer" source="spec:SPEC-16.F; line/config/board.json; spec:SPEC-17#s-halt">The halt and drain flags under the run directory, the files the interim line writes too, and the shutdown grace.</key>
+    <key name="intake.poll_seconds, intake.since, intake.runner_seats" type="integer, string, array" source="spec:SPEC-16.A">Intake's keys: the tick, the first-start boundary and the seats whose records are its own.</key>
+    <key name="retry.max_attempts, retry.base_seconds, retry.factor, retry.max_seconds, retry.jitter" type="integer, number, number, number, number" source="spec:SPEC-16.D">The retry policy of a job: three attempts, pinned by the schema, backoff with jitter, then the dead letter.</key>
+    <key name="jobs.in_flight, jobs.keep_days" type="integer, integer" source="spec:SPEC-16.D">Concurrency and retention.</key>
+    <key name="wake.ack_seconds, wake.max_attempts" type="object, integer" source="spec:SPEC-16.D">Confirmation windows per role and re-sends.</key>
+    <key name="stall.visible_within_seconds" type="integer" source="spec:SPEC-16.F; factory/config/flow.json">The bound within which a stall is visible; the deadlines themselves are the per-kind start-to-close.</key>
+    <key name="belt.file, belt.stale_seconds" type="string, integer" source="spec:SPEC-16.F">The heartbeat under the run directory, whose age bearings stable checks outside the line.</key>
+    <key name="executor.socket, executor.dial_seconds, executor.health_seconds" type="string, integer, integer" source="spec:SPEC-16.H">The executor socket under the runtime directory, the dial timeout, the health interval.</key>
+    <key name="control.socket" type="string" source="spec:SPEC-16.H">The scheduler's own socket for status, reload, drain and retry.</key>
+    <key name="notify.min_code, notify.owner_cap_per_hour" type="integer, integer" source="spec:SPEC-16.F; ROADMAP.md#Rules that keep agents from being gates">The lowest code that raises a herdr notification, and the cap on owner notices per hour.</key>
+    <key name="digest.interval_seconds, digest.lanes" type="integer, array" source="ROADMAP.md#Rules that keep agents from being gates; line/config/board.json">The interval of the one architect digest and the addressees it gathers; no per-record architect prompt exists.</key>
+    <key name="housekeeping.queue_sweep_seconds, housekeeping.glass_sweep_seconds, housekeeping.prune_seconds, housekeeping.retention_days" type="integer" source="spec:SPEC-16.F; ROADMAP.md#Locked decisions">The periods, and the age past which whole month folders of the state root are deleted.</key>
+    <key name="shadow.parity_min_records" type="integer" source="spec:SPEC-16.J">How many agreeing records parity needs before going active.</key>
+    <key name="runtime.image" type="string: name and tag" source="spec:SPEC-16.H; factory/tests/run.sh">The runtime image by name and tag, no registry host and no digest, so the file lifts unchanged; the wrapper resolves the tag to a digest at start, and a change is a restart.</key>
+    <key name="runtime.memory" type="string: a number with k, m or g" source="spec:SPEC-16.H">The container's memory limit in the unit form the container engine takes.</key>
+    <key name="runtime.container_name" type="string" source="spec:SPEC-16.H">The container's name; the engine refuses a second start while a container of that name exists.</key>
+    <key name="runtime.image_digest" type="string: a variable from the environment" source="spec:SPEC-16.H">The digest the wrapper resolved and passed through its environment name; Status reports it, so the running build is known without a digest in any file.</key>
+    <key name="log.level" type="string: debug, info, warn, error" source="spec:SPEC-16.I">The log level.</key>
+  </section>
+
+  <section id="g-domain-keys" title="The keys the other domains add">
+    <text id="g-dk-why" source="owner:bearings:2026-10-13T02:50Z; spec:SPEC-16#l-llm">Revision 1.1.0 gives every threshold a rule uses a key: a probe, an idle limit, a lease, a timing or a budget that lived in a watcher's literal or a model's judgement is now a number in this file.</text>
+    <section id="g-kinds" title="B routing: the per-kind table">
+      <text id="g-kinds-rule" level="MUST" source="spec:SPEC-16.B; factory/config/routes.json">kinds is an object keyed by record kind; each entry is the timing of the item that kind opens. The routes table says where a record goes; this table says how long its consumer may take.</text>
+      <key name="kinds.KIND.start_to_close_seconds" type="integer" source="spec:SPEC-16.B; factory/config/flow.json">From the record's time to the consumer's output record; past it the item is a stall. Replaces the per-gate stall deadlines.</key>
+      <key name="kinds.KIND.heartbeat_seconds" type="integer" source="spec:SPEC-16.B; spec:SPEC-16.F">The longest the consumer may go without a sign of work (a changed screen, a record, a renewed lease) before a liveness check runs.</key>
+      <key name="kinds.KIND.max_attempts" type="integer, at most 3" source="spec:SPEC-16.B; factory/bin/route.sh">The attempt count a seat may reach on one item before the attempt rows escalate it.</key>
+    </section>
+    <section id="g-seat" title="C seats: names, the idle limit and leases">
+      <key name="seat.busy_regex, seat.done_regex, seat.read_lines" type="string, string, integer" source="spec:SPEC-16.C; herdr/bin/turnwatch.sh">How a pane reads busy or done, and how many tail lines are read.</key>
+      <key name="seat.cap_wait_seconds, seat.absent_wait_seconds" type="integer, integer" source="spec:SPEC-16.C">How long a held bring-up waits for a slot, and for a seat to appear.</key>
+      <key name="seat.idle_down_seconds" type="integer, at most 60" source="owner:bearings:2026-10-13T02:01Z; spec:SPEC-16.C">An idle seat with no open item for this long is downed on the next tick; sixty, the owner's limit, pinned as a maximum.</key>
+      <key name="seat.lease_seconds" type="integer" source="spec:SPEC-16.C; line/config/board.json; herdr/config/leases.json">The lease a seat holds on its item; past it the reaper releases the item and downs an orphaned seat.</key>
+      <key name="seat.standing" type="array of role" source="spec:SPEC-17#s-health; spec:SPEC-16.C">The roles that stand by with no work; every other seat comes up on demand and goes at the idle limit.</key>
+    </section>
+    <section id="g-probe" title="F health: probe thresholds">
+      <text id="g-probe-rule" level="MUST" source="spec:SPEC-16#l-llm; spec:SPEC-17#s-health">A probe is a measurement compared with one of these keys. No key names a model, a prompt or a confidence; a model only explains a finding the code raised.</text>
+      <key name="probe.poll_seconds" type="integer" source="spec:SPEC-16.F">The probe tick.</key>
+      <key name="probe.screen_unchanged_ticks" type="integer" source="spec:SPEC-16.F; herdr/bin/turnwatch.sh">A busy seat whose pane tail hash is unchanged for this many ticks fails liveness.</key>
+      <key name="probe.busy_grace_seconds" type="integer" source="spec:SPEC-16.F; factory/config/flow.json">How long a busy seat may run before the unchanged screen counts.</key>
+      <key name="probe.idle_with_items_seconds" type="integer" source="spec:SPEC-16.F; spec:SPEC-17#s-health">An idle seat with open items for this long fails readiness.</key>
+      <key name="probe.blocked_words" type="array of string" source="spec:SPEC-16.F; spec:SPEC-17#s-health">Words that, in a pane's last lines, are a finding on the next tick without the ladder's wait.</key>
+      <key name="probe.process_count" type="integer, const 1" source="spec:SPEC-16.F; spec:SPEC-17#s-health">The main processes a supervised unit may have; a second copy is a stray and a finding.</key>
+      <key name="probe.repeat_window_seconds, probe.repeat_max" type="integer, integer" source="spec:SPEC-16.F; spec:SPEC-17#s-health">The window and count of the repeat-action fingerprint: the same action this many times inside the window is a loop, which output alone hides.</key>
+      <key name="probe.backoff_seconds, probe.backoff_max_seconds, probe.stable_seconds" type="integer" source="spec:SPEC-16.F; spec:SPEC-17#s-health">The repair ladder: the first wait, its cap, and how long probes must pass before the counters reset.</key>
+    </section>
+    <section id="g-loops" title="The two loops and their budgets">
+      <text id="g-loops-rule" level="MUST" source="owner:bearings:2026-10-13T01:17Z; spec:SPEC-17#s-health">System and product work never mix: each loop has its own tickets in flight and its own seats, the shared tier has seats, and no loop borrows the other's spare budget.</text>
+      <key name="loops.system.wip_tickets, loops.product.wip_tickets" type="integer, integer" source="owner:bearings:2026-10-13T01:17Z; ROADMAP.md#Guardrails against a repeat">How many tickets each loop may hold in flight; the product value is at most four by the guardrail.</key>
+      <key name="loops.system.seats, loops.product.seats, loops.shared.seats" type="integer" source="owner:bearings:2026-10-13T01:17Z; herdr/config/herdr.json">The live seats each loop and the shared tier may hold; the three sum within max_agents.</key>
+      <key name="loops.system_epics" type="array of string" source="owner:bearings:2026-10-13T01:17Z; spec:SPEC-16.A">The top-level epics whose tickets are system work; every other epic is product. One change here moves an epic between loops.</key>
+      <key name="loops.borrow" type="boolean, const false" source="owner:bearings:2026-10-13T01:17Z">Lending spare budget across loops; pinned false, because isolation is the point of the two loops.</key>
+    </section>
+  </section>
+
+  <section id="g-executor" title="The key registry of executor.json">
+    <key name="schema_version" type="string" source="spec:SPEC-01#s-config">The file's schema version.</key>
+    <key name="socket" type="string" source="spec:SPEC-16.H">The unix socket path the executor listens on, under the runtime directory variable.</key>
+    <key name="host_repo, state_root, herdr_session" type="string" source="spec:SPEC-16.G#g-vars">The repository and the state root on the host, and the session every herdr verb addresses.</key>
+    <key name="seat" type="string" source="spec:SPEC-16.A">The seat the record verb forces on every record it writes; the scheduler cannot override it.</key>
+    <key name="record_writer" type="string: repo-relative" source="spec:SPEC-16#l-writer; bin/state-root.sh">The event writer the record verb runs, relative to host_repo, so the spec names no writer path and the one writer stays one.</key>
+    <key name="tail_lines" type="integer" source="spec:SPEC-16.H">How many lines of stdout and stderr come back in a verdict.</key>
+    <key name="verbs" type="object: name to verb" source="spec:SPEC-16.H">The verb table: argv template, timeout seconds, final exit codes, the allowed flag set for the record verb.</key>
+    <key name="unset_env" type="array of string" source="factory/bin/route.sh">Environment names removed before every verb, the executor pane's own identity among them, so a herdr call never targets the executor's pane by accident.</key>
+  </section>
+
+  <section id="g-tests" title="Cases the build ticket proves">
+    <case id="g-t1" command="go test ./internal/config -run TestMissingKeyNamed" expected="exit 0: a file lacking one key fails with exit 3 and the key's dotted name in the error" source="spec:SPEC-16.G#g-nodefault">A missing key is named.</case>
+    <case id="g-t2" command="go test ./internal/config -run TestUnknownKeyRefused" expected="exit 0: a file with an extra key, intake.roots among them, fails naming it" source="spec:SPEC-16.G#g-nodefault">No silent extras, and the 1.0.0 keys are refused.</case>
+    <case id="g-t3" command="go test ./internal/config -run TestVariablesResolved" expected="exit 0: repo, host_repo, state_root, cache_root and ENV names resolve; HOME, an unknown variable or an unset name fails naming it" source="spec:SPEC-16.G#g-vars">Portable values, one root.</case>
+    <case id="g-t4" command="go test ./internal/config -run TestCrossChecks" expected="exit 0: a role without an ack window, a woken kind without a kinds entry, a broken visible bound and a missing state tree each fail naming the key" source="spec:SPEC-16.G#g-validate">Cross checks at start.</case>
+    <case id="g-t5" command="go test ./internal/config -run TestReloadSwapsWholeOrNot" expected="exit 0: a changed valid table is swapped with a new version; a changed invalid one leaves the old version in place with one note" source="spec:SPEC-16.G#g-reload">Whole or not at all.</case>
+    <case id="g-t6" command="make lint" expected="configs: schema ok, with scheduler.json and executor.json validated against their schemas" source="lint/lint.sh">The repository lint covers the files.</case>
+    <case id="g-t7" command="go test ./internal/config -run TestRuntimeKeysLiteral" expected="exit 0: image, memory or container_name carrying a variable form fails naming it; the digest key resolves from the environment and the group appears in Status" source="spec:SPEC-16.G#g-keys">The wrapper's keys are literal.</case>
+    <case id="g-t8" command="go test ./internal/config -run TestBudgetsWithinMaxAgents" expected="exit 0: seat budgets summing above max_agents fail naming the sum; borrow true fails naming the key" source="spec:SPEC-16.G#g-loops">The loops fit the machine.</case>
+    <case id="g-t9" command="go test ./internal/config -run TestPinnedValues" expected="exit 0: idle_down_seconds above 60, retry.max_attempts above 3 and process_count other than 1 each fail naming the key; lower values load" source="spec:SPEC-16.G#g-nodefault-owner">The owner's numbers hold.</case>
+  </section>
+
+  <section id="g-examples" title="GOOD and NEVER">
+    <example kind="GOOD" source="spec:SPEC-16.G#g-vars-root"><text>records_root is the state_root variable followed by the records directory; the run wrapper mounts the state root read-write and the repository read-only, and nothing else.</text></example>
+    <example kind="GOOD" source="spec:SPEC-16.G#g-reload"><text>An operator adds a routes row and saves; the next tick loads it, the log says routes loaded with the new hash, and the next record uses it.</text></example>
+    <example kind="GOOD" source="spec:SPEC-16.G#g-probe"><text>A merger's pane ends with the word blocked; probe.blocked_words matches on the next tick and the finding goes to the maintenance lane with the evidence lines.</text><why>The probe is code against a key; nobody asked a model whether the seat was fine.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.G#g-nodefault"><text>poll := cfg.PollSeconds; if poll == 0 then poll = 10.</text><why>A default nobody can find; the key is required or the file is wrong.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.G#g-vars-nohome"><text>intake.roots listing the repository's events tree and a pattern over every treehouse slot under the home directory.</text><why>One state root serves every slot; a second root is the copying the state root replaced.</why></example>
+    <example kind="NEVER" source="spec:SPEC-16.G#g-loops"><text>The system loop at its seat budget seats a tester from the product loop's spare budget.</text><why>No borrowing: more capacity is an owner card that raises max_agents and a budget.</why></example>
+  </section>
+</spec>

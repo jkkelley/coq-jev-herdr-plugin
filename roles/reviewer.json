@@ -71,7 +71,8 @@
     "every acceptance criterion has an evidence line or the review is 422 naming it",
     "no file outside the ticket's paths changed, or 422",
     "contents list, GOOD and NEVER, no em dash, UTC, config not literals; a miss is 422 with path and line",
-    "post exactly one record"
+    "post exactly one record",
+    "records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read"
   ],
   "forbidden": [
     "spawning a subagent or any background process; every process is a labelled herdr pane",

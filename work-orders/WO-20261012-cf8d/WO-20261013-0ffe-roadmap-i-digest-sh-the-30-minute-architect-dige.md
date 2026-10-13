@@ -4,14 +4,14 @@
   "slug": "roadmap-i-digest-sh-the-30-minute-architect-dige",
   "title": "Roadmap I - digest.sh, the 30-minute architect digest moves from ~/.cache/coq-watch/digest.sh into line/bin/digest.sh with its test; the live copy runs from the repo and the cache copy is deleted",
   "type": "chore",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T17:52:41+00:00",
   "parent": "WO-20261012-cf8d",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/roadmap-i-digest-sh-the-30-minute-architect-dige",
+  "pr": 119,
   "closed": null,
   "approval": {
     "via": "override",
@@ -69,7 +69,8 @@ Owner 2026-10-12 22:49Z (m-20261012224955626-rjghl): every script lives in the p
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/digest.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+- [x] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/digest.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+  - observed `2026-10-13` make lint exit 0; make -C line test: 6 passed, 0 failed from test pane wD3:p16Q, digest case 18 checks ok; with the window filter broken the case fails 5 checks; grep of /home/luna and .cache/coq-watch in line/bin/digest.sh: 0 each; the case asserts the state root holds only records and run/digest.last
 - [ ] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/digest.sh is empty, ~/.cache/coq-watch/digest.sh is gone, and the archive path is in a 200 note on this ticket
 
 ## Test plan
@@ -89,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro. digest.sh moved as it was with three record-format fixes kept inside the same behaviour: it read the repo events/ tree (empty since A1), cut its window on a file name that no longer sorts against the stamp, and counted route failures by a file name pattern; it now reads the state root records tree and cuts on the record at field. Added DIGEST_ROUNDS as a test hook. Worker lease deviation: this worktree was cut by wo-start.sh (start-WO-20261013-0ffe), so treehouse status lists no lease for it; worked here as the brief named. AC-H2 (stop the running instance, start it from the repo, archive and delete the cache copies and .bak files, put the archive path in a 200 note) is the orchestrator lane after the merge.
 
 ## Outcome
 

@@ -20,6 +20,8 @@
     { "match": { "kind": "seat.up", "code": 100 }, "do": "ignore" },
     { "match": { "kind": "seat.down", "code": 100 }, "do": "ignore" },
     { "match": { "kind": "note", "code": 100 }, "do": "ignore" },
+    { "match": { "kind": "note", "code": 300 }, "do": "ignore" },
+    { "match": { "kind": "work.started", "code": 100 }, "do": "ignore" },
     { "match": { "kind": "record.routed", "code": 300 }, "do": "ignore" },
     { "match": { "kind": "break.glass", "code": 300 }, "do": "notify_owner", "to": "interface-agent", "line": "decision" },
     { "match": { "kind": "break.glass", "code": 200 }, "do": "break-glass", "to": "orchestrator" },
