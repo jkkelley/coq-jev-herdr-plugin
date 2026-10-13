@@ -4,15 +4,15 @@
   "slug": "roadmap-k6-the-owner-lane-on-the-page-bearings-r",
   "title": "Roadmap K6 - The owner lane on the page: bearings renders owner-lane items as cards and the health line from the board's health file, so the owner never has to ask where the line stands",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T01:04:10+00:00",
   "parent": "WO-20261012-cf8d",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/roadmap-k6-the-owner-lane-on-the-page-bearings-r",
+  "pr": 92,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner accepted SPEC-17 on card C25; lavish prohibited for Claude seats",
@@ -68,9 +68,12 @@ The owner had to ask where the line stood on 2026-10-12 and decisions reached th
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a second 423 on one ticket renders as exactly one card and the answer record clears it
-- [ ] `AC-H2` *(human)* the health line on the page matches the health file within one refresh and still renders while the line is halted
-- [ ] `AC-H3` *(human)* the bearings test suite passes in Podman
+- [x] `AC-H1` *(human)* a second 423 on one ticket renders as exactly one card and the answer record clears it
+  - observed `2026-10-13` tests/owner.sh: two 423 items on one ticket render as one card (2 cards for 2 tickets, 'raised 2 times'); an answer record naming a member id clears it; 135 passed in Podman
+- [x] `AC-H2` *(human)* the health line on the page matches the health file within one refresh and still renders while the line is halted
+  - observed `2026-10-13` tests/owner.sh: the page draws state, lanes, seats, stalls from health.json; halted line still renders with its reason; missing or malformed file draws 'not reporting' with the reason; 135 passed
+- [x] `AC-H3` *(human)* the bearings test suite passes in Podman
+  - observed `2026-10-13` make lint: all ok; make -C tools/bearings test in Podman: bearings tests: 135 passed, 0 failed
 
 ## Test plan
 
@@ -89,6 +92,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: K1 (board) and K2 (health) are not merged, so owner.mjs reads the item and health fields SPEC-17 names; only cardOf() and readHealthLine() change if they settle other names. Page theme untouched, new strip reuses existing classes. Lesson: a hook reformat split a ternary and my line delete broke owner.mjs; run node --check after any scripted edit.
 
 ## Outcome
 

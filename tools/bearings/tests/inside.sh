@@ -195,6 +195,7 @@ set +e; out=$(node /skill/scripts/server.mjs --tier dev --ticket t5 --config /wo
 CASE="an empty board_dir fails at start (exit 3) naming the key"; check test "$rc" = 3 -a "${out#*board_dir}" != "$out"
 
 . /skill/tests/sitrep.sh
+. /skill/tests/owner.sh
 
 echo "bearings tests: $PASS passed, $FAIL failed"
 [ "$FAIL" = 0 ] || exit 3
