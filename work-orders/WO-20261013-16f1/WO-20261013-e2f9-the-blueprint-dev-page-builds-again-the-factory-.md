@@ -64,7 +64,8 @@ _none_
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* AC-H1 CASES=12 bash herdr/tests/run.sh exits 0 on the branch
+- [x] `AC-H1` *(human)* AC-H1 CASES=12 bash herdr/tests/run.sh exits 0 on the branch
+  - observed `2026-10-13` CASES=12 bash herdr/tests/run.sh run from the labelled test pane wD3:p15H on this branch: '12-blueprint-panes: pass', 'tests: 1 passed, 0 failed', exit 0. Also make -C report/loop test (18 passed, 0 failed) and make -C report/loop lint exit 0.
 
 ## Test plan
 
@@ -83,6 +84,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: the blueprint board lists every open ticket plus board_done_max done ones (lib/blueprint/entry.jq), 144 open + 12 done = 156 rows on 2026-10-13 against maxItems 120. Raised the schema cap to 400 with the breadcrumb in the board description (JSON has no comments) and added two cases in report/loop/tests/cases/01-schema.test.sh (156 rows validates, 401 refused). Capping rows in collect was rejected: an open ticket missing from the board reads as a ticket that does not exist. Step 1 passed by architect ruling imu40 (start worktree, no pool slot). Early on I ran two short read-only checks outside the test pane before re-running everything through testpane.sh.
 
 ## Outcome
 

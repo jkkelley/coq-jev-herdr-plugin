@@ -66,8 +66,9 @@
     },
     "board": {
       "type": "array",
-      "maxItems": 120,
-      "items": { "$ref": "#/$defs/boardrow" }
+      "maxItems": 400,
+      "items": { "$ref": "#/$defs/boardrow" },
+      "description": "one row per ticket. BREADCRUMB 2026-10-13 - WO-20261013-e2f9. What broke: maxItems was 120 and the blueprint view lists every open ticket plus board_done_max done ones (lib/blueprint/entry.jq, board), so with 144 open and 12 done (156 rows) on 2026-10-13 loop.sh --view blueprint collect failed validation on board, the dev server never built a first page, and herdr case 12-blueprint-panes (dev serves a built page) failed on main (verify-main c903d8b and 29c1b34). Why this fix: raise the cap to 400. Rejected: capping the open rows in collect, since a ticket missing from the board would read as a ticket that does not exist, and the board's job is to show every open one. Cost: the cap is still a number; at 400 open tickets the schema must be raised again, and the page draws one row per ticket, so a very long board is a long page. Record: WO-20261013-e2f9"
     },
     "legend": {
       "type": "array",

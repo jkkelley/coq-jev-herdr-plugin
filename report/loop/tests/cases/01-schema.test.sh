@@ -23,6 +23,10 @@ neg "an unknown part kind is refused" '.lines[0].st.owner.parts[0][0] = "maybe"'
 neg "an extra field is refused" '.surprise = 1'
 neg "a string sim is refused" '.lines[0].sim = "no"'
 neg "a board step of 5 is refused" '.board[0].step = 5'
+# WO-20261013-e2f9: the live board was 156 rows (144 open, 12 done) against a cap of 120; it must validate, and a runaway one must not.
+jq '.board = [range(0; 156) as $i | .board[0]]' "$F" > "$W/long.json"
+t "a board of 156 rows validates" "$LOOP" validate "$W/long.json"
+neg "a board of 401 rows is refused" '.board = [range(0; 401) as $i | .board[0]]'
 neg "a bad ticket id is refused" '.lines[0].ticket = "WO-1"'
 neg "a text over 400 characters is refused" '.headline = ("x" * 401)'
 
