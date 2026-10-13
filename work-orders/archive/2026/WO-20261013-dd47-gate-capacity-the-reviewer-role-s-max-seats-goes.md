@@ -4,7 +4,7 @@
   "slug": "gate-capacity-the-reviewer-role-s-max-seats-goes",
   "title": "Gate capacity: the reviewer role's max_seats goes from 2 to 4, playbook re-rendered",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect orders 2026-10-13, re-cut on review yv8xi; lavish prohibited for Claude seats",
@@ -28,7 +28,8 @@
     "roles/reviewer.json",
     "playbooks/reviewer.md",
     "herdr/tests/cases/28-reviewer-seats.test.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261013-5f41"
 }
 ---
 
@@ -90,4 +91,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: architect ruling (b) 2026-10-13: pull request 99 already sets reviewer max_seats 4 (plus worker 6, orchestrator 2); rescoped to the cap test only
+- superseded by: `WO-20261013-5f41`
+
+No branch, no PR and no merge commit exist for this work order.
+
