@@ -538,6 +538,29 @@ if [ "$DRY" != 1 ] && ! sl_agent_live "$name"; then
   fi
 fi
 
+# BREADCRUMB 2026-10-13 - WO-20261013-69df, cause v. What broke: a seat's records tree was whatever its checkout's name made it
+#   (seat-lib.sh, sl_canonical_repo), so three testers seated from the verify-fba7551 worktree posted their test.passed records to
+#   ~/.local/state/coq/verify-fba7551/records and the merger never saw them. Why this fix: the line that starts the agent exports the
+#   canonical repository (COQ_REPO) and, when the caller set one, COQ_STATE, so the seat posts to the canonical tree; this gate then
+#   asks the seat's own resolver (its worktree's bin/state-root.sh, which its events/bin/event.sh sources) under that exact
+#   environment and refuses, exit 3 naming both trees, when the answer is not the canonical one, before a pane or an agent exists.
+#   It catches what the export cannot fix: a worktree whose resolver is stale and names a root of its own. Rejected: a warning (the
+#   records would still go astray, which is how the merger starved), fixing the tree up after the fact (copying records by hand is
+#   the defect), and refusing a worktree with no bin/state-root.sh (its event.sh stops with exit 4 and writes nowhere, and the
+#   suite's stub treehouse slots are empty clones, so cases 08, 10, 16, 32 and 33 failed on the first run of this gate). Cost: a
+#   worktree with no resolver is let through with a log line, so a seat there cannot post at all until it is brought forward. Not
+#   run under DRY_RUN (the dry-run slot is not a directory). Record: WO-20261013-69df.
+state_root_gate() {
+  [ "$DRY" != 1 ] || return 0
+  local want got
+  want="$(sl_canonical_tree records)" || refuse "the canonical records tree did not resolve: $want"
+  got="$(sl_seat_records_tree "$wt")" || {
+    [ $? -ne 2 ] || { sl_log "seat $name: $wt has no bin/state-root.sh, so nothing there resolves a records tree; the state root gate has nothing to judge"; return 0; }
+    refuse "seat $name would not post to the canonical records tree $want: $got"; }
+  [ "$got" = "$want" ] || refuse "seat $name would post its records to $got, not the canonical records tree $want; bring the checkout $wt forward (bin/state-root.sh) and rerun, nothing started"
+}
+if [ -n "$ticket" ] && [ "$wt_given" = 0 ] && [ "$mode" != adopt ]; then :; else state_root_gate; fi
+
 # ---- --adopt ----
 # BREADCRUMB 2026-10-11 - WO-20261011-8fb3, DEC-architect-becomes-interface-agent. What broke (would break): the owner ordered the
 #   architect session to become the interface agent with everything the day put in its context, and every door above ends in
@@ -610,7 +633,7 @@ fi
 # Door 1 without --worktree: lease the ticket's slot now, after every refusal above so a refused seat leases nothing, and
 # before the first herdr call that names a directory. --worktree leases nothing and returns nothing (AC-H4).
 lease=null; lease_new=0; recorded=0
-if [ -n "$ticket" ] && [ "$wt_given" = 0 ]; then lease_up; fi
+if [ -n "$ticket" ] && [ "$wt_given" = 0 ]; then lease_up; state_root_gate; fi
 
 # Workspace by label else create; tab by label else create. A fresh workspace's root tab is renamed and used.
 sl_h workspace list >/dev/null 2>&1 || { [ "$DRY" = 1 ] || { SL_EXIT=4 sl_die "herdr session $HS is not running; bringup.sh starts it"; }; }
@@ -761,7 +784,10 @@ else
   surface=lavish; [ "$runtime" = claude ] && surface=artifact
   unset_markers='for v in $(env | sed -n '\''s/^\(CLAUDECODE\|CLAUDE_CODE_[A-Z0-9_]*\|CLAUDE_PID\|CLAUDE_EFFORT\|AI_AGENT\)=.*/\1/p'\''); do unset "$v"; done; '
   line="$unset_markers$(printf 'cd %q && export COQ_SEAT=%q COQ_TEST_PANE=%q COQ_ROLE=%q COQ_TICKET=%q COQ_ROLE_FILE=%q COQ_WORKTREE=%q COQ_REPO=%q RAIL_SURFACE=%q PATH=%q:"$PATH"' \
-    "$wt" "$name" "$tpane" "$role" "$id" "$role_file" "$wt" "$SL_REPO" "$surface" "$SL_REPO/bin")"
+    "$wt" "$name" "$tpane" "$role" "$id" "$role_file" "$wt" "$(sl_canonical_repo)" "$surface" "$SL_REPO/bin")"
+  # The caller's COQ_STATE, when it set one, is the canonical root by definition and rides the line; a caller with none exports none,
+  # because a seat that runs seat.sh would otherwise move its seats/ directory (STATE in seat-lib.sh) off the shared root.
+  [ -z "${COQ_STATE:-}" ] || line+="$(printf ' COQ_STATE=%q' "$COQ_STATE")"
   sl_mut pane wait-output "$a" --regex "$SL_PROMPT_RE" --timeout "$(sl_cfg .prompt_timeout_ms)" >/dev/null 2>&1 \
     || { [ "$DRY" = 1 ] || { SL_EXIT=4 sl_die "pane $a showed no shell prompt within $(sl_cfg .prompt_timeout_ms) ms; rerun to repair"; }; }
   sl_mut pane run "$a" "$line" >/dev/null
