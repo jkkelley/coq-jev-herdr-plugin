@@ -30,7 +30,8 @@
     "config/tests.json",
     "config/tests.schema.json",
     "herdr/tests/run.sh",
-    "factory/tests/run.sh"
+    "factory/tests/run.sh",
+    "factory/tests/cases/18-case-runner.test.sh"
   ]
 }
 ---
@@ -96,6 +97,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Rework PR 115 (review.changes 422, 2026-10-13T19:18Z): the PR adds factory/tests/cases/18-case-runner.test.sh, the case that proves AC-H1 and AC-H2, but the files field omitted it, so claims.sh diff exited 3. Declared it with claims.sh set rather than reverting it, since deleting it would drop the only proof of the concurrency criteria. Cost: none, the file stays.
 - `2026-10-13` Retro: the design assumed cases share nothing but the container, but they share /proc (seat.sh --audit) and pkill (12-blueprint-panes), so parallel cases in one container failed 8 herdr cases; the ruling made it one container per case. Teardown check moved inside each case's container and now also checks scratch worlds and live herdr servers. 12-blueprint-panes fails on main serially (dev serves a built page): not this ticket, needs its own system ticket.
 
 ## Outcome
