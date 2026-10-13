@@ -51,7 +51,8 @@ Starting a ticket (bin/wo-start.sh, work-order start) edits the ticket frontmatt
 
 **In**
 
-- factory/tests/cases/22-wo-start-leaves-checkout-clean.test.sh (the factory suite; replaces the generic test-case line above)
+- bin/wo-start.sh: after work-order start, commit the in-progress frontmatter on the ticket branch and verify the starting checkout is clean, retrying 3 times then reporting
+- factory/tests/cases/22-wo-start-leaves-checkout-clean.test.sh
 
 **Out - non-goals**
 
@@ -69,7 +70,7 @@ Starting a ticket (bin/wo-start.sh, work-order start) edits the ticket frontmatt
 ## Test plan
 
 ```sh
-Scratch-repo case: run wo-start on a ready ticket, assert git status --porcelain is empty in the starting checkout and git log on the branch shows the frontmatter commit
+bash factory/tests/cases/22-wo-start-leaves-checkout-clean.test.sh   # runs wo-start on a ready ticket in a scratch repo, asserts git status --porcelain is empty and git log on the branch shows the frontmatter commit
 ```
 
 ## Assumptions
