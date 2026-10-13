@@ -1,0 +1,32 @@
+{
+  "id": "DEC-scheduler-go-podman",
+  "type": "Decision",
+  "title": "The small loop and the factory DAG are scheduled by one lightweight Go service in Podman on WSL, designed domain by domain before it is built",
+  "status": "proposed",
+  "text": "Owner order. The service replaces the route runner, the flow watch, the policy watch and the two architect watches with one process that routes, retries, confirms and supervises from the same tables they read today. Revised 2026-10-13 to the locked decisions: the bus is files in the state root ($COQ_STATE/records/YYYY/MM/), owned by the scheduler, and routing is still by status code through the routes table; NATS JetStream is deferred (card C15, ROADMAP.md), so this decision no longer depends on DEC-nats-jetstream-grpc. SPEC-16 is the engine and the end state (owner 2026-10-13 02:50Z), and the merge, the carry and the verify on main are code in the scheduler, not seats waiting on the architect. Rejected: keeping the depends_on edge to the NATS decision (it would make a deferred bus a precondition of the engine). Cost: when the bus returns, a new decision node supersedes the file bus rather than this node changing.",
+  "sources": [
+    {
+      "kind": "owner",
+      "id": "bearings",
+      "at": "2026-10-12T18:34Z"
+    },
+    {
+      "kind": "owner",
+      "id": "card-C15",
+      "at": "2026-10-12"
+    },
+    {
+      "kind": "owner",
+      "id": "spec-16-engine-and-end-state",
+      "at": "2026-10-13T02:50Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "implements",
+      "to": "REQ-status-change-wakeups"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-13T16:35Z"
+}
