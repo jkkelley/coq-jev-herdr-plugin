@@ -72,7 +72,8 @@ Owner 2026-10-12 22:49Z (m-20261012224955626-rjghl): every script lives in the p
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/aq.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+- [x] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/aq.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+  - observed `2026-10-13` Case line/tests/cases/aq.sh passes (47 assertions) in the test pane through herdr/bin/testpane.sh, and fails under three mutations of line/bin/aq.sh (sort reversed: 5 failing assertions, dedupe removed: 6, done copies instead of moves: 3, a literal state path: 12). grep finds no /home/luna or .cache/coq-watch in line/bin/aq.sh. With COQ_STATE set to a temp dir the case finds no written file outside it. make lint exit 0, make -C line test: 6 passed, 0 failed.
 - [ ] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/aq.sh is empty, ~/.cache/coq-watch/aq.sh is gone, and the archive path is in a 200 note on this ticket
 
 ## Test plan
@@ -92,6 +93,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: the test pane's lease check (treehouse status) found no slot leased to this ticket because the seat works in a start- worktree under ~/.cache/coq/.../worktrees, so the playbook's step 1 lease gate did not apply; the brief named the worktree and the work proceeded there. shellcheck SC1010 rejects a bare 'done' argument, so the case's helper is named queue and passes "done" quoted. AC-H2 (cache copy deleted, archive path in a 200 note) is the orchestrator lane after the merge.
 
 ## Outcome
 
