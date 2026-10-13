@@ -67,6 +67,8 @@ Owner answers on the bearings page, 2026-10-12 UTC.
 | C20  | The factory spec (pull request 35) is revised to these decisions, then published as v2.1.                   |
 | C21  | The bearings page links stay live until their own ticket lands.                                             |
 | C22  | `USERHALT` exists next to `USERGO`.                                                                         |
+| C23  | Roadmap item K, the orchestrator runs the line, is cut first and designed first (2026-10-13).                |
+| C24  | The line drains and the system is designed first: no new starts, the tickets in flight finish, the owner reads the K design, the system is built and checked, then the roadmap resumes (2026-10-13). |
 
 Defaults the owner accepted: 30 days of runtime records kept, squash merges, the scheduler team kept up and idle until its design is revised.
 
@@ -158,8 +160,17 @@ Tickets, with the order their declared files force:
 | D | WO-20261012-da1e | B, A2 |
 | E | WO-20261012-7a46 | D |
 | C | WO-20261012-e970 | E, G |
+| K | WO-20261013-1031 (design) | none; its build tickets are cut after the owner's card |
 
 Item A is split into A1 to A4 so each stays small (Law: scope small, integrate in CI).
+
+### System first (C23, C24)
+
+Owner order, 2026-10-13 UTC: drain the line, design the system, build and check it, then resume.
+
+- **K - The orchestrator runs the line and the system checks every agent.** Designed first as `specs/SPEC-17-orchestrator-and-agent-health.xml` (ticket WO-20261013-1031): one board is the single intake, seats and the orchestrator pull from it, nothing pushes prompts at the architect; the system checks every agent (alive, stuck, out of context, at capacity) with three retries and graceful recovery; halt, drain, resume and the bring-up checklist; a status code map; an inventory of every hand fix of 2026-10-12 with what replaces it; a cross-walk to the scheduler design.
+- The owner reads the design on the page and accepts it on a card; its build tickets (SPEC-17 s-build, K1 to K7) are cut from it with declared files; the system is checked with the check command of SPEC-17 s-bringup; only then does the roadmap resume with I, A2 and J.
+- While draining: no new ticket starts, the tickets in flight finish, held tickets wait.
 
 ### Phase 1
 

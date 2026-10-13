@@ -1,0 +1,361 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spec id="SPEC-17" version="1.0.0" title="Orchestrator and agent health: one board is the intake, the orchestrator runs the line, the system checks every agent" status="proposed" updated="2026-10-13T00:50Z">
+  <contents>
+    <item ref="s-chain" title="The chain of command and what each link hears"/>
+    <item ref="s-board" title="The board: the single intake"/>
+    <item ref="s-lanes" title="Lanes, items and the pull contract"/>
+    <item ref="s-orchestrator" title="The orchestrator seat: line operations by rule"/>
+    <item ref="s-health" title="The system checks every agent"/>
+    <item ref="s-architect" title="What reaches the architect: rulings, as a digest"/>
+    <item ref="s-owner" title="What reaches the owner: cards and the health line"/>
+    <item ref="s-halt" title="Halt, drain, resume and break glass"/>
+    <item ref="s-bringup" title="System up before the line: the bring-up DAG and its checklist"/>
+    <item ref="s-dag" title="The line DAG from cut to verified on main, a checklist per node"/>
+    <item ref="s-codes" title="Status code map"/>
+    <item ref="s-inventory" title="Inventory of 2026-10-12: every hand fix and line operation, and what replaces it"/>
+    <item ref="s-crosswalk" title="Cross-walk to SPEC-16: the Go scheduler later, the bash belt now"/>
+    <item ref="s-config" title="Files and keys the build adds"/>
+    <item ref="s-tests" title="Cases the build tickets prove"/>
+    <item ref="s-build" title="Build tickets to cut from this design"/>
+    <item ref="s-examples" title="GOOD and NEVER"/>
+  </contents>
+  <purpose>One board is the only intake of the line: every record, block, refusal, request and health finding is an item on it, seats pull from their lane, the orchestrator runs the line from its lane, the architect pulls rulings as a digest, and the owner sees cards and one health line. The system checks every agent mechanically and repairs with three retries before anyone hears of it, and it comes up and is checked before the line is kicked. Sources: owner cards C23 and C24 of 2026-10-13, the owner's message of 2026-10-13 00:11Z ("why doesn't everything end up on some board and then you pick it up"), and the owner's global rules "design first, system first, never by hand" and "how agents talk to me, and who answers to whom" (2026-10-13 00:02Z and 00:10Z). Build tickets are cut from this spec after the owner accepts it on a card; nothing here is built before that.</purpose>
+
+  <section id="s-chain" title="The chain of command and what each link hears">
+    <text>The chain is the owner, then the architect, then the orchestrator, then the system (owner rule "how agents talk to me", 2026-10-13: "like me, you, orchestrator, system"). Each link hears only what the link below it is not allowed to settle or failed to settle three times.</text>
+    <text>The owner hears decisions as cards on the bearings page, one health line for the state of the line, and one done line per verified ticket. Never a question in prose, never a record id, a pane, a pid or a path.</text>
+    <text>The architect hears rulings only: a block no standing policy answers, a third failed attempt on one ticket, a design question that names a spec section, two locked rules in conflict. It designs and rules; it runs no line operation.</text>
+    <text>The orchestrator hears line operations: a refused seat, a finished seat, a merge that needs cleanup or has no verify, a stale slot or lease, a health finding the system could not repair. It acts within the rules of its playbook and every action ends in a record (s-orchestrator).</text>
+    <text>The system hears everything first and settles most of it: routing by table, the board, the four checks on every agent, stalls, standing policies, the halt flag, bring-up and supervision. Today it is the bash scripts of the repository (factory/bin, herdr/bin, queue/bin, and line/ once roadmap item I lands); later it is the Go scheduler of specs/scheduler (s-crosswalk).</text>
+    <text>Rule of climbing: an item climbs one link at a time, as a board item in the upper link's lane, never as a prompt that carries the content. The lower link attaches what it tried (three attempts, each with its outcome record) so the upper link reads once and decides once.</text>
+    <mermaid>flowchart TD
+  OWNER["owner: cards, health line, done lines"] --> ARCH["architect: rulings and designs"]
+  ARCH --> ORCH["orchestrator seat: line operations by rule"]
+  ORCH --> SYS["system: routing, board, agent checks, stalls, policies, halt, bring-up"]
+  SYS -- "finding after 3 repairs" --> ORCH
+  ORCH -- "needs a ruling" --> ARCH
+  ARCH -- "second block on one ticket, break glass, phase done" --> OWNER</mermaid>
+    <ref node="ROL-orchestrator"/>
+    <ref node="ROL-monitor"/>
+    <ref spec="SPEC-02" anchor="s-roles"/>
+  </section>
+
+  <section id="s-board" title="The board: the single intake">
+    <text>The board is a directory of items in the state root, one file per item, one lane per consumer role plus the owner lane. Posting an item is creating a file, taking it is a lease field with a deadline, finishing it is a move into the done tree with the result record's id. No lock: distinct file names and atomic rename, the contract of the repository's queue (queue/bin/queue.sh, SPEC-03 s-locks). The board generalises that queue from tickets to every record. Source: owner 2026-10-13 00:11Z; REQ-locks-and-queues.</text>
+    <text>Everything lands on it: every record the writer accepts (gate results, blocks, refusals, requests from the owner page, seat up and down, stall notes, health findings, halt and resume), after routing names its lane. A seat learns of work by pulling its lane and by nothing else: no watch copies records to an agent, no prompt carries a record's content, no agent is woken per record.</text>
+    <text>Pull, not push. An idle seat whose lane holds open items is nudged with one line that names the lane and the count and carries nothing else. It pulls the oldest item of the highest priority, leases it, acts, posts its result record, and marks the item done with that record's id. A nudge replayed after a compaction costs one pull and nothing else; the flood of 2026-10-12 was content pushed one prompt per record and replayed after a compaction (ROADMAP.md, Why this roadmap exists).</text>
+    <text>One consumer per item. Routing (factory/config/routes.json, ROADMAP.md rule 1) names exactly one lane for a record; an item never sits on two lanes. A second audience, the owner's health line or the factory board, reads the board; it is not a second lane.</text>
+    <text>The ticket lane is the queue as it stands: tickets to start, p0 to p3, dequeue refuses a ticket whose dependencies are not done (work-order next is the oracle), a TTL lease per ticket. The board adds the record lanes with the same mechanics and the same script shape. Both live in the state root; the queue's items directory inside the repository today is a defect under the law "runtime data never lives in git" and moves with roadmap item A (s-inventory H24).</text>
+    <text>Where: items under the board directory of the state root, one subdirectory per lane; finished items under its done tree by year and month, named by the state-root rule (a UTC second stamp, then a name under 55 characters); the health line as one JSON file beside them. Nothing of it is in git. Source: ROADMAP.md, Where runtime data lives.</text>
+    <mermaid>flowchart LR
+  W["record writer: a seat, a gate, a check"] --> R["router: routes.json, one lane per record"]
+  R --> L1["lane tester"]
+  R --> L2["lane reviewer"]
+  R --> L3["lane merger"]
+  R --> L4["lane worker, keyed by the ticket's owner seat"]
+  R --> L5["lane orchestrator"]
+  R --> L6["lane architect"]
+  R --> L7["lane owner"]
+  L1 --> S1["tester pulls, acts, posts a record"]
+  L5 --> S5["orchestrator pulls, operates, posts a record"]
+  L6 --> S6["architect pulls a digest, rules, posts a record"]
+  L7 --> P["bearings page renders cards; the owner answers"]
+  S1 --> W
+  S5 --> W
+  S6 --> W
+  P --> W</mermaid>
+    <ref node="CMP-queue"/>
+    <ref node="REQ-locks-and-queues"/>
+    <ref spec="SPEC-03" anchor="s-locks"/>
+    <ref spec="SPEC-03" anchor="s-routes"/>
+  </section>
+
+  <section id="s-lanes" title="Lanes, items and the pull contract">
+    <text>Lanes: one per role of the record schema's addressee list (interface-agent, orchestrator, architect, worker, tester, reviewer, merger, player, monitor) plus owner. The worker lane is keyed by the seat the ticket names as its owner (ROADMAP.md rule 2: routing reads the owner seat from the ticket, never builds a name), so a team seat such as a scheduler worker has its own lane and nobody forwards by hand. Source: events/schema/event.schema.json (to), s-inventory H06.</text>
+    <text>Item fields: id (the record's id, so one id is the trace from the writer to the done tree), kind, code, ticket, lane, priority, posted_at, due_at (the deadline of the standing policy that covers the kind, when one does), attempt, lease (holder, acquired, deadline), done (at, by, result). Priority: p0 for halt, break glass and owner cards; p1 for rulings and refusals; p2 for gate records; p3 for notes. Within a priority, older first.</text>
+    <text>Verbs of the board script, same shape and exit codes as the queue script (0 ok, 2 usage, 3 validation, 4 io, 6 nothing to pull): post (the router's call; refuses a record without a lane), pull --lane L --holder SEAT (leases the next item, prints its id), renew, done --id --result RECORD-ID (moves the item to the done tree), release (back to open, attempt unchanged), sweep (an expired lease back to open; the third expiry of one item is a health finding), list [--lane] [--json], digest --lane L (open items grouped by ticket, oldest first, with their due times, as one text block), health (the health line: per lane the open and leased counts, the oldest age, the stalls, the halt or drain state, counters), check (name and content agree, no literal path in the config).</text>
+    <text>The nudge: one line, herdr agent prompt to the seat, "board: N items in lane L, pull", sent by the system at most once per nudge interval per seat while the lane has open items and the seat is idle. A busy seat is never nudged; it pulls when its step ends. A seat that does not pull within three nudges is a stuck finding (s-health). The architect's nudge interval is the digest interval (s-architect). Source: herdr/bin/turnwatch.sh (the busy signal), factory/bin/route.sh (the wake line it replaces).</text>
+    <text>Leases are the lease rule of the system (SPEC-04 s-leases, herdr/config/leases.json): a TTL, automatic release by sweep, the holder named. Retention: done items are pruned with the records after the configured days (ROADMAP.md default 30).</text>
+    <text>The owner lane is drained by the page, never by a prompt: the page renders each item as a card; the owner's answer, posted as a record by the receiving seat, marks the item done (s-owner).</text>
+    <ref spec="SPEC-04" anchor="s-leases"/>
+    <ref node="DEC-no-process-under-agent"/>
+  </section>
+
+  <section id="s-orchestrator" title="The orchestrator seat: line operations by rule">
+    <text>The orchestrator is a fixed seat (seat.sh door 2; roles/orchestrator.json: read-only, one seat, runtime claude or codex) whose allowed commands gain the board script and the line scripts named in s-config. Its purpose widens from "routes records by the decision table" to "runs the line": routing by table stays with the system; the seat takes the operations below. Each is a rule in its rendered playbook, each ends in a record, each has three attempts. Source: owner rule "how agents talk to me" (line operations belong to the orchestrator and the system, never the architect); ROL-orchestrator.</text>
+    <text>O1 Refused seat (a 429 item). The system has already retried for three ticks when a slot frees. Still refused: apply the down order of s-health check 4 (an idle fixed seat first, then a worker whose pull request waits on a gate, which is re-seated by its next 422 or 409), then re-post the refused item to its lane. Records: seat.down 100 for the seat downed, the re-posted item's record.routed 300.</text>
+    <text>O2 Finished seat. A seat whose ticket reached verified, or whose lane has had no open item for the idle interval, is downed through seat.sh --down (retire sequence, tab closed, slot returned, seat.down 100). Nobody waits for a human to notice an idle seat.</text>
+    <text>O3 Cleanup after merged 200: the remote branch deleted, the worktree pruned, the treehouse slot released, the ticket closed by the work-order tool with its evidence. Cleanup runs from the checkout, never inside a slot (on 2026-10-12 the merger's cleanup exited 4 in a slot and the merged record was withheld, s-inventory H12). Three attempts, then the item stays open on the orchestrator lane with the failure and the health line shows it.</text>
+    <text>O4 Verified on main after a merge. The merger seat performs the verify (ROADMAP.md item B, card C18); the orchestrator makes sure it happens: a merged 200 item with no verified 201 or rejected 422 within the stall deadline re-seats the merger or re-posts the item. The architect never verifies. This satisfies both the owner rule (verify belongs to the orchestrator and the system) and card C18 (the merger verifies): the seat performs, the orchestrator owns the outcome.</text>
+    <text>O5 Capacity. Work in progress stays within max_agents and the four-tickets guardrail (ROADMAP.md): the ticket lane does not dequeue a fifth ticket; a lane whose consumer cannot be seated holds its items (SPEC-16.C c-caps: hold, never refuse). The orchestrator sizes nothing by hand; caps are config.</text>
+    <text>O6 Stale state. A treehouse slot on a branch with no live seat, a worktree whose agent is gone, a lease or ledger entry past its TTL: released by the recover and unfreeze rules (SPEC-04 s-recovery, herdr/bin/recover.sh, herdr/bin/unfreeze.sh) and recorded. On 2026-10-12 a slot held the design branch with no seat (s-inventory H18).</text>
+    <text>O7 Re-route. An item whose consumer is gone (seat downed, sha superseded by a newer head, result already present) is marked done with the reason, or re-posted to the right lane. The routed ledger is never edited by hand (s-inventory H09).</text>
+    <text>Never: a ruling on what to build or how to split a ticket; prose to another agent; a GitHub write other than branch deletion and the ticket's closing; a break glass; a word to the owner. What a rule does not cover climbs as one item to the architect lane (s-architect) only when it needs a ruling; otherwise it stays open on the orchestrator lane and the health line shows it.</text>
+    <text>Three attempts everywhere, then stop and report (SPEC-03 s-retry; the owner's "every automated step retries up to 3 times, then recovers gracefully and reports, never loops and never fails silently").</text>
+    <ref spec="SPEC-03" anchor="s-retry"/>
+    <ref spec="SPEC-04" anchor="s-recovery"/>
+    <ref spec="SPEC-04" anchor="s-cleanup"/>
+    <ref spec="SPEC-15" anchor="s-cleanup"/>
+    <ref node="RUN-recover"/>
+  </section>
+
+  <section id="s-health" title="The system checks every agent">
+    <text>Every tick (health poll interval) the system runs four checks on every agent: every seat record with no end and every fixed seat. It reads herdr (agent get, the pane's foreground process), the seat record, the compaction-guard status and the board; it decides nothing a rule does not say. Source: owner rule "the system runs the mechanical checks on every agent (alive, stuck, out of context, at capacity)"; herdr/bin/seat.sh --check and --audit; herdr/bin/recover.sh.</text>
+    <text>C1 Alive. The agent answers and the pane's foreground process is the agent's (seat.sh --check exit 0). Not alive: the check is repeated on the next two ticks; then the repair: seat.sh --down closes the record and returns the slot, and the seat is re-seated when its ticket is still live. Records: seat.down 500, seat.up 100 on the re-seat. A repair that fails is one finding on the orchestrator lane.</text>
+    <text>C2 Stuck. Busy longer than the busy grace with no new record and the pane text unchanged (the busy signal of herdr/bin/turnwatch.sh; factory/config/flow.json busy_grace_seconds), or idle with open lane items after three nudges. Repairs, one per retry, in order: a nudge; Escape then a nudge (frees a question dialog, the fix applied by hand on 2026-10-12, s-inventory H16); retire and re-seat with --resume on the same transcript (herdr/bin/retire.sh, seat.sh --resume). Then the finding.</text>
+    <text>C3 Out of context. The context percent is at or above the role's threshold (roles, context_threshold_percent) and no compaction ran within the guard's window, or the guard lease froze the seat past its freeze window. The guard owns the compaction (SPEC-05); the check verifies that the guard is bound (seat.sh --check), releases an expired lease (unfreeze.sh --all), and counts: a seat that compacted three times without finishing one item is a finding.</text>
+    <text>C4 At capacity. Agents at max_agents (herdr/config/herdr.json) or a role at its max_seats while a lane has open items. Repair: retry the seat when a slot frees, three ticks; then the down order: an idle fixed seat first, then a worker whose pull request waits on a gate, never a seat mid-turn; then the seat comes up and the item is re-posted. On 2026-10-12 a reviewer and a merger were refused at max_agents and the line sat idle 17 minutes until the owner asked (s-inventory H08). A refusal nobody retries is forbidden.</text>
+    <text>C5 Exactly one of each system process: the runner, the stall watch, the policy watch, the health watch, each with a pid file under the state root's run directory. A duplicate is stopped and recorded; a missing one is restarted by the supervisor chain (s-bringup). The "four runners" of 2026-10-12 was a miscount of subshells (s-inventory H21); counting pid files makes the count a fact.</text>
+    <text>Every check: three retries, one repair per retry, a repair that never leaves a zombie (the retire sequence), one record per outcome, one entry on the health line. Never a loop: an open finding stops further repairs of the same object until it is marked done. Never silent: a finding the repair did not fix is on the orchestrator lane and on the health line within one tick.</text>
+    <text>Who hears: the orchestrator lane, for findings the repair did not fix; the owner's health line, always; the monitor seat, a notification only within the owner's notice cap; the architect, never.</text>
+    <mermaid>flowchart LR
+  T["tick"] --> A{"alive?"}
+  A -- yes --> S{"stuck?"}
+  A -- "no, 3 ticks" --> RA["repair: down, re-seat if the ticket is live"]
+  S -- yes --> RS["repair 1 nudge, 2 escape and nudge, 3 retire and re-seat with resume"]
+  S -- no --> X{"out of context?"}
+  X -- yes --> RX["guard compacts; expired lease released; 3 cycles without progress is a finding"]
+  X -- no --> C{"at capacity with open items?"}
+  C -- yes --> RC["retry 3 ticks, then the down order, then seat and re-post"]
+  RA --> F["finding on the orchestrator lane and the health line"]
+  RS --> F
+  RX --> F
+  RC --> F</mermaid>
+    <ref spec="SPEC-04" anchor="s-seat"/>
+    <ref spec="SPEC-05" anchor="s-monitoring"/>
+    <ref spec="SPEC-05" anchor="s-quiet"/>
+    <ref node="CMP-monitor-seat"/>
+  </section>
+
+  <section id="s-architect" title="What reaches the architect: rulings, as a digest">
+    <text>Rulings only: a blocked 423 that no standing policy answers within its deadline (factory/config/policies.json is tried first, SPEC-16.E of specs/scheduler); a 422 at attempt 3 (the ticket is split or re-scoped, never re-prompted, SPEC-03 s-retry); a design question from a worker, which is a 423 whose observations name a spec section; a conflict between two locked rules the orchestrator met.</text>
+    <text>How: items on the architect lane. The architect is nudged at most once per digest interval with one line (ROADMAP.md: one batched digest every 30 minutes until item D). A p0 item (halt, break glass, a second 423 on one ticket) nudges at once, once. After a compaction, the resume notice comes first (SPEC-05 s-failure, compaction-guard CMP-240), then one pull.</text>
+    <text>The pull: board digest --lane architect renders the open items grouped by ticket, oldest first, each with what the lower links tried. The architect answers each with one record (kind escalated or note, addressed to the consumer role, naming the ticket and the ruling) and marks the item done with that record's id. The ruling lands on the consumer's lane like any record. The scheduler team's architect seat is a lane of its own when the ticket's owner seat says so (rule 2).</text>
+    <text>Counted: architect nudges and architect items per hour, by kind, are counters on the health line (ROADMAP.md rule 9). A kind that recurs becomes a standing policy row or an orchestrator rule, cut as a ticket.</text>
+    <text>Never: a copy of every record, a prompt per record, a watch under the architect's own session, a question from another agent in prose, a carry, a verify, a conflict instruction, a seat operation.</text>
+    <ref spec="SPEC-05" anchor="s-failure"/>
+    <ref node="REQ-factory-node-contract"/>
+  </section>
+
+  <section id="s-owner" title="What reaches the owner: cards and the health line">
+    <text>The owner hears through the bearings page only (DEC-page-only-owner-channel; the owner rule "every question or decision for me goes on the Getting My Bearings page as a card, never inside a reply"). Three things: cards (one decision each, options and a recommendation), the health line (the state of the line: running, draining or halted; per lane the open and leased items; seats and their check state; stalls; counters), and one done line per verified ticket (id and title). Prose is spacious and high level; no ids, pids, panes or paths.</text>
+    <text>What becomes a card: a second 423 on the same ticket; a break glass request; a phase done-when; a design to accept (such as this spec); a halt or a resume; an irreversible action the policies table reserves to the owner. Everything else is a line on the health line or nothing.</text>
+    <text>How the owner's words come back: the bearings wait loop (tools/bearings/scripts/bearings.sh wait) delivers each message to one pane, the interface agent's (DEC-interface-agent-owns-bearings; the architect's until the interface agent seat lands). The receiving seat turns the message into a record on the board: request.forwarded 300 for a request, break.glass 200 for a grant, the chosen option as a record on the asking ticket. A message containing USERHALT runs the halt before anything else; one containing USERGO runs the resume (s-halt).</text>
+    <text>Owner notices are capped per hour; the health line is never capped, because the page pulls it from the board's health file and nothing pushes it. The page server and the wait loop never stop (s-halt).</text>
+    <text>The owner lane: items addressed to the owner; the page renders them as cards; an item is done when the owner's answer record exists. The factory board (report/loop, CMP-factory-board) reads the same files for its view.</text>
+    <ref node="DEC-page-only-owner-channel"/>
+    <ref node="DEC-interface-agent-owns-bearings"/>
+    <ref node="CMP-bearings-tool"/>
+    <ref node="CMP-factory-board"/>
+  </section>
+
+  <section id="s-halt" title="Halt, drain, resume and break glass">
+    <text>Halt (USERHALT, card C22). The halt command writes the halt flag in the state root's run directory with the reason and the time, stops the runner, the stall watch, the policy watch and the health watch (their monitor slots released), interrupts every seat's turn with Escape and keeps every seat up, posts line.halted 503 to the owner lane and the record, and leaves bearings stable running: the page server and the wait loop are the one monitoring that never shuts off (ROADMAP.md Signals; owner order 2026-10-12). While the flag exists the supervisor brings back only bearings stable.</text>
+    <text>Drain (card C24). The drain flag beside the halt flag: no new ticket dequeues, items in flight finish, the health line says draining, the supervisor and the checks run as usual. Resume clears it. The line is drained by hand as this spec is written; drain becomes a command in the build (s-build K4).</text>
+    <text>Resume (USERGO). The resume command runs the preflight, then the bring-up DAG (s-bringup), then wakes seats one at a time (merger first, worker last), then watches fifteen minutes. Preflight: every open board item is judged by rule and marked done with the reason when its consumer is gone, its sha is superseded or its result is already present; the routed ledger and the board agree; the flags are removed last. Record: line.resumed 100. A nudge count above the threshold in the first fifteen minutes halts again (ROADMAP.md phase 1).</text>
+    <text>Break glass. Owner-only and one time (SPEC-04 s-breakglass; specs/scheduler SPEC-16.E e-glass): a break.glass 300 request item on the owner lane, the owner's 200 grant as a record, seat.sh --break-glass runs exactly that command under the hook that denies a second one, 201 used, 204 restored by the sweep. The orchestrator and the system never grant one. A halted line still serves a break glass: it is the owner's lever.</text>
+    <text>Halt and resume are commands, never a hunt for process ids (ROADMAP.md rule 8; s-inventory H01, H02). They are roadmap item C; this section is its contract.</text>
+    <ref spec="SPEC-04" anchor="s-breakglass"/>
+  </section>
+
+  <section id="s-bringup" title="System up before the line: the bring-up DAG and its checklist">
+    <text>The system is 100 percent operational and checked before the line is kicked (owner rule "design first, system first, never by hand"; DEC-system-before-agents). This DAG extends the bring-up of SPEC-04 s-bringup (herdr/bin/bringup.sh, herdr/bin/supervisor.sh) with the board, the system processes and the preflight. The check command runs every node read-only and prints one line per node, ok or FAILED, exit 1 on any FAILED; the resume command repairs in order and stops at the first FAILED with a 500 record; nothing below a FAILED node starts.</text>
+    <mermaid>flowchart LR
+  B1["B1 bearings stable"] --> B2["B2 herdr session"]
+  B2 --> B3["B3 podman"]
+  B3 --> B4["B4 control plane and guard"]
+  B4 --> B5["B5 monitors grid"]
+  B5 --> B6["B6 state root and board"]
+  B6 --> B7["B7 system processes, exactly one each"]
+  B7 --> B8["B8 preflight"]
+  B8 --> B9["B9 seats one at a time"]
+  B9 --> B10["B10 fifteen-minute watch"]
+  B10 --> LINE["line running"]</mermaid>
+    <section id="b-nodes" title="Checklist per bring-up node">
+      <text>B1 bearings stable: [ ] the page server answers its health call; [ ] the wait loop pane is present and at its loop; proof: the server log and the pane list. Never stopped by any node below.</text>
+      <text>B2 herdr session: [ ] the session answers (agent list exits 0); repair: the user unit starts it, never a child of the check. Proof: the exit code.</text>
+      <text>B3 podman: [ ] podman answers; repair: podman system migrate. Proof: the exit code.</text>
+      <text>B4 control plane and guard: [ ] the control plane health is 200; [ ] compaction-guard doctor ok; [ ] the guard watch slot runs (herdr/bin/guardwatch.sh). Proof: the slot's foreground process.</text>
+      <text>B5 monitors grid: [ ] every tab has its nine panes (monitors.sh status exit 0); [ ] every reserved slot with a command is healthy (monitors.sh health). Proof: one line per slot.</text>
+      <text>B6 state root and board: [ ] the state root exists with the layout and is writable; [ ] board check exits 0; [ ] no lease is older than its TTL (board sweep printed nothing). Proof: the check output.</text>
+      <text>B7 system processes: [ ] exactly one runner and the belt file fresh (route.sh status exit 0); [ ] exactly one stall watch, one policy watch, one health watch, each with its pid file; [ ] the supervisor timer is armed; [ ] no halt flag. Proof: the pid files and the status lines.</text>
+      <text>B8 preflight: [ ] every open board item judged (done with the reason, or left open on purpose); [ ] the routed ledger agrees with the board; [ ] line.resumed 100 posted. Proof: the record.</text>
+      <text>B9 seats, one at a time: [ ] the monitor seat first (seat.sh refuses any other while it is down); [ ] merger, reviewer, tester, then workers; [ ] each seat.sh --check ok; [ ] each answered its first pull. Proof: seat.up 100 records.</text>
+      <text>B10 fifteen-minute watch: [ ] architect nudges under the threshold; [ ] zero per-record prompts; [ ] the health line green. Proof: the counters on the health line. Then the owner's health line says running.</text>
+    </section>
+    <ref spec="SPEC-04" anchor="s-bringup"/>
+    <ref spec="SPEC-04" anchor="s-monitors"/>
+    <ref node="DEC-system-before-agents"/>
+    <ref node="WFL-bringup"/>
+  </section>
+
+  <section id="s-dag" title="The line DAG from cut to verified on main, a checklist per node">
+    <text>The small loop as it stands (SPEC-03 s-sdlc, SPEC-15 s-sdlc), with every edge a board item in exactly one lane and every node a checklist whose boxes are ticked only with a record or a command's exit code. A node's failure re-opens the node it names with attempt plus one; the third failure climbs to the architect lane; a second block on one ticket becomes an owner card.</text>
+    <mermaid>flowchart LR
+  CUT["cut: architect, ticket.cut 100"] --> START["start: system, work.started 100"]
+  START --> WORK["work: worker, pr.opened 100"]
+  WORK --> TEST["test: tester, 201 or 422"]
+  TEST -- 201 --> REVIEW["review: reviewer, 201 or 422"]
+  TEST -- "422, attempt under 3" --> WORK
+  REVIEW -- 201 --> MERGE["merge: merger, 200 or 409"]
+  REVIEW -- "422, attempt under 3" --> WORK
+  MERGE -- 409 --> WORK
+  MERGE -- 200 --> VERIFY["verify on main: merger, 201 or 422"]
+  VERIFY -- 201 --> CLOSE["close: orchestrator cleanup, owner done line"]
+  TEST -- "422 at attempt 3" --> RULE["architect lane: ruling"]
+  REVIEW -- "422 at attempt 3" --> RULE
+  VERIFY -- 422 --> RULE
+  RULE -- "second 423 on one ticket" --> CARD["owner card"]</mermaid>
+    <section id="n-cut" title="Node cut: the architect cuts, the system checks">
+      <text>[ ] the ticket carries its id, full title, parent epic, declared files (claims.sh set) and a test plan whose every command runs in Podman through a repository target; [ ] the owner seat is in the frontmatter when a team seat owns it; [ ] no declared file overlaps an open pull request or a live ticket (claims.sh start); [ ] ticket.cut 100 posted. Proof: the ticket file and the record. Retry: a refused start is a 412 item back to the architect lane with the overlap printed.</text>
+    </section>
+    <section id="n-start" title="Node start: the system starts">
+      <text>[ ] the ticket lane dequeued it by rule (dependencies done, fewer than four in flight, a slot free); [ ] the branch is cut from main by the start wrapper (bin/wo-start.sh); [ ] work.started 100 carries the branch and the sha; [ ] the seat is up through seat.sh with the guard bound. Proof: the records and seat.sh --check. Retry: a seat refused is a 429 item (s-health C4), never a prompt.</text>
+    </section>
+    <section id="n-work" title="Node work: the worker builds">
+      <text>[ ] the worker pulled its lane item; [ ] every step went through the step command (lint in Podman, commit, push, checkpoint); [ ] the pull request title is the ticket id and full title; [ ] the branch is released from the worktree before pr.opened; [ ] pr.opened 100 carries the sha and the pull request number; [ ] every acceptance criterion has its evidence in the pull request body. Proof: the record and the pull request. Retry: a 422 or 409 re-opens this node with attempt plus one; attempt 3 climbs.</text>
+    </section>
+    <section id="n-test" title="Node test: the tester proves">
+      <text>[ ] the tester ran the ticket's test plan literally, in its test pane, in Podman (herdr/bin/testpane.sh); [ ] test.passed 201 or test.failed 422 with a repro and observations, both carrying the sha and the pull request; [ ] a gate record without a sha is refused by the writer; [ ] a pull request whose own files are byte-identical to a tested sha carries the 201 by rule (factory/bin/gate.sh, roadmap item E). Proof: the record and the test log under the state root's tests tree.</text>
+    </section>
+    <section id="n-review" title="Node review: the reviewer checks">
+      <text>[ ] every acceptance criterion's evidence is checked; [ ] lint passed; [ ] the diff stays inside the ticket's declared files, carries no aggregate and no runtime file (gate.sh pr-files); [ ] review.passed 201 or review.changes 422 with observations, on the same sha as the test. Proof: the record.</text>
+    </section>
+    <section id="n-merge" title="Node merge: the merger lands">
+      <text>[ ] test.passed 201 and review.passed 201 exist for the same sha, the newest head (gate.sh heads_match); [ ] squash merge; [ ] merged 200 posted right after the merge with the merge sha, before any cleanup; [ ] a conflict is merge.conflict 409 to the worker lane, whose playbook says merge main and keep the deletion of gitignored aggregates. Proof: the record and the pull request state.</text>
+    </section>
+    <section id="n-verify" title="Node verify: the merger verifies on main">
+      <text>[ ] the ticket's test plan ran on main at the merge sha in Podman; [ ] verified 201 or rejected 422; [ ] a rejected climbs to the architect lane for a revert or fix-forward ruling. Proof: the record and the test log. Owner of the outcome: the orchestrator (s-orchestrator O4).</text>
+    </section>
+    <section id="n-close" title="Node close: the orchestrator cleans up">
+      <text>[ ] remote branch deleted, worktree pruned, slot released; [ ] seats whose lanes are empty downed; [ ] the ticket closed by the work-order tool with its evidence; [ ] every board item of the ticket done; [ ] one done line to the owner with the id and the full title. Proof: the records and the health line.</text>
+    </section>
+    <ref spec="SPEC-03" anchor="s-sdlc"/>
+    <ref spec="SPEC-15" anchor="s-sdlc"/>
+    <ref spec="SPEC-15" anchor="s-parallel-prs"/>
+    <ref node="WFL-sdlc"/>
+    <ref node="SCH-routes"/>
+  </section>
+
+  <section id="s-codes" title="Status code map">
+    <text>Every status has a code, every code is in this map, and the map says what it means, who acts and what the retry is (owner rule). The set is the locked HTTP-shaped set (STC-http-shaped) plus the codes the routes table and the roles already use; a record whose code is not here is 500 to the monitor and an item on the orchestrator lane. Adding a code is a row here, a routes row and a lint check. One row per text: code, meaning, kinds, who acts, retry.</text>
+    <text>100 ACCEPTED: a thing began or was noted. Kinds ticket.cut, work.started, pr.opened, seat.up, seat.down (clean), request.accepted, note, line.resumed. Acts: the lane the routes row names (tester for pr.opened, worker for ticket.cut); a note and a clean seat.down route to nobody. Retry: none; a wake not confirmed is re-sent by the jobs rule up to three times.</text>
+    <text>200 DONE: an action completed. Kinds merged, policy.applied, break.glass (grant), line.halted is not 200 (see 503). Acts: merged goes to the merger lane for the verify and to the orchestrator for cleanup (one item, two steps, the merger's result record opens the cleanup); policy.applied wakes the seat the row names. Retry: cleanup three times, then an open orchestrator item.</text>
+    <text>201 PASSED: a gate passed. Kinds test.passed, review.passed, verified, break.glass (used). Acts: the next gate's lane (reviewer after test, merger after review); verified ends the ticket and writes the owner's done line. Retry: none. A 201 without a sha is refused by the writer.</text>
+    <text>204 RESTORED: a break glass was put back (break.glass by the sweep). Acts: the monitor notes it. Retry: none.</text>
+    <text>300 ROUTED: something moved along. Kinds record.routed (the router's receipt), request.forwarded (the owner's request), break.glass (a request). Acts: the architect lane for a request; the owner lane for a break glass request; nobody for a receipt. Retry: none.</text>
+    <text>400 REJECTED: a request failed its schema (request.rejected). Acts: the interface agent tells the owner in one line. Retry: none; the owner re-asks.</text>
+    <text>409 CONFLICT: the merge did not land (merge.conflict). Acts: the worker lane; the worker merges main. Retry: attempt plus one, up to three, then 423.</text>
+    <text>412 GATE_FAILED: a rule refused before a seat ran. Cases: the diff strays from the declared files or carries an aggregate (gate.sh pr-files), a start overlaps an open pull request (claims.sh start), a record missing its sha. Acts: the worker lane (diff), the architect lane (overlap at cut). Retry: attempt plus one, up to three.</text>
+    <text>422 FAILED: a gate failed with evidence (test.failed, review.changes, rejected). Acts: the worker lane with the repro and observations; rejected goes to the architect lane. Retry: attempt plus one; at attempt 3 the record routes as 423 to the architect lane (split or re-scope, never re-prompt).</text>
+    <text>423 BLOCKED: a seat cannot continue (blocked, escalated). Acts: the standing policies first (a policy row's deadline and default, policy.applied 200); the residue is one item on the architect lane in the digest; a second 423 on the same ticket is an owner card. Retry: none, it is a ruling.</text>
+    <text>429 REFUSED: a seat could not be seated for capacity (max_agents or a role's max_seats). Acts: the system retries for three ticks when a slot frees; then the orchestrator lane applies the down order (s-health C4). Never the architect.</text>
+    <text>500 STALLED or DEAD: a seat stalled, an agent is gone, a stall note from the stall watch, a record with no route, a duplicate system process. Kinds seat.stalled, seat.down (unclean), note from the stall watch. Acts: the health check repairs three times; then the orchestrator lane; the monitor notifies the owner within the cap. Retry: three repairs, then an open item.</text>
+    <text>503 HALTED: the line is halted (line.halted) or draining (line.draining). Acts: nobody routes; the supervisor keeps bearings stable; cleared by the owner's USERGO through the resume command (line.resumed 100). Retry: none.</text>
+    <text>Compaction codes are the guard families (STC-guard-families): CMP-240 resume comes first after a compaction, before any pull (SPEC-05).</text>
+    <ref node="STC-http-shaped"/>
+    <ref node="STC-guard-families"/>
+    <ref spec="SPEC-01" anchor="s-codes"/>
+  </section>
+
+  <section id="s-inventory" title="Inventory of 2026-10-12: every hand fix and line operation, and what replaces it">
+    <text>Every line operation the architect did by hand on 2026-10-12, from the roadmap progress file, the restart runbook and the retro in the state root's plans tree, and from the scheduler architect's records. Each row: what was done by hand, then the rule, seat or check that replaces it (owner rule: a hand fix is a defect to turn into automation). Acceptance criterion AC-H2 of the design ticket.</text>
+    <text>H01 Halt by hand, 20:42Z: routers, stall watch, retry, unfreeze and two watches hunted by process and stopped; every seat interrupted with Escape; a halt note posted. Replaced by the halt command and the flag (s-halt), roadmap item C.</text>
+    <text>H02 Restart by hand, 21:59Z, from a hand-written runbook: ledger preflight, one route tick by hand, panes started in order, seats woken one by one, fifteen minutes watched. Replaced by the resume command with the bring-up DAG and its checklist (s-bringup).</text>
+    <text>H03 Carry rulings by hand: four pull requests reposted after aggregate-only merges got their test and review carried by an architect record each. Replaced by the carry rule in gate.sh (roadmap item E) and node test's checklist.</text>
+    <text>H04 Verify on main by the architect, four times. Replaced by the merger's verify (item B, card C18) owned by the orchestrator (O4).</text>
+    <text>H05 Merge conflicts answered with prose instructions to each pull request owner. Replaced by the 409 route to the worker lane and a worker playbook step: merge main, keep the deletion of gitignored aggregates (n-merge).</text>
+    <text>H06 Scheduler team forwarding: the belt woke seats named worker-WO-id that did not exist (762 route failures) and the scheduler architect forwarded by hand. Replaced by the worker lane keyed by the ticket's owner seat (s-lanes; roadmap item D rule 2).</text>
+    <text>H07 Blocked rulings by hand within minutes, including a design question (a worker's 423 on config keys) and a world-fixture ruling. Design questions stay rulings but arrive as digest items (s-architect); the rest meet the standing policies first.</text>
+    <text>H08 Capacity refusals: a reviewer refused at eight agents, a merger refused at max_agents, the line idle seventeen minutes until the owner asked; a seat downed by hand to free a slot; the retry script patched by hand to match max_agents. Replaced by check C4 (retry, then the down order) and the capacity rule O5.</text>
+    <text>H09 Ledger entries cleared by hand so the belt would re-route (two records). Replaced by O7 re-route through the board; the ledger is never edited.</text>
+    <text>H10 Seats downed by hand when finished or stale. Replaced by O2 and check C1.</text>
+    <text>H11 A tester re-seated by hand to retest with the sha it had dropped; a reviewer's pass held because the test record carried no sha. Replaced by the writer refusing a gate record without a sha (n-test, s-build K5) and by O1 for the re-seat.</text>
+    <text>H12 The merger withheld merged 200 because cleanup exited 4 inside a slot; the architect ran the cleanup from the checkout and told the merger to post. Replaced by n-merge (post merged first) and O3 (cleanup from the checkout, three attempts).</text>
+    <text>H13 A record bus script copied slot records into the checkout by hand-started pane. Replaced by one state root for every worktree and slot (roadmap item A; card C17 closed the bus).</text>
+    <text>H14 Two architect watches copied every record and every seat turn to the architect, then a hand-started thirty-minute digest pane. Replaced by the architect lane and the digest nudge (s-architect; item D).</text>
+    <text>H15 A one-minute merge watch started by hand at the owner's request, with its own pid, lock and seen files. Replaced by merged 200 as a board item for the merger and the orchestrator (s-codes 200); no watch.</text>
+    <text>H16 Seats freed from a question dialog with Escape by hand; a worker stuck waiting on a tool it was not allowed. Replaced by check C2's second repair and the role deny of background tools.</text>
+    <text>H17 Test plan commands run bare on the host failed because the tool is only in the image; fourteen tickets rewritten by hand to Podman commands. Replaced by n-cut's checklist (every test plan command runs in Podman through a repository target) checked at cut.</text>
+    <text>H18 A treehouse slot left on a branch with no live seat, worked around with a forced checkout. Replaced by O6 stale state and node close.</text>
+    <text>H19 The owner had to ask where the line stood. Replaced by the health line the page pulls, which a halt never stops (s-owner).</text>
+    <text>H20 Fifty-eight one-off scripts, logs and backups outside the repository, archived by hand. Replaced by roadmap items I (scripts live in the repository) and J (artifacts documented and cleanable); the board and the health scripts are repository scripts.</text>
+    <text>H21 "Four runners" counted at the halt, a miscount of subshells; one runner verified by hand at the restart. Replaced by check C5 (exactly one of each process, by pid file).</text>
+    <text>H22 Workers answered by hand-written note records and prompts, and a stuck worker found by reading its pane. Replaced by rulings as board items on the worker lane and check C2.</text>
+    <text>H23 The compaction replay: queued prompts replayed to the architect after its compaction, stale. Replaced by pull: nothing queues at an agent, a nudge carries no content, the resume notice comes first (s-board, s-architect).</text>
+    <text>H24 The queue's items directory and the belt's state directory live inside the repository tree. Replaced by the board and the queue in the state root (roadmap items A1 to A4).</text>
+    <text>H25 An agent check by hand at 00:10Z ("all eight seats working or correctly holding"). Replaced by the four checks every tick and the health line (s-health).</text>
+    <text>H26 Build tickets started and routed by hand to team seats, one prompt each, and a design branch released by hand before every repost. Replaced by the ticket lane keyed by the owner seat and node start; the release stays a worker playbook step until the seat script learns it.</text>
+  </section>
+
+  <section id="s-crosswalk" title="Cross-walk to SPEC-16: the Go scheduler later, the bash belt now">
+    <text>SPEC-16 (specs/scheduler, pull request 37) is the engine's design; this spec is the line's operating model. Every row names who owns the part now (the bash belt) and later (the Go scheduler domain), and every contradiction is named with its resolution. The revision of pull request 37 (card C16, roadmap phase 4) folds the board into SPEC-16.A and SPEC-16.B and adds the four checks to SPEC-16.C and SPEC-16.F.</text>
+    <text>X01 Routing. Now: factory/bin/route.sh matches factory/config/routes.json and acts. Later: SPEC-16.B (specs/scheduler/SPEC-16.B-routing.xml, b-match, b-plan). Agree on the table. Contradiction: SPEC-16.B b-actions says wake is a herdr prompt that names the record id (push); this spec says post the item to the lane and nudge with the lane (pull). Resolution: the revision re-specifies wake as post and nudge; until the board lands, route.sh keeps waking with the record id and the architect gets the digest.</text>
+    <text>X02 Verify. SPEC-16.B b-owned routes merged 200 to "wake the architect to verify". Contradiction with card C18 and O4. Resolution: the revision routes merged 200 to the merger for the verify and to the orchestrator for the cleanup; the architect row is deleted.</text>
+    <text>X03 Caps. SPEC-16.C c-caps already says hold, never refuse, which agrees with check C4; the bash belt refuses with 429 and relies on the retry, until the seats domain lands. The down order (C4, O1) is new to both and goes into SPEC-16.C in the revision.</text>
+    <text>X04 Records root. SPEC-16.A a-roots reads the repository's events tree and the slot trees; this spec reads the board in the state root. Resolution: cards C10 and C11; the revision moves intake to the state root and makes the board the intake's source; the bash belt reads the events tree until roadmap items A1 to A4 land.</text>
+    <text>X05 Agent health. SPEC-16.F covers the scheduler's own heartbeat, record stalls, the halt flag and the supervisor chain; the four agent checks (C1 to C4) are new. Resolution: observation goes to SPEC-16.C c-status (absent, idle, busy gains stuck and out of context), repair to SPEC-16.F; the bash health watch (s-build K2) is the reference implementation whose fixtures the Go version replays (SPEC-16.K k-replay).</text>
+    <text>X06 Policies. SPEC-16.E is factory/config/policies.json; agree. The digest (s-architect) is new and goes to SPEC-16.F f-notify in the revision.</text>
+    <text>X07 Escalation. SPEC-16.B's escalate action writes an escalated record addressed to the architect; this spec posts it to the architect lane and nudges by the digest interval. Resolution: the escalate action becomes a post; the digest is a health job.</text>
+    <text>X08 The ticket lane. SPEC-16 has no ticket lane: tickets are started by the architect's start command. Named gap, not a contradiction: queue.sh stays the ticket lane in shadow and active modes until a later ticket moves it into the scheduler.</text>
+    <text>X09 The bus. SPEC-16 overview l-bus names NATS JetStream; card C15 drops it; the board, files in the state root owned by the scheduler, is the bus. Resolution: the revision rewrites l-bus and the blueprint's log node; routing stays by status code.</text>
+    <text>X10 Halt. SPEC-16.F f-halt reads a halt flag under the scheduler's state directory; this spec puts the flag in the state root's run directory, written by the halt command (roadmap item C). Resolution: the revision points f-halt at that file; the supervisor keeps bearings stable while it exists (ROADMAP.md).</text>
+    <text>X11 Verbs. The executor's verb table (SPEC-16.H h-verbs: herdr prompt, seat up and down, record, pane read) covers every orchestrator and health action except the board verbs, which are file operations on the mounted state root inside the container: no new verb.</text>
+    <text>X12 Cut-over. SPEC-16.J shadow mode compares the scheduler's plans with the bash belt's ledger. With the board, parity is a diff of intended lane posts against the belt's posts, item by item (SPEC-16.J j-parity); the board makes the oracle a file.</text>
+    <text>X13 The orchestrator seat. Both designs keep it a seat. Every duty of s-orchestrator that is a pure rule moves into the scheduler as its domain lands (SPEC-16.C c-down and c-caps for O1, O2, O5; SPEC-16.F for O6); the seat keeps the residue (a cleanup that failed three times, a stale state that needs reading, a re-route decision) and shrinks toward zero. Retiring the seat is an owner card, not a design decision here.</text>
+    <text>Ownership now and later, one line each: routing route.sh then SPEC-16.B; board posting the board script (K1) then SPEC-16.A and B; seats seat.sh in both, as the executor's verb, SPEC-16.C decides; health checks the health watch (K2) then SPEC-16.C and F; stalls flow.sh then SPEC-16.F; policies policy.sh then SPEC-16.E; halt and resume the line commands (C) then SPEC-16.F; bring-up bringup.sh and supervisor.sh then SPEC-16.F f-supervisor with the scheduler itself a supervised pane; the owner lane and the health line the bearings page in both (SPEC-16.I i-board reads the same files).</text>
+    <ref node="DEC-local-fast-ci-full"/>
+  </section>
+
+  <section id="s-config" title="Files and keys the build adds">
+    <text>Nothing hardcoded (DEC-no-hardcode-config-s3): every tunable below is a key in a schema-validated config with a variable form for paths, and a missing key is exit 3 naming the key. Paths use the state root variable and the repository variable; no literal path, host or seat name appears in a script.</text>
+    <text>The board config (line/config/board.json, schema beside it): schema_version; state_root (variable, the state root); lanes (the addressee roles plus owner); priorities; default_priority; lease_seconds; nudge_seconds (the least time between two nudges to one seat); digest_seconds (the architect's interval); retention_days; health_file (the health line's path under the board). The items directory of the queue config moves under the same root (roadmap item A).</text>
+    <text>The health config (line/config/health.json, schema beside it): poll_seconds; retries (three, fixed by the rule and still a key so the test can lower it); busy_grace_seconds; idle_down_seconds; context_threshold_percent (the role's value unless set); capacity.down_order (idle fixed seats, then workers waiting on a gate); notify.owner_cap_per_hour; processes (name, pid file, command, slot) for the runner, the stall watch, the policy watch and the health watch; architect_nudge_threshold (the fifteen-minute watch).</text>
+    <text>The run directory of the state root: the halt flag, the drain flag, the pid files, the locks. The halt command, the drain command, the resume command and the check command are make targets of the repository (roadmap item C widened by K4).</text>
+    <text>Routes rows (factory/config/routes.json, roadmap item D's file): 429 to the orchestrator lane; 500 seat findings to the orchestrator lane; merged 200 to the merger (verify) and the orchestrator (cleanup) as one item; every kind exactly one row per attempt; lint fails a kind without a row and a code outside s-codes.</text>
+    <text>Roles: roles/orchestrator.json gains the board and line scripts in its allowed commands and the duties O1 to O7 in its must list; the playbook is rendered, never written by hand. herdr/config/monitors.json gains a health watch slot and turns the queue slot into the board watch.</text>
+    <ref node="DEC-no-hardcode-config-s3"/>
+  </section>
+
+  <section id="s-tests" title="Cases the build tickets prove">
+    <text>Every case runs in Podman through a repository target (the line test target) with a fake herdr and a scratch state root, in seconds; the names below are the cases the build tickets carry in their test plans.</text>
+    <text>T01 post then pull: an item posted to the tester lane is pulled once by one holder; a second pull exits 6; done moves it to the done tree; the item id equals the record id.</text>
+    <text>T02 nudge once: fifty records to the architect lane produce at most one nudge within the digest interval (the flood test of roadmap item D, run against the board).</text>
+    <text>T03 compaction replay: twenty queued nudges to one seat collapse into one pull with no item lost.</text>
+    <text>T04 alive: a seat whose agent is gone is downed after three ticks and re-seated when its ticket is live; records seat.down 500 and seat.up 100.</text>
+    <text>T05 stuck: a seat in a question dialog is freed by Escape and nudged on the second retry; the third retry retires and re-seats with resume; the finding is posted after the third.</text>
+    <text>T06 capacity: at max_agents with an open merger item, an idle fixed seat is downed and the merger seated within three ticks; the architect lane stays empty.</text>
+    <text>T07 exactly one: a second runner process is detected by its pid file and stopped; the health line shows it.</text>
+    <text>T08 halt: the halt command leaves bearings stable running and the system processes gone within one tick; seats stay up; 503 on the owner lane; a supervisor tick repairs only bearings.</text>
+    <text>T09 resume: with one stale item (its consumer downed) the preflight marks it done with the reason and starts the system in order; a FAILED node stops the resume with a 500 record and nothing below it starts.</text>
+    <text>T10 verify ownership: a merged 200 with no verified within the stall deadline re-seats the merger; the architect lane stays empty.</text>
+    <text>T11 cleanup: after close the branch, the worktree and the slot are gone; a cleanup that fails three times is one open item on the orchestrator lane and one line on the health line.</text>
+    <text>T12 owner lane: a second 423 on one ticket renders as one card; the answer record marks the item done.</text>
+    <text>T13 line-check: every bring-up node prints ok or FAILED; exit 1 on any FAILED; nothing written.</text>
+    <text>T14 config: a missing key or a literal path fails the board and health check verbs with exit 3 naming the key.</text>
+    <text>T15 one consumer: a routes table with a kind that has two rows for one attempt, or none, fails lint naming the kind.</text>
+  </section>
+
+  <section id="s-build" title="Build tickets to cut from this design">
+    <text>Cut after the owner accepts this spec on a card (AC-H4), under the roadmap epic, each with declared files and no overlap with an open pull request (Law: no file is ever touched by two open PRs); each title names the letter K and its number. Order: K1, K2, K3 share the line tree and run one after another; K4 is roadmap item C widened; K5 rides with item A1; K6 waits for the interface agent decision; K7 is roadmap item D as cut. Done when: a ticket goes from cut to verified with zero architect prompts and the health line shows every seat checked (roadmap phase 3 done-when).</text>
+    <text>K1 Board: the board script, its config and schema, the ticket lane kept as the queue script with its items under the state root, the board watch slot, tests T01 to T03 and T14. Files: line/bin/board.sh, line/config/board.json, line/config/board.schema.json, line/tests/cases/board-*.sh, queue/config/queue.json. Waits on roadmap items I (the line tree) and A1 (the state root variable).</text>
+    <text>K2 Health watch: the four checks, exactly-one processes, the health line, the nudge, tests T04 to T07 and T15 for the lint half it owns. Files: line/bin/health.sh, line/config/health.json, line/config/health.schema.json, line/tests/cases/health-*.sh, herdr/config/monitors.json. Waits on K1.</text>
+    <text>K3 Orchestrator seat: the role's duties O1 to O7 as commands the seat runs, the rendered playbook, the fixed seat's bring-up, tests T10 to T12. Files: roles/orchestrator.json, playbooks/orchestrator.md, line/bin/orchestrate.sh, line/tests/cases/orchestrate-*.sh. Waits on K2; its routes rows belong to K7.</text>
+    <text>K4 Halt, drain, resume, check: roadmap item C (WO-20261012-e970) widened with the drain flag, the preflight by rule and the bring-up checklist as the check command; the supervisor keeps bearings stable while halted; tests T08, T09, T13. Files: the repository Makefile targets, line/bin/line-halt.sh, line/bin/line-drain.sh, line/bin/line-resume.sh, line/bin/line-check.sh, herdr/bin/supervisor.sh. Waits on K2 and on items E and G as ROADMAP.md orders.</text>
+    <text>K5 The writer refuses a gate record without a sha and a code outside s-codes. Files: events/bin/event.sh and its schema, which roadmap item A1 holds; folded into A1 or cut right after it.</text>
+    <text>K6 The owner lane on the page: cards rendered from owner-lane items and the health line read from the board's health file. Files under tools/bearings and report/loop. Waits on the decision on pull request 17 (the interface agent seat).</text>
+    <text>K7 Routes and lint: one row per kind and attempt, the owner seat from the ticket, the 429 and 500 rows to the orchestrator lane, the merged 200 row to the merger and the orchestrator, lint for s-codes coverage. This is roadmap item D (WO-20261012-da1e) as cut, with these rows named.</text>
+    <text>K8 The revision of pull request 37 folds s-board into SPEC-16.A and SPEC-16.B and the checks into SPEC-16.C and SPEC-16.F (roadmap phase 4, card C16); owned by the scheduler architect seat.</text>
+  </section>
+
+  <section id="s-examples" title="GOOD and NEVER">
+    <example kind="GOOD"><text>A tester finishes a run, posts test.passed 201 with the sha, marks its item done, and the reviewer's lane gains one item; the reviewer, idle, gets one line: "board: 1 item in lane reviewer, pull".</text><why>One record, one lane, one nudge without content; nothing reached the architect.</why></example>
+    <example kind="GOOD"><text>A merger is refused at max_agents; the health watch retries for three ticks, then downs an idle fixed seat and seats the merger; the health line shows the swap and the architect lane is empty.</text><why>Capacity is the system's and the orchestrator's problem, settled by rule.</why></example>
+    <example kind="GOOD"><text>The owner types USERHALT on the page; within one tick the flag exists, the runner and watches are gone, every seat is at its prompt, the page still answers and shows halted.</text><why>Halt is a command, and the owner's monitoring never stops.</why></example>
+    <example kind="GOOD"><text>A worker's blocked 423 names a spec section; the standing policy does not cover it; thirty minutes later the architect's digest shows it with what the worker tried; the architect posts one ruling record to the worker's lane.</text><why>A ruling reached the architect as one item in one digest.</why></example>
+    <example kind="NEVER"><text>A watch that prompts the architect with every record or every seat turn.</text><why>It made the architect the hub of the line and replayed stale prompts after a compaction on 2026-10-12.</why></example>
+    <example kind="NEVER"><text>An architect clearing a ledger entry, downing a seat or running a cleanup by hand because the line sat still.</text><why>Each is an orchestrator or system rule here; a hand fix is a defect to turn into automation.</why></example>
+    <example kind="NEVER"><text>Starting a seat or a ticket while a bring-up node is FAILED, or keeping a refused seat refused with nobody retrying.</text><why>The system is up and checked before the line is kicked, and every refusal is retried then settled.</why></example>
+    <example kind="NEVER"><text>A question to the owner inside a reply, or a card that carries a record id or a pane.</text><why>Decisions are cards on the page, in spacious prose; mechanics stay in the progress file.</why></example>
+  </section>
+</spec>

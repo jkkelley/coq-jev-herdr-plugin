@@ -92,6 +92,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` SPEC-17 written 2026-10-13 00:50Z by sched-architect: 17 sections, 361 lines, no new graph nodes (graph/ is item L's), SPEC-16 cited by path; make lint all ok in Podman; SPEC-00 row added; ROADMAP.md gains C23, C24, item K and the system-first order.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
