@@ -26,7 +26,7 @@
   "title": "Merger",
   "purpose": "Integrates: rebases if needed, merges a reviewed PR, runs cleanup, releases the slot, posts merged.",
   "model": {
-    "claude": "claude-haiku-5-5",
+    "claude": "claude-sonnet-5-5",
     "architect_may_override": true
   },
   "permission_mode": "bypassPermissions",
