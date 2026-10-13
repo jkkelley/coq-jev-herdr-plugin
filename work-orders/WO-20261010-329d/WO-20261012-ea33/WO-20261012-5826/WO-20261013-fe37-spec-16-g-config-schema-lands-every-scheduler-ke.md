@@ -76,7 +76,8 @@ Owner 2026-10-13 03:00Z (record 57h60): pull request 37 (WO-20261012-5826, the S
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* check.sh check passes in Podman; the file stays under 1000 lines, generic (no paths, keys or hostnames) and every element cites its source; make lint passes (graph check and sync-specs)
+- [x] `AC-H1` *(human)* check.sh check passes in Podman; the file stays under 1000 lines, generic (no paths, keys or hostnames) and every element cites its source; make lint passes (graph check and sync-specs)
+  - observed `2026-10-13` check.sh check in localhost/coq-lint:1 printed 'ok specs/scheduler/SPEC-16.G-config-schema.xml (180 lines)', exit 0; no paths, keys or hostnames (forbidden patterns pass); every word element cites a source; make lint ended 'lint: all ok' with graph check + specs agree ok
 
 ## Test plan
 
