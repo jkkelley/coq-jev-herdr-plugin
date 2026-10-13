@@ -28,7 +28,7 @@
   ],
   "files": [
     "herdr/bin/seat.sh",
-    "herdr/tests/cases/36-fence-write-deny.test.sh"
+    "herdr/tests/cases/38-fence-write-deny.test.sh"
   ]
 }
 ---
@@ -56,7 +56,7 @@ herdr/bin/seat.sh render_settings (:129) turns deny.paths into Edit(...) rules o
 **In**
 
 - render_settings emits Write(<path>) next to every Edit(<path>) deny rule, and the comment above it says why, naming this ticket and PR 118 and PR 125
-- herdr/tests/cases/36-fence-write-deny.test.sh: a worker's rendered settings deny both Edit and Write on roles/, specs/ and graph/
+- herdr/tests/cases/38-fence-write-deny.test.sh: a worker's rendered settings deny both Edit and Write on roles/, specs/ and graph/
 
 **Out - non-goals**
 
@@ -88,6 +88,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Overlap with WO-20261013-69df (PR 143): both change herdr/bin/seat.sh. This ticket already waits on WO-20261013-bcba, which waits on PR 143 merging, so the order is 69df, bcba, d0dd. The case was renumbered from 36 to 38 because 69df owns 36-seat-canonical-state-root and bcba owns 37-seat-model-override.
 
 ## Outcome
 

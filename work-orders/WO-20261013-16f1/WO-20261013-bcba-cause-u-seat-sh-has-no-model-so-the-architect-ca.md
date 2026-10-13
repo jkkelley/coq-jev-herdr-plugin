@@ -89,6 +89,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Overlap with WO-20261013-69df (PR 143): both change herdr/bin/seat.sh, and 69df also changes seat-lib.sh and adds herdr/tests/cases/36-seat-canonical-state-root.test.sh. Do not start this ticket until PR 143 is merged; start it from the merged main, so no two in-flight tickets share seat.sh. Case 37 here follows 69df's case 36.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
