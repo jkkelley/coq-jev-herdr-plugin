@@ -4,15 +4,15 @@
   "slug": "cause-f-the-belt-cannot-seat-the-tester-and-revi",
   "title": "Cause f: the belt cannot seat the tester and reviewer for a tickets pull request, because the ticket's branch is null; seat.sh takes the head branch from the pull request",
   "type": "bug",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T16:37:15+00:00",
   "parent": "WO-20261013-16f1",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/cause-f-the-belt-cannot-seat-the-tester-and-revi",
+  "pr": 135,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect P0 order 2026-10-13 (owner m-20261013162710557-e4nos: always a system loop), approved by the architect in the owner place (card C29); lavish prohibited for Claude seats",
@@ -66,7 +66,8 @@ Cause f (record b5yad, roadmap progress 2026-10-13 15:58Z): a tickets-only pull 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a pr.opened on a tickets-only pull request seats its tester with no hand step, and the case fails without the fix
+- [x] `AC-H1` *(human)* a pr.opened on a tickets-only pull request seats its tester with no hand step, and the case fails without the fix
+  - observed `2026-10-13` herdr/tests/cases/32-seat-gate-tickets-pr.test.sh passes from test pane wD3:p1A2 (make -C herdr test, 27 of 28 cases, the one failure is 12-blueprint-panes, a known main break fixed by PR 113): a tester and a reviewer are seated by seat.sh --ticket with no --worktree for a ticket whose branch is null, the slot is on the open pull request's head and tracks origin. With herdr/bin/seat.sh reverted, the same case fails 11 assertions (exit 3 'has no branch yet'). Case 08 still passes; make lint passes.
 
 ## Test plan
 
@@ -85,6 +86,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: seat.sh is not told the PR by route.sh, so it looks the PR up itself from gh by title prefix (every PR is titled '<WO-id> - ...'); route.sh --pr and frontmatter pr were rejected (breadcrumb in seat.sh). Added herdr/tests/stubs/gh because the suite container has no gh; it returns every PR and leaves the filtering to seat.sh. Case 12-blueprint-panes fails on this base, not caused here.
 
 ## Outcome
 
