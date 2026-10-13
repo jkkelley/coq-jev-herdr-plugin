@@ -67,7 +67,8 @@ Cause g (records of 2026-10-13: the PR 87 tester and tester-wo-20261013-f298 sta
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* after seat.sh --down or retire.sh no process of the seat remains and its slot is free; the case fails with a planted background session
+- [x] `AC-H1` *(human)* after seat.sh --down or retire.sh no process of the seat remains and its slot is free; the case fails with a planted background session
+  - observed `2026-10-13` herdr/tests/cases/33-down-leaves-no-process.test.sh, run in the test pane through make -C herdr test: with a stub claude planted by setsid in the leased slot (cwd) and one carrying COQ_SEAT elsewhere, seat.sh --down exits 0, both are gone, the slot is free (treehouse status holds 0 leases for the ticket) and seat.down 100 is recorded; a bystander claude is left running. The same case on the unmodified HEAD fails 13 checks (planted sessions survive, --down exits 3, slot stays held). make lint ok; full suite 27 passed, 1 failed - 12-blueprint-panes (dev serves a built page), which fails the same way on unmodified HEAD.
 
 ## Test plan
 
@@ -86,6 +87,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: retire.sh stopped at 'herdr no longer answers' and never looked at the host, so a claude outside the pane tree (setsid, bg session) or an orphaned MCP child kept the slot. Fix: seat-lib.sh sl_end_seat_procs ends the agent pane tree, the pre-/exit snapshot (pid plus start time) and every claude with COQ_SEAT=name or cwd in the seat's own leased slot, three SIGTERM/SIGKILL rounds, then a 500 note naming the pid and retire.sh exit 3; seat.sh --down then exits 4 with the seat un-ended. Learned: seat.sh runs under set -e, so a trailing '[ ] && printf' in a library loop can fail the caller; and the world stub claude has comm 'bash' in the 500 text, so the note prints the cmdline. Not done: case 12 (dev serves a built page) fails on main, outside this ticket's files; the playbook lease check could not pass because this seat was started with --worktree (no treehouse lease), proceeded on the architect's brief naming the worktree.
 
 ## Outcome
 

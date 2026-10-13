@@ -14,6 +14,8 @@
     "prompt_timeout_ms",
     "agent_start_timeout_ms",
     "down_wait_seconds",
+    "down_kill_tries",
+    "down_kill_wait_seconds",
     "retire_poll_seconds",
     "nudge_wait_seconds",
     "nudge_settle_seconds",
@@ -71,6 +73,16 @@
     "down_wait_seconds": {
       "type": "integer",
       "minimum": 0
+    },
+    "down_kill_tries": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "rounds of SIGTERM then SIGKILL sl_end_seat_procs makes against the processes of a downed seat before it reports a 500 naming the survivor (WO-20261013-50a4)"
+    },
+    "down_kill_wait_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "how long each round waits for SIGTERM to work before SIGKILL"
     },
     "retire_poll_seconds": {
       "type": "integer",
