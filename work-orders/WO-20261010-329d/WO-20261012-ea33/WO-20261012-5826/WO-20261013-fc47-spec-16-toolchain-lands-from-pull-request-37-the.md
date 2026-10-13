@@ -67,8 +67,10 @@ Owner 2026-10-13 03:00Z (record 57h60): pull request 37 (WO-20261012-5826, the S
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* check.sh check exits 0 on main with this ticket alone and on pull request 37's branch with all twelve files
-- [ ] `AC-H2` *(human)* make lint passes
+- [x] `AC-H1` *(human)* check.sh check exits 0 on main with this ticket alone and on pull request 37's branch with all twelve files
+  - observed `2026-10-13` 2026-10-13 UTC, lint image: check.sh check exits 0 on main with this ticket alone (ok no spec files yet, 0 of 12 in spec_set); on a 012fa41 export with all twelve files it exits 0 (ownership ok: 27 routes rows and 12 status codes each owned once); each file landed alone on main with its graph nodes exits 0; a row owned twice in a partial tree exits 3; an unknown spec id exits 3
+- [x] `AC-H2` *(human)* make lint passes
+  - observed `2026-10-13` 2026-10-13 UTC: make lint prints lint: all ok, exit 0 (configs: schema validates check.json against check.schema.json with the new spec_set key; shellcheck ok)
 
 ## Test plan
 
@@ -87,6 +89,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: the twelve SPEC-16 files cite each other in a cycle (overview cites A to K, A cites the overview), so relaxing ownership alone was not enough; no file could be first to pass. spec_set (file and id pairs) in check.json now makes a citation of a not-yet-landed spec pending rather than failed, and spec ids resolve from every spec on disk, not only the FILE arguments. The remaining per-file failure on main is the graph nodes each file's own ticket lands.
 
 ## Outcome
 
