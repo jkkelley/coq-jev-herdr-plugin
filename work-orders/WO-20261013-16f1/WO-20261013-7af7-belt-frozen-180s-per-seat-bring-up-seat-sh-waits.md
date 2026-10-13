@@ -23,7 +23,9 @@
   "depends_on": [
     "WO-20261013-0bda"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-d127"
+  ],
   "files": [
     "herdr/bin/seat.sh",
     "herdr/config/herdr.json",

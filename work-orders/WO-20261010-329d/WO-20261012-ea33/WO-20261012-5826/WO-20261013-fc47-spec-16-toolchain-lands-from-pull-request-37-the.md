@@ -88,6 +88,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Note (ruling zi4u6): this ticket adds specs/scheduler/bin/check.sh, so its plan runs it from this ticket's own branch; it does not exist on main before this merges.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
