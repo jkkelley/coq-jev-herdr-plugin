@@ -50,7 +50,7 @@
 
 ## Problem
 
-Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013194800-ci-gate-design.md, ticket 5. Input: merge.sh keys on the gate (ticket 3) and main verdicts come from the gate (ticket 4). Output: no tester seat is ever seated; testers keep running until this lands.
+Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013194800-ci-gate-design.md, ticket 5, unchanged by the 2026-10-13T20:00Z, 20:04Z and 20:07Z amendments except that the gate it relies on is the coq/gate status posted by Jenkins. Input: merge.sh keys on the coq/gate status of the head sha (ticket 3) and main verdicts come from the coq/gate status event (ticket 4), both triggered by webhook. Output: no tester seat is ever seated; testers keep running until this lands.
 
 ## Scope
 
@@ -90,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` 2026-10-13T20:02Z: amended on PR 130 to fold in the design amendments 20:00Z (Jenkins, not GitHub Actions), 20:04Z (in the cluster via coqGate(), test images in GHCR, host agent fallback only) and 20:07Z (webhooks, no pollSCM, status event triggers, 5-rung ladder). The ticket is ready and amend refuses non-drafts, so the body and files were edited directly by the cut seat under the architect's order; approval and status are unchanged.
 
 ## Outcome
 

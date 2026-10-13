@@ -2,7 +2,7 @@
 {
   "id": "WO-20261013-aff2",
   "slug": "ci-gate-4-a-green-gate-on-main-posts-verified-fo",
-  "title": "CI gate 4: a green gate on main posts verified for every merge since the last verified sha, a red one posts rejected and sets the merge hold",
+  "title": "CI gate 4: a green coq/gate status on main posts verified for every merge since the last verified sha, a red one posts rejected and sets the merge hold, triggered by the GitHub status event",
   "type": "feature",
   "status": "ready",
   "priority": "p0",
@@ -33,7 +33,7 @@
 }
 ---
 
-# WO-20261013-aff2 - CI gate 4: a green gate on main posts verified for every merge since the last verified sha, a red one posts rejected and sets the merge hold
+# WO-20261013-aff2 - CI gate 4: a green coq/gate status on main posts verified for every merge since the last verified sha, a red one posts rejected and sets the merge hold, triggered by the GitHub status event
 
 ## Contents
 
@@ -49,18 +49,19 @@
 
 ## Problem
 
-Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013194800-ci-gate-design.md, ticket 4. Input: the gate runs on push to main (ticket 2). Output: verified 200 or rejected 422 records for the range, replacing the verify-main seat runs.
+Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013194800-ci-gate-design.md, ticket 4, as amended 2026-10-13T20:07Z (hooks and ladder). Input: coq/gate runs on a push to main (ticket 2), and its status event reaches the line by webhook. Output: verified 200 or rejected 422 records for the range, replacing the verify-main seat runs, written by a handler that the status event triggers, so no seat and no loop watches a run.
 
 ## Scope
 
 **In**
 
-- ci/bin/main-gate.sh: from the gate result on a main sha, post verified per PR in the range since the last verified sha, or rejected naming the failing suite and set the hold; retry 3 times then report
+- ci/bin/main-gate.sh: the handler for one GitHub status event payload on stdin; it ignores every context but coq/gate and every sha that is not a main commit. On success it posts verified per merged pull request in the range since the last verified sha. On failure it posts rejected naming the failing suite and sets the hold. Retry 3 times then report, per the ladder; a red or error status already carries its log link and page from ticket 2, so this script adds none
 - ci/tests/cases/04-main-gate.test.sh
 
 **Out - non-goals**
 
 - removing line/bin/verify-main.sh (a follow-up)
+- the listener that delivers the webhook payload to the handler (see ticket 3)
 
 ## Degrees of freedom
 
@@ -68,8 +69,9 @@ Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/2026101319
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* A green main sha posts one verified per merged PR since the last verified sha
-- [ ] `AC-H2` *(human)* A red one posts rejected with the failing suite and the hold
+- [ ] `AC-H1` *(human)* A coq/gate success event on a main sha posts one verified per merged pull request since the last verified sha
+- [ ] `AC-H2` *(human)* A coq/gate failure event on a main sha posts rejected with the failing suite and sets the hold
+- [ ] `AC-H3` *(human)* An event for a non-main sha or another context posts nothing, and no process polls
 
 ## Test plan
 
@@ -88,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` 2026-10-13T20:02Z: amended on PR 130 to fold in the design amendments 20:00Z (Jenkins, not GitHub Actions), 20:04Z (in the cluster via coqGate(), test images in GHCR, host agent fallback only) and 20:07Z (webhooks, no pollSCM, status event triggers, 5-rung ladder). The ticket is ready and amend refuses non-drafts, so the body and files were edited directly by the cut seat under the architect's order; approval and status are unchanged.
 
 ## Outcome
 
