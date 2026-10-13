@@ -89,6 +89,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Correction: the SPEC-17 O9 cite in the Scope bullet for the 450 row is wrong. SPEC-17 has only O1 to O7 and none of them covers conduct or compliance reports, so no anchor applies; ignore the cite.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
