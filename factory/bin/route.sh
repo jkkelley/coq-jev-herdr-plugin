@@ -7,7 +7,7 @@
 #   route.sh once   [flags]      one tick: route every new record, touch the belt file, exit
 #   route.sh run    [flags]      ticks forever, every poll_seconds; run it in a labelled herdr pane, never as a background job
 #   route.sh status [flags]      print the belt age; exit 0 when fresher than stale_seconds, 1 when stale or missing
-# Flags: --config FILE (default factory/config/runner.json)   --repo DIR (what ${repo} means)   --routes FILE   --state DIR
+# Flags: --config FILE (default factory/config/runner.json)   --repo DIR (what ${repo} means)   --routes FILE   --state DIR (the state root, as COQ_STATE)
 #        --from-start   on the first start only, route the records already in the log (default: only records written after it)
 # Actions: wake and notify_owner = herdr agent prompt <seat> "record <id> playbook <path>"; enqueue = queue.sh enqueue;
 #          escalate = event.sh add --kind escalated --to <role>; break-glass = seat.sh --break-glass <record's seat> --record <id>;
@@ -18,6 +18,21 @@
 #          older head gate.sh says this record replaces).
 # Exit: 0 ok, 1 belt stale (status only), 2 usage, 3 validation, 4 io.
 #
+# BREADCRUMB 2026-10-13 - WO-20261012-0229 (Roadmap A2, owner cards C10 and C11). What broke: events_dir was ${repo}/events and
+#   state_dir was ${repo}/factory/state in factory/config/runner.json, and the ledger was <state_dir>/routed, so the belt of each
+#   treehouse slot read its own checkout's log and kept its own ledger, belt and since file, and a record had to be copied between
+#   slots for the line to see it. Since 7e13 (Roadmap A1) event.sh writes <state>/records/YYYY/MM/YYYYMMDDHHMMSS-<name>.json, a file
+#   the old find (-name "$ID.json", ledger keyed on the record id) could not match to anything. Why this fix: the config names three
+#   trees through the resolver, events_dir ${tree:records}, ledger_dir ${tree:ledger} (= <state>/ledger/routed) and state_dir
+#   ${tree:run} (belt and since), so one root serves every slot; --state DIR is that root for this run, the same as COQ_STATE.
+#   The ledger is keyed on the record's FILE name (ROADMAP.md, Where runtime data lives), not its id: a file name is what the
+#   records tree holds, and an id is a field. The wake line, the receipts and the 500 notes still name the record's id, which is
+#   what gate.sh --id and event.sh --answer take. tick still routes in record id order (it reads the id of each unrouted file and
+#   sorts), because two records written in one second sort by their file name, which says nothing of which was posted first, and
+#   escalations_before counts by id. since is now a file-name boundary (YYYYMMDDHHMMSS) because that is what the tick compares.
+#   Rejected: reading the old events/ tree as well (a second place records live; A4 removes it from git, and a belt that reads two
+#   trees routes a record twice) and a --legacy switch. Cost: a record still in the repository's events/ is not routed, which is the
+#   point; the first start in the new run directory writes a new since, so a belt started over an old log routes nothing old.
 # BREADCRUMB 2026-10-12 - WO-20261012-3bb0, the when guard, supersede and with merge-main. What broke: three gate rules lived in the
 #   architect's head (a test on a head that differs from the reviewed one only by record files counts; a head that moves re-wakes
 #   the tester and drops the old run; a PR that conflicts with main goes back to its worker to merge main), so the line stopped when
@@ -103,27 +118,32 @@
 set -uo pipefail
 export LC_ALL=C
 HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd); FACTORY=$(cd "$HERE/.." && pwd)
-REPO=$(cd "$FACTORY/.." && pwd); CONFIG=$FACTORY/config/runner.json; ROUTES=""; STATE=""; FROM_START=0
+REPO=$(cd "$FACTORY/.." && pwd); CONFIG=$FACTORY/config/runner.json; ROUTES=""; STATE_ROOT=""; FROM_START=0
 die() { local c=$1; shift; printf 'route: %s\n' "$*" >&2; exit "$c"; }
 log() { printf '%s route: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
 command -v jq >/dev/null || die 4 "jq is required"
 VERB=${1:-}; shift || true
 while [ $# -gt 0 ]; do case $1 in
   --config) CONFIG=${2:?}; shift 2;; --repo) REPO=$(cd "${2:?}" && pwd) || die 4 "no such --repo"; shift 2;;
-  --routes) ROUTES=${2:?}; shift 2;; --state) STATE=${2:?}; shift 2;; --from-start) FROM_START=1; shift;;
+  --routes) ROUTES=${2:?}; shift 2;; --state) STATE_ROOT=${2:?}; shift 2;; --from-start) FROM_START=1; shift;;
   *) die 2 "unknown flag $1";; esac; done
 case $VERB in once|run|status) ;; *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2;; esac
 
 [ -f "$CONFIG" ] || die 4 "config $CONFIG missing"
-cfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$CONFIG") || die 3 "config $CONFIG is not JSON"; [ -n "$v" ] || die 3 "config key $1 missing"; printf '%s' "${v//\$\{repo\}/$REPO}"; }
+# shellcheck source=paths.sh
+. "$HERE/paths.sh" || die 4 "cannot load paths.sh or the state-root resolver beside it"
+[ -z "$STATE_ROOT" ] || fx_set_root "$STATE_ROOT" || exit $?
+cfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$CONFIG") || die 3 "config $CONFIG is not JSON"; [ -n "$v" ] || die 3 "config key $1 missing"; fx_expand "$v"; }
 POLL=$(cfg poll_seconds); SEAT=$(cfg runner_seat); SESSION=${COQ_HERDR_SESSION:-$(cfg herdr_session)}
 EVENTS=$(cfg events_dir); EVENT_BIN=$(cfg event_bin); QUEUE_BIN=$(cfg queue_bin)
 SEAT_BIN=$(cfg seat_bin); ROLES=$(cfg roles_dir); PLAYBOOKS=$(cfg playbooks_dir); STALE=$(cfg stale_seconds); GATE_BIN=$HERE/gate.sh
-[ -n "$ROUTES" ] || ROUTES=$(cfg routes_file); [ -n "$STATE" ] || STATE=$(cfg state_dir)
-LEDGER=$STATE/routed; BELT=$STATE/belt; SINCE=$STATE/since
+[ -n "$ROUTES" ] || ROUTES=$(cfg routes_file); LEDGER=$(cfg ledger_dir); STATE=$(cfg state_dir)
+# cfg runs in a subshell, so a state root it could not resolve (it says why on stderr) arrives here as an empty path
+[ -n "$EVENTS" ] && [ -n "$LEDGER" ] && [ -n "$STATE" ] || die 4 "the state root did not resolve; set COQ_STATE or pass --state DIR"
+BELT=$STATE/belt; SINCE=$STATE/since
 
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
-stamp() { date -u +%Y%m%dT%H%M%SZ; }
+fstamp() { date -u +%Y%m%d%H%M%S; }
 belt_touch() { printf '%s pid %s\n' "$(now)" "$$" > "$BELT"; }
 belt_age() { local m; m=$(stat -c %Y "$BELT" 2>/dev/null) || return 1; echo $(( $(date +%s) - m )); }
 
@@ -221,19 +241,21 @@ perform() {
   [ -z "$why" ] || { echo "$why"; return 1; }
 }
 
-# route_file FILE: claim, match, perform, receipt. At most once per record id.
+# route_file FILE: claim, match, perform, receipt. At most once per record file; the ledger entry is named like the file, and every
+# message, receipt and wake line names the record's id.
 route_file() {
-  local f=$1 line id rseat ticket kind code rec row esc why to act down when grc r
-  rec=$(jq -c . "$f" 2>/dev/null) || { id=$(basename "$f" .json); ( set -C; echo unreadable > "$LEDGER/$id" ) 2>/dev/null && trouble "$id" - "unreadable record $id"; return; }
+  local f=$1 line id key rseat ticket kind code rec row esc why to act down when grc r
+  key=$(basename "$f" .json)
+  rec=$(jq -c . "$f" 2>/dev/null) || { ( set -C; echo unreadable > "$LEDGER/$key" ) 2>/dev/null && trouble "$key" - "unreadable record $key"; return; }
   line=$(jq -r '[.id, .seat, (.ticket // "-"), .kind, (.code | tostring)] | @tsv' <<<"$rec") || return
   IFS=$'\t' read -r id rseat ticket kind code <<<"$line"
-  ( set -C; printf 'claimed %s\n' "$(now)" > "$LEDGER/$id" ) 2>/dev/null || return
-  if [ "$rseat" = "$SEAT" ]; then echo own > "$LEDGER/$id"; return; fi
+  ( set -C; printf 'claimed %s\n' "$(now)" > "$LEDGER/$key" ) 2>/dev/null || return
+  if [ "$rseat" = "$SEAT" ]; then echo own > "$LEDGER/$key"; return; fi
   esc=$(escalations_before "$ticket" "$id"); row=$(match_route "$rec" "${esc:-0}")
-  if [ -z "$row" ]; then trouble "$id" "$ticket" "no route for $kind $code, record $id"; echo unrouted > "$LEDGER/$id"; return; fi
+  if [ -z "$row" ]; then trouble "$id" "$ticket" "no route for $kind $code, record $id"; echo unrouted > "$LEDGER/$key"; return; fi
   # ignore: the table says this record is housekeeping. Its ledger entry is all it leaves; no receipt, so a seat coming up or
   #   going down does not write a second record for every first one (see the ignore breadcrumb at the top).
-  if [ "$(jq -r .do <<<"$row")" = ignore ]; then echo ignored > "$LEDGER/$id"; return; fi
+  if [ "$(jq -r .do <<<"$row")" = ignore ]; then echo ignored > "$LEDGER/$key"; return; fi
   # when: a gate.sh predicate. 0 proceeds; 1 holds this record (a receipt that says why, no action, no down, no 500); anything else is a failure.
   when=$(jq -r '.when // empty' <<<"$row")
   if [ -n "$when" ]; then
@@ -241,35 +263,48 @@ route_file() {
     case $grc in
       0) ;;
       1) to=$(jq -r .to <<<"$row"); r=(--code 300 --kind record.routed --to "$to" --note "$(printf 'held %s %s (%s): %s' "$kind" "$code" "$id" "$why" | cut -c1-240)" --evidence "${f#"$REPO"/}")
-         [ "$ticket" = - ] || r+=(--ticket "$ticket"); emit "${r[@]}" || log "could not write the receipt for $id"; echo "held $when" > "$LEDGER/$id"; return ;;
-      *) trouble "$id" "$ticket" "route failed for $kind $code, record $id: gate.sh when $when failed (exit $grc): $(tail -n 1 <<<"$why" | cut -c1-100)"; echo failed > "$LEDGER/$id"; return ;;
+         [ "$ticket" = - ] || r+=(--ticket "$ticket"); emit "${r[@]}" || log "could not write the receipt for $id"; echo "held $when" > "$LEDGER/$key"; return ;;
+      *) trouble "$id" "$ticket" "route failed for $kind $code, record $id: gate.sh when $when failed (exit $grc): $(tail -n 1 <<<"$why" | cut -c1-100)"; echo failed > "$LEDGER/$key"; return ;;
     esac
   fi
   if why=$(perform "$row" "$id" "$ticket" "$rec"); then
     to=$(jq -r .to <<<"$row"); act=$(jq -r .do <<<"$row"); down=$(jq -r '.down // empty' <<<"$row")
     local r=(--code 300 --kind record.routed --to "$to" --note "routed $kind $code ($id): $act $to${down:+, down $down}" --evidence "${f#"$REPO"/}"); [ "$ticket" = - ] || r+=(--ticket "$ticket")
-    emit "${r[@]}" || log "could not write the receipt for $id"; echo "done $act" > "$LEDGER/$id"
-  else trouble "$id" "$ticket" "route failed for $kind $code, record $id: $why"; echo failed > "$LEDGER/$id"; fi
+    emit "${r[@]}" || log "could not write the receipt for $id"; echo "done $act" > "$LEDGER/$key"
+  else trouble "$id" "$ticket" "route failed for $kind $code, record $id: $why"; echo failed > "$LEDGER/$key"; fi
 }
 
-# recover_interrupted: a ledger entry still "claimed" at start was cut off mid-action; say so, never repeat it.
+# recover_interrupted: a ledger entry still "claimed" at start was cut off mid-action; say so, never repeat it. The entry is named like
+# the record's file, so that is the name the 500 gives.
 recover_interrupted() {
   local e id
   for e in "$LEDGER"/*; do [ -f "$e" ] || continue; grep -q '^claimed' "$e" || continue
     id=$(basename "$e"); trouble "$id" - "routing of record $id was interrupted; not repeated"; echo interrupted > "$e"; done
 }
+# tick: every record file not in the ledger and not before the since boundary, routed in record id order. The file name sorts by second
+# and then by a name that says nothing of posting order, so the unrouted files (a few per tick) are read for their id and sorted on it.
+# An unreadable file has no id; it sorts at its own timestamp and route_file reports it.
 tick() {
-  local f base boundary
+  local f base boundary key
   belt_touch; boundary=$(cat "$SINCE")
   while IFS= read -r f; do base=$(basename "$f" .json)
     [[ $base < $boundary ]] && continue; [ -e "$LEDGER/$base" ] && continue
-    route_file "$f"
-  done < <(find "$EVENTS" -path '*/20*/*.json' -name '*.json' 2>/dev/null | awk -F/ '{print $NF"\t"$0}' | sort | cut -f2-)
+    key=$(jq -r '.id // empty' "$f" 2>/dev/null) || key=""; [ -n "$key" ] || key="${base:0:8}T${base:8:6}Z-000-$base"
+    printf '%s\t%s\n' "$key" "$f"
+  done < <(find "$EVENTS" -mindepth 3 -maxdepth 3 -name '*.json' 2>/dev/null | LC_ALL=C sort) | LC_ALL=C sort | cut -f2- | while IFS= read -r f; do route_file "$f" </dev/null; done
 }
 start() {
-  mkdir -p "$LEDGER" || die 4 "cannot create $LEDGER"; [ -x "$EVENT_BIN" ] || die 4 "event.sh not executable: $EVENT_BIN"
+  mkdir -p "$LEDGER" "$STATE" || die 4 "cannot create $LEDGER or $STATE"; [ -x "$EVENT_BIN" ] || die 4 "event.sh not executable: $EVENT_BIN"
   jq -e '.routes | type == "array"' "$ROUTES" >/dev/null 2>&1 || die 3 "routes file $ROUTES is not a routes table"
-  if [ ! -f "$SINCE" ]; then if [ "$FROM_START" = 1 ]; then echo 00000000T000000Z > "$SINCE"; else stamp > "$SINCE"; fi; fi
+  if [ ! -f "$SINCE" ]; then if [ "$FROM_START" = 1 ]; then echo 00000000000000 > "$SINCE"; else fstamp > "$SINCE"; fi; fi
+  fx_readme "$LEDGER" "# ledger/routed - the route runner's ledger
+Written by factory/bin/route.sh (one file per record file it has seen, named like the record file, holding claimed, done, held, failed, ignored, own, unrouted, unreadable or interrupted).
+Read by route.sh itself: a record file with an entry here is never routed again.
+Clean: delete an entry only together with its record file (the retention job removes whole records/YYYY/MM folders), never alone; an entry deleted while its record file is newer than run/since makes the runner route that record again."
+  fx_readme "$STATE" "# run - the route runner's working files
+belt: touched every tick by factory/bin/route.sh; route.sh status, flow.sh and the board read its age. since: the first-start boundary (a record file name stamp); records before it are never routed.
+flow/ and policy/: the latch files of factory/bin/flow.sh and factory/bin/policy.sh.
+Clean: belt is safe to delete (the next tick writes it). Delete since only to make the runner forget its first-start boundary, and only with --from-start in mind: the next start sets a new one. Latches in flow/ and policy/ are safe to delete only when you want the same stall or default noted or applied again."
   recover_interrupted
 }
 

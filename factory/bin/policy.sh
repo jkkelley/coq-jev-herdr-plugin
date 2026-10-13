@@ -6,7 +6,7 @@
 #   policy.sh once   [flags]   one tick: apply the default of every escalation past its deadline, exit
 #   policy.sh run    [flags]   ticks forever, every poll_seconds; run it in a labelled herdr pane (herdr/config/monitors.json slot policy), never as a background job
 #   policy.sh status [flags]   print every escalation a policy covers that still waits, write nothing; exit 1 when one is past its deadline
-# Flags: --config FILE (default factory/config/policies.json)   --repo DIR (what ${repo} means)   --state DIR   --from-start
+# Flags: --config FILE (default factory/config/policies.json)   --repo DIR (what ${repo} means)   --state DIR (the state root, as COQ_STATE)   --from-start
 #        --from-start   on the first start only, judge the escalations already in the log (default: only records written after it)
 # One default, in this order: (1) a policy.applied 200 record (seat policy-watch, to the role woken, --policy the row id, --answer the
 # escalation's id, the default text in the note), (2) herdr agent prompt <seat> "record <id> playbook <path>", the line route.sh sends.
@@ -35,32 +35,45 @@
 #   The first start judges only records written after it (state/since), like route.sh and flow.sh: a log of old escalations would
 #   otherwise wake every seat that ever blocked. Cost of the whole: a default can land up to poll_seconds after its deadline, and the
 #   answered_by list is a judgement per row, so a row whose list is too short applies a default over an answer it did not recognise.
+# BREADCRUMB 2026-10-13 - WO-20261012-0229 (Roadmap A2). What broke: events_dir was ${repo}/events and state_dir ${repo}/factory/state/policy
+#   in factory/config/policies.json, so this watcher read its own checkout's log and kept its latches there while records are written to the state root
+#   (WO-20261012-7e13); with nothing to read it would never note a stall. Why this fix: both values name a tree through the resolver
+#   (events_dir ${tree:records}, state_dir ${tree:run}/policy, see factory/bin/paths.sh) and --state DIR is the state root, as in
+#   route.sh, which it passes on to route.sh status through COQ_STATE so there is still one belt. Rejected: reading the repository
+#   events/ as well (route.sh does not route it, so a stall there would be noted for a record the belt never saw). Cost: a latch from
+#   before this change (factory/state/policy) is not seen, so a stall noted under the old path is noted once more.
 set -uo pipefail
 export LC_ALL=C
 HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd); FACTORY=$(cd "$HERE/.." && pwd)
-REPO=$(cd "$FACTORY/.." && pwd); CONFIG=$FACTORY/config/policies.json; STATE=""; FROM_START=0
+REPO=$(cd "$FACTORY/.." && pwd); CONFIG=$FACTORY/config/policies.json; STATE_ROOT=""; FROM_START=0
 die() { local c=$1; shift; printf 'policy: %s\n' "$*" >&2; exit "$c"; }
 log() { printf '%s policy: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*" >&2; }
 command -v jq >/dev/null || die 4 "jq is required"
 VERB=${1:-}; shift || true
+# shellcheck disable=SC2034 # REPO is read by fx_expand in paths.sh, which shellcheck does not see through
 while [ $# -gt 0 ]; do case $1 in
   --config) CONFIG=${2:?}; shift 2;; --repo) REPO=$(cd "${2:?}" && pwd) || die 4 "no such --repo"; shift 2;;
-  --state) STATE=${2:?}; shift 2;; --from-start) FROM_START=1; shift;;
+  --state) STATE_ROOT=${2:?}; shift 2;; --from-start) FROM_START=1; shift;;
   *) die 2 "unknown flag $1";; esac; done
 case $VERB in once|run|status) ;; *) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2;; esac
 
 [ -f "$CONFIG" ] || die 4 "config $CONFIG missing"
-cfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$CONFIG") || die 3 "config $CONFIG is not JSON"; [ -n "$v" ] || die 3 "config key $1 missing"; printf '%s' "${v//\$\{repo\}/$REPO}"; }
+# shellcheck source=paths.sh
+. "$HERE/paths.sh" || die 4 "cannot load paths.sh or the state-root resolver beside it"
+[ -z "$STATE_ROOT" ] || fx_set_root "$STATE_ROOT" || exit $?
+cfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$CONFIG") || die 3 "config $CONFIG is not JSON"; [ -n "$v" ] || die 3 "config key $1 missing"; fx_expand "$v"; }
 POLL=$(cfg poll_seconds); SEAT=$(cfg watcher_seat); EVENTS=$(cfg events_dir); EVENT_BIN=$(cfg event_bin); RUNNER_CFG=$(cfg runner_config)
-[ -n "$STATE" ] || STATE=$(cfg state_dir)
+STATE=$(cfg state_dir)
+# cfg runs in a subshell, so a state root it could not resolve (it says why on stderr) arrives here as an empty path
+[ -n "$EVENTS" ] && [ -n "$STATE" ] || die 4 "the state root did not resolve; set COQ_STATE or pass --state DIR"
 POLICIES=$(jq -c '.policies' "$CONFIG") || die 3 "config $CONFIG is not JSON"
-rcfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$RUNNER_CFG" 2>/dev/null); [ -n "$v" ] || die 3 "runner config $RUNNER_CFG has no $1"; printf '%s' "${v//\$\{repo\}/$REPO}"; }
+rcfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$RUNNER_CFG" 2>/dev/null); [ -n "$v" ] || die 3 "runner config $RUNNER_CFG has no $1"; fx_expand "$v"; }
 [ -f "$RUNNER_CFG" ] || die 4 "runner config $RUNNER_CFG missing"
 ROLES=$(rcfg roles_dir); PLAYBOOKS=$(rcfg playbooks_dir); SESSION=${COQ_HERDR_SESSION:-$(rcfg herdr_session)}
 SINCE=$STATE/since
 
 now() { date -u +%Y-%m-%dT%H:%M:%SZ; }
-stamp() { date -u +%Y%m%dT%H%M%SZ; }
+stamp() { date -u +%Y%m%dT%H%M%SZ; }  # a record id's time part: policy compares .id, not file names
 herdr_prompt() { env -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_SOCKET_PATH herdr --session "$SESSION" agent prompt "$1" "$2" >/dev/null 2>&1; }
 # trouble TICKET TEXT: a 500 note to the monitor. Returns 1 when the record could not be written.
 trouble() {
@@ -138,6 +151,10 @@ tick() {
 }
 start() {
   mkdir -p "$STATE" || die 4 "cannot create $STATE"; [ -x "$EVENT_BIN" ] || die 4 "event.sh not executable: $EVENT_BIN"
+  fx_readme "$STATE" "# run/policy - the policy watch's latches
+Written by factory/bin/policy.sh: one file per escalation whose default it has taken, and since (the first-start boundary, a record id time stamp).
+Read by policy.sh itself, so a default is taken once per escalation.
+Clean: safe to delete; a deleted latch lets the default be applied again to an escalation that still has no answer, a deleted since makes the next start set a new boundary."
   [ -d "$ROLES" ] || die 4 "roles directory $ROLES missing"
   jq -e 'map(select(.match.kind == "break.glass")) | length == 0' <<<"$POLICIES" >/dev/null || die 3 "a policy matches break.glass; the owner authorises every break glass by hand"
   jq -e '(map(.id) | length) == (map(.id) | unique | length)' <<<"$POLICIES" >/dev/null || die 3 "policy ids are not unique"

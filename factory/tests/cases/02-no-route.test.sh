@@ -12,21 +12,21 @@ id=$(rec deploy 250 someone $T)
 run_once; assert_eq "exit 0" "$?" 0
 assert_eq "herdr was not called" "$(hcalls)" 0
 assert_eq "no receipt" "$(ids_of record.routed | grep -c .)" 0
-n=$(find "$R/events" -name '*-500-*.json'); assert_eq "one 500 record" "$(printf '%s\n' "$n" | grep -c .)" 1
+n=$(files_code 500); assert_eq "one 500 record" "$(printf '%s\n' "$n" | grep -c .)" 1
 r=$(cat "$n")
 assert_eq "500 is a note addressed to the monitor" "$(jq -r '[.code, .kind, .to, .seat, .ticket] | join(" ")' <<<"$r")" "500 note monitor route-runner $T"
 assert_match "it names the record" "$(jq -r .note <<<"$r")" "no route for deploy 250, record $id"
 
 echo "-- the runner does not route its own records: a second tick adds nothing"
-before=$(find "$R/events" -name '*.json' | wc -l | tr -d ' ')
+before=$(rec_files | wc -l | tr -d ' ')
 run_once; run_once
-assert_eq "event count unchanged" "$(find "$R/events" -name '*.json' | wc -l | tr -d ' ')" "$before"
+assert_eq "event count unchanged" "$(rec_files | wc -l | tr -d ' ')" "$before"
 
 echo "-- an unreadable file becomes a 500 and does not stop the tick"
-sleep 1; d="$R/events/$(date -u +%Y/%m)"; printf 'not json' > "$d/$(date -u +%Y%m%dT%H%M%SZ)-100-zzzzz.json"
+sleep 1; d="$STATE/records/$(date -u +%Y/%m)"; printf 'not json' > "$d/$(date -u +%Y%m%d%H%M%S)-note-zzzzz.json"
 rec pr.opened 100 worker-wo-20261011-aaaa $T >/dev/null
 run_once; assert_eq "exit 0" "$?" 0
 assert_eq "the good record after it was still routed" "$(hcalls)" 1
-[ "$(hcalls)" = 1 ] || { echo "  DIAG herdr log:"; cat "$HLOG"; echo "  DIAG records and 500 notes:"; find "$R/events" -name "*.json" -path "*/20*/*" | sort | sed "s|.*/||"; cat "$R"/events/20*/*/*-500-*.json | jq -r .note; ls "$STATE/routed"; }
-assert_match "an unreadable-record 500 exists" "$(cat "$R"/events/20*/*/*-500-*.json | jq -r .note)" "unreadable record"
+[ "$(hcalls)" = 1 ] || { echo "  DIAG herdr log:"; cat "$HLOG"; echo "  DIAG records and 500 notes:"; rec_files | sed "s|.*/||"; notes_code 500; ls "$STATE/ledger/routed"; }
+assert_match "an unreadable-record 500 exists" "$(notes_code 500)" "unreadable record"
 case_done

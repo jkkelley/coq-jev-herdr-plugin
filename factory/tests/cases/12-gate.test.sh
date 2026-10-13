@@ -82,9 +82,9 @@ assert_eq "a pr.opened with no sha supersedes nothing" "$(g supersedes --id "$p5
 p6=$(ev --code 100 --seat worker-wo-20261012-dddd --kind pr.opened --ticket $W2 --sha "$B" --pr 8)
 assert_eq "B is the same head as A (events only): the in-flight A is not superseded by it" "$(g supersedes --id "$p6")" ""
 echo "-- an unreadable record file never blinds the gate, whatever order the directory lists it in (backlog disva)"
-D="$W/dirty/events/2026/10"; mkdir -p "$D"
-jq -n '{id: "20261012T000001Z-100-aaaaa", ticket: "WO-20261012-eeee", kind: "pr.opened", code: 100, sha: "'"$A"'"}' > "$D/20261012T000001Z-100-aaaaa.json"
-for n in 1 2 3 4 5 6 7 8 9; do printf 'not json' > "$D/20261012T00000${n}Z-100-zzzz${n}.json"; done
-bad=0; for _ in 1 2 3 4 5 6; do "$GATE" supersedes --id 20261012T000001Z-100-aaaaa --repo "$R" --events "$W/dirty/events" >/dev/null 2>&1 || bad=$((bad + 1)); done
+D="$W/dirty/records/2026/10"; mkdir -p "$D"
+jq -n '{id: "20261012T000001Z-100-aaaaa", ticket: "WO-20261012-eeee", kind: "pr.opened", code: 100, sha: "'"$A"'"}' > "$D/20261012000001-pr-opened-aaaaa.json"
+for n in 1 2 3 4 5 6 7 8 9; do printf 'not json' > "$D/2026101200000${n}-note-zzzz${n}.json"; done
+bad=0; for _ in 1 2 3 4 5 6; do "$GATE" supersedes --id 20261012T000001Z-100-aaaaa --repo "$R" --events "$W/dirty/records" >/dev/null 2>&1 || bad=$((bad + 1)); done
 assert_eq "supersedes succeeds six times over one good record and nine unreadable ones" "$bad" 0
 case_done

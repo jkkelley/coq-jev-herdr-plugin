@@ -21,7 +21,7 @@ assert_eq "seat.sh first, then the prompt" "$(cut -d' ' -f1 "$W/order.log" | tr 
 rid=$(ids_of record.routed); r=$(rec_json "$rid")
 assert_eq "one receipt, to the tester, for the ticket" "$(jq -r '[.to, .ticket] | join(" ")' <<<"$r")" "tester $T"
 assert_match "the receipt says seat" "$(jq -r .note <<<"$r")" "routed pr.opened 100 \($id\): seat tester"
-assert_eq "no 500" "$(find "$R/events" -name '*-500-*.json' | wc -l | tr -d ' ')" 0
+assert_eq "no 500" "$(files_code 500 | wc -l | tr -d ' ')" 0
 assert_eq "seat.up 100 is on the log, from seat.sh" "$(ids_of seat.up | grep -c .)" 1
 
 echo "-- a record for a live seat: seat.sh is called and leaves it as is, the prompt still goes"
@@ -31,7 +31,7 @@ assert_eq "two seat.sh calls" "$(seats)" 2
 assert_eq "still one seat.up: the live seat was not built again" "$(ids_of seat.up | grep -c .)" 1
 assert_match "and the second prompt went to the same seat" "$(tail -1 "$HLOG")" "^--session stable agent prompt tester-wo-20261011-aaaa record $id2 playbook"
 run_once
-assert_eq "the seat.up record the stub wrote is ignored, not a 500" "$(find "$R/events" -name '*-500-*.json' | wc -l | tr -d ' ')" 0
+assert_eq "the seat.up record the stub wrote is ignored, not a 500" "$(files_code 500 | wc -l | tr -d ' ')" 0
 
 echo "-- the merger is one shared seat named merger"
 sleep 1; REC_SHA=abc1234 rec test.passed 201 tester-wo-20261011-aaaa $T >/dev/null
@@ -45,7 +45,7 @@ printf 'seat.sh: refused - bring-up order: monitor seat monitor is down\n' > "$W
 sleep 1; U=WO-20261011-bbbb; id4=$(rec pr.opened 100 worker-wo-20261011-bbbb $U)
 before=$(hcalls); run_once
 assert_eq "herdr was not called" "$(hcalls)" "$before"
-n=$(grep -l "$id4" "$R"/events/20*/*/*-500-*.json | head -1)
+n=$(files_code 500 | xargs -r grep -l -- "$id4" | head -1)
 assert_match "the 500 names the record, the command, the exit code and the reason" "$(jq -r .note "$n")" "route failed for pr.opened 100, record $id4: seat.sh --ticket $U --role tester failed \(exit 3\): seat.sh: refused - bring-up order"
 assert_eq "it is addressed to the monitor" "$(jq -r .to "$n")" monitor
 assert_eq "no receipt for it" "$(ids_of record.routed | grep -c "")" 4
@@ -59,12 +59,12 @@ assert_match "the worker was woken" "$(tail -1 "$HLOG")" "agent prompt worker-wo
 echo "-- a seat row for a record with no ticket is a 500, seat.sh is not called"
 sleep 1; before=$(seats); id5=$(rec pr.opened 100 worker-wo-20261011-aaaa); run_once
 assert_eq "seat.sh calls unchanged" "$(seats)" "$before"
-n=$(grep -l "$id5" "$R"/events/20*/*/*-500-*.json | head -1)
+n=$(files_code 500 | xargs -r grep -l -- "$id5" | head -1)
 assert_match "the 500 says why" "$(jq -r .note "$n")" "route failed for pr.opened 100, record $id5: seat needs a ticket"
 
 echo "-- the belt is touched after a slow bring-up, so it does not read stopped while seat.sh ran"
 touch "$W/seat.slow"; sleep 1; V=WO-20261011-cccc; rec pr.opened 100 worker-wo-20261011-cccc $V >/dev/null
 run_once
 assert_file "the stub saw the belt while it ran" "$W/seat.belt"
-check "the belt was touched again after seat.sh returned" "$([ "$(date -r "$STATE/belt" +%s%N)" -gt "$(cat "$W/seat.belt")" ] && echo 1 || echo 0)"
+check "the belt was touched again after seat.sh returned" "$([ "$(date -r "$STATE/run/belt" +%s%N)" -gt "$(cat "$W/seat.belt")" ] && echo 1 || echo 0)"
 case_done

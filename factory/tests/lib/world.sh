@@ -8,46 +8,49 @@
 #   --down NAME           writes a seat.down 100 record for NAME, once; a second --down prints "already down" and writes nothing
 #   $W/seat.fail          its text is the refusal: stderr, exit 3, nothing written   $W/seat.fail.down  the same, for --down only
 #   $W/seat.slow  writes the belt's mtime (ns) to $W/seat.belt, then sleeps a second
-#   world_up <name>          sets W (case root), R (repo copy), ROUTE (the runner), STATE (runner state dir), HLOG (herdr log)
+#   world_up <name>          sets W (case root), R (repo copy), ROUTE (the runner), STATE (the world's state root, exported as COQ_STATE:
+#                            records in $STATE/records, the ledger in $STATE/ledger/routed, belt and since in $STATE/run), HLOG (herdr log)
 #   rec KIND CODE SEAT [TICKET] [ATTEMPT]   one record through the copy's event.sh; prints its id; REC_SHA=<hex> and REC_PR=<n> in the
 #                            environment add --sha and --pr (a review.passed is held by gate.sh unless a test.passed names the same head)
 #   evo ARGS                 event.sh add, with an id strictly after every record already in the world; rec goes through it
 #   run_once [flags]         route.sh once --from-start --repo $R --state $STATE
 #   rec_json ID              the record's JSON
+#   rec_file ID              the record file whose id field is ID (a file is named <timestamp>-<name>, never by its id)
+#   rec_files                every record file in the state root's records tree
+#   files_code CODE          the record files with that code (the runner's 500 notes are code 500)
+#   notes_code CODE          the notes of those records, one per line
+#   ledger_of ID             the path of the runner's ledger entry for that record (it is named like the record's file)
 #   hcalls                   how many times the runner called herdr
 #   ids_of KIND              ids of the records of that kind in the copy's event log, one per line
 # Records are written one second apart by the cases that depend on order: ids sort by UTC second, then a random suffix.
-# BREADCRUMB 2026-10-12 - WO-20261012-7e13 (Roadmap A1), architect ruling on blocked record 20261012T231224Z-423-8cv0o. What broke: event.sh add
-#   now writes <state>/records/YYYY/MM/<timestamp>-<name>.json, and this world copied only events/bin and events/schema, so event.sh
-#   exited 4 (bin/state-root.sh missing) and 17 of 21 cases failed; and even with the resolver the belt would not see the record:
-#   route.sh keys its ledger on the record's file name (route.sh line ~264) and gate.sh finds a record by `find -name "$ID.json"`
-#   (gate.sh line 97), so a file that is not named by its id is lost to them until item A2 moves the belt onto the state root.
-#   Why this fix: the world copies the resolver and its config and runs the REAL event.sh as event-real.sh with its own temp
-#   COQ_STATE (recstate), and event.sh in the world is a ten line shim that runs it and moves the new record to the events/YYYY/MM/
-#   <id>.json place the belt reads, printing the id as before. Every case and the unmodified runner keep their old view; the real
-#   writer is still what makes the record. Rejected: a legacy switch in event.sh (AC-H1 forbids it) and editing cases (not this
-#   ticket's files). Cost: the world proves the belt against the old layout, not the state root, until A2 deletes this shim and
-#   points events_dir at the state root. A case that calls event.sh list sees only the moved records (the old tree), as before.
+# BREADCRUMB 2026-10-13 - WO-20261012-0229 (Roadmap A2). What broke: this world used to copy the resolver and run the REAL event.sh into
+#   a private temp root (recstate), then move each record to <repo copy>/events/YYYY/MM/<id>.json, because the belt read the old
+#   events/ tree and keyed its ledger on a file named by the id (the A1 breadcrumb, architect ruling on blocked record
+#   20261012T231224Z-423-8cv0o). The belt now reads the state root, so the move is a lie: the world proved the belt against a layout
+#   it no longer has. Why this fix: the world exports COQ_STATE=$W/state (AC-H3), the real event.sh writes there as it does on the
+#   host, and the unmodified runner, gate.sh, flow.sh and policy.sh read it from there. event.sh in the world stays a wrapper over
+#   the real one (event-real.sh) for one reason: `add` prints the new record's id, not its path, and about 130 assertions in the
+#   cases hold an id. Every other verb, and --json, are the real ones. Rejected: rewriting the cases to take paths (an id is what
+#   the wake line, the receipts and gate.sh --id carry) and keeping the move (it hides exactly the A2 defect). Cost: a case that
+#   needs the path of a record asks rec_file; a record file is named <timestamp>-<kind>-..., so find -name '*-500-*' no longer
+#   finds the runner's 500 notes, files_code does.
 world_event_shim() {
   cp "$1/bin/state-root.sh" "$R/bin/"; cp "$1/config/state.json" "$1/config/state.schema.json" "$R/config/"
   mv "$R/events/bin/event.sh" "$R/events/bin/event-real.sh"
-  sed -e "s|__RECSTATE__|$W/recstate|g" > "$R/events/bin/event.sh" <<'SHIM'
+  cat > "$R/events/bin/event.sh" <<'SHIM'
 #!/usr/bin/env bash
-# world shim for events/bin/event.sh (factory/tests/lib/world.sh, world_event_shim): the real writer into a temp state root, then the old place.
+# world wrapper for events/bin/event.sh (factory/tests/lib/world.sh, world_event_shim): the real writer, but add prints the record's id.
 ROOT=$(cd "$(dirname "$0")/.." && pwd); real=$ROOT/bin/event-real.sh
-export COQ_STATE=__RECSTATE__
 [ "${1:-}" = add ] || exec "$real" "$@"
 args=(); json=0; for a in "$@"; do if [ "$a" = --json ]; then json=1; else args+=("$a"); fi; done
 p=$("$real" "${args[@]}") || exit $?
-id=$(jq -r .id "$p"); ym=$(basename "$(dirname "$(dirname "$p")")")/$(basename "$(dirname "$p")")
-mkdir -p "$ROOT/$ym" && mv "$p" "$ROOT/$ym/$id.json" || exit 4
-if [ "$json" = 1 ]; then cat "$ROOT/$ym/$id.json"; else printf '%s\n' "$id"; fi
+if [ "$json" = 1 ]; then cat "$p"; else jq -r .id "$p"; fi
 SHIM
   chmod +x "$R/events/bin/event.sh"
 }
 world_up() {
-  W="${COQ_CASE_WORK:-${WORK_ROOT:-/tmp}}/$1"; R="$W/repo"; STATE="$W/state"; HLOG="$W/herdr.log"
-  rm -rf "$W"; mkdir -p "$R/events" "$R/queue" "$R/factory" "$R/bin" "$R/config" "$W/bin" "$STATE" "$W/recstate"; : > "$HLOG"
+  W="${COQ_CASE_WORK:-${WORK_ROOT:-/tmp}}/$1"; R="$W/repo"; STATE="$W/state"; HLOG="$W/herdr.log"; export COQ_STATE="$STATE"
+  rm -rf "$W"; mkdir -p "$R/events" "$R/queue" "$R/factory" "$R/bin" "$R/config" "$W/bin" "$STATE"; : > "$HLOG"
   local src="${REPO_ROOT:-/repo}"
   cp -r "$src/events/bin" "$src/events/schema" "$R/events/"; world_event_shim "$src"; cp -r "$src/roles" "$src/playbooks" "$R/"
   cp -r "$src/queue/bin" "$src/queue/config" "$R/queue/"; cp -r "$src/factory/bin" "$src/factory/config" "$R/factory/"
@@ -56,7 +59,7 @@ world_up() {
   sed -e "s|__W__|$W|g" -e "s|__R__|$R|g" -e "s|__STATE__|$STATE|g" > "$R/herdr/bin/seat.sh" <<'STUB'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >> "__W__/seat.log"; printf 'seat %s\n' "$*" >> "__W__/order.log"
-[ ! -e "__W__/seat.slow" ] || { date -r "__STATE__/belt" +%s%N > "__W__/seat.belt"; sleep 1; }
+[ ! -e "__W__/seat.slow" ] || { date -r "__STATE__/run/belt" +%s%N > "__W__/seat.belt"; sleep 1; }
 if [ -e "__W__/seat.fail" ]; then cat "__W__/seat.fail" >&2; exit 3; fi
 if [ "$1" = --down ] && [ -e "__W__/seat.fail.down" ]; then cat "__W__/seat.fail.down" >&2; exit 3; fi
 ev() { "__R__/events/bin/event.sh" add --code 100 --seat "$1" --kind "$2" ${3:+--ticket "$3"} --note "stub seat.sh"; }
@@ -85,24 +88,30 @@ rec() {
 # about one run in four on 2026-10-12 (backlog disva) when a later record landed in the same second as, and sorted before, an earlier one.
 # A record that would not sort after the last is deleted and written again a moment later. event.sh's own exit code is passed on.
 evo() {
-  local id last rc
+  local id last rc p
   for _ in $(seq 1 20); do
-    id=$("$R/events/bin/event.sh" add "$@"); rc=$?; [ "$rc" = 0 ] || return "$rc"
+    p=$("$R/events/bin/event-real.sh" add "$@"); rc=$?; [ "$rc" = 0 ] || return "$rc"
+    id=$(jq -r .id "$p")
     # the newest id of ANY other record in the world: the runner's own escalated and receipt records count too, since the table's
     # `escalations` counts the ones with an id before the record (03-escalate failed when a blocked 423 sorted before one).
-    last=$(find "$R/events" -path '*/20*/*.json' -name '*.json' ! -name "$id.json" -printf '%f\n' 2>/dev/null | sort | tail -n 1); last=${last%.json}
+    last=$(rec_files | while read -r f; do [ "$f" = "$p" ] || jq -r .id "$f" 2>/dev/null; done | sort | tail -n 1)
     if [[ -z "$last" || "$id" > "$last" ]]; then printf '%s\n' "$id"; return 0; fi
-    find "$R/events" -name "$id.json" -delete; sleep 0.3
+    rm -f "$p"; sleep 0.3
   done
   return 1
 }
 run_once() { "$ROUTE" once --from-start --repo "$R" --state "$STATE" "$@"; }
 ids_of() { "$R/events/bin/event.sh" list --json | jq -r --arg k "$1" 'select(.kind == $k) | .id'; }
-rec_json() { find "$R/events" -name "$1.json" -exec cat {} +; }
+rec_files() { find "$STATE/records" -mindepth 3 -maxdepth 3 -name '*.json' 2>/dev/null | sort; }
+rec_file() { grep -rlF --include='*.json' "\"id\": \"$1\"" "$STATE/records" 2>/dev/null | head -n 1; }
+rec_json() { cat "$(rec_file "$1")"; }
+files_code() { rec_files | while read -r f; do jq -e --argjson c "$1" 'select(.code == $c)' "$f" >/dev/null 2>&1 && printf '%s\n' "$f"; done; true; }
+ledger_of() { printf '%s/ledger/routed/%s' "$STATE" "$(basename "$(rec_file "$1")" .json)"; }
+notes_code() { files_code "$1" | while read -r f; do jq -r .note "$f"; done; }
 hcalls() { wc -l < "$HLOG" | tr -d ' '; }
 
 # --- the flow watch (WO-20261011-6842) ---
-#   flow_world               after world_up: FLOW (the watcher), FSTATE, a herdr stub that answers pane list and process-info
+#   flow_world               after world_up: FLOW (the watcher), FSTATE (the state root, so the latches are $STATE/run/flow), a herdr stub that answers pane list and process-info
 #                            from $W/panes.json and $W/procinfo.json, a fresh belt file, and a runner pane that is up
 #   runner_pane up|idle|gone the runner pane running a job, its shell sitting at a prompt, or no such pane
 #   agent_state working|idle|gone   the answer of `herdr agent get` for any seat (the flow watch skips a gate whose consumer seat is working)
@@ -110,9 +119,9 @@ hcalls() { wc -l < "$HLOG" | tr -d ' '; }
 #   flow_once [flags]        flow.sh once --from-start --repo $R --state $FSTATE
 #   flow_notes               the 500 notes the watcher wrote, as JSON lines
 flow_world() {
-  FLOW="$R/factory/bin/flow.sh"; FSTATE="$W/fstate"; mkdir -p "$R/factory/state"
+  FLOW="$R/factory/bin/flow.sh"; FSTATE="$STATE"; mkdir -p "$STATE/run"
   printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s"\ncase "$*" in\n *"pane list"*) cat "%s/panes.json" ;;\n *"process-info"*) cat "%s/procinfo.json" ;;\n *"agent get"*) [ -f "%s/agent.json" ] && cat "%s/agent.json" || exit 1 ;;\nesac\n' "$HLOG" "$W" "$W" "$W" "$W" > "$W/bin/herdr"
-  chmod +x "$W/bin/herdr"; runner_pane up; : > "$R/factory/state/belt"
+  chmod +x "$W/bin/herdr"; runner_pane up; : > "$STATE/run/belt"
 }
 runner_pane() {
   case $1 in
@@ -124,15 +133,15 @@ runner_pane() {
 }
 # agent_state working|idle|gone   what `herdr agent get <any seat>` answers: that agent_status, or an error when there is no such agent
 agent_state() { if [ "$1" = gone ]; then rm -f "$W/agent.json"; else printf '{"result":{"agent":{"agent_status":"%s"}}}\n' "$1" > "$W/agent.json"; fi; }
-backdate() { local f; f=$(find "$R/events" -name "$1.json"); jq --arg at "$(date -u -d "-$2 seconds" +%Y-%m-%dT%H:%M:%SZ)" '.at = $at' "$f" > "$f.tmp" && mv "$f.tmp" "$f"; }
+backdate() { local f; f=$(rec_file "$1"); jq --arg at "$(date -u -d "-$2 seconds" +%Y-%m-%dT%H:%M:%SZ)" '.at = $at' "$f" > "$f.tmp" && mv "$f.tmp" "$f"; }
 flow_once() { "$FLOW" once --from-start --repo "$R" --state "$FSTATE" "$@"; }
 flow_notes() { "$R/events/bin/event.sh" list --json | jq -c 'select(.seat == "flow-watch")'; }
 
 # --- the policy watch (WO-20261012-9b2c) ---
-#   policy_world             after world_up: POLICY (the watcher) and PSTATE; the herdr stub world_up made stays (it logs argv, exits 1 when $W/herdr.fail exists)
+#   policy_world             after world_up: POLICY (the watcher) and PSTATE (the state root, latches in $STATE/run/policy); the herdr stub world_up made stays (it logs argv, exits 1 when $W/herdr.fail exists)
 #   policy_once [flags]      policy.sh once --from-start --repo $R --state $PSTATE
 #   policy_records           the policy.applied records the watcher wrote, as JSON lines
 #   backdate ID SECONDS      (defined with the flow watch above) rewrite a record's "at"; the watcher judges a deadline by "at"
-policy_world() { POLICY="$R/factory/bin/policy.sh"; PSTATE="$W/pstate"; }
+policy_world() { POLICY="$R/factory/bin/policy.sh"; PSTATE="$STATE"; }
 policy_once() { "$POLICY" once --from-start --repo "$R" --state "$PSTATE" "$@"; }
 policy_records() { "$R/events/bin/event.sh" list --json | jq -c 'select(.kind == "policy.applied")'; }

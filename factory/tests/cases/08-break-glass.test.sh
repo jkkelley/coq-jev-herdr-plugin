@@ -14,7 +14,7 @@ printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >> "%s"\nexit "$(cat "%s/seat.
 # steps back a second (06-belt breadcrumb) put a record in the same second as the previous receipt (backlog disva, 2026-10-12: the
 # receipt for the 300 request was read as the receipt for the 200 grant).
 bg() { evo --kind break.glass --seat worker-wo-20261011-aaaa --action 'gh pr merge 17 --squash' "$@"; }
-n500() { find "$R/events" -name '*-500-*.json' | wc -l | tr -d ' '; }
+n500() { files_code 500 | wc -l | tr -d ' '; }
 
 echo "-- a 300 request becomes a decision card for the interface agent"
 req=$(bg --code 300); run_once; assert_eq "exit 0" "$?" 0
@@ -26,19 +26,19 @@ echo "-- a 200 runs seat.sh --break-glass for the record's seat with the 200's o
 grant=$(bg --code 200 --answer "$req"); run_once
 assert_eq "seat.sh was run once, with the seat and the record id only" "$(cat "$SLOG")" "--break-glass worker-wo-20261011-aaaa --record $grant"
 assert_eq "herdr was not asked for anything else" "$(hcalls)" 1
-assert_match "the receipt names the action" "$(cat "$R"/events/2026/*/*.json | jq -r 'select(.kind == "record.routed") | .note' | grep -F "routed break.glass 200 ($grant)")" "routed break.glass 200 \($grant\): break-glass orchestrator"
+assert_match "the receipt names the action" "$(rec_files | xargs -r cat | jq -r 'select(.kind == "record.routed") | .note' | grep -F "routed break.glass 200 ($grant)")" "routed break.glass 200 \($grant\): break-glass orchestrator"
 assert_eq "no 500" "$(n500)" 0
 
 echo "-- a refusal by seat.sh (exit 3, its own 423 written) is handled: a receipt, no second 500"
 echo 3 > "$W/seat.rc"; refused=$(bg --code 200); run_once
 assert_match "seat.sh was run for it" "$(tail -1 "$SLOG")" " --record $refused$"
-assert_match "receipted as routed" "$(grep -l "routed break.glass 200 ($refused)" "$R"/events/2026/*/*.json 2>/dev/null | head -1)" "json$"
+assert_match "receipted as routed" "$(rec_files | xargs -r grep -l "routed break.glass 200 ($refused)" 2>/dev/null | head -1)" "json$"
 assert_eq "still no 500" "$(n500)" 0
 
 echo "-- a seat.sh failure that is not a refusal becomes a 500 to the monitor"
 echo 4 > "$W/seat.rc"; broke=$(bg --code 200 --answer "$req"); run_once
 assert_eq "one 500" "$(n500)" 1
-r=$(cat "$(find "$R/events" -name '*-500-*.json' | head -1)")
+r=$(cat "$(files_code 500 | head -1)")
 assert_eq "a note to the monitor" "$(jq -r '[.kind, .to, .seat] | join(" ")' <<<"$r")" "note monitor route-runner"
 assert_match "it names the record and the exit" "$(jq -r .note <<<"$r")" "route failed for break.glass 200, record $broke: seat.sh --break-glass exited 4"
 echo 0 > "$W/seat.rc"
@@ -49,7 +49,7 @@ for c in 100 201 204; do bg --code "$c" --answer "$req" >/dev/null; done; run_on
 assert_eq "still one 500, the seat.sh crash above" "$(n500)" 1
 assert_eq "seat.sh not run" "$(wc -l < "$SLOG" | tr -d ' ')" "$before"
 assert_eq "herdr not asked" "$(hcalls)" "$h"
-assert_eq "three receipts for the three records" "$(grep -l 'routed break.glass \(100\|201\|204\)' "$R"/events/2026/*/*.json | wc -l | tr -d ' ')" 3
+assert_eq "three receipts for the three records" "$(rec_files | xargs -r grep -l 'routed break.glass \(100\|201\|204\)' | wc -l | tr -d ' ')" 3
 
 echo "-- a refused 423 wakes the monitor with the record"
 id=$(bg --code 423 --answer "$req"); run_once

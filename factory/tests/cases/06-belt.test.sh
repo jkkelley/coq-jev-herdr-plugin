@@ -6,7 +6,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${REPO_ROOT:-/repo}/herdr/tests/lib/assert.sh"; . "$HERE/../lib/world.sh"
 world_up belt
 jq '.poll_seconds = 5' "$R/factory/config/runner.json" > "$W/runner.json"
-belt="$STATE/belt"
+belt="$STATE/run/belt"
 
 echo "-- status with no belt file"
 "$ROUTE" status --repo "$R" --state "$STATE" >/dev/null; assert_eq "no belt: exit 1" "$?" 1

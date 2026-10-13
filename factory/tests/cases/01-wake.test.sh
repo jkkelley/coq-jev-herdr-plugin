@@ -26,7 +26,7 @@ id2=$(rec pr.opened 100 worker-wo-20261011-aaaa $T)
 run_once; assert_eq "exit 0" "$?" 0
 assert_eq "herdr was asked" "$(hcalls)" 2
 assert_eq "still one receipt" "$(ids_of record.routed | grep -c .)" 1
-n=$(find "$R/events" -name '*-500-*.json' | head -1); r=$(cat "$n")
+n=$(files_code 500 | head -1); r=$(cat "$n")
 assert_eq "500 is a note to the monitor" "$(jq -r '[.kind, .to, .seat] | join(" ")' <<<"$r")" "note monitor route-runner"
 assert_match "it names the record and the reason" "$(jq -r .note <<<"$r")" "route failed for pr.opened 100, record $id2: herdr agent prompt tester-wo-20261011-aaaa failed"
 case_done

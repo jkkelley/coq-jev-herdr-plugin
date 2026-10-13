@@ -7,7 +7,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${REPO_ROOT:-/repo}/herdr/tests/lib/assert.sh"; . "$HERE/../lib/world.sh"
 world_up flowbelt; flow_world
-belt="$R/factory/state/belt"
+belt="$STATE/run/belt"
 
 echo "-- a fresh belt and a running runner pane: silence"
 flow_once; assert_eq "exit 0" "$?" 0; assert_eq "no note" "$(flow_notes | grep -c .)" 0
@@ -24,7 +24,7 @@ echo "-- the belt moves again: no note, and the latch clears; stale again is a n
 touch "$belt"; flow_once; assert_eq "still one note" "$(flow_notes | grep -c .)" 1
 touch -d '-90 seconds' "$belt"; flow_once; assert_eq "two notes" "$(flow_notes | grep -c .)" 2
 echo "-- a belt file that does not exist is a stall too"
-world_up flowbelt2; flow_world; rm -f "$R/factory/state/belt"; flow_once
+world_up flowbelt2; flow_world; rm -f "$STATE/run/belt"; flow_once
 assert_eq "one note" "$(flow_notes | grep -c .)" 1; assert_match "it says no belt file" "$(flow_notes | jq -r .note)" 'no belt file'
 
 echo "-- the runner pane gone is one 500 that names the pane, not repeated"
@@ -38,6 +38,6 @@ echo "-- the pane comes back: latch clears, silence, then gone again is a second
 runner_pane up; flow_once; assert_eq "still one" "$(flow_notes | grep -c .)" 1
 runner_pane gone; flow_once; assert_eq "two" "$(flow_notes | grep -c .)" 2
 echo "-- both stalls at once are two notes"
-world_up flowboth; flow_world; runner_pane gone; touch -d '-100 seconds' "$R/factory/state/belt"; flow_once
+world_up flowboth; flow_world; runner_pane gone; touch -d '-100 seconds' "$STATE/run/belt"; flow_once
 assert_eq "two notes" "$(flow_notes | grep -c .)" 2
 case_done

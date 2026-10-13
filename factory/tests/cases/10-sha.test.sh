@@ -43,8 +43,8 @@ assert_match "pr only" "$(grep "record $idp " "$HLOG")" "record $idp pr 7 playbo
 
 echo "-- a malformed sha in a record on disk is a 500 and nothing is sent"
 sleep 1; idb=$(ev --code 100 --seat worker-wo-20261011-aaaa --kind pr.opened --ticket $T --sha "$SHA")
-f=$(find "$R/events" -name "$idb.json"); jq '.sha = "$(touch pwned)"' "$f" > "$f.t" && mv "$f.t" "$f"
+f=$(rec_file "$idb"); jq '.sha = "$(touch pwned)"' "$f" > "$f.t" && mv "$f.t" "$f"
 before=$(hcalls); run_once
 assert_eq "no herdr call for it" "$(hcalls)" "$before"
-assert_match "a 500 names the record and the sha" "$(cat "$R"/events/20*/*/*-500-*.json | jq -r .note)" "route failed for pr.opened 100, record $idb: record $idb has a malformed sha"
+assert_match "a 500 names the record and the sha" "$(notes_code 500)" "route failed for pr.opened 100, record $idb: record $idb has a malformed sha"
 case_done

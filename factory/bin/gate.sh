@@ -13,9 +13,18 @@
 #   gate.sh pr-files --ticket ID [--base REF] [--head REF]
 #                                                 0 the PR diff stays inside the ticket's files field, carries no aggregate and takes no doc number
 #                                                 another PR or main already has   1 hold: each offending path on one line, joined with "; "   4 error
-# Flags: --repo DIR (default: the checkout this script is in)   --events DIR (default: <repo>/events)
+# Flags: --repo DIR (default: the checkout this script is in)   --events DIR (default: the records tree under the state root, $COQ_STATE/records)
 # Exit: 0 ok, 1 hold or differ, 2 usage, 4 io or a sha the repo cannot resolve.
 #
+# BREADCRUMB 2026-10-13 - WO-20261012-0229 (Roadmap A2). What broke: --events defaulted to <repo>/events and load found a record by
+#   `find -name "$ID.json"`. Since WO-20261012-7e13 event.sh writes <state>/records/YYYY/MM/YYYYMMDDHHMMSS-<name>.json, so the
+#   default read a tree with no records and no file is named by its id any more: every `when` and `supersedes` ended "no record ID"
+#   (exit 4), which route.sh turns into a 500 for each gate record. Why this fix: the default is the records tree (through
+#   bin/state-root.sh, so COQ_STATE and the default root apply), and load finds the file whose `id` field is the id, by a fixed-string
+#   grep for the field and a jq check of the hit. Rejected: keeping a find by file name as a second path (nothing writes that name now)
+#   and passing route.sh's file path in (the verbs are also run by hand with an id, and the tests do). Cost: a lookup reads the files
+#   that mention the id, which is the record, the receipts and notes that name it, not the whole log.
+#   The resolver is loaded only for a verb that reads the log, so same-head and pr-files still run from a copy of this file alone.
 # BREADCRUMB 2026-10-12 - WO-20261012-0677, verb pr-files. What broke: nothing checked a PR's diff against what its ticket said it would
 #   change, so five PRs edited one set of files on 2026-10-12 and each merge conflicted the next (AC-H2 of the ticket). Why this fix: the
 #   rule is factory/bin/claims.sh (files field, aggregates, doc numbers); this verb only gives it the gate's contract, exit 1 and one
@@ -55,8 +64,12 @@ while [ $# -gt 0 ]; do case $1 in
   --repo) REPO=$(cd "${2:?}" && pwd) || die 4 "no such --repo"; shift 2;; --events) EVENTS=${2:?}; shift 2;; --id) ID=${2:?}; shift 2;;
   --ticket) TICKET_ARG=${2:?}; shift 2;; --base) BASE_ARG=${2:?}; shift 2;; --head) HEAD_ARG=${2:?}; shift 2;;
   -*) die 2 "unknown flag $1";; *) ARGS+=("$1"); shift;; esac; done
-[ -n "$EVENTS" ] || EVENTS=$REPO/events
 case $VERB in same-head|when|supersedes|pr-files) ;; *) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' >&2; exit 2;; esac
+if [ -z "$EVENTS" ] && { [ "$VERB" = when ] || [ "$VERB" = supersedes ]; }; then
+  # shellcheck source=paths.sh
+  . "$HERE/paths.sh" || die 4 "cannot load paths.sh or the state-root resolver beside it"
+  EVENTS=$(coq_tree records) || die 4 "the state root did not resolve; set COQ_STATE"
+fi
 
 # resolve SHA: the commit it names in the repo, fetching once when it is not there; empty when it cannot be found.
 resolve() {
@@ -94,7 +107,11 @@ newest() {
 }
 load() {
   [ -n "$ID" ] || die 2 "$VERB needs --id"
-  local f; f=$(find "$EVENTS" -name "$ID.json" 2>/dev/null | head -n 1); [ -n "$f" ] || die 4 "no record $ID under $EVENTS"
+  local f hit; f=""
+  while IFS= read -r hit; do
+    jq -e --arg id "$ID" '.id == $id' "$hit" >/dev/null 2>&1 && { f=$hit; break; }
+  done < <(grep -rlF --include='*.json' -e "\"id\": \"$ID\"" -e "\"id\":\"$ID\"" "$EVENTS" 2>/dev/null | LC_ALL=C sort)
+  [ -n "$f" ] || die 4 "no record $ID under $EVENTS"
   REC=$(jq -c . "$f" 2>/dev/null) || die 4 "record $ID is not JSON"
   RID=$(field id "$REC"); TICKET=$(field ticket "$REC"); SHA=$(field sha "$REC")
   ALL=$(log_all) || die 4 "cannot read $EVENTS"

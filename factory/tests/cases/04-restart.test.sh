@@ -27,11 +27,11 @@ assert_eq "a third start routes nothing" "$(hcalls)" 2
 
 echo "-- a record left claimed by a killed runner is reported, never repeated"
 sleep 1; id=$(rec pr.opened 100 worker-wo-20261011-aaaa $T)
-printf 'claimed 2026-10-11T00:00:00Z\n' > "$STATE/routed/$id"
+printf 'claimed 2026-10-11T00:00:00Z\n' > "$(ledger_of $id)"
 run_once; assert_eq "exit 0" "$?" 0
 assert_eq "no wake for it" "$(hcalls)" 2
-assert_match "a 500 names the interrupted record" "$(cat "$R"/events/20*/*/*-500-*.json | jq -r .note)" "routing of record $id was interrupted; not repeated"
-assert_eq "the ledger says interrupted" "$(cat "$STATE/routed/$id")" interrupted
+assert_match "a 500 names the interrupted record" "$(notes_code 500)" "routing of record $(basename "$(rec_file "$id")" .json) was interrupted; not repeated"
+assert_eq "the ledger says interrupted" "$(cat "$(ledger_of $id)")" interrupted
 n=$(ids_of note | grep -c .); run_once
 assert_eq "and says so only once" "$(ids_of note | grep -c .)" "$n"
 case_done

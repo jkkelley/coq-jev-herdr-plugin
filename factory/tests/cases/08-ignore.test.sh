@@ -17,11 +17,11 @@ i3=$(rec note 100 worker-wo-20261011-aaaa $T)
 i4=$(rec record.routed 300 some-other-runner $T)
 i5=$(rec seat.up 100 monitor)
 run_once; assert_eq "exit 0" "$?" 0
-assert_eq "no 500 record of any kind" "$(find "$R/events" -name '*-500-*.json' | wc -l | tr -d ' ')" 0
+assert_eq "no 500 record of any kind" "$(files_code 500 | wc -l | tr -d ' ')" 0
 assert_eq "herdr was not called" "$(hcalls)" 0
 assert_eq "no receipt: the only record.routed is the one the case wrote" "$(ids_of record.routed | grep -c .)" 1
 assert_eq "five records in the log, none added by the runner" "$(nrec)" 5
-for id in $i1 $i2 $i3 $i4 $i5; do assert_eq "ledger says ignored for $id" "$(cat "$STATE/routed/$id")" ignored; done
+for id in $i1 $i2 $i3 $i4 $i5; do assert_eq "ledger says ignored for $id" "$(cat "$(ledger_of $id)")" ignored; done
 
 echo "-- a second tick routes none of them again"
 run_once; assert_eq "event count unchanged" "$(nrec)" 5
@@ -30,8 +30,8 @@ echo "-- the rows ignore by kind and code: a note 500 still wakes the monitor, a
 sleep 1; n5=$(rec note 500 route-check $T); n4=$(rec note 429 seat-check $T); g=$(rec gate 150 someone $T)
 run_once
 assert_match "the note 500 woke the monitor" "$(cat "$HLOG")" "^--session stable agent prompt monitor record $n5 playbook $R/playbooks/monitor.md$"
-fives=$(find "$R/events" -name '*-500-*.json' | wc -l | tr -d ' ')
-notes=$(cat "$R"/events/20*/*/*-500-*.json | jq -r .note)
+fives=$(files_code 500 | wc -l | tr -d ' ')
+notes=$(notes_code 500)
 assert_match "the note 429 has no row" "$notes" "no route for note 429, record $n4"
 assert_match "the gate 150 has no row" "$notes" "no route for gate 150, record $g"
 assert_eq "exactly those two new 500s, plus the note 500 the case wrote" "$fives" 3
