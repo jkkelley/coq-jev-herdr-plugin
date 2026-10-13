@@ -23,7 +23,9 @@
   "depends_on": [
     "WO-20261013-c17f"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261012-be64"
+  ],
   "files": [
     "specs/scheduler/SPEC-16.H-podman-runtime-executor.xml",
     "graph/nodes/RSK-executor-host-tools.json"

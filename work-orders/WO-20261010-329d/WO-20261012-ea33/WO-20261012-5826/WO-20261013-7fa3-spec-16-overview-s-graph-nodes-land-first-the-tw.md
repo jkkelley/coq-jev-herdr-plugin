@@ -22,7 +22,8 @@
   "surfaces": [],
   "depends_on": [],
   "blocks": [
-    "WO-20261013-c17f"
+    "WO-20261013-c17f",
+    "WO-20261012-be64"
   ],
   "files": [
     "graph/nodes/DEC-scheduler-go-podman.json",

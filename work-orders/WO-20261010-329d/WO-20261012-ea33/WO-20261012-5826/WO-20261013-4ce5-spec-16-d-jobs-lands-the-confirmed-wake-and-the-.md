@@ -23,7 +23,9 @@
   "depends_on": [
     "WO-20261013-fe37"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261012-be64"
+  ],
   "files": [
     "specs/scheduler/SPEC-16.D-jobs-retries-confirmation.xml",
     "graph/nodes/REQ-wake-confirmed.json",

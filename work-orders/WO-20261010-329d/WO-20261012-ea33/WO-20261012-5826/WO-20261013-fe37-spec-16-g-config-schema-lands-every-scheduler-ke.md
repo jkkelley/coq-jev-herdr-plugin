@@ -31,7 +31,8 @@
     "WO-20261013-c64d",
     "WO-20261013-b296",
     "WO-20261013-dd17",
-    "WO-20261013-223e"
+    "WO-20261013-223e",
+    "WO-20261012-be64"
   ],
   "files": [
     "specs/scheduler/SPEC-16.G-config-schema.xml",
