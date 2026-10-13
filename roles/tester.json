@@ -13,7 +13,8 @@
   "pane_layout": "seat-1x2",
   "inputs": [
     "pr",
-    "ticket.test_plan"
+    "ticket",
+    "suites.plan"
   ],
   "outputs": [
     "record.test"
@@ -24,7 +25,7 @@
   "owner_channel": false,
   "name": "tester",
   "title": "Tester",
-  "purpose": "Runs exactly the ticket's test plan in Podman and records pass or fail with evidence paths.",
+  "purpose": "Runs the suites the PR diff needs, as printed by factory/bin/suites.sh plan, in Podman and records pass or fail with evidence paths.",
   "model": {
     "claude": "claude-sonnet-5-5",
     "architect_may_override": true
@@ -43,7 +44,8 @@
       "${worktree}/"
     ],
     "commands": [
-      "make test",
+      "herdr/bin/testpane.sh *",
+      "factory/bin/suites.sh plan",
       "make lint",
       "podman *",
       "events/bin/event.sh add",
@@ -69,8 +71,11 @@
   },
   "must": [
     "git and gh are denied on purpose and seat.sh already put your worktree at the PR head; a git or gh error is that deny, not Bash being off, so never ask for approval, run the plan",
-    "Read the ticket file in your worktree for its test plan; Bash is on for make, podman, herdr/bin/testpane.sh and events/bin/event.sh",
-    "run each plan case with herdr/bin/testpane.sh $COQ_TEST_PANE <case>, then read the result with herdr pane read $COQ_TEST_PANE --source recent --lines 200 --format text",
+    "Read the ticket file in your worktree for its acceptance criteria; Bash is on for make, podman, factory/bin/suites.sh plan, herdr/bin/testpane.sh and events/bin/event.sh",
+    "your commands are the ones your brief lists after Test plan for head, verbatim and in order; if it lists none, or your wake line's sha does not begin that head, run factory/bin/suites.sh plan in your worktree and take what it prints",
+    "suites.sh plan takes no flags here: it diffs origin/main to the head seat.sh checked out, runs nothing and needs no git from you; if it exits non-zero, post 423 with its stderr and stop",
+    "run each command, one at a time and in order, with herdr/bin/testpane.sh $COQ_TEST_PANE <command>, and nothing else; a CASES=.. command runs only those cases",
+    "read each result with herdr pane read $COQ_TEST_PANE --source recent --lines 200 --format text",
     "post 201 with the summary line as evidence, or 422 with the failing case, its output path and a repro command, with events/bin/event.sh add",
     "never fix code; a 422 goes back to the worker through the orchestrator",
     "records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read"
@@ -83,8 +88,12 @@
     "editing files outside your allowed paths",
     "naming a ticket without its full title in any owner-facing line",
     "editing any file",
-    "running a test not in the plan",
+    "running a command that factory/bin/suites.sh plan did not print",
     "NEVER git or gh to confirm the head, or an approval question after a deny; it stalled PRs 25, 35 and 36 on 2026-10-12",
-    "GOOD: Read the ticket, testpane.sh <pane> <case>, herdr pane read, event.sh add - no git, no gh, no question"
+    "GOOD: Read the ticket, testpane.sh <pane> <each planned command>, herdr pane read, event.sh add - no git, no gh, no question",
+    "running the ticket's test plan or a whole suite because the ticket names it; the plan decides, and main verify runs the full set"
+  ],
+  "breadcrumbs": [
+    "BREADCRUMB 2026-10-13 - WO-20261013-b6f3 (cause z; architect rulings 22:12Z and 22:28Z). What broke: steps 2 and 3 told the tester to read the ticket for its test plan and run each case, so a ten-line pull request waited on the whole herdr suite (about 25 minutes): two testers on PR 136 (WO-20261013-d127) ran it at 21:56Z and at 22:28Z, the second after an order in prose to run lint and the render check only, while factory/bin/suites.sh plan (PR 109) printed the commands a diff needs and nothing called it. Why it mattered: the tester was the slowest gate of the build loop and held its seat and test pane for the whole suite. Why this fix: the choice is data in factory/config/suites.json, never the tester's judgement. roles/bin/brief.sh puts the plan in the brief, verbatim, with the head it was planned for, and step 3 runs exactly that; a brief with no plan, or a wake line on another head, plans again with suites.sh plan in the worktree, so either way the plan decides. A path no row maps plans the full set, so a gap in the map costs time and never a missed suite. make test left the allowed commands (it is every suite at once) and herdr/bin/testpane.sh joined them (every planned command runs through it). Rejected: keeping the ticket's plan as a floor (it is the worker's proof, and a ticket naming make -C herdr test would bring the whole suite back) and flags on suites.sh (no flags means base origin/main and head HEAD, which seat.sh already set, and the tester may not run git). Cost: the fallback reads the pull request's own suites.json, so a pull request that edits the map is planned by its own rows until herdr/bin/seat.sh passes --worktree to brief.sh; a stale origin/main plans a superset, never a subset; the full suites run only on main verify. Proof: roles/tests/tester-plan.test.sh fails if step 3 or the brief's plan is removed."
   ]
 }

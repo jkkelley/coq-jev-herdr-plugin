@@ -4,13 +4,13 @@
   "slug": "cause-z-a-belt-seated-tester-runs-the-full-suite",
   "title": "Cause z: a belt-seated tester runs the full suites; its playbook runs factory/bin/suites.sh plan on the PR diff and only the commands it prints",
   "type": "bug",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T21:59:04+00:00",
   "parent": "WO-20261013-16f1",
-  "branch": null,
+  "branch": "feat/cause-z-a-belt-seated-tester-runs-the-full-suite",
   "pr": null,
   "closed": null,
   "approval": {
@@ -25,6 +25,9 @@
   "files": [
     "roles/tester.json",
     "playbooks/tester.md",
+    "roles/reviewer.json",
+    "playbooks/reviewer.md",
+    "roles/bin/brief.sh",
     "roles/tests/tester-plan.test.sh"
   ]
 }
@@ -83,6 +86,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Spec-author seat, architect ruling 22:28Z added scope. (1) roles/reviewer.json and its playbook: the review reads the PR diff, the files it changes and the ticket and runs no test, suite, case, lint or make target; make lint left its allowed commands; make, podman and herdr/bin/testpane.sh joined its denied commands. (2) roles/bin/brief.sh --worktree DIR: a tester's brief names the head and lists, verbatim and in order, what the project's factory/bin/suites.sh plan prints for it; tester step 3 runs that list, else plans with suites.sh plan in its worktree. Files extended with claims.sh set; claims.sh start exit 0. Proof: roles/tests/tester-plan.test.sh, 31 passed in the herdr test image, 20 of 31 fail on the pre-change files. Left for a follow-up (outside the fence and this ticket): herdr/bin/seat.sh passes --worktree "$wt" to brief.sh (the file is held by WO-20261013-7af7), and a herdr case runs roles/tests/tester-plan.test.sh in make -C herdr test; until then every tester takes the step 3 fallback.
 
 ## Outcome
 
