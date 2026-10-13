@@ -2,7 +2,7 @@
 # Catches (WO-20261013-f1ff): a path-to-suite map that maps a path to the suite under it and no further. 32fc429 changed events/bin and broke the
 # factory suite, which a per-directory map would not have run (architect ruling b99ta, record 7c3dq). AC-H1: a change to events/bin/event.sh or
 # events/schema plans the events, factory and herdr suites (and line, whose merge.sh calls event.sh), and dropping one from the row fails this
-# case. AC-H2: a changelog-only diff plans lint and reindex only, a tickets or graph diff also plans herdr (case 12's blueprint server reads them), a path no row maps plans the full set, a missing key exits 3. Also: a command in
+# case. AC-H2: a changelog-only diff plans lint and reindex only, a tickets or graph diff also plans herdr case 12 and not the whole herdr suite (architect ruling 18:24Z on PR 109: case 12's blueprint server reads them, nothing else in herdr does), a path no row maps plans the full set, a missing key exits 3. Also: a command in
 # the map that does not exist, a suite on disk that no command runs, and the plan depending on the order git lists the files.
 set -uo pipefail
 SRC="${REPO_ROOT:-/repo}"
@@ -67,18 +67,36 @@ assert_eq "exit 0" "$RC" 0
 assert_eq "exactly lint then reindex" "$(tr '\n' '|' <<<"$OUT")" "$LINT|$REINDEX|"
 assert_eq "no complaint on stderr" "$ERR" ""
 
-echo "-- the blueprint dev server reads graph/ and work-orders/, so herdr case 12 must run for them (tester test.failed on PR 109)"
+echo "-- the blueprint dev server reads graph/ and work-orders/, so herdr case 12 runs for them and the rest of herdr does not (architect ruling 18:24Z)"
+CASE12=$(jq -r '.case_commands.herdr | sub("{cases}"; "12")' "$SRC/factory/config/suites.json")
+assert_eq "the case command is the herdr runner limited to case 12" "$CASE12" "CASES=12 bash herdr/tests/run.sh"
 plan work-orders/EPIC/WO-20261013-aaaa-t.md work-orders/archive/y.md
-assert_eq "a tickets-only diff plans lint, reindex and herdr" "$(tr '\n' '|' <<<"$OUT")" "$LINT|$REINDEX|$HERDR|"
+assert_eq "a tickets-only diff plans lint, reindex and herdr case 12" "$(tr '\n' '|' <<<"$OUT")" "$LINT|$REINDEX|$CASE12|"
+assert_eq "and not the whole herdr suite" "$(has "$OUT" "$HERDR")" 0
 plan graph/nodes/n.json
-assert_eq "a graph/ diff plans lint, herdr and loop" "$(sort <<<"$OUT" | tr '\n' '|')" "$(printf '%s\n' "$LINT" "$HERDR" "$LOOP" | sort | tr '\n' '|')"
-cp "$CFG" "$W/full.json"; jq '(.rows[] | select(.paths | index("graph/*")) | .suites) -= ["herdr"]' "$W/full.json" > "$CFG"
+assert_eq "a graph/ diff plans lint, herdr case 12 and loop" "$(sort <<<"$OUT" | tr '\n' '|')" "$(printf '%s\n' "$LINT" "$CASE12" "$LOOP" | sort | tr '\n' '|')"
+assert_eq "and not the whole herdr suite" "$(has "$OUT" "$HERDR")" 0
+plan work-orders/EPIC/WO-20261013-aaaa-t.md herdr/bin/seat.sh
+check "a ticket plus a herdr/ change plans the whole herdr suite" "$(has "$OUT" "$HERDR")"
+assert_eq "and the case line is not printed beside it" "$(has "$OUT" "$CASE12")" 0
+cp "$CFG" "$W/full.json"
+jq '(.rows[] | select(.paths | index("graph/*"))) |= (.suites += ["herdr"] | del(.cases))' "$W/full.json" > "$CFG"
 plan graph/nodes/n.json
-assert_eq "with herdr dropped from the graph/ row the plan lacks herdr (the check above is not vacuous)" "$(has "$OUT" "$HERDR")" 0
-jq '(.rows[] | select(.paths | index("work-orders/*")) | .suites) -= ["herdr"]' "$W/full.json" > "$CFG"
+check "the case FAILS the row if graph/ maps to the whole herdr suite (the check above is not vacuous)" "$(has "$OUT" "$HERDR")"
+jq '(.rows[] | select(.paths | index("work-orders/*"))) |= (.suites += ["herdr"] | del(.cases))' "$W/full.json" > "$CFG"
 plan work-orders/EPIC/WO-20261013-aaaa-t.md
-assert_eq "with herdr dropped from the work-orders/ row the plan lacks herdr" "$(has "$OUT" "$HERDR")" 0
+check "and the same for work-orders/ mapped to the whole herdr suite" "$(has "$OUT" "$HERDR")"
+jq '(.rows[] | select(.paths | index("graph/*")) | .cases) = {}' "$W/full.json" > "$CFG"
+plan graph/nodes/n.json
+assert_eq "with the cases dropped from the graph/ row the plan has no herdr line at all" "$(has "$OUT" "$HERDR")$(has "$OUT" "$CASE12")" 00
+jq '(.rows[] | select(.paths | index("work-orders/*")) | .cases.herdr) = ["12", "14"]' "$W/full.json" > "$CFG"
+plan work-orders/EPIC/WO-20261013-aaaa-t.md
+assert_eq "two cases print as one quoted CASES list" "$(sed -n 3p <<<"$OUT")" 'CASES="12 14" bash herdr/tests/run.sh'
 cp "$W/full.json" "$CFG"
+jq '.rows[0].cases = {"nonesuch": ["1"]}' "$W/full.json" > "$W/bad.json"; out=$("$S" full --config "$W/bad.json" 2>&1); assert_eq "cases of a suite with no case_commands entry: exit 3" "$?" 3
+assert_match "and the message names the suite" "$out" "nonesuch"
+jq '.rows[0].cases = {"herdr": []}' "$W/full.json" > "$W/bad.json"; "$S" full --config "$W/bad.json" >/dev/null 2>&1; assert_eq "an empty case list: exit 3" "$?" 3
+jq '.rows[0].cases = {"herdr": ["1; rm -rf /"]}' "$W/full.json" > "$W/bad.json"; "$S" full --config "$W/bad.json" >/dev/null 2>&1; assert_eq "a case id with shell metacharacters: exit 3" "$?" 3
 
 echo "-- AC-H2: a path no row maps plans the full set, and the message names the path"
 plan Jenkinsfile; assert_eq "exit 0" "$RC" 0

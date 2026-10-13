@@ -93,6 +93,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Architect ruling 18:24Z: AC-H2 tickets-only means lint + reindex plus herdr case 12, the blueprint build that reads work-orders and graph
 - `2026-10-13` Retro: reading what each suite copies found two things the ticket text did not name: line's merge.sh calls event.sh and state-root.sh (line joins the events rows), and scheduler/host/tests/run.sh is a suite make -C scheduler test never runs (new suite scheduler-host, caught by the case that lists suites on disk). Rows union, a path no row matches plans the full set. Not done, outside the files field: factory/RUNBOOK.md does not yet describe suites.sh (the tester ticket WO-20261013-dd11 reads it).
 
 ## Outcome

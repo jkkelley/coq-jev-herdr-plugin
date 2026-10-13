@@ -12,6 +12,9 @@
     "sitrep": "make -C report/sitrep test",
     "scheduler-host": "bash scheduler/host/tests/run.sh"
   },
+  "case_commands": {
+    "herdr": "CASES={cases} bash herdr/tests/run.sh"
+  },
   "always": [
     "lint"
   ],
@@ -34,9 +37,13 @@
         "work-orders/*"
       ],
       "suites": [
-        "reindex",
-        "herdr"
-      ]
+        "reindex"
+      ],
+      "cases": {
+        "herdr": [
+          "12"
+        ]
+      }
     },
     {
       "paths": [
@@ -202,9 +209,13 @@
         "graph/*"
       ],
       "suites": [
-        "loop",
-        "herdr"
-      ]
+        "loop"
+      ],
+      "cases": {
+        "herdr": [
+          "12"
+        ]
+      }
     },
     {
       "paths": [

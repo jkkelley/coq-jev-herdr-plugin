@@ -12,6 +12,11 @@
       "description": "Suite name to the one command that runs it, from the repository root. Every command must exist (pinned by factory/tests/cases/19-suites-map.test.sh).",
       "additionalProperties": { "type": "string", "minLength": 1 }
     },
+    "case_commands": {
+      "type": "object",
+      "description": "Suite name to the command that runs only some of that suite's cases (WO-20261013-f1ff, architect ruling 18:24Z). {cases} is replaced by the case ids of every row that names them, sorted, space-separated and double-quoted when more than one. Only a suite listed here may appear in a row's cases.",
+      "additionalProperties": { "type": "string", "pattern": "\\{cases\\}" }
+    },
     "always": {
       "type": "array",
       "items": { "type": "string", "minLength": 1 },
@@ -39,7 +44,16 @@
           "suites": {
             "type": "array",
             "items": { "type": "string", "minLength": 1 },
-            "description": "Suite names this path exercises, on top of always. An empty list means the path needs only the always set."
+            "description": "Suite names this path exercises whole, on top of always. An empty list means the path needs only the always set."
+          },
+          "cases": {
+            "type": "object",
+            "description": "Cases of a suite this path exercises and the rest of the suite does not, as suite name to case ids (a prefix of the case file name, as the suite runner matches). Planned through case_commands; a suite planned whole by any matching row wins over its cases.",
+            "additionalProperties": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "pattern": "^[A-Za-z0-9._-]+$" }
+            }
           }
         }
       },
