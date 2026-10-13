@@ -11,8 +11,15 @@ world_up blueprintpanes '.bringup_gate=true' || exit 1
 # The world is a copy of the checkout, gitignored build output included: start from a tree where nothing was ever promoted.
 rm -rf "$REPO/report/blueprint/out"
 BU="$REPO/herdr/bin/bringup.sh"; RC="$REPO/herdr/bin/recover.sh"; SERVE="$REPO/report/blueprint/serve.sh"
-serving() { for _ in $(seq 1 40); do "$SERVE" --check "$1" >/dev/null 2>&1 && return 0; sleep 1; done; return 1; }
-dead() { for _ in $(seq 1 20); do "$SERVE" --check "$1" >/dev/null 2>&1 || return 0; sleep 1; done; return 1; }
+# BREADCRUMB 2026-10-13 - WO-20261013-b2fe (test speed, polls part 3; design d-shape 5). What broke: serving and dead were loops of
+#   `serve.sh --check` and a fixed `sleep 1`, so a server that answered in 0.3 s was noticed up to a second late, on every call (every
+#   tier after bringup, the killed one, the restarted one). Why this fix: each is wait_until on the same check with the same caps
+#   (40 s up, 20 s down), which looks at once and every 0.2 s. Rejected: a shorter fixed sleep (the same guess, smaller). Cost: none; a
+#   server that never changes state still fails at the same cap, now with wait_until's line naming the check.
+is_serving() { "$SERVE" --check "$1" >/dev/null 2>&1; }
+is_dead() { ! is_serving "$1"; }
+serving() { wait_until 40 is_serving "$1"; }
+dead() { wait_until 20 is_dead "$1"; }
 
 echo "-- bringup plugs in the three servers and they answer"
 "$BU" --worktree "$REPO" >/dev/null 2>&1; assert_eq "bringup exits 0" "$?" 0

@@ -13,14 +13,23 @@ out="$("$SEAT" --ticket "$T" --role worker --worktree "$REPO")"; ws="$(jq -r .wo
 hand="$(h tab create --workspace "$ws" --cwd /tmp --label by-hand --no-focus | jq -r .result.root_pane.pane_id)"
 h pane wait-output "$hand" --regex '[$%>❯] *$' --timeout 10000 >/dev/null
 h agent start by-hand --kind claude --pane "$hand" -- --permission-mode bypassPermissions >/dev/null
-sleep 1
+# BREADCRUMB 2026-10-13 - WO-20261013-b2fe (test speed, polls part 3; design d-shape 5). What broke: a fixed `sleep 1` after the
+#   hand-started agent and another after its /exit, 2 s a case, each a guess at when a process would be (or no longer be) in /proc,
+#   which is all --audit reads. Why this fix: hand_pid is wait_until the stub is a claude process whose environment names the hand
+#   pane (the two facts --audit judges it by), hand_gone is wait_until that process has ended. Rejected: polling `--audit` itself (each
+#   run records seat.stalled 500, and the case counts exactly one) and `agent get` (herdr's view, not /proc's). Cost: a process that
+#   never appears or never ends fails in 5 to 10 s naming the condition.
+hand_pid() { local d; for d in /proc/[0-9]*; do tr '\0' ' ' < "$d/cmdline" 2>/dev/null | grep -q 'claude' && tr '\0' '\n' < "$d/environ" 2>/dev/null | grep -qx "HERDR_PANE_ID=$hand" && return 0; done; return 1; }
+hand_gone() { ! hand_pid; }
+wait_until 10 hand_pid
 rep="$("$SEAT" --audit)"; rc=$?
 echo "$rep" | sed 's/^/    /'
 assert_eq "--audit exits 1 with a hand-started agent present" "$rc" 1
 assert_match "the seat.sh seat is COMPLIANT" "$rep" "^COMPLIANT [^ ]+ $N pid"
 assert_match "the hand-started agent is OUT OF COMPLIANCE" "$rep" "^OUT OF COMPLIANCE [^ ]+ claude pid [0-9]+: hand-started"
 assert_eq "one seat.stalled 500 was recorded" "$(event_count seat.stalled 500)" 1
-h agent prompt by-hand "/exit" >/dev/null 2>&1; sleep 1
+h agent prompt by-hand "/exit" >/dev/null 2>&1
+wait_until 10 hand_gone
 "$SEAT" --down "$N" >/dev/null
 
 echo "-- fixture: flags that drift from the role"
