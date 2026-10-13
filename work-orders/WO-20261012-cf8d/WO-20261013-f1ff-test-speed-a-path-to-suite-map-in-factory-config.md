@@ -15,7 +15,7 @@
   "closed": null,
   "approval": {
     "via": "override",
-    "reason": "architect P0 order 2026-10-13 (owner p0c28); design approved on card C29 with two conditions; lavish prohibited for Claude seats",
+    "reason": "architect P0 order 2026-10-13 (owner p0c28), design approved on card C29; re-cut for runnable plans and NN- case names; lavish prohibited for Claude seats",
     "at": "2026-10-13"
   },
   "evidence": null,
@@ -28,7 +28,7 @@
     "factory/config/suites.json",
     "factory/config/suites.schema.json",
     "factory/bin/suites.sh",
-    "factory/tests/cases/suites-map.test.sh"
+    "factory/tests/cases/19-suites-map.test.sh"
   ]
 }
 ---
@@ -55,9 +55,9 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 
 **In**
 
-- factory/config/suites.json and suites.schema.json: rows of path pattern to every make target whose suite exercises that path, not only the suite under it: events/bin and events/schema map to the events, factory and herdr suites; bin/state-root.sh and config/ to every suite that sources them; a tickets-only set (work-orders/, changelog/) maps to make lint and work-order.sh reindex --check; a path with no row means the full set
+- factory/config/suites.json and suites.schema.json: rows of path pattern to every suite command that exercises that path, not only the suite under it: events/bin and events/schema map to the events, factory and herdr suites; bin/state-root.sh and config/ to every suite that sources them; a tickets-only set (work-orders/, changelog/) maps to make lint and work-order.sh reindex --check; a path with no row means the full set; every command named exists (events runs as bash events/tests/run.sh, which has no Makefile)
 - factory/bin/suites.sh plan --base B --head H prints one command per line; full prints the full set; exit codes per section d-codes
-- factory/tests/cases/suites-map.test.sh asserts the cross-suite rows: a change to events/bin/event.sh plans events, factory and herdr
+- factory/tests/cases/19-suites-map.test.sh asserts the cross-suite rows: a change to events/bin/event.sh plans events, factory and herdr
 
 **Out - non-goals**
 

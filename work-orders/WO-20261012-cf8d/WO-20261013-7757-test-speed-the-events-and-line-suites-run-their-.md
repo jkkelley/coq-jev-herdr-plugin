@@ -15,7 +15,7 @@
   "closed": null,
   "approval": {
     "via": "override",
-    "reason": "architect P0 order 2026-10-13 (owner p0c28); design approved on card C29 with two conditions; lavish prohibited for Claude seats",
+    "reason": "architect P0 order 2026-10-13 (owner p0c28), design approved on card C29; re-cut for runnable plans and NN- case names; lavish prohibited for Claude seats",
     "at": "2026-10-13"
   },
   "evidence": null,
@@ -70,7 +70,7 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 ## Test plan
 
 ```sh
-make lint && make -C events test && make -C line test, in Podman through the repository targets
+make lint && bash events/tests/run.sh && make -C line test, in Podman (events/tests/run.sh re-execs itself in Podman)
 ```
 
 ## Assumptions

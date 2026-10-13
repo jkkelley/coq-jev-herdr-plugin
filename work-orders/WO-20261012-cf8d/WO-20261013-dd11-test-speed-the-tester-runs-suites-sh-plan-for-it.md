@@ -15,7 +15,7 @@
   "closed": null,
   "approval": {
     "via": "override",
-    "reason": "architect P0 order 2026-10-13 (owner m-20261013154808303-p0c28: test suites cannot be the bottleneck); lavish prohibited for Claude seats",
+    "reason": "architect P0 order 2026-10-13 (owner p0c28), design approved on card C29; re-cut for runnable plans and NN- case names; lavish prohibited for Claude seats",
     "at": "2026-10-13"
   },
   "evidence": null,
@@ -26,7 +26,8 @@
   "blocks": [],
   "files": [
     "roles/tester.json",
-    "playbooks/tester.md"
+    "playbooks/tester.md",
+    "herdr/tests/cases/29-tester-runs-plan.test.sh"
   ]
 }
 ---
@@ -54,10 +55,11 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 **In**
 
 - roles/tester.json: the step that runs the ticket's test plan runs factory/bin/suites.sh plan for the pull request's base and head, plus any case the plan names by hand; the full set is verify-main's on main, never per pull request; playbooks/tester.md re-rendered
+- herdr/tests/cases/29-tester-runs-plan.test.sh asserts the role and playbook name suites.sh plan (roles/ has no suite of its own; the herdr suite runs role tests)
 
 **Out - non-goals**
 
-- the map itself (its own ticket)
+- the map itself (WO-20261013-f1ff)
 - the tester's model (WO-20261013-0f18)
 
 ## Degrees of freedom
@@ -66,12 +68,12 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the role and playbook name suites.sh plan, the playbook check reports no drift and make lint passes
+- [ ] `AC-H1` *(human)* the role and playbook name suites.sh plan, the case fails without it, and the playbook check in lint reports no drift
 
 ## Test plan
 
 ```sh
-make lint && make -C roles test, in Podman through the repository targets
+make lint && make -C herdr test, in Podman through the repository targets
 ```
 
 ## Assumptions

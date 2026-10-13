@@ -15,7 +15,7 @@
   "closed": null,
   "approval": {
     "via": "override",
-    "reason": "architect P0 order 2026-10-13 (owner m-20261013154808303-p0c28: test suites cannot be the bottleneck); lavish prohibited for Claude seats",
+    "reason": "architect P0 order 2026-10-13 (owner p0c28), design approved on card C29; re-cut for runnable plans and NN- case names; lavish prohibited for Claude seats",
     "at": "2026-10-13"
   },
   "evidence": null,
@@ -28,7 +28,7 @@
     "bin/test-cases.sh",
     "config/tests.json",
     "config/tests.schema.json",
-    "factory/tests/cases/runner-budget.test.sh"
+    "factory/tests/cases/20-runner-budget.test.sh"
   ]
 }
 ---
@@ -55,12 +55,13 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 
 **In**
 
-- bin/test-cases.sh prints -- <case>: pass <seconds>s and fails a case over its budget; config/tests.json and tests.schema.json hold the default budget and per-suite overrides, each with a reason
-- factory/tests/cases/runner-budget.test.sh: a stub case over budget fails with its name and time
+- bin/test-cases.sh prints -- <case>: pass <seconds>s and fails a case over its budget; config/tests.json and tests.schema.json gain the default budget and per-suite overrides, each with a reason
+- factory/tests/cases/20-runner-budget.test.sh: a stub case over budget fails with its name and time
 
 **Out - non-goals**
 
 - making any case faster (the poll tickets)
+- the jobs value (WO-20261013-0bc0)
 
 ## Degrees of freedom
 
