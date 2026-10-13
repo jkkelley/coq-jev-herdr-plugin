@@ -69,7 +69,8 @@ Owner 2026-10-12 22:49Z (m-20261012224955626-rjghl): every script lives in the p
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/start-tickets.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+- [x] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/start-tickets.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+  - observed `2026-10-13` make lint: all ok; make -C line test: 12 passed, 0 failed (start-tickets case included, run in the test pane wD3:p1E9). Mutation check: with the script changed to cut from HEAD, put the worktree outside COQ_CACHE and skip the worktree removal, the case fails 5 assertions. grep -c '/home/luna' and grep -c '.cache/coq-watch' on line/bin/start-tickets.sh both 0. With COQ_STATE and COQ_CACHE set, the case asserts HOME stays empty and the log is one dated file under the state root logs tree, the worktree under COQ_CACHE.
 - [ ] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/start-roadmap.sh is empty, ~/.cache/coq-watch/start-roadmap.sh is gone, and the archive path is in a 200 note on this ticket
 
 ## Test plan
@@ -89,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: the port was mechanical. Changes beyond the move: every expansion quoted, cd failures now exit (shellcheck SC2164), the log is one dated file per run under the logs tree and not one file appended forever. A failed id still leaves its worktree under COQ_CACHE until the next start of that id removes it (as before; recorded in the breadcrumb). AC-H2 (cache copy archived and deleted after merge) is the orchestrator lane and is not done by this seat.
 
 ## Outcome
 
