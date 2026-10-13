@@ -4,7 +4,7 @@
   "slug": "test-speed-the-tester-runs-suites-sh-plan-for-it",
   "title": "Test speed: the tester runs suites.sh plan for its pull request instead of whole suites; the full suite runs once on main through verify-main.sh",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect P0 order 2026-10-13 (owner p0c28), design approved on card C29; re-cut for runnable plans and NN- case names; lavish prohibited for Claude seats",
@@ -28,7 +28,8 @@
     "roles/tester.json",
     "playbooks/tester.md",
     "herdr/tests/cases/29-tester-runs-plan.test.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261013-b6f3"
 }
 ---
 
@@ -90,4 +91,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: superseded by WO-20261013-b6f3 (architect 23:15Z)
+- superseded by: `WO-20261013-b6f3`
+
+No branch, no PR and no merge commit exist for this work order.
+
