@@ -4,7 +4,7 @@
   "slug": "roadmap-k5-the-writer-refuses-a-gate-record-with",
   "title": "Roadmap K5 - The writer refuses a gate record without its sha and any code outside the SPEC-17 status code map, and the schema gains the halt, drain and resume kinds (after A1)",
   "type": "feature",
-  "status": "cancelled",
+  "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": "2026-10-13",
+  "closed": null,
   "approval": {
     "via": "override",
     "reason": "owner accepted SPEC-17 on card C25; lavish prohibited for Claude seats",
@@ -28,8 +28,7 @@
     "events/bin/event.sh",
     "events/schema/event.schema.json",
     "events/tests/*"
-  ],
-  "superseded_by": "WO-20261013-bdf9"
+  ]
 }
 ---
 
@@ -94,10 +93,4 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-Cancelled `2026-10-13` - nothing shipped.
-
-- reason: owner 03:00Z size rule: split into WO-20261013-bdf9, WO-20261013-e782
-- superseded by: `WO-20261013-bdf9`
-
-No branch, no PR and no merge commit exist for this work order.
-
+_Written by `work-order done`. Empty until then._
