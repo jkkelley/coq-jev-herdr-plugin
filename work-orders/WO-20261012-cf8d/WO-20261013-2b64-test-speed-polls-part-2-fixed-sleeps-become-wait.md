@@ -69,7 +69,8 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* these cases pass and carry no uncommented fixed sleep; make -C herdr test passes
+- [x] `AC-H1` *(human)* these cases pass and carry no uncommented fixed sleep; make -C herdr test passes
+  - observed `2026-10-13` 2026-10-13 Cases 06-unfreeze, 09-testpane-subshell, 11-guard-ack-nudge, 13-recover-belt, 17-pane-health pass (CASES run from the test pane through testpane.sh, tests: 5 passed, 0 failed) in 202 s against 257 s for the same five on an unmodified export of HEAD b68be5b. make lint passes. Per the architect ruling of 20:50Z the full make -C herdr test was not run by this seat (a run started before the ruling was stopped); verify runs it after merge. Sleeps left, all commented as the thing under test (absence of a prompt has nothing to poll): 11 x2, 06 x1; wait_until's 0.2 s is the poll interval. 17's sleep 600 is the process under test. No JOBS option or bin/test-cases.sh exists yet, so the runs were serial.
 
 ## Test plan
 
@@ -88,6 +89,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: 5 cases converted. Three helper shapes recur (pane_bare, pane_idle, fg_has) and are copied per case, not put in world.sh, because world.sh is part 1's file and no open PR may touch it twice; a follow-up can lift them. Absence checks (no second prompt, no prompt to a working seat, no wake to a reviewer) keep a commented sleep. 09's failing-command step now touches a marker so the wait cannot pass before the command ran. The architect ruling mid-ticket (workers run only the cases their diff touches) cut the full-suite proof.
 
 ## Outcome
 

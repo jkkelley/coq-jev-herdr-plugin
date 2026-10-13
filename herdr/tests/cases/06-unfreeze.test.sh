@@ -33,6 +33,14 @@ unfreeze_notes() { local n=0 f; for f in "$EVENTS"/2*/*/*.json; do [ -f "$f" ] |
 # heard <agent>: how many screen lines carry the wake prompt; the stub echoes what it is sent (input box and "> " line), so
 # the count is at least 1 for an agent that got it and exactly 0 for one that did not.
 heard() { h agent read "$1" --source recent-unwrapped --lines 200 | grep -c 'guard lease released by unfreeze.sh at'; }
+# BREADCRUMB 2026-10-13 - WO-20261013-2b64 (test speed, polls part 2). What broke: four fixed `sleep 2` in this case, one before `agent start`
+#   (waiting for the new tab's shell prompt) and three after an unfreeze (waiting for the stub to echo the wake prompt), each paid in full
+#   on every run. Why this fix: the first becomes herdr's own `pane wait-output` for the prompt regex (the condition seat.sh waits on
+#   before it types into a pane); the two that precede a "heard it" check become wait_until on that check. The third precedes "heard
+#   nothing new", where the thing under test is an absence: nothing to poll for, so it stays, with a comment. The "reviewer heard nothing"
+#   assert after the first poll runs after the worker and hand-started agent are proven to have heard, so the wake path is shown live
+#   before the absence is read. Cost: none; the asserts are unchanged.
+heard_since() { [ "$(heard "$1")" -gt "$2" ]; }
 
 echo "-- a world: two seats and a hand-started agent that only an exemption names"
 "$SEAT" --ticket WO-20261010-8777 --role worker --worktree "$REPO" >/dev/null; assert_eq "the worker comes up" "$?" 0
@@ -41,7 +49,7 @@ WP="$(jq -r .pane "$STATE/seats/$W/seat.json")"; RP="$(jq -r .pane "$STATE/seats
 ws="$(h workspace list | jq -r '.result.workspaces[] | select(.label == "coq") | .workspace_id')"
 AP="$(h tab create --workspace "$ws" --label arch --cwd "$REPO" | jq -r '.result.root_pane.pane_id // empty')"
 assert_match "the hand-started tab has a pane" "$AP" '^w'
-sleep 2; h agent start arch --kind claude --pane "$AP" -- --model x >/dev/null; assert_eq "the hand-started agent comes up" "$?" 0
+h pane wait-output "$AP" --regex '[$%>❯] *$' --timeout 15000 >/dev/null; h agent start arch --kind claude --pane "$AP" -- --model x >/dev/null; assert_eq "the hand-started agent comes up" "$?" 0
 jq --arg p "$AP" '.exemptions += [{pane:$p, rule:"seat.audit", until:"2099-01-01T00:00:00Z", card_id:"suite-fixture", why:"a hand-started pane with no seat record"}]' \
   "$REPO/herdr/config/exemptions.json" > "$WORLD/ex.json" && mv "$WORLD/ex.json" "$REPO/herdr/config/exemptions.json"
 SW="$(live_sid "$WP")"; SR="$(live_sid "$RP")"; SA="$(live_sid "$AP")"
@@ -61,7 +69,7 @@ assert_match "the fresh reviewer lease prints ok" "$out" "^ok $RP $R \(armed [0-
 assert_eq "the worker guard session is idle" "$(phase_of "$SW")" idle
 assert_eq "the exempt pane's guard session is idle" "$(phase_of "$SA")" idle
 assert_eq "the fresh lease is untouched" "$(phase_of "$SR")" armed
-sleep 2
+wait_until 10 heard_since "$W" 0; wait_until 10 heard_since arch 0
 check "the worker's agent heard the wake prompt" "$(( $(heard "$W") >= 1 ))"
 check "the hand-started agent heard the wake prompt" "$(( $(heard arch) >= 1 ))"
 assert_eq "the reviewer heard nothing" "$(heard "$R")" 0
@@ -98,7 +106,7 @@ assert_eq "the live session is released" "$(phase_of "$SW")" idle
 assert_eq "the first dead session is untouched" "$(phase_of s-dead-one)" compacting
 assert_eq "the second dead session is untouched" "$(phase_of s-dead-two)" armed
 assert_eq "one more note 100" "$(unfreeze_notes)" "$((notes + 1))"
-sleep 2
+wait_until 10 heard_since "$W" "$before"
 check "the seat heard the wake prompt" "$(( $(heard "$W") > before ))"
 # With the live session idle, the dead ones alone must release nothing and wake nobody.
 mk_session "$SW" "$WP" idle 0 180
@@ -108,7 +116,7 @@ assert_eq "no release line when only dead sessions are frozen" "$(grep -c "^rele
 assert_match "the worker pane reads not frozen" "$out" "^ok $WP $W \(not frozen\)$"
 assert_eq "the dead sessions are still untouched" "$(phase_of s-dead-one)/$(phase_of s-dead-two)" "compacting/armed"
 assert_eq "no note was written" "$(unfreeze_notes)" "$notes"
-sleep 2
+sleep 2  # the thing under test: a wake prompt that must NOT arrive has nothing to poll for, so give one two seconds to show up
 assert_eq "the seat heard nothing new" "$(heard "$W")" "$before"
 "$UF" "$W" --force >/dev/null 2>&1
 assert_eq "--force on the seat leaves a dead session alone too" "$(phase_of s-dead-one)" compacting
