@@ -15,7 +15,7 @@
   "closed": null,
   "approval": {
     "via": "override",
-    "reason": "architect orders 2026-10-13: 9c50 split (reviewer max_seats 2 to 4), K5 reland, post-merge as code; lavish prohibited for Claude seats",
+    "reason": "architect orders 2026-10-13, re-cut on review yv8xi; lavish prohibited for Claude seats",
     "at": "2026-10-13"
   },
   "evidence": null,
@@ -27,7 +27,7 @@
     "roles/merger.json",
     "playbooks/tester.md",
     "playbooks/merger.md",
-    "roles/tests/gate-models.test.sh"
+    "herdr/tests/cases/27-gate-models.test.sh"
   ]
 }
 ---
@@ -55,11 +55,11 @@ Haiku testers and mergers misread test plans and gate records on 2026-10-12 and 
 **In**
 
 - roles/tester.json and roles/merger.json model.claude is claude-sonnet-5-5; playbooks/tester.md and playbooks/merger.md re-rendered by roles/bin/render-playbook.sh
-- roles/tests/gate-models.test.sh pins both models
+- herdr/tests/cases/27-gate-models.test.sh pins both models and fails on haiku (roles/ has no suite of its own; the herdr suite runs role tests, as 23-compliance-officer does)
 
 **Out - non-goals**
 
-- the reviewer's seat count (its own part)
+- the reviewer's seat count (WO-20261013-dd47)
 - the merger's duties (WO-20261013-f6ae and its follow-up)
 
 ## Degrees of freedom
@@ -68,17 +68,17 @@ Haiku testers and mergers misread test plans and gate records on 2026-10-12 and 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* both roles name claude-sonnet-5-5, the playbook check reports no drift and the test fails on haiku; make lint passes
+- [ ] `AC-H1` *(human)* both roles name claude-sonnet-5-5, the playbook check in lint reports no drift and the case fails on haiku
 
 ## Test plan
 
 ```sh
-make lint && make -C roles test, in Podman through the repository targets; roles/bin/render-playbook.sh roles playbooks --check exits 0
+make lint && make -C herdr test, in Podman through the repository targets (lint runs the playbook drift check)
 ```
 
 ## Assumptions
 
-1. WO-20261013-73be (A3, merger and tester roles read the state root, on pull request 89) also edits these four files; this part goes first and 73be follows it; the depends_on edge is written on 73be once pull request 89 merges, until then claims.sh start keeps the two apart
+1. WO-20261013-73be (pull request 89) and WO-20261013-dd11 (pull request 98) also edit the tester role; the order is written as edges once those pull requests merge, until then claims.sh start keeps them apart
 
 ## Open questions
 

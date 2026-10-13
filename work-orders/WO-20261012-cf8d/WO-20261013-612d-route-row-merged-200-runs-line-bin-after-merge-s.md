@@ -15,7 +15,7 @@
   "closed": null,
   "approval": {
     "via": "override",
-    "reason": "architect orders 2026-10-13: 9c50 split (reviewer max_seats 2 to 4), K5 reland, post-merge as code; lavish prohibited for Claude seats",
+    "reason": "architect orders 2026-10-13, re-cut on review yv8xi; lavish prohibited for Claude seats",
     "at": "2026-10-13"
   },
   "evidence": null,
@@ -27,7 +27,7 @@
   "files": [
     "factory/config/routes.json",
     "factory/bin/route.sh",
-    "factory/tests/cases/route-after-merge.test.sh"
+    "factory/tests/cases/18-route-after-merge.test.sh"
   ]
 }
 ---
@@ -48,13 +48,15 @@
 
 ## Problem
 
-routes.json routes merged 200 to a wake of the architect with verify and downs the merger; owner order 2026-10-13 makes the after-merge script the handler.
+routes.json routes merged 200 to a wake of the architect with verify and downs the merger; owner order 2026-10-13 makes the after-merge script the handler. Review yv8xi: code 450 (compliance report) has no row, so the reland of the code map would route it nowhere.
 
 ## Scope
 
 **In**
 
-- factory/config/routes.json: the merged 200 row runs after-merge.sh with the record id; route.sh gains the run action if B's rows have not added it; factory/tests/cases/route-after-merge.test.sh
+- factory/config/routes.json: the merged 200 row runs after-merge.sh with the record id; route.sh gains the run action if the rows ticket has not added it
+- factory/config/routes.json: a 450 row sends the compliance report to the orchestrator lane, which acts on conduct reports (SPEC-17 O9)
+- factory/tests/cases/18-route-after-merge.test.sh covers both rows
 
 **Out - non-goals**
 
@@ -67,7 +69,7 @@ routes.json routes merged 200 to a wake of the architect with verify and downs t
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a merged 200 in the factory test world runs after-merge.sh once with the record id and wakes no architect; make lint passes
+- [ ] `AC-H1` *(human)* a merged 200 in the factory test world runs after-merge.sh once with the record id and wakes no architect; a 450 reaches the orchestrator; make lint passes
 
 ## Test plan
 

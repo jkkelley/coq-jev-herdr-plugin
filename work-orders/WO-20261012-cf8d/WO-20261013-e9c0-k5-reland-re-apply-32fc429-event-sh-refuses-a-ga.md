@@ -15,7 +15,7 @@
   "closed": null,
   "approval": {
     "via": "override",
-    "reason": "architect orders 2026-10-13: 9c50 split (reviewer max_seats 2 to 4), K5 reland, post-merge as code; lavish prohibited for Claude seats",
+    "reason": "architect orders 2026-10-13, re-cut on review yv8xi; lavish prohibited for Claude seats",
     "at": "2026-10-13"
   },
   "evidence": null,
@@ -51,13 +51,14 @@
 
 ## Problem
 
-32fc429 (WO-20261013-f298) is right but landed before the fixtures it breaks and is reverted. With the fixtures fixed by the three parts it depends on, the same change lands again.
+32fc429 (WO-20261013-f298) is right but landed before the fixtures it breaks and is reverted. With the fixtures fixed by the three parts it depends on, the same change lands again. Review yv8xi: the code map refused 450, which the compliance officer posts (roles/compliance-officer.json), and nothing tracked it.
 
 ## Scope
 
 **In**
 
 - re-apply 32fc429's changes to events/bin/event.sh, events/schema/event.schema.json, events/tests/cases/03-read.test.sh and events/tests/cases/04-refusals.test.sh, with the breadcrumb naming the revert and this reland
+- 450 (compliance report) is in the schema's code enum with a breadcrumb, so the reland refuses nothing a role posts; 04-refusals asserts 450 is accepted and an unmapped code is refused; its routes row is WO-20261013-612d and its SPEC-17 row is WO-20261013-d101
 
 **Out - non-goals**
 
@@ -70,12 +71,12 @@
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the writer refuses test.passed without --sha with exit 3, and every suite named in the test plan passes on the same commit
+- [ ] `AC-H1` *(human)* the writer refuses test.passed without --sha with exit 3, accepts 450, refuses an unmapped code, and every suite in the test plan passes on the same commit
 
 ## Test plan
 
 ```sh
-make lint && make -C events test && make -C factory test && make -C herdr test, all in Podman through the repository targets
+make lint && bash events/tests/run.sh && make -C factory test && make -C herdr test, all in Podman (events/tests/run.sh re-execs itself in Podman)
 ```
 
 ## Assumptions

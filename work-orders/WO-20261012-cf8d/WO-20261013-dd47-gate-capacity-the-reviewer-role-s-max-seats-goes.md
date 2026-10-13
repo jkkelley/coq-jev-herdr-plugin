@@ -15,7 +15,7 @@
   "closed": null,
   "approval": {
     "via": "override",
-    "reason": "architect orders 2026-10-13: 9c50 split (reviewer max_seats 2 to 4), K5 reland, post-merge as code; lavish prohibited for Claude seats",
+    "reason": "architect orders 2026-10-13, re-cut on review yv8xi; lavish prohibited for Claude seats",
     "at": "2026-10-13"
   },
   "evidence": null,
@@ -26,7 +26,8 @@
   "blocks": [],
   "files": [
     "roles/reviewer.json",
-    "playbooks/reviewer.md"
+    "playbooks/reviewer.md",
+    "herdr/tests/cases/28-reviewer-seats.test.sh"
   ]
 }
 ---
@@ -54,11 +55,12 @@ Two reviewer seats queue the review of every open pull request behind each other
 **In**
 
 - roles/reviewer.json max_seats 4; playbooks/reviewer.md re-rendered by roles/bin/render-playbook.sh
+- herdr/tests/cases/28-reviewer-seats.test.sh pins max_seats 4 and fails on 2
 
 **Out - non-goals**
 
-- role models (its own part)
-- herdr max_agents (its own part)
+- role models (WO-20261013-0f18)
+- herdr max_agents (WO-20261013-a1c6)
 
 ## Degrees of freedom
 
@@ -66,17 +68,17 @@ Two reviewer seats queue the review of every open pull request behind each other
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the role says 4, the playbook check reports no drift; make lint passes
+- [ ] `AC-H1` *(human)* the role says 4, the case fails on 2 and the playbook check in lint reports no drift
 
 ## Test plan
 
 ```sh
-make lint && make -C roles test, in Podman through the repository targets; roles/bin/render-playbook.sh roles playbooks --check exits 0
+make lint && make -C herdr test, in Podman through the repository targets (lint runs the playbook drift check)
 ```
 
 ## Assumptions
 
-1. WO-20261013-44b3 (A3, reviewer and worker roles read the state root, on pull request 89) also edits these files; this part goes first; the edge is written on 44b3 once pull request 89 merges
+1. WO-20261013-44b3 (pull request 89) also edits these files; the edge is written once pull request 89 merges
 
 ## Open questions
 
