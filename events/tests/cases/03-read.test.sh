@@ -8,10 +8,9 @@ world_up read
 export COQ_STATE="$W/s"
 T=WO-20261012-7e13
 
-# WO-20261013-f298: the old-shape record carries code 100, not 150; 150 is outside the SPEC-17 status code map, so the schema (and event.sh check) now refuses it.
 # A record in the old shape: <id>.json in the repository's events/YYYY/MM, the id being the file name.
 mkdir -p "$R/events/2026/10"
-jq -n '{schema_version:"1.0.0", id:"20261012T215900Z-100-oldaa", at:"2026-10-12T21:59:00Z", code:100, seat:"legacy", kind:"gate", ticket:null, pane:null, note:"old shape", evidence:[], observations:[]}' > "$R/events/2026/10/20261012T215900Z-100-oldaa.json"
+jq -n '{schema_version:"1.0.0", id:"20261012T215900Z-150-oldaa", at:"2026-10-12T21:59:00Z", code:150, seat:"legacy", kind:"gate", ticket:null, pane:null, note:"old shape", evidence:[], observations:[]}' > "$R/events/2026/10/20261012T215900Z-150-oldaa.json"
 freeze_clock 1; "$EV" add --code 100 --seat worker --kind work.started --ticket $T --note "new one" >/dev/null
 freeze_clock 3; "$EV" add --code 423 --seat worker --kind blocked --ticket $T --note "new two" >/dev/null
 
@@ -49,9 +48,9 @@ rm -r "$W/s/records/2026/11"
 jq '.code = 7' "$good" > "$d/20261012220001-work-started.json"
 out=$("$EV" check 2>&1); assert_eq "a record the schema refuses: exit" "$?" 3; assert_match "it names the file" "$out" "invalid: .*20261012220001-work-started.json"
 rm "$d/20261012220001-work-started.json"
-cp "$R/events/2026/10/20261012T215900Z-100-oldaa.json" "$R/events/2026/10/20261012T215900Z-100-moved.json"
+cp "$R/events/2026/10/20261012T215900Z-150-oldaa.json" "$R/events/2026/10/20261012T215900Z-150-moved.json"
 out=$("$EV" check 2>&1); assert_eq "an old-shape file whose name is not its id: exit" "$?" 3; assert_match "it names the file" "$out" "filename/id mismatch: .*moved"
-rm "$R/events/2026/10/20261012T215900Z-100-moved.json"
+rm "$R/events/2026/10/20261012T215900Z-150-moved.json"
 assert_eq "clean again" "$("$EV" check 2>&1)" "events ok: 12 files"
 
 echo "-- a state root that does not exist yet is an empty tree, and an unresolvable one leaves the repository tree readable"
