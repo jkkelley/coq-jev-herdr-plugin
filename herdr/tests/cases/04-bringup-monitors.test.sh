@@ -27,6 +27,18 @@ for t in "monitors 1 - compaction watchers" "monitors 2 - loop, events and queue
   tid="$(h tab list --workspace "$ws" | jq -r --arg l "$t" '.result.tabs[] | select(.label == $l) | .tab_id')"
   assert_eq "$t holds 9 panes" "$(h pane list --workspace "$ws" | jq -r --arg t "$tid" '[.result.panes[] | select(.tab_id == $t)] | length')" 9
 done
+# BREADCRUMB 2026-10-13 - WO-20261013-8573. What broke: `monitors.sh status` was read once, right after bring-up, and a slot shows "in use"
+#   only once the command in its pane has started; in a Kubernetes pod on an arm64 Raspberry Pi node (ghcr.io/jkkelley/coq-test:1) the board
+#   watch (2.2.1) had not started yet on one of two full-suite runs, so line 43's match failed (the other 30 cases passed in that run). Why this
+#   fix: wait_until, at most 30 s, for every slot the assertions below name to read "in use"; the assertions are unchanged, so a slot that never
+#   starts still fails its own line. Rejected: a fixed sleep (a guess, paid on every run). Cost: none when the slots are up at once.
+slots_in_use() {
+  local out k; out="$("$MON" status)" || return 1
+  for k in '1\.1\.1' '1\.1\.2' '2\.1\.1' '2\.1\.2' '2\.2\.1' '2\.2\.2' '2\.2\.3' '2\.3\.1' '2\.3\.2' '3\.3\.1' '3\.3\.2' '3\.3\.3'; do
+    grep -qE "$k .*\]  in use" <<<"$out" || return 1
+  done
+}
+wait_until 30 slots_in_use || true
 st="$("$MON" status)"; rc=$?
 assert_eq "monitors.sh status exits 0" "$rc" 0
 assert_match "1.1.1 runs the guard lease watcher" "$st" "1\.1\.1 guard lease watcher - lease  \[[^]]+\]  in use"
