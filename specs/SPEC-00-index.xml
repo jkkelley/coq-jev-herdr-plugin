@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<spec id="SPEC-00" version="1.0.0" title="Index and knowledge graph" status="locked" updated="2026-10-10T19:20Z">
+<spec id="SPEC-00" version="1.0.1" title="Index and knowledge graph" status="locked" updated="2026-10-13T00:50Z">
   <contents>
     <item ref="s-map" title="Spec map"/>
     <item ref="s-graph" title="The knowledge graph"/>
@@ -12,7 +12,7 @@
   <section id="s-map" title="Spec map">
     <text>One spec per concern, each under 1000 lines. A spec that needs more is two specs. Status: locked means the owner decided; proposed means written and awaiting the owner's card; draft means being written.</text>
     <node id="CMP-knowledge-graph" status="locked"><title>graph/: one JSON node per file, graph.sh add/edge/find/check/index/sync-specs</title><text>The graph is the source; specs cite it. See s-graph.</text></node>
-    <text>SPEC-00 index and knowledge graph (this file). SPEC-01 conventions: naming, UTC, contents lists, GOOD and NEVER, config and variables, status codes, event log. SPEC-02 roles and permissions. SPEC-03 DAG workflow and node contract. SPEC-04 herdr seat lifecycle. SPEC-05 compaction and checkpoint. SPEC-06 control plane. SPEC-07 SITREP site and factory dashboard. SPEC-08 player contract and runtimes. SPEC-09 game adapters (Qud, Cities Skylines 2). SPEC-10 game hosts. SPEC-11 pane renderer and plugin manifest, SPEC-11.B Rust terminal. SPEC-12 delivery. SPEC-13 testing and lint. SPEC-14 skills. SPEC-15 SDLC DAG end to end.</text>
+    <text>SPEC-00 index and knowledge graph (this file). SPEC-01 conventions: naming, UTC, contents lists, GOOD and NEVER, config and variables, status codes, event log. SPEC-02 roles and permissions. SPEC-03 DAG workflow and node contract. SPEC-04 herdr seat lifecycle. SPEC-05 compaction and checkpoint. SPEC-06 control plane. SPEC-07 SITREP site and factory dashboard. SPEC-08 player contract and runtimes. SPEC-09 game adapters (Qud, Cities Skylines 2). SPEC-10 game hosts. SPEC-11 pane renderer and plugin manifest, SPEC-11.B Rust terminal. SPEC-12 delivery. SPEC-13 testing and lint. SPEC-14 skills. SPEC-15 SDLC DAG end to end. SPEC-16 (specs/scheduler) the Go scheduler, one file per domain. SPEC-17 orchestrator and agent health: one board is the intake, the orchestrator runs the line, the system checks every agent, halt and bring-up, the status code map.</text>
     <ref spec="SPEC-01" anchor="s-naming"/>
   </section>
 
