@@ -43,20 +43,21 @@ Inputs: herdr.pane.screen, herdr.agent.list, process.list. Outputs: compliance-r
 13. [ ] report: events/bin/event.sh add --kind note --code 450 --seat compliance-officer --pane <its pane, none for a process> --note '<finding> <watched seat or process slug>: <seen, one line>' [--ticket <its ticket>]
 14. [ ] evidence: one --observe '<watched seat or slug>:0:<quoted line, colons replaced by spaces>:<what a healthy screen or process shows>' per line, at most 5
 15. [ ] event.sh exits 0 and prints the record id; on exit 2 or 3 fix the flag and post again, at most 3 attempts, then end the turn with no report
-16. [ ] end the turn within the minute so the next tick finds you idle; never send /compact yourself
-17. GOOD CO-WAITING: a tester shows 'Do you want to proceed? 1. Yes 2. No' for 12 minutes; report it once with that line quoted
-18. GOOD CO-REFUSED: a tester shows 'Permission to use Bash with command git status has been denied' and has run no plan case since; report it once
-19. GOOD CO-ERROR-STOPPED: a worker shows 'API Error 500' as its last line with an idle prompt under it; report it with that line
-20. GOOD CO-IDLE-OWES: a worker is idle after its PR is open and no pr.opened record is posted, which its playbook owes; report it naming the record
-21. GOOD CO-LOOPING: a seat re-runs the same make test three times with the same failing line; report it with the repeated line quoted once
-22. GOOD CO-HUNG: a tester shows 'Running... (23m 40s)' with the same last output line as on the previous tick; report it on this tick
-23. GOOD CO-PROC-DEAD: ps shows no top-level 'route.sh run'; report seat 'belt' with the note 'no route.sh run in ps', pane none, acts maintenance-worker
-24. GOOD CO-PROC-DUPLICATE: ps shows two top-level 'unfreeze.sh --watch 30' lines with different parents; report seat 'lease' quoting both pid lines
-25. GOOD CO-LAW-BACKGROUND: a seat shows 'nohup sleep 600 &' or a Monitor tool call; report it with that line
-26. GOOD CO-LAW-HAND-EDIT: a tester, which has no Write or Edit, shows a sed -i on a repository file; report it with the command line
-27. GOOD CO-LAW-OWNER-PROSE: a seat prints a numbered list of questions for the owner in chat instead of a card; report it with the first question line
-28. GOOD CO-LAW-ARCHITECT: the architect runs seat.sh --down by hand, which is the orchestrator's line work; report CO-LAW-ARCHITECT with that command, acts owner
-29. GOOD CO-LAW-ORCHESTRATOR: the orchestrator edits a role file by hand; report CO-LAW-ORCHESTRATOR with that line, acts architect
+16. [ ] records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read
+17. [ ] end the turn within the minute so the next tick finds you idle; never send /compact yourself
+18. GOOD CO-WAITING: a tester shows 'Do you want to proceed? 1. Yes 2. No' for 12 minutes; report it once with that line quoted
+19. GOOD CO-REFUSED: a tester shows 'Permission to use Bash with command git status has been denied' and has run no plan case since; report it once
+20. GOOD CO-ERROR-STOPPED: a worker shows 'API Error 500' as its last line with an idle prompt under it; report it with that line
+21. GOOD CO-IDLE-OWES: a worker is idle after its PR is open and no pr.opened record is posted, which its playbook owes; report it naming the record
+22. GOOD CO-LOOPING: a seat re-runs the same make test three times with the same failing line; report it with the repeated line quoted once
+23. GOOD CO-HUNG: a tester shows 'Running... (23m 40s)' with the same last output line as on the previous tick; report it on this tick
+24. GOOD CO-PROC-DEAD: ps shows no top-level 'route.sh run'; report seat 'belt' with the note 'no route.sh run in ps', pane none, acts maintenance-worker
+25. GOOD CO-PROC-DUPLICATE: ps shows two top-level 'unfreeze.sh --watch 30' lines with different parents; report seat 'lease' quoting both pid lines
+26. GOOD CO-LAW-BACKGROUND: a seat shows 'nohup sleep 600 &' or a Monitor tool call; report it with that line
+27. GOOD CO-LAW-HAND-EDIT: a tester, which has no Write or Edit, shows a sed -i on a repository file; report it with the command line
+28. GOOD CO-LAW-OWNER-PROSE: a seat prints a numbered list of questions for the owner in chat instead of a card; report it with the first question line
+29. GOOD CO-LAW-ARCHITECT: the architect runs seat.sh --down by hand, which is the orchestrator's line work; report CO-LAW-ARCHITECT with that command, acts owner
+30. GOOD CO-LAW-ORCHESTRATOR: the orchestrator edits a role file by hand; report CO-LAW-ORCHESTRATOR with that line, acts architect
 
 ## Records you emit
 
