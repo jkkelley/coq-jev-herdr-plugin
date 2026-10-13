@@ -7,7 +7,7 @@
   "status": "in-progress",
   "priority": "p0",
   "created": "2026-10-12",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "created_at": "2026-10-12T23:56:17+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": "feat/owner-law-in-agents-md-questions-go-on-cards-pro",
@@ -65,8 +65,10 @@ Owner orders on the bearings page 2026-10-12 22:49Z to 23:55Z lived only in the 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* AGENTS.md has the three law sections with the owner quotes and dated UTC owner orders, one sentence per line, each with a GOOD and a NEVER line as the other laws have
-- [ ] `AC-H2` *(human)* make lint passes in Podman
+- [x] `AC-H1` *(human)* AGENTS.md has the three law sections with the owner quotes and dated UTC owner orders, one sentence per line, each with a GOOD and a NEVER line as the other laws have
+  - observed `2026-10-13` AGENTS.md now has 'Law: talking to the owner', 'Law: the chain of command' and 'Law: tooling in the repository, artifacts documented' after 'Law: agents are never gates'. Each carries the dated 2026-10-12 UTC owner quotes, one sentence per line, and a GOOD and a NEVER line. The contents list names all three; bin/md-contents.sh --check AGENTS.md exits 0 and grep finds no em dash.
+- [x] `AC-H2` *(human)* make lint passes in Podman
+  - observed `2026-10-13` make lint run in test pane wD3:pPD through herdr/bin/testpane.sh exits 0 and ends 'lint: all ok' (markdown contents list in sync ok, shellcheck ok). make -C herdr test in the same pane exits 0 with 'tests: 25 passed, 0 failed'.
 
 ## Test plan
 
@@ -85,6 +87,9 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Correction to the retro: AGENTS.md does not name Roadmap I, J or K at all; those items stay out of scope and untouched.
+- `2026-10-13` Retro: no deviations. Inserted the three laws after 'Law: agents are never gates' so they stay with the other laws and inside the contents list. Quotes taken from the ticket scope and the owner's global rule of 2026-10-13. Roadmap I, J and K are named only as the items that will build the moved scripts, the artifact manifest and the orchestrator; none were touched.
 
 ## Outcome
 

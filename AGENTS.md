@@ -9,6 +9,9 @@
 - Hard rule: dated entry files, one file per entry
 - Law: runtime data never lives in git
 - Law: agents are never gates
+- Law: talking to the owner
+- Law: the chain of command
+- Law: tooling in the repository, artifacts documented
 - Law: herdr-first, never background processes
 - Law: automation leads, never by hand
 - Law: Google Drive first
@@ -128,6 +131,39 @@ The architect receives one digest of items addressed to it, never a copy of ever
 
 GOOD: a pull request reposted after a main merge with byte-identical own files carries its test and review by rule.
 NEVER: a watch that forwards every record to one agent, or a merge that waits for the architect to notice it.
+
+## Law: talking to the owner
+
+Owner order, 2026-10-12 UTC: "your prose to me needs to be spacious, concise" and "high level".
+A reply to the owner is a few short lines with a blank line between them.
+It says the outcome, not the plumbing: no record ids, pids, pane ids or ledger paths unless the owner asks for them.
+Owner order, 2026-10-12 UTC: "your questions go where too".
+Every question and every decision goes to the owner as a card on the bearings page, never inside a reply.
+Ask it with `tools/bearings/scripts/bearings.sh stable ask FILE`, one question per card.
+
+GOOD: "The merge landed and main is green." as one line, and a card asking which of two designs to build.
+NEVER: a reply that lists open questions, or one that pastes a record id and a pane id where the owner wanted the result.
+
+## Law: the chain of command
+
+Owner order, 2026-10-12 UTC: "like me > you > orchestrator > system".
+The chain is the owner, then the architect, then the orchestrator, then the system.
+The architect makes rulings and designs.
+Line operations belong to the orchestrator and the system: re-routing a refused seat, downing a finished seat, branch cleanup and verify on main.
+An agent that finds the architect is the only path for a line operation reports it as a defect (Law: agents are never gates).
+
+GOOD: a refused seat-up is re-routed by the orchestrator, and the architect hears about it only in the digest.
+NEVER: the architect re-routing seats or deleting branches by hand because it noticed first.
+
+## Law: tooling in the repository, artifacts documented
+
+Owner order, 2026-10-12 UTC: "all scripts better live within the project" and "artifacts live outside but documented always".
+Every script this project uses lives in the repository and is tracked, so a fresh clone has all of it.
+What a script writes lives outside the repository under `$COQ_STATE` or `$COQ_CACHE` (Law: runtime data never lives in git).
+Each such artifact directory carries a README that says what writes it, what reads it and how to clean it, so a cleanup command can exist.
+
+GOOD: a watcher script under `factory/bin/` that writes to `$COQ_STATE/watch/`, whose README names the script and the safe cleanup.
+NEVER: a script kept in `~/.cache` or the home directory, or an artifact directory nobody documented.
 
 ## Law: herdr-first, never background processes
 
