@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # seat.sh - the one way a seat comes up, is checked, is taken down and is audited (SPEC-04 RUN-seat-up).
-#   seat.sh --ticket WO-ID --role R [--runtime claude|codex] [--worktree DIR]   door 1: the ticket names the seat (worker-WO-...); no --worktree leases a treehouse slot to the ticket and checks it out on the ticket's branch
+#   seat.sh --ticket WO-ID --role R [--runtime claude|codex] [--worktree DIR]   door 1: the ticket names the seat (worker-WO-...); no --worktree leases a treehouse slot to the ticket and checks it out on the ticket's branch (a null branch takes the head of the open pull request titled with the ticket, WO-20261013-a0e2)
 #   seat.sh --role R --task "text" [--worktree DIR]                             door 2: a fixed seat (monitor, merger, orchestrator)
 #   seat.sh --adopt --role R --pane P --session ID [--ticket WO-ID] [--worktree DIR]   adopt: the claude already running in pane P becomes the role's seat in place
 #                               (seat.json, agent name, pane label, settings.json for the next restart, seat.up 100); no agent is started or stopped
@@ -468,7 +468,24 @@ if [ -n "$ticket" ] && [ "$mode" != adopt ]; then
   #   seating anyway.
   if [ "$wt_given" = 0 ]; then
     branch="$(awk '/^---$/{c++; next} c==1' "$ticket_file" | jq -r '.branch // empty' 2>/dev/null)" || branch=""
-    [ -n "$branch" ] || refuse "ticket $ticket has no branch yet (frontmatter branch is null); run work-order start first, nothing leased"
+    # BREADCRUMB 2026-10-13 - WO-20261013-a0e2, cause f (record b5yad, roadmap progress 2026-10-13 15:58Z). What broke: the refusal
+    #   on the next line. A tickets-only pull request (PRs 89, 96 and 98) is opened for an epic or ticket that was never started, so
+    #   its frontmatter branch is null, and the belt's `seat.sh --ticket T --role tester` (factory/bin/route.sh, act_primary) was
+    #   refused with exit 3 for it and for the reviewer. The route became a 500, the PR sat in rework, and the orchestrator seated
+    #   the gates by hand with --worktree, with the build line starving behind it. Why this fix: a null branch is no longer the end
+    #   when the ticket has an open pull request, and the pull request knows its own head. The head ref is read from gh by the
+    #   ticket id the PR title begins with (every pull request here is titled "<WO-id> - <title>"), and the same slot_to_branch
+    #   puts the seat's slot on it (fetch origin, then track origin/<head>). No role is special-cased: a worker for a ticket
+    #   that was never started and has no pull request is still refused. Rejected: passing --pr from route.sh (the file
+    #   belongs to another ticket, and the title lookup also serves a seat started by hand with no record) and reading the ticket
+    #   frontmatter `pr` (null until `work-order submit`, which a tickets-only PR may never run). Cost: one gh call, only when the
+    #   branch is null; no gh on PATH, no auth, or no open PR titled with the id leaves the refusal below exactly as it was.
+    if [ -z "$branch" ] && command -v gh >/dev/null 2>&1; then
+      branch="$(cd "$SL_REPO" && gh pr list --state open --search "$ticket in:title" --json headRefName,title --limit 30 2>/dev/null \
+        | jq -r --arg t "$ticket" 'first(.[]? | select(.title | startswith($t + " ")) | .headRefName) // empty' 2>/dev/null)" || branch=""
+      [ -z "$branch" ] || sl_log "seat $ticket: ticket has no branch, using the head $branch of its open pull request"
+    fi
+    [ -n "$branch" ] || refuse "ticket $ticket has no branch yet (frontmatter branch is null) and no open pull request is titled with it; run work-order start first, nothing leased"
     git check-ref-format "refs/heads/$branch" || refuse "ticket $ticket names branch '$branch', which is not a valid branch name; nothing leased"
   fi
 fi
