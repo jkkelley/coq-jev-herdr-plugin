@@ -133,6 +133,12 @@
           "name": "supervisor",
           "what": "supervisor log",
           "command": "while :; do clear; ${repo}/herdr/bin/supervisor.sh log; sleep 10; done"
+        },
+        {
+          "pos": "4.2.1",
+          "name": "patrolwatch",
+          "what": "compliance patrol tick",
+          "command": "${repo}/herdr/bin/patrolwatch.sh"
         }
       ]
     }

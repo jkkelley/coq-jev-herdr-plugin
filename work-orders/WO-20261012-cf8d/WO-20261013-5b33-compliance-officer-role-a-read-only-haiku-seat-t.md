@@ -69,10 +69,14 @@ Owner 2026-10-13 01:01Z to 01:03Z: two testers sat up to 40 minutes on a refused
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* roles/compliance-officer.json validates and make lint's roles step passes with the playbook in sync
-- [ ] `AC-H2` *(human)* the report schema accepts a sample report and rejects an unknown finding code, shown by a test
-- [ ] `AC-H3` *(human)* the playbook names every agent as watched, the architect included, and forbids any write, nudge or fix
-- [ ] `AC-H4` *(human)* make lint and make -C herdr test pass in Podman
+- [x] `AC-H1` *(human)* roles/compliance-officer.json validates and make lint's roles step passes with the playbook in sync
+  - observed `2026-10-13` make lint in Podman from the test pane: 'roles: schema + playbooks in sync ok', 'lint: all ok'; roles/tests/compliance-officer.test.sh: 'role validates against role.schema.json' and 'playbook in sync with the role (render --check)' ok
+- [x] `AC-H2` *(human)* the report schema accepts a sample report and rejects an unknown finding code, shown by a test
+  - observed `2026-10-13` roles/tests/compliance-officer.test.sh, 60 passed 0 failed: 'sample report validates' ok; 'unknown finding code fails', 'wrong who-acts for a finding fails', 'missing evidence fails', 'an extra field fails' all refused; each refusal first checks the variant file parses
+- [x] `AC-H3` *(human)* the playbook names every agent as watched, the architect included, and forbids any write, nudge or fix
+  - observed `2026-10-13` playbooks/compliance-officer.md: 'the architect and the orchestrator are in the list and are read like any other', Forbidden opens 'any write, edit or file change', 'any nudge', 'any fix'; deny list holds Write, Edit, NotebookEdit, Agent, Task, git *, gh *, herdr agent prompt, herdr pane run, send-text, send-keys, close; tests assert each
+- [x] `AC-H4` *(human)* make lint and make -C herdr test pass in Podman
+  - observed `2026-10-13` from the test pane: make lint 'lint: all ok'; make -C herdr test 'tests: 27 passed, 0 failed' including 23-compliance-officer and 24-patrolwatch (three ticks, three '> PATROL' prompts heard); EXIT=0 for both
 
 ## Test plan
 
@@ -91,6 +95,11 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro. Went well: the role file as data carried the checklist and the GOOD/NEVER lines without touching the renderer, which the worker fence denies. Went badly: steps are capped at 240 characters so the 13 GOOD examples render as numbered steps beside the checklist; a renderer extension with an examples section would read better and is the architect's file. First slot I picked, 4.1.4, does not exist in the 3-wide grid and broke case 17-pane-health; caught by running the subset before the full suite. A herdr stub echoes a prompt twice (tty echo plus the stub's own line), so case 24 counts '^> PATROL' lines. Tick waits: patrolwatch skips a tick while the officer is busy, so a hung officer is silent until the supervisor's alive check.
+- `2026-10-13` Files beyond the ticket's list, all needed by the above: roles/schema/role.schema.json (name enum gains compliance-officer, or lint rejects the role), herdr/bin/patrolwatch.sh, herdr/config/herdr.json and herdr.schema.json (patrol_seconds, compliance_agent), herdr/config/monitors.json (slot 4.2.1; 4.1.4 does not exist in the 3-wide grid and broke case 17-pane-health), herdr/tests/cases/23-compliance-officer.test.sh and 24-patrolwatch.test.sh. No open PR touches any of them. Left for Roadmap K: the orchestrator and the maintenance worker acting on reports, and a maintenance-worker role (none exists yet, so acts=maintenance-worker is a lane name only); the officer cannot read prior reports to dedupe (the ticket's allow list has no event.sh list), so one report per key rests on its own context and the consumer dropping a repeated key.
+- `2026-10-13` Scope added by the architect, owner question 'isn't the tattle tale on some kind of 1 min loop?': the officer patrols on a 1-minute tick driven by the system, reads every agent's screen each tick, and checks each line process of the restart runbook runs exactly once; a hung seat or dead process is reported within one tick; findings go to the orchestrator lane, process findings to the maintenance worker. Done: herdr/bin/patrolwatch.sh (watches.patrol_seconds 60, watches.compliance_agent, reserved slot 4.2.1 in monitors.json), finding codes CO-HUNG, CO-PROC-DEAD, CO-PROC-DUPLICATE, playbook tick and checklist and GOOD/NEVER for all 13 codes, herdr case 24 for the tick.
+- `2026-10-13` Scope added by the architect, owner order 01:05Z: the playbook carries a checklist for every patrol, names every script and command the officer uses (herdr/bin/turnwatch.sh with COQ_HERDR_CONFIG pointing watches.architect_agent at it) and gives a GOOD and a NEVER example for every finding code. Owner quotes: 'checklist, the scripts you use, etc, everything', 'use GOOD and NEVER for examples'. Done: the role file holds them as data and the playbook is rendered from it.
 
 ## Outcome
 

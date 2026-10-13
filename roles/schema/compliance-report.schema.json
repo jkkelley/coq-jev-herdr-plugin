@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/roles/schema/compliance-report.schema.json",
+  "title": "compliance-report",
+  "description": "One report of the compliance officer (roles/compliance-officer.json): one agent, one finding, seen on its screen. One report per seat per finding, never repeated; `key` is that pair and the consumer drops a second report with the same key. $defs.finding_codes is the closed finding-code map: code, meaning, who acts, and the event code the report is carried with. The officer reports; it never nudges, fixes or stops anyone, so the one who acts is always another seat or the owner. The patrol is a one-minute tick: a hung seat or a dead process is reported within one tick.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "reporter",
+    "seat",
+    "ticket",
+    "pane",
+    "finding",
+    "code",
+    "acts",
+    "key",
+    "seen",
+    "evidence",
+    "first_seen",
+    "last_seen"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "reporter": {
+      "const": "compliance-officer",
+      "description": "the seat that wrote the report"
+    },
+    "seat": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+      "description": "the watched agent the finding is about, the architect and the orchestrator included; for a process finding the process slug (belt, flow, lease, bearings)"
+    },
+    "ticket": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$",
+      "description": "the ticket that seat holds, null for a seat that holds none"
+    },
+    "pane": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[A-Za-z0-9]+:[A-Za-z0-9]+$",
+      "description": "the herdr pane id of the watched agent; null for a process finding that has no pane"
+    },
+    "finding": {
+      "enum": [
+        "CO-WAITING",
+        "CO-REFUSED",
+        "CO-ERROR-STOPPED",
+        "CO-IDLE-OWES",
+        "CO-LOOPING",
+        "CO-HUNG",
+        "CO-PROC-DEAD",
+        "CO-PROC-DUPLICATE",
+        "CO-LAW-BACKGROUND",
+        "CO-LAW-HAND-EDIT",
+        "CO-LAW-OWNER-PROSE",
+        "CO-LAW-ARCHITECT",
+        "CO-LAW-ORCHESTRATOR"
+      ],
+      "description": "a code from $defs.finding_codes; the list is closed, so an unknown code is invalid"
+    },
+    "code": {
+      "const": 450,
+      "description": "the event status code every report is carried with; the finding is the discriminator, not the number"
+    },
+    "acts": {
+      "enum": [
+        "orchestrator",
+        "architect",
+        "owner",
+        "maintenance-worker"
+      ],
+      "description": "who acts on the finding, copied from $defs.finding_codes; the officer never acts. Findings go to the orchestrator lane; a process finding goes to the maintenance worker's lane"
+    },
+    "key": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}\\|CO-[A-Z-]+$",
+      "description": "<seat>|<finding>, the one-report-per-seat-per-finding key"
+    },
+    "seen": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "description": "what was seen on the screen, one line"
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 240
+      },
+      "description": "lines quoted from the watched agent's screen, colons replaced by spaces"
+    },
+    "first_seen": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC, ISO 8601, Z suffix: the first patrol that saw the finding"
+    },
+    "last_seen": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC, ISO 8601, Z suffix: the patrol that wrote this report"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "finding": {
+            "enum": [
+              "CO-LAW-ARCHITECT"
+            ]
+          }
+        },
+        "required": [
+          "finding"
+        ]
+      },
+      "then": {
+        "properties": {
+          "acts": {
+            "const": "owner"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "finding": {
+            "enum": [
+              "CO-LAW-ORCHESTRATOR"
+            ]
+          }
+        },
+        "required": [
+          "finding"
+        ]
+      },
+      "then": {
+        "properties": {
+          "acts": {
+            "const": "architect"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "finding": {
+            "enum": [
+              "CO-PROC-DEAD",
+              "CO-PROC-DUPLICATE"
+            ]
+          }
+        },
+        "required": [
+          "finding"
+        ]
+      },
+      "then": {
+        "properties": {
+          "acts": {
+            "const": "maintenance-worker"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "finding": {
+            "enum": [
+              "CO-WAITING",
+              "CO-REFUSED",
+              "CO-ERROR-STOPPED",
+              "CO-IDLE-OWES",
+              "CO-LOOPING",
+              "CO-HUNG",
+              "CO-LAW-BACKGROUND",
+              "CO-LAW-HAND-EDIT",
+              "CO-LAW-OWNER-PROSE"
+            ]
+          }
+        },
+        "required": [
+          "finding"
+        ]
+      },
+      "then": {
+        "properties": {
+          "acts": {
+            "const": "orchestrator"
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "finding_codes": {
+      "description": "The closed finding-code map. Keys equal the `finding` enum above (a test asserts it). `acts` follows the chain owner, architect, orchestrator, system: a worker, tester, reviewer, merger, monitor or player is answered to by the orchestrator, the orchestrator by the architect, the architect by the owner. A law broken by the architect or the orchestrator has its own code so the finding is never lost in a worker bucket. The maintenance worker is the lane that restarts line processes; it answers to the orchestrator.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "CO-WAITING": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-REFUSED": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-ERROR-STOPPED": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-IDLE-OWES": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-LOOPING": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-HUNG": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-PROC-DEAD": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-PROC-DUPLICATE": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-LAW-BACKGROUND": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-LAW-HAND-EDIT": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-LAW-OWNER-PROSE": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-LAW-ARCHITECT": {
+          "$ref": "#/$defs/finding"
+        },
+        "CO-LAW-ORCHESTRATOR": {
+          "$ref": "#/$defs/finding"
+        }
+      },
+      "default": {
+        "CO-WAITING": {
+          "meaning": "an agent is waiting on a question, a menu or an approval prompt that nobody answers",
+          "acts": "orchestrator"
+        },
+        "CO-REFUSED": {
+          "meaning": "a tool or command was refused or denied and the agent has not moved on",
+          "acts": "orchestrator"
+        },
+        "CO-ERROR-STOPPED": {
+          "meaning": "an agent stopped on an error and is not retrying",
+          "acts": "orchestrator"
+        },
+        "CO-IDLE-OWES": {
+          "meaning": "an agent is idle while it owes a record its playbook names",
+          "acts": "orchestrator"
+        },
+        "CO-LOOPING": {
+          "meaning": "an agent repeats the same step with the same result",
+          "acts": "orchestrator"
+        },
+        "CO-HUNG": {
+          "meaning": "an agent is mid-turn with a busy footer past ten minutes and its last output has not moved",
+          "acts": "orchestrator"
+        },
+        "CO-PROC-DEAD": {
+          "meaning": "a line process of the restart runbook is not running (belt, flow, lease, bearings server or wait loop)",
+          "acts": "maintenance-worker"
+        },
+        "CO-PROC-DUPLICATE": {
+          "meaning": "a line process runs more than once at top level; exactly one is allowed",
+          "acts": "maintenance-worker"
+        },
+        "CO-LAW-BACKGROUND": {
+          "meaning": "an agent ran a background job, or a Monitor tool under an agent, against AGENTS.md law herdr-first",
+          "acts": "orchestrator"
+        },
+        "CO-LAW-HAND-EDIT": {
+          "meaning": "an agent edited a file outside its allowed paths, or did by hand what the system should do",
+          "acts": "orchestrator"
+        },
+        "CO-LAW-OWNER-PROSE": {
+          "meaning": "an agent wrote prose or a question to the owner outside a card on the page",
+          "acts": "orchestrator"
+        },
+        "CO-LAW-ARCHITECT": {
+          "meaning": "the architect broke an AGENTS.md law or an owner order, seen on its screen",
+          "acts": "owner"
+        },
+        "CO-LAW-ORCHESTRATOR": {
+          "meaning": "the orchestrator broke an AGENTS.md law or an owner order, seen on its screen",
+          "acts": "architect"
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "meaning",
+        "acts"
+      ],
+      "properties": {
+        "meaning": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "acts": {
+          "enum": [
+            "orchestrator",
+            "architect",
+            "owner",
+            "maintenance-worker"
+          ]
+        }
+      }
+    }
+  }
+}

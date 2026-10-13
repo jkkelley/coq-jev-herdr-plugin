@@ -277,9 +277,11 @@
         "architect_agent",
         "turn_poll_seconds",
         "record_poll_seconds",
-        "record_kinds"
+        "record_kinds",
+        "compliance_agent",
+        "patrol_seconds"
       ],
-      "description": "turnwatch.sh and recwatch.sh (WO-20261012-b800): the agent they prompt and how often they look",
+      "description": "turnwatch.sh, recwatch.sh and patrolwatch.sh (WO-20261012-b800, WO-20261013-5b33): the agent each prompts and how often it looks",
       "properties": {
         "architect_agent": {
           "type": "string",
@@ -301,6 +303,16 @@
             "type": "string"
           },
           "description": "record kinds recwatch.sh prompts for"
+        },
+        "compliance_agent": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_-]{0,31}$",
+          "description": "herdr agent name that receives the PATROL tick of patrolwatch.sh (WO-20261013-5b33)"
+        },
+        "patrol_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "the system's patrol tick; the owner's order is every minute, so 60"
         }
       }
     },

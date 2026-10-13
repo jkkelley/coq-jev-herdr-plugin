@@ -1,0 +1,17 @@
+{
+  "schema_version": "1.0.0",
+  "reporter": "compliance-officer",
+  "seat": "tester-wo-20261013-aaaa",
+  "ticket": "WO-20261013-aaaa",
+  "pane": "wD3:pQ9",
+  "finding": "CO-REFUSED",
+  "code": 450,
+  "acts": "orchestrator",
+  "key": "tester-wo-20261013-aaaa|CO-REFUSED",
+  "seen": "tester shows a denied git status and has run no plan case since",
+  "evidence": [
+    "Permission to use Bash with command git status has been denied"
+  ],
+  "first_seen": "2026-10-13T00:20:00Z",
+  "last_seen": "2026-10-13T01:00:00Z"
+}
