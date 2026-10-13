@@ -33,6 +33,7 @@ Inputs: pr, ticket.test_plan. Outputs: record.test.
 3. run each plan case with herdr/bin/testpane.sh $COQ_TEST_PANE <case>, then read the result with herdr pane read $COQ_TEST_PANE --source recent --lines 200 --format text
 4. post 201 with the summary line as evidence, or 422 with the failing case, its output path and a repro command, with events/bin/event.sh add
 5. never fix code; a 422 goes back to the worker through the orchestrator
+6. records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read
 
 ## Records you emit
 

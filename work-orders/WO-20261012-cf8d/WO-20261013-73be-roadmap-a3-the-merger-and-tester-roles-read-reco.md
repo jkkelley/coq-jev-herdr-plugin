@@ -69,8 +69,10 @@ Seats searched their own slot's events/ and missed records (the merger on 2026-1
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* roles/merger.json and roles/tester.json each carry the state-root step, and the playbook check reports no drift
-- [ ] `AC-H2` *(human)* neither role nor playbook names a repository or slot events/ path for reading records; make lint passes
+- [x] `AC-H1` *(human)* roles/merger.json and roles/tester.json each carry the state-root step, and the playbook check reports no drift
+  - observed `2026-10-13` roles/merger.json and roles/tester.json each carry the state-root step as their last must entry; roles/bin/render-playbook.sh roles playbooks --check exits 0 (no drift), run in test pane
+- [x] `AC-H2` *(human)* neither role nor playbook names a repository or slot events/ path for reading records; make lint passes
+  - observed `2026-10-13` grep of the four files finds only events/bin/event.sh (the writer) and the new step's 'never read' clause; no records read path; make lint ok (LINT_RC=0), roles tests 60 passed 0 failed
 
 ## Test plan
 
@@ -89,6 +91,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: the ticket's test plan names make -C roles test, which has no Makefile; ran make lint, roles/tests/compliance-officer.test.sh and render-playbook.sh --check in the test pane instead.
 
 ## Outcome
 
