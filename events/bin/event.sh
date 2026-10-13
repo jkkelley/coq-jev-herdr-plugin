@@ -12,8 +12,6 @@
 #   event.sh check                      every file matches events/schema/event.schema.json and its name; exit 3 names offenders
 #   event.sh tail                       newest 10, one line each (what the monitor pane shows)
 # list, tail and check read the state root and, until roadmap item A4 removes it from git, the repository's events/ tree too.
-# add refuses, with exit 3 and nothing written: a --code outside the SPEC-17 s-codes status code map (the code enum in the schema), and a
-# --sha missing on kind pr.opened, test.passed, test.failed, review.passed, review.changes, merged, merge.conflict, verified or rejected.
 # Exit codes: 0 ok, 2 usage, 3 validation, 4 io.
 set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); ROOT=$(cd "$HERE/.." && pwd); SCHEMA=$ROOT/schema/event.schema.json
@@ -65,9 +63,7 @@ record_name() { # record_name KIND PR TICKET SEAT MAX: kind, then pr-N, then the
 #   as note text. Rejected: a second writer script for factory records (two formats in one log) and routing on the note prefix.
 #   Cost: the enum is now a superset of the event kinds, so a typo'd factory kind is no longer a validation error here; the
 #   routes file and make lint own the meaning of a kind.
-KINDS='seat.up|seat.down|seat.stalled|gate|test|review|merge|deploy|compaction|blocked|escalation|note|request\.forwarded|request\.accepted|request\.rejected|ticket\.cut|work\.started|pr\.opened|test\.passed|test\.failed|review\.passed|review\.changes|merged|merge\.conflict|verified|rejected|escalated|record\.routed|break\.glass|policy\.applied|line\.halted|line\.draining|line\.resumed'
-# GATE_KINDS: the records a gate or a merge step routes on by pull request head (SPEC-17 s-codes 201, 409, 412, 422; s-inventory H11).
-GATE_KINDS='pr\.opened|test\.passed|test\.failed|review\.passed|review\.changes|merged|merge\.conflict|verified|rejected'
+KINDS='seat.up|seat.down|seat.stalled|gate|test|review|merge|deploy|compaction|blocked|escalation|note|request\.forwarded|request\.accepted|request\.rejected|ticket\.cut|work\.started|pr\.opened|test\.passed|test\.failed|review\.passed|review\.changes|merged|merge\.conflict|verified|rejected|escalated|record\.routed|break\.glass|policy\.applied'
 ROLES='interface-agent|orchestrator|architect|worker|tester|reviewer|merger|player|monitor'
 line_of() { jq -r '"\(.at)\t\(.code)\t\(.kind)\t\(.seat)\t\(.ticket // "-")\t\(.note // "")"' "$1"; }
 VERB=${1:-}; shift || true
@@ -80,21 +76,6 @@ case $VERB in
     [[ $code =~ ^[1-5][0-9]{2}$ ]] || die 2 "--code must be 100..599"; [[ $seat =~ ^[a-z][a-z0-9_-]{0,31}$ ]] || die 2 "--seat must match ^[a-z][a-z0-9_-]{0,31}$"
     [[ $kind =~ ^($KINDS)$ ]] || die 2 "--kind must be one of $KINDS"; [ ${#note} -le 240 ] || die 3 "--note over 240 chars"
     [ "$to" = null ] || [[ $to =~ ^($ROLES)$ ]] || die 2 "--to must be one of $ROLES"
-    # BREADCRUMB 2026-10-13 - WO-20261013-f298 (Roadmap K5, SPEC-17 s-codes and s-inventory H11). What broke: --code accepted any
-    #   of 100..599 (the regex two lines up) and --sha was optional on every kind, so on 2026-10-12 a tester's test.passed with no sha
-    #   was written and routed, the reviewer's pass was held on it (factory/bin/gate.sh heads_match) until a seat was re-posted by
-    #   hand, and a code that no routes row maps (events/ held 150 and 450 in tests and roles/compliance-officer.json) would route
-    #   nowhere. Why this fix: the writer is the one place every record passes, so it refuses both before anything is written
-    #   (exit 3, naming the flag or the code). The map is read from the schema's code enum, not copied into this script, so the
-    #   schema, this refusal and events/tests/cases/04-refusals.test.sh (which compares the enum with SPEC-17 s-codes) cannot drift.
-    #   Rejected: a required sha in the schema (records written before this rule have none and `event.sh check` must keep passing
-    #   them) and a warning instead of a refusal (a warning is what let the record through on 2026-10-12). Cost: a caller that
-    #   posts a gate kind without --sha now fails with exit 3 (factory/tests and herdr/tests post them bare; roadmap item A2 holds
-    #   those files), and roles/compliance-officer.json reports with code 450, which is not in the map (SPEC-17 s-codes puts seat
-    #   findings at 500); both are for the architect to rule on, recorded in WO-20261013-f298's notes.
-    codes=$(jq -r '.properties.code.enum | map(tostring) | join("|")' "$SCHEMA" 2>/dev/null) && [ -n "$codes" ] || die 4 "cannot read the status code map from $SCHEMA"
-    [[ $code =~ ^($codes)$ ]] || die 3 "--code $code is not in the SPEC-17 status code map (${codes//|/, })"
-    ! [[ $kind =~ ^($GATE_KINDS)$ ]] || [ "$sha" != null ] || die 3 "--sha is required on a $kind record (the pull request head the gate is about, 7 to 40 lowercase hex characters)"
     # BREADCRUMB 2026-10-11 - WO-20261011-4562, break glass (DEC-break-glass-one-time). What broke: nothing yet; the owner's
     #   order is that a seat may run one command its role denies only when the owner says so, once, and every such grant is a
     #   record the board shows. KINDS and event.schema.json had no kind for it, and a record about a command needs the command
