@@ -22,7 +22,8 @@
   "surfaces": [],
   "depends_on": [],
   "blocks": [
-    "WO-20261013-ab25"
+    "WO-20261013-ab25",
+    "WO-20261013-ca2a"
   ],
   "files": [
     "ci/image/Containerfile",
