@@ -91,6 +91,7 @@ _none_
 _Newest first. Appended only by `work-order note` - never by hand._
 
 - `2026-10-13` Retro: the twelve SPEC-16 files cite each other in a cycle (overview cites A to K, A cites the overview), so relaxing ownership alone was not enough; no file could be first to pass. spec_set (file and id pairs) in check.json now makes a citation of a not-yet-landed spec pending rather than failed, and spec ids resolve from every spec on disk, not only the FILE arguments. The remaining per-file failure on main is the graph nodes each file's own ticket lands.
+- `2026-10-13` Note (ruling zi4u6): this ticket adds specs/scheduler/bin/check.sh, so its plan runs it from this ticket's own branch; it does not exist on main before this merges.
 
 ## Outcome
 

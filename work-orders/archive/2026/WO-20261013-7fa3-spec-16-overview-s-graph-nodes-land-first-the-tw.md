@@ -4,15 +4,15 @@
   "slug": "spec-16-overview-s-graph-nodes-land-first-the-tw",
   "title": "SPEC-16 overview's graph nodes land first: the two scheduler decisions, the executor interface and the operate runbook, so the overview stays within five files",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p1",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T03:24:40+00:00",
   "parent": "WO-20261012-5826",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/spec-16-overview-s-graph-nodes-land-first-the-tw",
+  "pr": 100,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner 2026-10-13 03:00Z (record 57h60): pull request 37 lands one pull request per SPEC-16 file; lavish prohibited for Claude seats",
@@ -68,8 +68,10 @@ Owner 2026-10-13 03:00Z (record 57h60): pull request 37 (WO-20261012-5826, the S
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* graph.sh check passes with the four nodes and their edges resolve on main
-- [ ] `AC-H2` *(human)* make lint passes
+- [x] `AC-H1` *(human)* graph.sh check passes with the four nodes and their edges resolve on main
+  - observed `2026-10-13` graph.sh check printed 'graph ok: 106 nodes' with the four nodes; their edges (REQ-status-change-wakeups, DEC-scheduler-go-podman, DEC-no-process-under-agent, DEC-scheduler-two-processes, RUN-seat-up) all resolve on main
+- [x] `AC-H2` *(human)* make lint passes
+  - observed `2026-10-13` make lint in test pane wD3:p0B ended 'lint: all ok', exit=0
 
 ## Test plan
 
@@ -88,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: the four nodes came from 012fa41 with the C15 revision (no NATS edge: DEC-scheduler-go-podman and DEC-scheduler-two-processes drop depends_on DEC-nats-jetstream-grpc, IFC-scheduler-executor is now decided_by DEC-scheduler-two-processes). The test plan's specs/scheduler/bin/check.sh does not exist on main yet (it lands with the SPEC-16 overview ticket), so only graph check and make lint ran. scheduler/RUNBOOK.md and the proto were already on main.
 
 ## Outcome
 

@@ -1,0 +1,22 @@
+{
+  "id": "RUN-scheduler-operate",
+  "type": "Runbook",
+  "title": "scheduler/RUNBOOK.md: build and test in Podman, bring the executor pane and the container pane up, read status, switch the mode between off, shadow and active, roll back, and read the parity report",
+  "status": "proposed",
+  "text": "The page an operator follows to run the scheduler (SPEC-16.H and SPEC-16.J). The runbook is scheduler/RUNBOOK.md (landed with WO-20261012-df2b); this node is the pointer that Components defined_in it resolve to.",
+  "sources": [
+    {
+      "kind": "spec",
+      "id": "SPEC-16.H",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "depends_on",
+      "to": "RUN-seat-up"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-13T16:35Z"
+}

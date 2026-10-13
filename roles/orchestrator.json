@@ -9,7 +9,7 @@
   },
   "effort": "high",
   "context_threshold_percent": 30,
-  "max_seats": 1,
+  "max_seats": 2,
   "pane_layout": "seat-1x2",
   "inputs": [
     "request",
@@ -82,5 +82,8 @@
     "naming a ticket without its full title in any owner-facing line",
     "editing a ticket, a spec or code",
     "talking to the owner"
+  ],
+  "breadcrumbs": [
+    "2026-10-13 owner message m-20261013161912217-3d6g0 (\"15 seats available, why idle\", via the architect, P0). What broke: a single orchestrator (roles/orchestrator.json max_seats 1) was the one point every request and factory record routed through, so a busy or down seat stalled routing for the whole line. Why it mattered: free capacity went unused while work waited. Why this fix: max_seats 1 to 2, nothing else changes. Rejected: leaving the cap and adding seats of another role (the idle capacity is in this role's lane). Cost: 2 concurrent seats of this role share the same test pane and Podman budget; the playbook text is rendered from this file by roles/bin/render-playbook.sh."
   ]
 }

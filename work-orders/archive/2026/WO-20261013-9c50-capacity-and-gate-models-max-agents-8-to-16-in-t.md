@@ -4,7 +4,7 @@
   "slug": "capacity-and-gate-models-max-agents-8-to-16-in-t",
   "title": "Capacity and gate models: max_agents 8 to 16 in the herdr config, the tester and merger roles on claude-sonnet-5-5 instead of claude-haiku-5-5 with their playbooks re-rendered, and a test that pins both",
   "type": "chore",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261012-cf8d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner card C27 (record gxmaw), all four levers; lavish prohibited for Claude seats",
@@ -29,7 +29,8 @@
     "playbooks/tester.md",
     "playbooks/merger.md",
     "herdr/tests/cases/*capacity*"
-  ]
+  ],
+  "superseded_by": "WO-20261013-a1c6"
 }
 ---
 
@@ -95,4 +96,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: split under the size rule into three parts: max_agents, gate models, reviewer seats (architect ruling: reviewer max_seats 2 to 4)
+- superseded by: `WO-20261013-a1c6`
+
+No branch, no PR and no merge commit exist for this work order.
+
