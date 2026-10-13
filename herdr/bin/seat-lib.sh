@@ -20,6 +20,9 @@
 #   sl_pane_session PANE        the Claude session id running in that pane right now, empty when none (WO-20261012-ee9c)
 #   sl_guard_targets            "<pane>\t<name>" for every pane the guard watchers govern: open seat records, then live exemptions
 #   sl_pane_busy                reads one `herdr pane process-info` reply on stdin; exit 0 when the pane's foreground is a job, not a bare shell
+#   pid_tree PID / pid_live PID  PID and everything under it, one per line / true while PID exists and is not a zombie (moved here from seat.sh)
+#   sl_pane_snapshot PANE       "pid:start" for every process below the pane's shell, taken before the agent is asked to leave
+#   sl_end_seat_procs NAME PANE SLOT [SNAPSHOT]   end the pane's tree, the snapshot and every claude of the seat, check none is left; 0 clean, 1 a pid survived three tries (500)
 #
 # BREADCRUMB - this library sets no shell options (bearings-v2 seat-lib.sh, same reasoning). What broke there: a
 #   sourced `set -euo pipefail` handed -e to watcher ticks built from checks that fail most of the time, so the first
@@ -183,4 +186,98 @@ sl_report_500() {
   printf '%s' "$2" > "$f"
   sl_record note 500 "${SL_REPORT_SEAT:-bringup}" --note "$(cut -c1-230 <<<"$2")"
   sl_h notification show "500 $2" >/dev/null 2>&1 || true
+}
+
+# pid_tree PID: PID and every process under it, one pid per line (empty when ps is unavailable).
+pid_tree() {
+  ps -e -o pid= -o ppid= 2>/dev/null | awk -v r="$1" 'BEGIN { keep[r] = 1 } { p[NR] = $1; q[NR] = $2 }
+    END { do { ch = 0; for (i = 1; i <= NR; i++) if (!(p[i] in keep) && (q[i] in keep)) { keep[p[i]] = 1; ch = 1 } } while (ch); for (k in keep) print k }'
+}
+# pid_live PID: true while PID exists and is not a zombie.
+pid_live() { local st; st="$(ps -o stat= -p "$1" 2>/dev/null)" || return 1; case "$st" in "" | Z*) return 1 ;; esac; }
+# pid_start PID: the process start time in clock ticks (field 22 of /proc/PID/stat), empty when it is gone. It tells a pid taken in a
+# snapshot from a stranger that was given the same number afterwards.
+pid_start() { local st; st="$(cat "/proc/$1/stat" 2>/dev/null)" || return 0; st="${st##*) }"; set -- $st; printf '%s' "${20:-}"; }
+# sl_ancestors: this shell and every process above it. Never ended, whoever the caller is (a worker downing its own seat included).
+sl_ancestors() { local p=$$ out=""; while [ -n "$p" ] && [ "$p" -gt 1 ]; do out="$out $p"; p="$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')"; done; printf '%s' "$out"; }
+
+# BREADCRUMB 2026-10-13 - WO-20261013-50a4, cause g. What broke: records of 2026-10-13 (the PR 87 tester and
+#   tester-wo-20261013-f298) show a seat that seat.sh --down or /exit had ended with its claude still running as a background
+#   session, outside the pane's process tree, holding treehouse slots 6 and 9 for minutes until they were killed by hand;
+#   retire.sh stopped at "herdr no longer answers for the agent" (line 20 before this change, `gone && exit 0`) and looked at no
+#   process, and the MCP servers claude started (npm exec ..., kubernetes-mcp-server) are reparented to init when it dies, so they
+#   outlive the pane too. Why this fix: ending the agent is now checked against the host, not against herdr's word. Three sets are
+#   ended and then looked for again: (1) the tree below the agent pane's shell, (2) the same tree as the snapshot taken BEFORE
+#   /exit (children of a claude that has gone are no longer under the shell), each pid kept only while its start time still
+#   matches, and (3) every claude process that belongs to the seat, either because COQ_SEAT in its environment is the seat's name
+#   (exact, and works for a seat on a plain --worktree) or because its cwd is in the seat's own leased slot (SLOT is passed only
+#   when this seat owns the lease, so a shared checkout is never swept). SIGTERM, a wait of down_kill_wait_seconds, SIGKILL, up
+#   to down_kill_tries rounds; a pid that survives them is a 500 note naming it and a return of 1, so --down leaves the seat
+#   un-ended and a rerun retries. Rejected: `treehouse return --force` as the cleaner (it runs last, only for a leased slot, and
+#   it ends whatever else sits there, which 36d7 shows is dangerous), killing every process whose cwd is the slot (case 10: a
+#   foreign shell there must stay and stop the return), and killing the pane's shell itself (herdr closes the pane when its
+#   shell dies, and retire.sh also runs on agents whose pane stays). Cost: a claude that a person started by hand in a seat's
+#   leased slot is ended with the seat; the shell of the pane survives until the tab close. Record: WO-20261013-50a4.
+# sl_pane_snapshot PANE: "pid:start" lines for every process below PANE's shell, empty when the pane is gone.
+sl_pane_snapshot() {
+  local sp pid
+  [ -n "${1:-}" ] || return 0
+  sp="$(sl_h pane process-info --pane "$1" 2>/dev/null | jq -r '.result.process_info.shell_pid // empty' 2>/dev/null)" || sp=""
+  [ -n "$sp" ] || return 0
+  # if-forms, not `a || b`: the callers are scripts under `set -e` and a loop that ends on a false test would fail them.
+  for pid in $(pid_tree "$sp"); do if [ "$pid" != "$sp" ]; then printf '%s:%s\n' "$pid" "$(pid_start "$pid")"; fi; done
+  return 0
+}
+# sl_is_claude PID: true for a claude process: named claude, or a script/interpreter run as claude (the suite's stub is `bash .../claude`).
+sl_is_claude() {
+  local argv=() a0 a1
+  mapfile -d '' -t argv < "/proc/$1/cmdline" 2>/dev/null || return 1
+  [ "${#argv[@]}" -gt 0 ] || return 1
+  a0="${argv[0]##*/}"; a1="${argv[1]:-}"; a1="${a1##*/}"
+  case "$a0" in claude) return 0 ;; bash | sh | node) [ "$a1" = claude ] ;; *) return 1 ;; esac
+}
+# sl_seat_procs NAME PANE SLOT SNAPSHOT: the live pids to end, one per line (see the BREADCRUMB above).
+sl_seat_procs() {
+  local name="$1" pane="$2" slot="$3" snap="${4:-}" keep line pid d c sp
+  keep=" $(sl_ancestors) "
+  {
+    sl_pane_snapshot "$pane" | cut -d: -f1
+    while IFS= read -r line; do
+      pid="${line%%:*}"; [ -n "$pid" ] || continue
+      if [ "$(pid_start "$pid")" = "${line#*:}" ]; then printf '%s\n' "$pid"; fi
+    done <<<"$snap"
+    for d in /proc/[0-9]*; do
+      pid="${d#/proc/}"; sl_is_claude "$pid" || continue
+      if tr '\0' '\n' < "$d/environ" 2>/dev/null | grep -qxF "COQ_SEAT=$name"; then printf '%s\n' "$pid"; continue; fi
+      [ -n "$slot" ] || continue
+      c="$(readlink "$d/cwd" 2>/dev/null)" || continue
+      case "$c" in "$slot" | "$slot"/*) printf '%s\n' "$pid" ;; esac
+    done
+  } | sort -un | while IFS= read -r pid; do
+    case "$keep" in *" $pid "*) continue ;; esac
+    if pid_live "$pid"; then printf '%s\n' "$pid"; fi
+  done
+  return 0
+}
+# sl_end_seat_procs NAME PANE SLOT [SNAPSHOT]: 0 when nothing of the seat is left, 1 after down_kill_tries rounds with a survivor.
+sl_end_seat_procs() {
+  local name="$1" pane="$2" slot="$3" snap="${4:-}" tries wait t pids left i desc
+  tries="$(sl_cfg .down_kill_tries)"; wait="$(sl_cfg .down_kill_wait_seconds)"
+  for ((t = 1; t <= tries; t++)); do
+    pids="$(sl_seat_procs "$name" "$pane" "$slot" "$snap" | tr '\n' ' ')"; [ -n "${pids// /}" ] || return 0
+    sl_log "seat $name: ending process(es) ${pids% } (round $t of $tries)"
+    # shellcheck disable=SC2086  # a list of pids
+    kill -TERM $pids 2>/dev/null || true
+    for ((i = 0; i < wait * 5; i++)); do
+      left="$(sl_seat_procs "$name" "$pane" "$slot" "$snap" | tr '\n' ' ')"; [ -n "${left// /}" ] || return 0
+      sleep 0.2
+    done
+    # shellcheck disable=SC2086
+    kill -KILL $left 2>/dev/null || true
+    sleep 0.2
+  done
+  left="$(sl_seat_procs "$name" "$pane" "$slot" "$snap" | tr '\n' ' ')"; [ -n "${left// /}" ] || return 0
+  desc=""; for i in $left; do desc="$desc $i($(tr '\0' ' ' < "/proc/$i/cmdline" 2>/dev/null | cut -c1-60))"; done
+  SL_REPORT_SEAT="$name" sl_report_500 "down-procs-$name" "seat $name: process${desc} survived $tries rounds of SIGTERM and SIGKILL; the seat is not down, rerun --down once it is gone"
+  return 1
 }
