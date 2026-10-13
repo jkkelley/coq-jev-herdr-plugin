@@ -7,6 +7,12 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../lib/assert.sh"; . "$HERE/../lib/world.sh"
 world_up gate '.bringup_gate=true | .max_agents=3' || exit 1
 T=WO-20261010-8777
+# BREADCRUMB 2026-10-13 - WO-20261013-0904 (test speed, polls part 4; design d-shape 5). What broke: a fixed `sleep 1` before "the task
+#   brief is the first prompt", a guess at when the monitor stub had received and echoed its first prompt (too short on a slow container,
+#   idle on a fast one). Why this fix: wait_until on what the assertion reads, the task brief on the agent's recent output (agent_shows),
+#   for at most 15 s; the assertion is unchanged, so a brief that never arrives still fails it after wait_until names the pattern.
+#   Rejected: a longer sleep (cost on every run) and dropping the wait (an early read is an empty screen). Cost: none.
+agent_shows() { h agent read "$1" --source recent-unwrapped --lines 200 | grep -qE "$2"; }
 # BREADCRUMB 2026-10-11 - WO-20261011-f896, found running the suite. What broke: this case's "role cap" section expects the third
 #   reviewer to be refused by max_seats 2 ("2 reviewer seats already live"), but WO-20261010-329d (26f6daa) raised
 #   roles/reviewer.json max_seats from 2 to 4 for the 16-agent budget, so with max_agents 3 here the third reviewer was refused by
@@ -27,7 +33,7 @@ echo "-- door 2: the monitor seat comes up by task"
 out="$("$SEAT" --role monitor --task "watch the factory" --worktree "$REPO")"; rc=$?
 assert_eq "monitor door exits 0" "$rc" 0
 assert_eq "a label without a token is the name" "$(jq -r .name <<<"$out")" monitor
-sleep 1
+wait_until 15 agent_shows monitor "You are the monitor seat named monitor.*Your task: watch the factory"
 assert_match "the task brief is the first prompt" "$(h agent read monitor --source recent-unwrapped --lines 200)" "You are the monitor seat named monitor.*Your task: watch the factory"
 
 echo "-- gate open: the worker now comes up"

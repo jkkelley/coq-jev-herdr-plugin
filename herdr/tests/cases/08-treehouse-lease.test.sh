@@ -17,6 +17,12 @@ B=WO-20261010-c274; NB=worker-wo-20261010-c274
 C=WO-20261010-8fa8; NC=worker-wo-20261010-8fa8
 D=WO-20261010-539f; ND=worker-wo-20261010-539f
 E=WO-20261010-d354
+# BREADCRUMB 2026-10-13 - WO-20261013-0904 (test speed, polls part 4; design d-shape 5). What broke: a fixed `sleep 1` before "the brief
+#   says to work only in the slot", a guess at when the stub agent had received and echoed its first prompt (too short on a slow
+#   container, idle on a fast one). Why this fix: wait_until on what the assertion reads, the brief on the agent's recent output
+#   (agent_shows), for at most 15 s; the assertion is unchanged, so a brief that never arrives still fails it after wait_until names the
+#   pattern. Rejected: a longer sleep (cost on every run) and dropping the wait (an early read is an empty screen). Cost: none.
+agent_shows() { h agent read "$1" --source recent-unwrapped --lines 200 | grep -qE "$2"; }
 pool() { treehouse status --json; }
 held() { pool | jq --arg h "$1" '[.[] | select(.lease_holder == $h)] | length'; }
 calls() { grep -c "^$1 " "$TREEHOUSE_STUB_LOG"; }
@@ -54,7 +60,7 @@ assert_eq "seat.json lease names the holder, the lease id and that this seat own
 assert_eq "the one-line result carries the lease" "$(jq -r .lease.owned <<<"$out")" true
 agent="$(jq -r .agent <<<"$out")"
 assert_eq "COQ_WORKTREE in the agent pane is the slot" "$(h pane read "$agent" --source recent-unwrapped --lines 200 | grep -cF "COQ_WORKTREE=$slot")" 1
-sleep 1
+wait_until 15 agent_shows "$NA" "Work only in $slot"
 assert_match "the brief says to work only in the slot" "$(h agent read "$NA" --source recent-unwrapped --lines 200)" "Work only in $slot"
 assert_eq "the rendered settings allow edits under the slot" "$(jq -r --arg s "$slot" '[.permissions.allow[] | select(startswith("Edit(") and contains($s))] | length' "$STATE/seats/$NA/settings.json")" 1
 "$SEAT" --check "$NA" >/dev/null; assert_eq "--check exits 0 with the lease held" "$?" 0
