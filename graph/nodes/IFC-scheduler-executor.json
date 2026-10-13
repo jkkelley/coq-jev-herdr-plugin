@@ -1,0 +1,22 @@
+{
+  "id": "IFC-scheduler-executor",
+  "type": "Interface",
+  "title": "scheduler.v1 gRPC over unix sockets: Executor.Run(verb, args, idempotency key, timeout) and Executor.Health; Scheduler.Health, Status, Reload and Drain",
+  "status": "proposed",
+  "text": "The control plane between the scheduler container and the host executor, defined in SPEC-16.H. Revised 2026-10-13 (card C15): it was decided_by DEC-nats-jetstream-grpc, whose bus is deferred; the gRPC half of that decision is the part that landed (scheduler/api/scheduler/v1/scheduler.proto), so the edge now points at DEC-scheduler-two-processes, which owns the split and the socket.",
+  "sources": [
+    {
+      "kind": "spec",
+      "id": "SPEC-16.H",
+      "at": "2026-10-12T19:30Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-scheduler-two-processes"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-13T16:35Z"
+}

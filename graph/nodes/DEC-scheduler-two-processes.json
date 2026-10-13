@@ -1,0 +1,36 @@
+{
+  "id": "DEC-scheduler-two-processes",
+  "type": "Decision",
+  "title": "The scheduler decides inside a container that holds no host tool and acts only through the executor, a dumb host process behind gRPC on a unix socket; the socket is the control plane and stays",
+  "status": "proposed",
+  "text": "Rejected: a container with the home directory mounted (every host tool bound in); the scheduler typing into a shell pane (prompt parsing, no exit code); the scheduler on the host (not Podman). Cost: two processes, two panes, one socket. Revised 2026-10-13 (card C15): the title used to say the bus later replaces the socket, and the node depended on DEC-nats-jetstream-grpc. With NATS deferred and the bus a set of files in the state root, the unix socket is the control plane only, never the bus, so it stays whatever the bus becomes, and the depends_on edge to the NATS decision is removed.",
+  "sources": [
+    {
+      "kind": "spec",
+      "id": "SPEC-16",
+      "at": "2026-10-12T19:30Z"
+    },
+    {
+      "kind": "owner",
+      "id": "bearings",
+      "at": "2026-10-12T18:34Z"
+    },
+    {
+      "kind": "owner",
+      "id": "card-C15",
+      "at": "2026-10-12"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-scheduler-go-podman"
+    },
+    {
+      "kind": "implements",
+      "to": "DEC-no-process-under-agent"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-13T16:35Z"
+}
