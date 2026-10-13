@@ -1,0 +1,52 @@
+{
+  "id": "CMP-scheduler",
+  "type": "Component",
+  "title": "scheduler/: a Go service in a Podman container that reads the records of the state root, applies the routes and policies tables, runs every action as a retried job through the host executor, confirms wakes, calls stalls on two signals",
+  "status": "proposed",
+  "text": "One module, one binary: run, exec, status, parity, check. It mounts the repository read-only and the state root read-write, acts only through the executor socket, and runs every domain loop under one supervised unit. Revised 2026-10-13 (SPEC-16 1.1.0): the title said it reads the record log and the text mounted its own state directory; runtime data left git for the state root (cards C10, C11), so it reads the records tree of the state root and writes its ledger, jobs and latches there. SPEC-16 is the engine and the end state (owner 2026-10-13 02:50Z), so every domain loop runs inside this one binary under one systemd user unit and no reconciler gets its own unit, process or pane. Rejected: one unit per reconciler (every unit is one more thing to supervise and one more way for the line to half-run). Cost: a crash in one domain loop restarts them all, which the binary's recovery on start (SPEC-16.F) makes safe.",
+  "sources": [
+    {
+      "kind": "spec",
+      "id": "SPEC-16",
+      "at": "2026-10-13T18:30Z"
+    },
+    {
+      "kind": "owner",
+      "id": "card-C10",
+      "at": "2026-10-12"
+    },
+    {
+      "kind": "owner",
+      "id": "spec-16-engine-and-end-state",
+      "at": "2026-10-13T02:50Z"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-scheduler-go-podman"
+    },
+    {
+      "kind": "decided_by",
+      "to": "DEC-scheduler-two-processes"
+    },
+    {
+      "kind": "implements",
+      "to": "SCH-routes"
+    },
+    {
+      "kind": "implements",
+      "to": "REQ-status-change-wakeups"
+    },
+    {
+      "kind": "depends_on",
+      "to": "CMP-scheduler-executor"
+    },
+    {
+      "kind": "defined_in",
+      "to": "RUN-scheduler-operate"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-13T18:30Z"
+}
