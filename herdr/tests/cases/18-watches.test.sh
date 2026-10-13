@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Catches (WO-20261012-b800, backlog 60l24): the architect's two wake-ups living outside the repo where nothing restarts them
 # (turnwatch and recwatch were scripts in ~/.cache run by hand), bringup not building the watches tab, a seat's finished turn
-# or a gate record in the checkout or in a treehouse slot not reaching the architect through herdr, a record kind that is not
-# a gate kind or a record from before the watcher started waking it, and a record announced twice because a slot's copy
-# reached the checkout.
+# or a gate record in the state root not reaching the architect through herdr, a record kind that is not
+# a gate kind or a record from before the watcher started waking it.
+# WO-20261013-f9f2 (Roadmap A3): the gate record the watch announces is read from the records tree of the state root, once; a file
+# under the checkout's or a slot's events/ is not read at all.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$HERE/../lib/assert.sh"; . "$HERE/../lib/world.sh"
@@ -38,27 +39,32 @@ echo "-- a seat that finishes a turn is announced to the architect, once its foo
 h agent prompt "$N" "ran for 5s, done 12:00Z" >/dev/null
 wait_heard "TURN $N $WP done 12:00Z"; assert_eq "the architect heard TURN with the seat, pane and time" "$?" 0
 
-echo "-- a gate record in the checkout is announced; another kind, and a record older than the watcher, are not"
+echo "-- a gate record in the state root is announced once; another kind, and a record older than the watcher, are not"
 now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"; ym="$(date -u +%Y/%m)"
-mkrec() { # mkrec <dir> <id> <kind> <at>
-  mkdir -p "$1/events/$ym"
-  jq -n --arg id "$2" --arg k "$3" --arg at "$4" '{schema_version:"1.0.0",id:$id,at:$at,code:100,seat:"fixture-seat",kind:$k,ticket:null,pane:null,note:"",evidence:[],observations:[]}' > "$1/events/$ym/$2.json"
+mkrec() { # mkrec <records dir> <id> <kind> <at>: the file name is the id, as the old tree named it; the watch reads the id field
+  mkdir -p "$1/$ym"
+  jq -n --arg id "$2" --arg k "$3" --arg at "$4" '{schema_version:"1.0.0",id:$id,at:$at,code:100,seat:"fixture-seat",kind:$k,ticket:null,pane:null,note:"",evidence:[],observations:[]}' > "$1/$ym/$2.json"
 }
-mkrec "$REPO" 20991231T000001Z-100-aaaaa pr.opened "$now"
-mkrec "$REPO" 20991231T000002Z-100-bbbbb seat.up "$now"
-mkrec "$REPO" 20991231T000003Z-100-ccccc pr.opened 2020-01-01T00:00:00Z
-wait_heard "REC checkout 20991231T000001Z-100-aaaaa fixture-seat pr.opened 100"; assert_eq "pr.opened in the checkout reached the architect" "$?" 0
+mkrec "$STATE/records" 20991231T000001Z-100-aaaaa pr.opened "$now"
+mkrec "$STATE/records" 20991231T000002Z-100-bbbbb seat.up "$now"
+mkrec "$STATE/records" 20991231T000003Z-100-ccccc pr.opened 2020-01-01T00:00:00Z
+wait_heard "REC state 20991231T000001Z-100-aaaaa fixture-seat pr.opened 100"; assert_eq "pr.opened in the state root reached the architect" "$?" 0
 sleep 4
 assert_eq "seat.up is not a gate kind, so it was not announced" "$(heard 20991231T000002Z-100-bbbbb)" 0
 assert_eq "a record from before the watcher started was not announced" "$(heard 20991231T000003Z-100-ccccc)" 0
+assert_eq "the watch pane announced the state root record exactly once" "$(h pane read "$RP" --source recent-unwrapped --lines 200 | grep -c ' REC .* 20991231T000001Z-100-aaaaa ')" 1
 
-echo "-- a record born in a treehouse slot is announced from the slot, and once, when the bus copies it to the checkout"
+echo "-- a file under the checkout's events/ and one under a slot's events/ are not read"
+mkdir -p "$REPO/events/$ym"
+jq -n --arg at "$now" '{schema_version:"1.0.0",id:"20991231T000004Z-100-ddddd",at:$at,code:100,seat:"fixture-seat",kind:"test.passed",ticket:null,pane:null,note:"",evidence:[],observations:[]}' > "$REPO/events/$ym/20991231T000004Z-100-ddddd.json"
 slot="$(treehouse get --lease --lease-holder WO-20269999-slot --no-fetch --json | jq -r .path)"
-mkrec "$slot" 20991231T000004Z-100-ddddd test.passed "$now"
-wait_heard "REC slot[0-9]* 20991231T000004Z-100-ddddd fixture-seat test.passed 100"; assert_eq "the slot's record reached the architect" "$?" 0
-cp "$slot/events/$ym/20991231T000004Z-100-ddddd.json" "$REPO/events/$ym/"
-sleep 4
-assert_eq "the watch pane announced it exactly once" "$(h pane read "$RP" --source recent-unwrapped --lines 200 | grep -c ' REC .* 20991231T000004Z-100-ddddd ')" 1
+mkdir -p "$slot/events/$ym"
+jq -n --arg at "$now" '{schema_version:"1.0.0",id:"20991231T000005Z-100-eeeee",at:$at,code:100,seat:"fixture-seat",kind:"test.passed",ticket:null,pane:null,note:"",evidence:[],observations:[]}' > "$slot/events/$ym/20991231T000005Z-100-eeeee.json"
+# a state root record written after both, so that hearing it proves the watch polled again since they landed
+mkrec "$STATE/records" 20991231T000006Z-100-fffff test.passed "$now"
+wait_heard "REC state 20991231T000006Z-100-fffff fixture-seat test.passed 100"; assert_eq "a later state root record was announced" "$?" 0
+assert_eq "the checkout's events/ file was not announced" "$(heard 20991231T000004Z-100-ddddd)" 0
+assert_eq "the slot's events/ file was not announced" "$(heard 20991231T000005Z-100-eeeee)" 0
 
 echo "-- killing the watch is caught by health and repaired by bringup"
 h pane send-keys "$RP" C-c >/dev/null; h pane send-keys "$RP" C-c >/dev/null
