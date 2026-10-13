@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "suites.json",
+  "description": "The path-to-suite map read by factory/bin/suites.sh (WO-20261013-f1ff): which test commands a pull request's changed files make necessary. A path maps to every suite that exercises it, not only the suite under it.",
+  "type": "object",
+  "required": ["commands", "always", "full", "rows"],
+  "additionalProperties": false,
+  "properties": {
+    "commands": {
+      "type": "object",
+      "minProperties": 1,
+      "description": "Suite name to the one command that runs it, from the repository root. Every command must exist (pinned by factory/tests/cases/19-suites-map.test.sh).",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "always": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "description": "Suite names planned for every diff, even an empty one."
+    },
+    "full": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "The full set, in the order a plan prints commands. A plan is always printed in this order."
+    },
+    "rows": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["paths", "suites"],
+        "additionalProperties": false,
+        "properties": {
+          "paths": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 },
+            "description": "Bash globs where * also crosses /; a bare directory or a trailing / is its subtree. No leading / and no .. segment."
+          },
+          "suites": {
+            "type": "array",
+            "items": { "type": "string", "minLength": 1 },
+            "description": "Suite names this path exercises, on top of always. An empty list means the path needs only the always set."
+          }
+        }
+      },
+      "description": "A changed path plans the union of the suites of every row it matches. A path no row matches plans the full set."
+    }
+  }
+}

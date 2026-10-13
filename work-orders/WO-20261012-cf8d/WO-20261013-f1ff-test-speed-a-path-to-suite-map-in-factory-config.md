@@ -70,8 +70,10 @@ Owner 2026-10-13: test suites cannot be the bottleneck. Every suite runs its cas
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a change to events/bin/event.sh or events/schema plans the events, factory and herdr suites, and the test fails if one is dropped
-- [ ] `AC-H2` *(human)* a tickets-only diff plans lint and reindex only; an unmapped path plans the full set; a missing key exits 3
+- [x] `AC-H1` *(human)* a change to events/bin/event.sh or events/schema plans the events, factory and herdr suites, and the test fails if one is dropped
+  - observed `2026-10-13` factory/tests/cases/19-suites-map.test.sh (51 checks, make -C factory test CASES=19, tests: 1 passed 0 failed): events/bin/event.sh and events/schema plan events, factory, herdr (and line, whose merge.sh calls event.sh); a copy of the map with herdr dropped from the events/bin row plans no herdr, which the case asserts, so dropping it fails the case
+- [x] `AC-H2` *(human)* a tickets-only diff plans lint and reindex only; an unmapped path plans the full set; a missing key exits 3
+  - observed `2026-10-13` same case: a diff of work-orders/ and changelog/ files plans exactly 'make lint' then 'work-order.sh reindex --check' with nothing on stderr; Jenkinsfile (no row) and Jenkinsfile among mapped paths plan the full set of 11 commands and stderr names the path; each of commands, always, full and rows removed exits 3 naming the key; make lint passes (lint: all ok) incl. suites.json against suites.schema.json
 
 ## Test plan
 
@@ -90,6 +92,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: reading what each suite copies found two things the ticket text did not name: line's merge.sh calls event.sh and state-root.sh (line joins the events rows), and scheduler/host/tests/run.sh is a suite make -C scheduler test never runs (new suite scheduler-host, caught by the case that lists suites on disk). Rows union, a path no row matches plans the full set. Not done, outside the files field: factory/RUNBOOK.md does not yet describe suites.sh (the tester ticket WO-20261013-dd11 reads it).
 
 ## Outcome
 

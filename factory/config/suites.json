@@ -1,0 +1,259 @@
+{
+  "commands": {
+    "lint": "make lint",
+    "reindex": "bash .claude/skills/work-order/scripts/work-order.sh reindex --check",
+    "events": "bash events/tests/run.sh",
+    "factory": "make -C factory test",
+    "herdr": "make -C herdr test",
+    "line": "make -C line test",
+    "scheduler": "make -C scheduler test",
+    "bearings": "make -C tools/bearings test",
+    "loop": "make -C report/loop test",
+    "sitrep": "make -C report/sitrep test",
+    "scheduler-host": "bash scheduler/host/tests/run.sh"
+  },
+  "always": [
+    "lint"
+  ],
+  "full": [
+    "lint",
+    "reindex",
+    "events",
+    "factory",
+    "herdr",
+    "line",
+    "scheduler",
+    "scheduler-host",
+    "bearings",
+    "loop",
+    "sitrep"
+  ],
+  "rows": [
+    {
+      "paths": [
+        "work-orders/*",
+        "changelog/*"
+      ],
+      "suites": [
+        "reindex"
+      ]
+    },
+    {
+      "paths": [
+        "events/20[0-9][0-9]/*"
+      ],
+      "suites": []
+    },
+    {
+      "paths": [
+        "*.md",
+        "LICENSE",
+        "docs/*",
+        "issues/*",
+        "specs/*"
+      ],
+      "suites": []
+    },
+    {
+      "paths": [
+        "bin/state-root.sh",
+        "config/*"
+      ],
+      "suites": [
+        "events",
+        "factory",
+        "herdr",
+        "line",
+        "bearings",
+        "loop"
+      ]
+    },
+    {
+      "paths": [
+        "events/bin/*",
+        "events/schema/*"
+      ],
+      "suites": [
+        "events",
+        "factory",
+        "herdr",
+        "line"
+      ]
+    },
+    {
+      "paths": [
+        "events/tests/*"
+      ],
+      "suites": [
+        "events"
+      ]
+    },
+    {
+      "paths": [
+        "lint/*"
+      ],
+      "suites": [
+        "events"
+      ]
+    },
+    {
+      "paths": [
+        "herdr/*"
+      ],
+      "suites": [
+        "herdr"
+      ]
+    },
+    {
+      "paths": [
+        "herdr/tests/lib/assert.sh"
+      ],
+      "suites": [
+        "events",
+        "factory",
+        "line",
+        "scheduler-host"
+      ]
+    },
+    {
+      "paths": [
+        "herdr/config/*"
+      ],
+      "suites": [
+        "loop"
+      ]
+    },
+    {
+      "paths": [
+        "factory/*"
+      ],
+      "suites": [
+        "factory"
+      ]
+    },
+    {
+      "paths": [
+        "factory/bin/*",
+        "factory/config/*"
+      ],
+      "suites": [
+        "herdr",
+        "line",
+        "loop",
+        "scheduler-host"
+      ]
+    },
+    {
+      "paths": [
+        "roles/*"
+      ],
+      "suites": [
+        "factory",
+        "herdr",
+        "line",
+        "loop"
+      ]
+    },
+    {
+      "paths": [
+        "playbooks/*"
+      ],
+      "suites": [
+        "factory",
+        "herdr",
+        "loop"
+      ]
+    },
+    {
+      "paths": [
+        "queue/*"
+      ],
+      "suites": [
+        "factory",
+        "line"
+      ]
+    },
+    {
+      "paths": [
+        "line/*"
+      ],
+      "suites": [
+        "line"
+      ]
+    },
+    {
+      "paths": [
+        "bin/*"
+      ],
+      "suites": [
+        "factory"
+      ]
+    },
+    {
+      "paths": [
+        "graph/*"
+      ],
+      "suites": [
+        "loop"
+      ]
+    },
+    {
+      "paths": [
+        "report/blueprint/*"
+      ],
+      "suites": [
+        "herdr",
+        "loop"
+      ]
+    },
+    {
+      "paths": [
+        "report/loop/*"
+      ],
+      "suites": [
+        "loop"
+      ]
+    },
+    {
+      "paths": [
+        "report/sitrep/*"
+      ],
+      "suites": [
+        "sitrep"
+      ]
+    },
+    {
+      "paths": [
+        "scheduler/api/*",
+        "scheduler/cmd/*",
+        "scheduler/internal/*",
+        "scheduler/config/*",
+        "scheduler/tests/*",
+        "scheduler/go.mod",
+        "scheduler/Containerfile",
+        "scheduler/Makefile",
+        "scheduler/.dockerignore"
+      ],
+      "suites": [
+        "scheduler"
+      ]
+    },
+    {
+      "paths": [
+        "scheduler/host/*",
+        "scheduler/config/*"
+      ],
+      "suites": [
+        "scheduler-host"
+      ]
+    },
+    {
+      "paths": [
+        "tools/bearings/*"
+      ],
+      "suites": [
+        "bearings"
+      ]
+    }
+  ]
+}
