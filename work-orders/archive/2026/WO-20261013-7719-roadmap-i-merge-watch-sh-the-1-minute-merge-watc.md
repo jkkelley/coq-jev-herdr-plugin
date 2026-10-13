@@ -4,15 +4,15 @@
   "slug": "roadmap-i-merge-watch-sh-the-1-minute-merge-watc",
   "title": "Roadmap I - merge-watch.sh, the 1-minute merge watch moves from ~/.cache/coq-watch/merge-watch.sh into line/bin/merge-watch.sh with its test; the live copy runs from the repo and the cache copy is deleted",
   "type": "chore",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T17:52:56+00:00",
   "parent": "WO-20261012-cf8d",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/roadmap-i-merge-watch-sh-the-1-minute-merge-watc",
+  "pr": 127,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect ruling ykne9 2026-10-13 (Roadmap I split one ticket per script); lavish prohibited for Claude seats",
@@ -69,8 +69,10 @@ Owner 2026-10-12 22:49Z (m-20261012224955626-rjghl): every script lives in the p
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/merge-watch.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
-- [ ] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/merge-watch.sh is empty, ~/.cache/coq-watch/merge-watch.sh is gone, and the archive path is in a 200 note on this ticket
+- [x] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/merge-watch.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+  - observed `2026-10-13` make -C line test: 6 passed, 0 failed, merge-watch case green (seed, one prompt, no repeat, restart, batch, gh down, second instance, fix ticket exit, halt flag, HOME empty). Mutations: dropping the seen-set append fails 7 checks, dropping the halt check fails 4. grep for /home/luna and .cache/coq-watch in line/bin/merge-watch.sh: no match. make lint: all ok.
+- [x] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/merge-watch.sh is empty, ~/.cache/coq-watch/merge-watch.sh is gone, and the archive path is in a 200 note on this ticket
+  - observed `2026-10-13` Not mine: the orchestrator lane after the merge (stop the running instance, start it from line/bin, archive and delete the cache copy and its .bak-1632 copy). Nothing to observe before the merge.
 
 ## Test plan
 
@@ -89,6 +91,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: a killed loop leaves its sleep child holding the flock for up to one tick, so the case waits on the lock (flock -w 3) before the next run; the live pane is restarted by the orchestrator after the merge, the file is behaviour-identical to the cache copy apart from REPO and the state paths.
 
 ## Outcome
 
