@@ -21,7 +21,9 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-9506"
+  ],
   "files": [
     "roles/orchestrator.json",
     "playbooks/orchestrator.md"

@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-12",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "created_at": "2026-10-12T22:13:33+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -24,7 +24,10 @@
     "WO-20261012-99d6",
     "WO-20261012-aac3"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-fd7d",
+    "WO-20261013-ced5"
+  ],
   "files": [
     "bin/step.sh",
     "bin/changelog.sh",
