@@ -63,7 +63,8 @@ A gate record with ticket null cannot be routed: records 20261013T213137Z-201-6p
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* AC-H1: a test.passed with pr 137 and no ticket routes with the first ticket of that PR. AC-H2: a record that has a ticket is unchanged. AC-H3: make lint and make -C factory test exit 0
+- [x] `AC-H1` *(human)* AC-H1: a test.passed with pr 137 and no ticket routes with the first ticket of that PR. AC-H2: a record that has a ticket is unchanged. AC-H3: make lint and make -C factory test exit 0
+  - observed `2026-10-13` factory case 24: test.passed 201 with pr 137 and no ticket seated reviewer for the PR's first ticket WO-20261013-249e (receipt carries it, no 500); a record with a ticket made no gh call and kept its own ticket; case fails 9 checks without the route.sh change; make lint and make -C factory test exit 0, 26 passed 0 failed
 
 ## Test plan
 
@@ -82,6 +83,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` retro: the head branch of a worker PR is feat/<slug> and rarely carries an id, so the title is the usual source of the ticket; ticket_of_pr reads branch then title, first id wins. Worktree start-WO-20261013-9b21 is not a treehouse slot, so the worker.md step 1 lease check could not pass; proceeded on the architect's brief.
 
 ## Outcome
 

@@ -167,6 +167,19 @@ seat_of() {
   label=${label//\$\{ticket\}/${2,,}}; case $label in ''|*'${'*) return 1;; esac; printf '%s' "${label,,}"
 }
 emit() { "$EVENT_BIN" add --seat "$SEAT" "$@" >/dev/null; }
+# BREADCRUMB 2026-10-13 - WO-20261013-9b21 (cause aa, architect ruling 22:08Z route failures). What broke: a gate record that carries a
+#   pr and no ticket (20261013T213137Z-201-6p9av test.passed and 20261013T214216Z-422-2tk0m test.failed, both PR 137) reached
+#   act_primary below with ticket "-", so a `seat` row stopped at "seat needs a ticket" and a `down` at "down needs a ticket": the
+#   merger and the worker for PR 137 were never woken. Why this fix: ticket_of_pr reads the ticket from the PR itself, one gh call, the
+#   head branch first and then the title (a branch is cut as feat/<slug>, which rarely carries an id, so the title "WO-... - ..." is the
+#   usual source), and route_file uses it for the whole record, the receipt and a 500 included. A PR that names two tickets (PR 137 names
+#   WO-20261013-249e and WO-20261013-7000) uses the first. Rejected: a routes.json row (the match cannot read a PR) and reading the
+#   record's note (routing on prose is forbidden above). Cost: a gh call per ticketless record that has a pr; gh failing, a missing
+#   gh, or no ticket in either place leaves the ticket "-" and the record fails exactly as it did before.
+ticket_of_pr() {
+  local j; j=$(cd "$REPO" && timeout 20 gh pr view "$1" --json headRefName,title 2>/dev/null) || return 1
+  jq -r '[.headRefName, .title] | map(. // "") | join(" ")' <<<"$j" | grep -oE -m1 'WO-[0-9]{8}-[0-9a-f]{4}' | head -n 1
+}
 # trouble ID TICKET TEXT: a 500 note addressed to the monitor; the monitor wakes on new events.
 trouble() {
   local args=(--code 500 --kind note --to monitor --note "$(printf '%s' "$3" | cut -c1-240)")
@@ -244,11 +257,12 @@ perform() {
 # route_file FILE: claim, match, perform, receipt. At most once per record file; the ledger entry is named like the file, and every
 # message, receipt and wake line names the record's id.
 route_file() {
-  local f=$1 line id key rseat ticket kind code rec row esc why to act down when grc r
+  local f=$1 line id key rseat ticket kind code rec row esc why to act down when grc r pr
   key=$(basename "$f" .json)
   rec=$(jq -c . "$f" 2>/dev/null) || { ( set -C; echo unreadable > "$LEDGER/$key" ) 2>/dev/null && trouble "$key" - "unreadable record $key"; return; }
   line=$(jq -r '[.id, .seat, (.ticket // "-"), .kind, (.code | tostring)] | @tsv' <<<"$rec") || return
   IFS=$'\t' read -r id rseat ticket kind code <<<"$line"
+  if [ "$ticket" = - ]; then pr=$(jq -r '.pr // empty' <<<"$rec"); if [[ $pr =~ ^[1-9][0-9]*$ ]]; then ticket=$(ticket_of_pr "$pr") || true; ticket=${ticket:--}; fi; fi
   ( set -C; printf 'claimed %s\n' "$(now)" > "$LEDGER/$key" ) 2>/dev/null || return
   if [ "$rseat" = "$SEAT" ]; then echo own > "$LEDGER/$key"; return; fi
   esc=$(escalations_before "$ticket" "$id"); row=$(match_route "$rec" "${esc:-0}")
