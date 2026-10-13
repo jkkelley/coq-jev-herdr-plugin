@@ -72,8 +72,10 @@ report/loop/loop.sh finds records under the repository's events_dir (config valu
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* loop.sh view shows a record written to the state root and none from the repository's events/
-- [ ] `AC-H2` *(human)* make -C report/loop test passes with COQ_STATE at a temp dir; make lint passes
+- [x] `AC-H1` *(human)* loop.sh view shows a record written to the state root and none from the repository's events/
+  - observed `2026-10-13` Case 17-records-state-root passes in make -C report/loop test: a record under COQ_STATE/records is read and makes its seat live, a record in the repository's events/ is not read. Live check: loop.sh collect --no-panes --no-live read 1748 records in 14 days from the state root (sources line names ${tree:records}); git tracks 178 files under events/.
+- [x] `AC-H2` *(human)* make -C report/loop test passes with COQ_STATE at a temp dir; make lint passes
+  - observed `2026-10-13` make -C report/loop test, run in the test pane with COQ_STATE at the world's temp dir: tests: 19 passed, 0 failed. make lint: all ok.
 
 ## Test plan
 
@@ -92,6 +94,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro. Deviations the architect should know, all forced by AC-H2 (the suite passes): (1) report/loop/tests/lib/world.sh, a listed non-goal, now gives each world its own COQ_STATE and links events/ to its records tree, and 04-derive.test.sh needs find on events/ with a trailing slash; without both, cases 04, 05, 06, 07 and 08-glass wrote records where collect no longer looks. (2) report/loop/lib/collect.jq route_of treats a matched ignore row as no route: since WO-20261013-7a76 added ignore rows to routes.json, cases 04, 05 and 08-glass failed 9 assertions on main itself (same 9 on a clean archive of HEAD). None of these four files is in the ticket's files field, so factory/bin/gate.sh pr-files will hold the diff until the claim is extended. The first make lint was run in the worker's own shell by mistake, before using testpane.sh; read-only, no side effects.
 
 ## Outcome
 

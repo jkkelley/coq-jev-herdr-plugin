@@ -39,7 +39,14 @@
       and ($m.attempt_lt == null or $r.att < $m.attempt_lt)
       and ($m.escalations == null or $m.escalations == $esc)
       and ($m.escalations_lt == null or $esc < $m.escalations_lt);
-  def route_of($r; $esc): first($routes.routes[] | select(.match | matches($r; $esc))) // null;
+  # BREADCRUMB 2026-10-13 - WO-20261013-3abe, found running its suite. What broke: WO-20261013-7a76 (fba7551) added `ignore` rows to
+  #   factory/config/routes.json for seat.up, seat.down, note 100 and 300, work.started and record.routed, and this took them for
+  #   routes: a ticket whose newest work record was a work.started had `here` moved to the row's station and a `waiting` set, so
+  #   report/loop cases 04, 05 and 08-glass failed on main (9 assertions, the same 9 on a clean archive of HEAD). Why this fix: the
+  #   first matching row still wins, and when it is an ignore row the record has no route, which is what the orchestrator does with
+  #   it and what the line below the table already says ("a record no row matches is still with the station that emitted it").
+  #   Rejected: dropping ignore rows before the match (a later row could then claim a record the orchestrator ignores). Cost: none.
+  def route_of($r; $esc): (first($routes.routes[] | select(.match | matches($r; $esc))) // null) | if . != null and .do == "ignore" then null else . end;
   def role_file($role): first($roles[] | select(.name == $role)) // null;
   def scoped($role): ((role_file($role) // {}) | (.label // "") | contains("${ticket}"));
   def family($role): ((role_file($role) // {}) | (.model // {}) | (.claude // .codex // "")) | split("-") | (if .[0] == "claude" then .[1] else .[0] end);

@@ -5,7 +5,7 @@
   "out_dir": "report/loop/out",
   "actor": "loop.sh",
   "inputs": {
-    "events_dir": "events",
+    "events_dir": "${tree:records}",
     "events_days": 14,
     "work_orders_dir": "work-orders",
     "routes": "factory/config/routes.json",

@@ -34,7 +34,7 @@ NEVER: running the prettier hook over `assets/template.html` or `design/`; the p
 
 This sets up the factory board (WO-20261011-616c) so the open page shows the lines on the factory floor, drawn from the records.
 A reader who has never seen this repository can do it on another one by editing one config file.
-Nothing on the page is typed in: every value comes from event records, ticket files, role files, the routes table, the herdr pane list and the route runner's state file.
+Nothing on the page is typed in: every value comes from event records (read from the state root's records tree, `inputs.events_dir`), ticket files, role files, the routes table, the herdr pane list and the route runner's state file.
 
 ## What you get
 
@@ -69,6 +69,7 @@ These are the ones to change:
 | `poll_seconds`, `watch_seconds`        | Between 5 and 30 each, and their sum at most 30.                                                                                           |
 | `actor`                                | Who the page says built it.                                                                                                                |
 | `inputs.*`                             | Where the records, tickets, roles, routes, playbooks, herdr config are, relative to the repository root.                                  |
+| `inputs.events_dir`                    | Where the records are read. `${tree:records}` is the state root's records tree (`bin/state-root.sh`, `$COQ_STATE`), where `events/bin/event.sh` writes; the repository's `events/` is not read. A relative path is read under the repository root, the old reading. |
 | `inputs.runner_config`                 | The route runner's config, with `${repo}`. Its `state_dir` plus `/belt` is the belt file `route.sh` touches; `${repo}` and `${tree:NAME}` work. |
 | `inputs.belt_max_age_seconds`          | How old the belt file may be before the belt reads as stopped.                                                                             |
 | `inputs.owner_pane_label`              | The label of the pane that serves the owner's page; while it is in the pane list the owner station reads live.                             |
@@ -127,7 +128,7 @@ Then do the three checks by eye:
 
 1. Collect with no hand value: the entry validates, and a ticket whose `pr.opened` record exists shows its work at the tester.
 2. A PR in a ticket's frontmatter with no `pr.opened` record shows "opened by hand" on the worker station.
-3. Open `/board`, post a record (`events/bin/event.sh add ...`), and watch the page change within 30 seconds without reloading.
+3. Open `/board`, post a record (`events/bin/event.sh add ...`, which lands in `$COQ_STATE/records`), and watch the page change within 30 seconds without reloading.
 
 ## Changing the page
 
