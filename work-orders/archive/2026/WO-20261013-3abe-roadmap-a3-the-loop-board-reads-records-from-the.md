@@ -31,7 +31,10 @@
     "report/loop/config/board.schema.json",
     "report/loop/loop.sh",
     "report/loop/tests/cases/17-records-state-root.test.sh",
-    "report/loop/RUNBOOK.md"
+    "report/loop/RUNBOOK.md",
+    "report/loop/lib/collect.jq",
+    "report/loop/tests/lib/world.sh",
+    "report/loop/tests/cases/04-derive.test.sh"
   ]
 }
 ---
