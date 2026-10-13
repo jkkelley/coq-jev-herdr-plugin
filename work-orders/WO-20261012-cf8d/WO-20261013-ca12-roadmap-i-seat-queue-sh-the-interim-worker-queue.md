@@ -4,14 +4,14 @@
   "slug": "roadmap-i-seat-queue-sh-the-interim-worker-queue",
   "title": "Roadmap I - seat-queue.sh, the interim worker queue moves from ~/.cache/coq-watch/seat-queue.sh into line/bin/seat-queue.sh with its test; the live copy runs from the repo and the cache copy is deleted",
   "type": "chore",
-  "status": "ready",
+  "status": "in-review",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T17:53:42+00:00",
   "parent": "WO-20261012-cf8d",
-  "branch": null,
-  "pr": null,
+  "branch": "feat/roadmap-i-seat-queue-sh-the-interim-worker-queue",
+  "pr": 129,
   "closed": null,
   "approval": {
     "via": "override",
@@ -69,7 +69,8 @@ Owner 2026-10-12 22:49Z (m-20261012224955626-rjghl): every script lives in the p
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/seat-queue.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+- [x] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/seat-queue.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
+  - observed `2026-10-13` CASES=seat-queue in Podman via testpane.sh: 21 checks ok (SEATED once after one max_seats refusal, branch wait, order, archive, state root); mutants without the retry loop and without the archive prune both FAIL the case; grep of /home/luna and .cache/coq-watch in line/bin/seat-queue.sh finds nothing; with COQ_STATE set seat.sh sees it and the queue writes no file; make lint and make -C line test: 6 passed, 0 failed
 - [ ] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/seat-queue.sh is empty, ~/.cache/coq-watch/seat-queue.sh is gone, and the archive path is in a 200 note on this ticket
 
 ## Test plan
@@ -89,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` retro: the script writes no file of its own, so AC-H1's 'every file lands under COQ_STATE' is held by exporting the resolved root to seat.sh and asserting the repo layout is unchanged. The two sleeps became SEAT_QUEUE_BRANCH_WAIT and SEAT_QUEUE_SLOT_WAIT (defaults 15 and 60) so the case runs in seconds. The first archive check survived a mutant because find order decides which file is met first; it now uses a ticket that exists only in the archive. AC-H2 is the orchestrator's after the merge. The brief's worktree is a start worktree, not a treehouse slot, so the playbook's lease check (step 1) could not hold; I worked in the named worktree.
 
 ## Outcome
 

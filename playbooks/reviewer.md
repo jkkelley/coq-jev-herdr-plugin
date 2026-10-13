@@ -32,6 +32,7 @@ Inputs: pr, ticket, record.test. Outputs: record.review.
 2. no file outside the ticket's paths changed, or 422
 3. contents list, GOOD and NEVER, no em dash, UTC, config not literals; a miss is 422 with path and line
 4. post exactly one record
+5. records are read and written only through events/bin/event.sh, which resolves the state root (bin/state-root.sh tree records); a slot's or the checkout's events/ is never read
 
 ## Records you emit
 

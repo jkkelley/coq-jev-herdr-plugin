@@ -5,6 +5,7 @@
 # deletes the session, so no case leaves one behind.
 #   world_up <name> [jq filter applied to herdr.json]   e.g. world_up gate '.bringup_gate=true'
 #   h <args>                                            herdr --session t-<name> <args>, markers unset
+#   wait_until SECONDS CMD...                           poll CMD every 0.2 s until it succeeds; fails naming CMD after SECONDS
 #   SEAT, REPO, STATE, EVENTS                            the paths a case asserts on
 #   notest_layout / role_layout ROLE LAYOUT              a world whose role names a layout with no test slot (AC-H4)
 world_up() {
@@ -89,8 +90,13 @@ SHIM
     "$REPO/herdr/config/herdr.json" | jq "$filt" > "$COQ_HERDR_CONFIG"
   unset HERDR_PANE_ID HERDR_TAB_ID HERDR_WORKSPACE_ID HERDR_SOCKET_PATH HERDR_SESSION
   (herdr --session "t-$name" server > "$WORLD/server.log" 2>&1 &)
-  for _ in $(seq 1 15); do sleep 1; herdr --session "t-$name" workspace list >/dev/null 2>&1 && break; done
-  herdr --session "t-$name" workspace list >/dev/null 2>&1 || { echo "world_up: herdr session t-$name did not start"; cat "$WORLD/server.log"; return 1; }
+  # BREADCRUMB 2026-10-13 - WO-20261013-892f (test speed, polls part 1; design d-shape 5). What broke: the server wait slept 1 s before
+  #   its first look, so every world paid at least a second before its first look whether or not the server was already answering,
+  #   and the cap was a count of sleeps, not a time. Why this fix: wait_until looks at once and every 0.2 s up to 15 s,
+  #   the same cap, so a world that is up in 0.3 s is used in 0.3 s. Rejected: a longer fixed sleep "to be safe" (the cost of every
+  #   world, forever) and an unbounded wait (a server that never starts would hang the suite). Cost: none; the failure message is the
+  #   same, plus wait_until's line naming what it waited for.
+  wait_until 15 herdr_answers || { echo "world_up: herdr session t-$name did not start"; cat "$WORLD/server.log"; return 1; }
   # BREADCRUMB 2026-10-10 - WO-20261010-8fa8. What broke (would break): seat.sh now refuses a ticket seat unless the tab it
   #   was started from holds a pane labelled "test - herdr", so every case that seats a worker or reviewer was refused with
   #   exit 3. Why this fix: the world gets what the live system has, an architect tab with a labelled test pane, in a
@@ -117,10 +123,31 @@ SHIM
 notest_layout() { jq '.id = "seat-nt" | .panes |= map(select(.kind != "test"))' "$REPO/herdr/layouts/seat-1x2.json" > "$REPO/herdr/layouts/seat-nt.json"; }
 role_layout() { jq --arg l "$2" '.pane_layout = $l' "$REPO/roles/$1.json" > "$REPO/roles/$1.json.tmp" && mv "$REPO/roles/$1.json.tmp" "$REPO/roles/$1.json"; }
 h() { herdr --session "$COQ_HERDR_SESSION" "$@"; }
+# wait_until SECONDS CMD...: run CMD (a command or a function, with its arguments) now and every 0.2 s until it succeeds, for at most SECONDS;
+# returns 0 at the first success, else 1 after printing "wait_until: timed out after Ns waiting for: CMD..." to stderr, so a case that
+# waited for a condition names it when it fails. This replaces a fixed sleep with the condition the sleep stood for (WO-20261013-892f).
+# The 0.2 s between looks is the poll interval itself, not a wait for anything.
+wait_until() {
+  local limit="$1" end; shift
+  end=$(( $(date +%s%N) / 1000000 + limit * 1000 ))
+  while :; do
+    "$@" && return 0
+    [ $(( $(date +%s%N) / 1000000 )) -lt "$end" ] || break
+    sleep 0.2
+  done
+  echo "wait_until: timed out after ${limit}s waiting for: $*" >&2
+  return 1
+}
+herdr_answers() { h workspace list >/dev/null 2>&1; }
+herdr_gone() { ! herdr_answers; }
 world_down() {
   [ -n "${COQ_HERDR_SESSION:-}" ] || return 0
   herdr --session "$COQ_HERDR_SESSION" session stop "$COQ_HERDR_SESSION" >/dev/null 2>&1 || true
-  sleep 1
+  # BREADCRUMB 2026-10-13 - WO-20261013-892f. What broke: a fixed second between `session stop` and `session delete`, paid by every case on
+  #   its way out whether the server had stopped in 50 ms or not. Why this fix: wait until the server stops answering (at most 5 s), then
+  #   delete; a server that is still up after that gets the delete anyway, as before, and run.sh's teardown check counts the session
+  #   directory if it survives. Cost: none.
+  wait_until 5 herdr_gone || true
   herdr --session "$COQ_HERDR_SESSION" session delete "$COQ_HERDR_SESSION" >/dev/null 2>&1 || true
   rm -rf "${XDG:-/nonexistent}"
 }

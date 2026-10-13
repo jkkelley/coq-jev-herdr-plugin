@@ -94,11 +94,45 @@ sl_grid_step() {
   awk -v d="$dir" -v f="$from" -v n="$rem" 'BEGIN { printf "%s %d %.4g\n", d, f, 1 / n }'
 }
 
+# BREADCRUMB 2026-10-13 - WO-20261013-69df, cause v (system epic WO-20261013-16f1). What broke: seat.sh line 763 exported
+#   COQ_REPO=$SL_REPO, the checkout seat.sh was run from, and bin/state-root.sh (_sr_repo_name) names the state root after COQ_REPO's
+#   basename. At 20:03Z three Sonnet testers were seated by seat.sh run from the verify-fba7551 worktree, so their test.passed records
+#   for PRs 127, 128 and 112 landed in ~/.local/state/coq/verify-fba7551/records, not .../coq-jev-herdr-plugin/records, and the merger
+#   never saw them; the orchestrator copied them by hand (a defect). Two more such roots sit beside it (start-WO-20261013-496d,
+#   start-case12-fix). A seat run from a seat inherits that seat's COQ_REPO too, so the wrong name also reached sl_record below.
+#   Why this fix: the repository's identity is where its git history lives, so the canonical repo is the parent of the git common
+#   directory, the one answer every worktree and slot of the repository gives, never the checkout's own name and never an inherited
+#   COQ_REPO; the canonical state root is then COQ_STATE when set, else the XDG root, both through bin/state-root.sh with that repo
+#   (no second copy of the rule). seat.sh exports the canonical repo to the seat and refuses a seat whose own resolver disagrees
+#   (state_root_gate in seat.sh). Rejected: exporting COQ_STATE into every seat (a seat that runs seat.sh would then move its
+#   seats/ directory, $STATE above, off ~/.local/state/coq), and editing bin/state-root.sh to ignore COQ_REPO (its test pins that
+#   COQ_REPO wins, and other callers set it on purpose). Cost: outside a git checkout (a test world's plain copy) the repo is the
+#   checkout's own directory, as before; a repository whose common directory is not named .git (a bare clone) takes the same fallback.
+sl_canonical_repo() {
+  local common
+  if common="$(git -C "$SL_REPO" rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" && [ "$(basename "$common")" = .git ]; then dirname "$common"
+  else printf '%s\n' "$SL_REPO"; fi
+}
+# sl_canonical_state / sl_canonical_tree NAME: the canonical state root and <root>/<tree>, from COQ_STATE or the XDG state root, whatever COQ_REPO the caller inherited.
+sl_canonical_tree() { local r; r="$(sl_canonical_repo)"; COQ_REPO="$r" "$SL_REPO/bin/state-root.sh" tree "$1"; }
+sl_canonical_state() { local r; r="$(sl_canonical_repo)"; COQ_REPO="$r" "$SL_REPO/bin/state-root.sh" state; }
+# sl_seat_records_tree WT: the records tree a seat working in WT resolves, with WT's own resolver (the one its events/bin/event.sh
+# sources) and the environment seat.sh gives it: COQ_REPO is the canonical repository, COQ_STATE is the caller's when it set one.
+# Returns 2 and prints nothing when WT has no bin/state-root.sh: such a checkout has no records tree to judge, and its event.sh stops
+# (exit 4, "bin/state-root.sh is missing") instead of writing anywhere; the suite's stub treehouse slots are empty clones of this kind.
+sl_seat_records_tree() {
+  local wt="$1" r
+  [ -x "$wt/bin/state-root.sh" ] || return 2
+  r="$(sl_canonical_repo)"; COQ_REPO="$r" "$wt/bin/state-root.sh" tree records 2>&1
+}
+
 # sl_record KIND CODE SEAT [--ticket T] [--pane P] [--note N]: one line in the event log, never fatal to the caller.
+# The record goes to the canonical state root (sl_canonical_state), never to a root named after the checkout or an inherited COQ_REPO.
 sl_record() {
-  local kind="$1" code="$2" seat="$3"; shift 3
+  local kind="$1" code="$2" seat="$3" cs; shift 3
   if [ "$DRY" = 1 ]; then printf 'DRY: event %s %s %s %s\n' "$kind" "$code" "$seat" "$*" >&2; return 0; fi
-  "$SL_REPO/events/bin/event.sh" add --kind "$kind" --code "$code" --seat "$seat" "$@" >/dev/null || sl_log "record $kind $code for $seat failed"
+  cs="$(sl_canonical_state)" || { sl_log "record $kind $code for $seat failed: the canonical state root did not resolve"; return 0; }
+  COQ_STATE="$cs" "$SL_REPO/events/bin/event.sh" add --kind "$kind" --code "$code" --seat "$seat" "$@" >/dev/null || sl_log "record $kind $code for $seat failed"
 }
 
 sl_role_file() { local f="$SL_REPO/roles/$1.json"; [ -f "$f" ] || sl_die "no role file $f"; printf '%s' "$f"; }

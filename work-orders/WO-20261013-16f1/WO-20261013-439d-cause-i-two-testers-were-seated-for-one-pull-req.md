@@ -23,7 +23,8 @@
   "depends_on": [],
   "blocks": [
     "WO-20261013-b839",
-    "WO-20261013-04b8"
+    "WO-20261013-04b8",
+    "WO-20261013-e2c3"
   ],
   "files": [
     "factory/bin/route.sh",

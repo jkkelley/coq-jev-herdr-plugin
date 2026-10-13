@@ -34,7 +34,16 @@ assert_eq "A's test pane carries A's label" "$(h pane list | jq -r --arg p "$tpA
 assert_eq "A's environment line holds A's pane" "$(h pane read "$agA" --source recent-unwrapped --lines 200 | grep -cF "COQ_TEST_PANE=$tpA")" 1
 assert_eq "B's environment line holds B's pane" "$(h pane read "$agB" --source recent-unwrapped --lines 200 | grep -cF "COQ_TEST_PANE=$tpB")" 1
 assert_eq "the seat record keeps the pane" "$(jq -r .test_pane "$STATE/seats/$NA/seat.json")" "$tpA"
-sleep 1
+# BREADCRUMB 2026-10-13 - WO-20261013-b2fe (test speed, polls part 3; design d-shape 5). What broke: a fixed `sleep 1` before the briefs
+#   were read off the agents' screens and two `seq 1 20` loops of `sleep 0.5` (10 s caps) for the command in each test pane and the pane
+#   shell's cwd, each a guess at when a screen or a pane would show what the next line asserts. Why this fix: each is wait_until on that
+#   condition (the brief is in the agent's recent output, both ran-* files exist, both panes' shells stand in the checkout) with the
+#   same 10 s cap, so the case moves on the moment it is true. Rejected: a shorter sleep (the same guess) and polling only seat A's
+#   cwd as the old loop did (seat B's was asserted right after with no wait at all, a race). Cost: none; a wait that never ends fails
+#   in 10 s naming the condition.
+agent_says() { h agent read "$1" --source recent-unwrapped --lines 200 | grep -qF "$2"; }
+wait_until 10 agent_says "$NA" "Your test pane is $tpA; run commands only there"
+wait_until 10 agent_says "$NB" "Your test pane is $tpB; run commands only there"
 assert_match "A's brief names A's pane" "$(h agent read "$NA" --source recent-unwrapped --lines 200)" "Your test pane is $tpA; run commands only there"
 assert_match "B's brief names B's pane" "$(h agent read "$NB" --source recent-unwrapped --lines 200)" "Your test pane is $tpB; run commands only there"
 
@@ -53,12 +62,15 @@ COQ_TEST_PANE="$tpA" "$TP" "$WORLD_TEST_PANE" 'true' >/dev/null 2>"$WORLD/err"; 
 assert_eq "A running in the architect tab's pane: exit 3" "$rc" 3
 COQ_WORKTREE="$SLOT_A" COQ_TEST_PANE="$tpA" "$TP" "$tpA" "echo ran-in-a > $WORLD/ran-a" >/dev/null 2>&1; assert_eq "A running in its own pane: exit 0" "$?" 0
 COQ_WORKTREE="$SLOT_B" COQ_TEST_PANE="$tpB" "$TP" "$tpB" "echo ran-in-b > $WORLD/ran-b" >/dev/null 2>&1
-for _ in $(seq 1 20); do [ -f "$WORLD/ran-a" ] && [ -f "$WORLD/ran-b" ] && break; sleep 0.5; done
+ran_both() { [ -f "$WORLD/ran-a" ] && [ -f "$WORLD/ran-b" ]; }
+wait_until 10 ran_both
 assert_eq "the command ran in A's pane" "$(cat "$WORLD/ran-a" 2>/dev/null)" ran-in-a
 assert_eq "and B's ran in B's, at the same time" "$(cat "$WORLD/ran-b" 2>/dev/null)" ran-in-b
 
 echo "-- the test pane's shell is in the main checkout, never in the slot (AC-H3)"
-for _ in $(seq 1 20); do [ "$(pane_cwd "$tpA")" = "$REPO" ] && break; sleep 0.5; done
+cwd_is() { [ "$(pane_cwd "$1")" = "$2" ]; }
+wait_until 10 cwd_is "$tpA" "$REPO"
+wait_until 10 cwd_is "$tpB" "$REPO"
 assert_eq "A's test pane shell stands in the checkout that brought the seat up" "$(pane_cwd "$tpA")" "$REPO"
 assert_eq "B's test pane shell stands there too" "$(pane_cwd "$tpB")" "$REPO"
 check "and not in A's slot" "$([ "$(pane_cwd "$tpA")" != "$SLOT_A" ] && echo 1 || echo 0)"

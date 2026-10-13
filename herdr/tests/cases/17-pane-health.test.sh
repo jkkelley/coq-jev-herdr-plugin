@@ -10,9 +10,20 @@ world_up pane-health '.bringup_gate=true' || exit 1
 BU="$REPO/herdr/bin/bringup.sh"; MON="$REPO/herdr/bin/monitors.sh"
 
 slot_pane() { "$MON" status | sed -nE "s/^ +$1 .*\[([^]]+)\] +(in use|open)$/\1/p"; }
+# BREADCRUMB 2026-10-13 - WO-20261013-2b64 (test speed, polls part 2). What broke: wait_health was a hand-rolled poll (30 looks, 0.5 s
+#   apart) and four fixed `sleep 1` sat in the set +m section below, each paid in full on every run. Why this fix: wait_health keeps its
+#   15 s and its two arguments but polls through wait_until (0.2 s apart, and a timeout names the health line it wanted); the sleeps
+#   become wait_until on what each stood for: the pane being a bare shell, then the sleep job showing in (and leaving) its foreground.
+#   Rejected: polling `h pane read` for the prompt (the prompt is the shell's, not what the case asserts on). Cost: none; the asserts
+#   are unchanged.
 # wait_health NAME STATE: poll monitors.sh health for up to 15 s until NAME reads ok or FAILED.
 # The output goes through a variable: `health | grep -q` closes the pipe on the first match and pipefail reports the SIGPIPE.
-wait_health() { local i hl; for ((i = 0; i < 30; i++)); do hl="$("$MON" health 2>/dev/null)"; grep -qE "^$2 $1( |\$)" <<<"$hl" && return 0; sleep 0.5; done; return 1; }
+health_reads() { local hl; hl="$("$MON" health 2>/dev/null)"; grep -qE "^$2 $1( |\$)" <<<"$hl"; }
+wait_health() { wait_until 15 health_reads "$1" "$2"; }
+# pane_bare PANE: the pane's foreground is its own shell and nothing else (the events loop's `sleep 15` is not a shell, so a live monitor is not bare).
+pane_bare() { h pane process-info --pane "$1" | jq -e '.result.process_info | .foreground_process_group_id == .shell_pid and all(.foreground_processes[]?; ((.argv // [.name])[0] | split("/") | last | ltrimstr("-")) | IN("bash", "zsh", "sh"))' >/dev/null; }
+# fg_has PANE NAME BOOL: whether the pane's foreground processes include one whose argv[0] is NAME reads BOOL (true or false).
+fg_has() { [ "$(h pane process-info --pane "$1" | jq -r --arg n "$2" '[.result.process_info.foreground_processes[].argv[0]] | any(. == $n)')" = "$3" ]; }
 
 echo "-- a fresh bringup leaves every reserved pane healthy"
 "$BU" --worktree "$REPO" > "$WORLD/out" 2>&1; assert_eq "bringup exits 0" "$?" 0
@@ -66,15 +77,18 @@ assert_match "health names the wrong holder" "$(cat "$WORLD/health")" "FAILED qu
 assert_match "the slot is restored to its owner" "$("$MON" status)" "2\\.1\\.2 queue list - queue  \\[$qp\\]  in use"
 echo "-- a job in the shell's own process group is still a job (WO-20261012-277d)"
 # set +m keeps the background job in the shell's group (fg group = shell pid), the way bearings' node wait.mjs ran on the live host.
-h pane send-keys "$ep" C-c >/dev/null; h pane send-keys "$ep" C-c >/dev/null; sleep 1
-h pane run "$ep" 'set +m; sleep 600 & p=$!; wait' >/dev/null; sleep 1
+h pane send-keys "$ep" C-c >/dev/null; h pane send-keys "$ep" C-c >/dev/null
+wait_until 10 pane_bare "$ep"
+h pane run "$ep" 'set +m; sleep 600 & p=$!; wait' >/dev/null
+wait_until 10 fg_has "$ep" sleep true
 h pane rename "$ep" "2.1.1 OPEN - event log tail" >/dev/null
 assert_eq "precondition: the job's group is the shell's group" "$(h pane process-info --pane "$ep" | jq -r '.result.process_info | .foreground_process_group_id == .shell_pid')" true
 "$MON" health > "$WORLD/health" 2>&1
 assert_match "health says the open slot runs a job, not that it is a bare shell" "$(cat "$WORLD/health")" "FAILED events \\(slot 2\\.1\\.1 is labelled open but pane $ep runs .*; left alone"
 assert_eq "the job was not interrupted" "$(h pane process-info --pane "$ep" | jq -r '[.result.process_info.foreground_processes[].argv[0]] | any(. == "sleep")')" true
 echo "-- and a bare shell in the same slot still reads idle"
-h pane send-keys "$ep" C-c >/dev/null; sleep 1; h pane run "$ep" 'kill $p; set -m' >/dev/null; sleep 1
+h pane send-keys "$ep" C-c >/dev/null; h pane run "$ep" 'kill $p; set -m' >/dev/null
+wait_until 10 fg_has "$ep" sleep false
 "$MON" health > "$WORLD/health" 2>&1
 assert_match "health says the open slot is a bare shell" "$(cat "$WORLD/health")" "FAILED events \\(slot 2\\.1\\.1 is open and its pane is a bare shell"
 

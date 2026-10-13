@@ -35,10 +35,14 @@ EOF
 }
 mkticket "$T" "fixture ticket with a seat"; mkticket "$T2" "fixture ticket nobody holds"
 
+# BREADCRUMB 2026-10-13 - WO-20261013-0904 (test speed, polls part 4; design d-shape 5). What broke: `gone` looked at herdr once a second
+#   (`sleep 1` in a 20 pass loop), so it cost a whole second after the stub had already exited. Why this fix: wait_until looks at once
+#   and every 0.2 s for the same 20 s cap, so the wait lasts as long as the exit takes. Rejected: a shorter fixed sleep (still a guess).
+#   Cost: none; a stub that never exits still fails `gone` after 20 s, now with wait_until's line naming what it waited for.
+agent_absent() { ! h agent get "$1" >/dev/null 2>&1; }
 gone() { # gone <agent name>: end the stub the way the real one ends, then wait until herdr stops answering for it.
   h agent prompt "$1" "/exit" >/dev/null 2>&1
-  for _ in $(seq 1 20); do h agent get "$1" >/dev/null 2>&1 || return 0; sleep 1; done
-  return 1
+  wait_until 20 agent_absent "$1"
 }
 run() { "$RC" "$1" > "$WORLD/out" 2>&1; rc=$?; out="$(cat "$WORLD/out")"; }
 seats_up() { local n=0 f; for f in "$STATE"/seats/*/seat.json; do [ -f "$f" ] && [ -z "$(jq -r '.ended_at // empty' "$f")" ] && n=$((n + 1)); done; echo "$n"; }

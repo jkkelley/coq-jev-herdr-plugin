@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "tests",
+  "description": "How the shared case runner, bin/test-cases.sh, schedules a suite's cases (WO-20261013-0bc0, design 20261013160000-test-speed-design.md d-shape 3). BREADCRUMB 2026-10-13: jobs.cap exists because herdr died at 31.8G of memory on 2026-10-13 (architect condition 2 on card C29), and every herdr case starts its own headless herdr server, so JOBS cases at once is JOBS servers at once. The runs per suite is min(cores, cap), where the cap is jobs.per_suite[suite] when that suite has a row, else jobs.cap; JOBS in the environment wins for one run and is never read from here. Rejected: a bare 'jobs' number (a host with 2 cores would then start 4 servers on 2 cores, and the cap would not say what it caps) and cores alone (the 16 core host would start 16 herdr servers, the exact failure). Cost: a suite that could run wider than 4 has to be given a per_suite row. Wall time and budgets are WO-20261013-74b6; its keys join this file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "jobs"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "jobs": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cap", "per_suite"],
+      "properties": {
+        "cap": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64,
+          "description": "the most cases that run at once in a suite with no row in per_suite; the runner uses min(cores, cap)"
+        },
+        "per_suite": {
+          "type": "object",
+          "description": "a suite's own cap, keyed by the suite name (the directory above its tests/ directory: herdr, factory, events, line)",
+          "propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 64
+          }
+        }
+      }
+    }
+  }
+}

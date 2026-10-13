@@ -154,19 +154,39 @@ live_json() {
   jq -n --argjson p "$prs" --argjson b "$br" '{ok: true, prs: $p, branches: $b}'
 }
 
+# expand_tree ROOT STR: STR with ${repo} the checkout and ${tree:NAME} the state root's tree (bin/state-root.sh), printed; exit 4 when
+# the state root cannot be resolved. One expansion for every config value that may name the state root (runner.json's state_dir, the
+# records tree), so no value carries a root of its own.
+expand_tree() {
+  local root=$1 s=$2 t
+  s=${s//\$\{repo\}/$root}
+  if [[ $s =~ \$\{tree:([a-z]+)\} ]]; then
+    t=$("$ROOT/bin/state-root.sh" tree "${BASH_REMATCH[1]}") || return 4
+    s=${s//\$\{tree:${BASH_REMATCH[1]}\}/$t}
+  fi
+  printf '%s\n' "$s"
+}
+
 # belt_file ROOT: the route runner's belt file, found the way route.sh finds it: runner.json's state_dir plus /belt. The config key
 # names runner.json with ${repo}; state_dir may say ${repo} or ${tree:NAME} (the state root, bin/state-root.sh).
 belt_file() {
-  local root=$1 rc sd t
+  local root=$1 rc sd
   rc=$(jq -r '.inputs.runner_config' "$CONFIG"); rc=${rc//\$\{repo\}/$root}
   sd=$(jq -r '.state_dir // empty' "$rc" 2>/dev/null) || sd=""
   [ -n "$sd" ] || return 1
-  sd=${sd//\$\{repo\}/$root}
-  if [[ $sd =~ \$\{tree:([a-z]+)\} ]]; then
-    t=$("$ROOT/bin/state-root.sh" tree "${BASH_REMATCH[1]}") || return 1
-    sd=${sd//\$\{tree:${BASH_REMATCH[1]}\}/$t}
-  fi
+  sd=$(expand_tree "$root" "$sd") || return 1
   printf '%s/belt\n' "$sd"
+}
+
+# events_path ROOT: the directory the records are read from. A relative events_dir is under ROOT (the old reading); the placeholder
+# ${tree:records} is the state root's records tree, which is where events/bin/event.sh writes.
+events_path() {
+  local root=$1 ed
+  ed=$(jq -r .inputs.events_dir "$CONFIG")
+  case $ed in
+    *\$\{*) expand_tree "$root" "$ed" ;;
+    *) printf '%s/%s\n' "$root" "$ed" ;;
+  esac
 }
 
 # collect_blueprint ROOT NOW NUMBER OUT: the blueprint view's collect (WO-20261011-ceea). The impure reads are lib/blueprint/gather.sh,
@@ -193,7 +213,7 @@ collect_blueprint() {
 
 # cmd_collect [--root DIR] [--now UTC] [--number N] [--panes FILE | --no-panes] [--out FILE]
 cmd_collect() {
-  local root=${LOOP_ROOT:-$ROOT} now="" number=1 panes_file=${LOOP_PANES_FILE:-} live_file=${LOOP_LIVE_FILE:-} out="" t cutoff now_epoch mtime age max days bf
+  local root=${LOOP_ROOT:-$ROOT} now="" number=1 panes_file=${LOOP_PANES_FILE:-} live_file=${LOOP_LIVE_FILE:-} out="" t cutoff now_epoch mtime age max days bf ev_dir
   while [ $# -gt 0 ]; do case $1 in
     --root) root=${2:-}; shift 2 ;;
     --now) now=${2:-}; shift 2 ;;
@@ -216,7 +236,8 @@ cmd_collect() {
   days=$(jq -r .inputs.events_days "$CONFIG"); max=$(jq -r .inputs.belt_max_age_seconds "$CONFIG")
   cutoff=$(date -u -d "$now - $days days" +%Y%m%d)
   # events: one file per record under YYYY/MM; the file name starts with the UTC date, so the window is a name comparison.
-  find "$root/$(jq -r .inputs.events_dir "$CONFIG")" -type f -path '*/20??/??/*.json' 2>/dev/null | sort \
+  ev_dir=$(events_path "$root") || die 4 "cannot resolve inputs.events_dir ($(jq -r .inputs.events_dir "$CONFIG")): no state root"
+  find "$ev_dir" -type f -path '*/20??/??/*.json' 2>/dev/null | sort \
     | awk -F/ -v c="$cutoff" 'substr($NF, 1, 8) >= c' | xargs -d '\n' -r cat | jq -s . > "$t/events.json" || die 4 "cannot read the event records"
   # tickets: the JSON frontmatter between the first two --- lines of every WO-*.md, in every subdirectory (archive included:
   # a merged ticket is how the board knows its bar is full).

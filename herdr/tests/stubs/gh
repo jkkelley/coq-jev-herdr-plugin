@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# stubs/gh - stands in for the GitHub CLI inside the suite, so a case never reaches the network or the host's gh login
+# (WO-20261013-a0e2). On PATH from world_up. Only the verb seat.sh uses exists:
+#   pr list [--state S] [--search Q] [--json F] [--limit N]   prints the JSON array in $GH_STUB_PRS (a file of
+#                                                             {number,title,headRefName} objects), `[]` when it is unset or missing
+# --search is NOT applied: the stub returns every pull request it holds and the caller's own filter must pick, which is the
+# stricter test of that filter. Every call's argv is appended to $GH_STUB_LOG when it is set, so a case can count and read them.
+[ -z "${GH_STUB_LOG:-}" ] || printf '%s\n' "$*" >> "$GH_STUB_LOG"
+if [ "${1:-}" = pr ] && [ "${2:-}" = list ]; then
+  if [ -n "${GH_STUB_PRS:-}" ] && [ -f "$GH_STUB_PRS" ]; then cat "$GH_STUB_PRS"; else echo '[]'; fi
+  exit 0
+fi
+echo "stub gh: unsupported call: $*" >&2; exit 2

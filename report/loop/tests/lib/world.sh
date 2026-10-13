@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # world.sh - a scratch repository for the collect cases, built from the real roles, playbooks and routes table (so the cases
 # cannot drift from them) plus the events, tickets, panes and belt each case writes. Source after assert.sh.
-#   world_init                         $W/root with roles/, playbooks/, factory/config/routes.json, empty events/ and work-orders/
+#   world_init                         $W/root with roles/, playbooks/, factory/config/routes.json, events/ (a link to the world's state root records tree, COQ_STATE=$W/state) and work-orders/
 #   ev AT SEAT KIND CODE TICKET PANE NOTE     one event record, one file, as events/bin/event.sh writes it
 #   ticket ID STATUS BRANCH PR [TITLE]        one ticket file with a JSON frontmatter (PR: a number or null)
 #   panes LABEL=ID...                  the herdr pane list: one pane per LABEL=ID, in herdr's JSON shape; no argument: an empty list
@@ -14,12 +14,20 @@ export NOW="2026-10-11T15:00:00Z"
 export ROOT_FIX="$W/root"
 SEQ=0
 
+# BREADCRUMB 2026-10-13 - WO-20261013-3abe (Roadmap A3). What broke: board.json's events_dir became ${tree:records}, so collect reads
+#   the state root's records tree, and every case that writes a record with ev (04, 05, 06, 07, 08-glass) wrote it where collect no
+#   longer looks and drew an empty line. Why this fix: world_init gives the world its own state root, COQ_STATE=$W/state, and makes
+#   $ROOT_FIX/events a link to its records tree, so ev and the cases that name events/ keep writing where collect now reads.
+#   Rejected: collect falling back to $LOOP_ROOT/events when COQ_STATE is unset (a quiet second reading of the repository's events/,
+#   which A4 removes) and rewriting each case. Cost: a case that wants a record in the repository's events/ must replace the link
+#   with a directory, as 17-records-state-root.test.sh does.
 world_init() {
-  rm -rf "$ROOT_FIX"; mkdir -p "$ROOT_FIX/events" "$ROOT_FIX/work-orders" "$ROOT_FIX/factory/config" "$ROOT_FIX/herdr/config"
+  rm -rf "$ROOT_FIX"; mkdir -p "$ROOT_FIX/work-orders" "$ROOT_FIX/factory/config" "$ROOT_FIX/herdr/config"
   cp -r "$REPO_ROOT/roles" "$REPO_ROOT/playbooks" "$ROOT_FIX/"
   cp "$REPO_ROOT/factory/config/routes.json" "$ROOT_FIX/factory/config/routes.json"
   cp "$REPO_ROOT/report/loop/config/board.json" "$W/board.json"
   echo '{"state_dir": "${repo}/factory/state"}' > "$ROOT_FIX/factory/config/runner.json"
+  rm -rf "$W/state"; mkdir -p "$W/state/records"; export COQ_STATE="$W/state"; ln -s "$W/state/records" "$ROOT_FIX/events"
   rm -f "$W/live.json"
   panes
 }
