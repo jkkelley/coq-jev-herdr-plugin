@@ -67,8 +67,10 @@ Seats searched their own slot's events/ and missed records (the merger on 2026-1
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* roles/reviewer.json and roles/worker.json each carry the state-root step, and the playbook check reports no drift
-- [ ] `AC-H2` *(human)* neither role nor playbook names a repository or slot events/ path for reading records; make lint passes
+- [x] `AC-H1` *(human)* roles/reviewer.json and roles/worker.json each carry the state-root step, and the playbook check reports no drift
+  - observed `2026-10-13` roles/worker.json and roles/reviewer.json each carry the state-root step as a must entry; playbooks/worker.md (step 5) and playbooks/reviewer.md (step 5) re-rendered by roles/bin/render-playbook.sh; render-playbook.sh roles playbooks --check exits 0 (render-rc=0), run in test pane wD3:p16Y
+- [x] `AC-H2` *(human)* neither role nor playbook names a repository or slot events/ path for reading records; make lint passes
+  - observed `2026-10-13` the four files name only events/bin/event.sh (the writer) and the new step's 'is never read' clause, no records read path; make lint ok (lint-rc=0, 'roles: schema + playbooks in sync ok'), run in test pane wD3:p16Y
 
 ## Test plan
 
@@ -87,6 +89,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: copied the 73be wording verbatim for the merger and tester. In the worker the step goes before the close-out step because that one ends in 'stop'. The test plan names make -C roles test, but roles/ has no Makefile (make: No rule to make target 'test'), so lint's roles check and render-playbook.sh --check were the proof. Worth a system ticket if roles is meant to have a test target.
 
 ## Outcome
 
