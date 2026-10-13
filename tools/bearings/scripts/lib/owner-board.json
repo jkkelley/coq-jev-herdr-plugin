@@ -1,0 +1,22 @@
+{
+  "dur_minutes_from_seconds": 90,
+  "dur_hours_from_seconds": 5400,
+  "poll_seconds": 2,
+  "caps": {
+    "id": 64,
+    "about": 200,
+    "decide": 300,
+    "label": 80,
+    "then": 300,
+    "kind": 64,
+    "ticket": 64,
+    "lane_name": 32,
+    "seat": 64,
+    "role": 32,
+    "check": 32,
+    "detail": 160,
+    "stall_title": 200,
+    "counter_name": 48,
+    "reason": 200
+  }
+}

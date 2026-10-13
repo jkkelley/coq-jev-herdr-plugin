@@ -16,7 +16,7 @@ import fs from "node:fs";
 import http from "node:http";
 import net from "node:net";
 import path from "node:path";
-import { TOOL_ROOT, argv, interpolate, loadConfig, resolveTier } from "./lib/config.mjs";
+import { TOOL_ROOT, argv, interpolate, loadConfig, resolveOwnerBoard, resolveTier } from "./lib/config.mjs";
 import { readHealthLine, readOwnerLane } from "./lib/owner.mjs";
 
 const ASSETS = path.join(TOOL_ROOT, "assets");
@@ -26,12 +26,14 @@ const REPO_ROOT = path.resolve(TOOL_ROOT, "..", "..");
 // [object Object]. Why this fix: the server hashes page.html and theme.css, injects the hash as @@BUILD@@ and reports it on
 // /state; the page reloads itself once (sessionStorage guard) when the two differ. Rejected: a version constant edited by
 // hand, which is forgotten. Cost: two small file reads per /state poll.
+const OWNER_PAGE = path.join(TOOL_ROOT, "scripts", "lib", "owner-page.html");
 const buildStamp = () => {
   try {
     return crypto
       .createHash("sha1")
       .update(fs.readFileSync(path.join(ASSETS, "page.html")))
       .update(fs.readFileSync(path.join(ASSETS, "theme.css")))
+      .update(fs.readFileSync(OWNER_PAGE))
       .digest("hex")
       .slice(0, 12);
   } catch {
@@ -56,7 +58,7 @@ const BOARD_DIR = cfg.board_dir ? path.resolve(REPO_ROOT, cfg.board_dir) : null;
 // page pulls them and nothing pushes. Absent from the config: no owner cards, no health line.
 const vars = { project: cfg.project, tier: T.tier, ticket: T.ticket };
 const OWNER_BOARD = cfg.owner_board
-  ? { ...cfg.owner_board, dir: interpolate(cfg.owner_board.dir, vars), records_dir: interpolate(cfg.owner_board.records_dir, vars) }
+  ? { ...resolveOwnerBoard(cfg.owner_board), dir: interpolate(cfg.owner_board.dir, vars), records_dir: interpolate(cfg.owner_board.records_dir, vars) }
   : null;
 const DIR = T.stateDir;
 const file = (f) => path.join(DIR, f);
@@ -342,7 +344,12 @@ if (has("--stop")) {
       const html = fs
         .readFileSync(path.join(ASSETS, "page.html"), "utf8")
         .replace(/@@THEME@@;?/, () => fs.readFileSync(path.join(ASSETS, "theme.css"), "utf8"))
-        .replace(/@@BUILD@@/g, buildStamp());
+        .replace(/@@BUILD@@/g, buildStamp())
+        .replace("</main>", () =>
+          OWNER_BOARD
+            ? `${fs.readFileSync(OWNER_PAGE, "utf8").replace("@@OWNER_POLL_MS@@", String(OWNER_BOARD.poll_seconds * 1000))}</main>`
+            : "</main>",
+        );
       res.setHeader("set-cookie", `${cfg.cookie_name}=${KEY}; HttpOnly; SameSite=Strict; Path=/`);
       return send(res, 200, `<!doctype html>\n${html}`, "text/html; charset=utf-8");
     }

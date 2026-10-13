@@ -17,7 +17,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$/;
+// Every text limit below is owner_board.caps (lib/owner-board.json, merged by config.mjs resolveOwnerBoard; review of PR 92: literals
+// here were a second place to change a limit). What stays literal is vocabulary, not a limit: the priority names and the card's 2 to 4 option rule, which is the
+// page's own deck rule.
+const idPattern = (max) => new RegExp(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,${max - 1}}$`);
 const PRIORITY = { p0: 0, p1: 1, p2: 2, p3: 3 };
 const cut = (s, n) =>
   String(s ?? "")
@@ -52,7 +55,7 @@ function cardOf(item, lim) {
     Number.isInteger(c.rec) && c.rec >= 0 && c.rec < options.length ? c.rec : 0;
   return {
     card: {
-      about: cut(c.about, lim.about) || cut(item.ticket, 64),
+      about: cut(c.about, lim.about) || cut(item.ticket, lim.ticket),
       decide,
       options,
       rec,
@@ -138,7 +141,8 @@ export function readOwnerLane(board, now = Date.now()) {
       ],
     };
   }
-  const lim = { about: 200, decide: 300, label: 80, then: 300 };
+  const lim = board.caps;
+  const idRe = idPattern(lim.id);
   const items = [];
   const problems = [];
   for (const n of names.sort()) {
@@ -149,7 +153,7 @@ export function readOwnerLane(board, now = Date.now()) {
       problems.push({ file: n, reason: `unreadable: ${e.message}` });
       continue;
     }
-    if (!isObj(item) || !ID_RE.test(String(item.id ?? ""))) {
+    if (!isObj(item) || !idRe.test(String(item.id ?? ""))) {
       problems.push({ file: n, reason: "no usable id" });
       continue;
     }
@@ -160,9 +164,9 @@ export function readOwnerLane(board, now = Date.now()) {
     }
     items.push({
       id: item.id,
-      kind: cut(item.kind, 64),
+      kind: cut(item.kind, lim.kind),
       code: num(item.code),
-      ticket: item.ticket ? cut(item.ticket, 64) : null,
+      ticket: item.ticket ? cut(item.ticket, lim.ticket) : null,
       priority: PRIORITY[item.priority] ?? 3,
       posted_at:
         typeof item.posted_at === "string" &&
@@ -246,6 +250,7 @@ export function readHealthLine(board, now = Date.now()) {
       available: false,
       reason: "health file has no state of running, draining or halted",
     };
+  const lim = board.caps;
   const at =
     typeof h.at === "string" && !Number.isNaN(Date.parse(h.at)) ? h.at : null;
   const lanes = [];
@@ -253,7 +258,7 @@ export function readHealthLine(board, now = Date.now()) {
     for (const [name, l] of Object.entries(h.lanes)) {
       if (!isObj(l)) continue;
       lanes.push({
-        name: cut(name, 32),
+        name: cut(name, lim.lane_name),
         open: num(l.open) ?? 0,
         leased: num(l.leased) ?? 0,
         ...(num(l.oldest_age_seconds) !== null
@@ -266,10 +271,10 @@ export function readHealthLine(board, now = Date.now()) {
     for (const s of h.seats) {
       if (!isObj(s)) continue;
       seats.push({
-        seat: cut(s.seat ?? s.label, 64),
-        role: cut(s.role, 32),
-        check: cut(s.check, 32) || "unknown",
-        ...(s.detail ? { detail: cut(s.detail, 160) } : {}),
+        seat: cut(s.seat ?? s.label, lim.seat),
+        role: cut(s.role, lim.role),
+        check: cut(s.check, lim.check) || "unknown",
+        ...(s.detail ? { detail: cut(s.detail, lim.detail) } : {}),
       });
     }
   const stalls = [];
@@ -277,7 +282,7 @@ export function readHealthLine(board, now = Date.now()) {
     for (const s of h.stalls) {
       if (!isObj(s)) continue;
       stalls.push({
-        title: cut(s.title ?? s.note, 200),
+        title: cut(s.title ?? s.note, lim.stall_title),
         ...(num(s.age_seconds) !== null
           ? { age_seconds: num(s.age_seconds) }
           : {}),
@@ -286,11 +291,14 @@ export function readHealthLine(board, now = Date.now()) {
   const counters = [];
   if (isObj(h.counters))
     for (const [name, v] of Object.entries(h.counters))
-      if (Number.isFinite(v)) counters.push({ name: cut(name, 48), value: v });
+      if (Number.isFinite(v)) counters.push({ name: cut(name, lim.counter_name), value: v });
   return {
     available: true,
     state: h.state,
-    ...(h.reason ? { reason: cut(h.reason, 200) } : {}),
+    ...(h.reason ? { reason: cut(h.reason, lim.reason) } : {}),
+    // The page words an age as seconds, minutes or hours; where it switches is config, so the page holds no threshold of its own.
+    dur_minutes_from_seconds: board.dur_minutes_from_seconds,
+    dur_hours_from_seconds: board.dur_hours_from_seconds,
     at,
     stale: at ? now - Date.parse(at) > board.health_stale_seconds * 1000 : true,
     lanes,

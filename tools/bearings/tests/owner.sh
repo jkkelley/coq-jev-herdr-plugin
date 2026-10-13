@@ -5,6 +5,7 @@
 # health line is one JSON file beside the lanes, answers are records whose `answer` field names an item id.
 BD=/work/oboard; RD=/work/orecords/2026/10
 mkdir -p "$BD/owner" "$RD"
+# owner_board enables the lane; caps, thresholds and the poll interval are the defaults of lib/owner-board.json (validated at start).
 jq --arg d "$BD" --arg r /work/orecords '.owner_board = {dir:$d,records_dir:$r,owner_lane:"owner",health_file:"health.json",answer_scan_seconds:0,owner_item_max_bytes:65536,health_max_bytes:262144,health_stale_seconds:180}' /work/config.json > /work/config-owner.json
 item() { # item ID TICKET KIND CODE POSTED -> one owner-lane item with a card
   jq -n --arg id "$1" --arg t "$2" --arg k "$3" --argjson c "$4" --arg p "$5" '{id:$id,kind:$k,code:$c,ticket:$t,priority:"p0",posted_at:$p,
@@ -26,6 +27,7 @@ CASE="the card keeps the id of the oldest item and says it was raised twice"; ch
 CASE="the card carries the decision, its options and the recommendation"; check bash -c 'jq -e ".questions.items[0] | (.decide|length>0) and (.options|length==2) and .rec==0" /work/o-state.json >/dev/null'
 CASE="an item that cannot be a card is reported, not dropped silently"; check bash -c 'jq -e ".owner_problems | length==1 and .[0].file==\"torn.json\"" /work/o-state.json >/dev/null'
 CASE="health line: state, lanes, seats, stalls and counters come through"; check bash -c 'jq -e ".health | .available and .state==\"running\" and (.lanes|length==2) and (.seats|length==2) and (.stalls|length==1) and (.counters|length==1) and .stale==false" /work/o-state.json >/dev/null'
+CASE="the page's age thresholds come from lib/owner-board.json, not from the page"; check bash -c 'jq -e ".health.dur_minutes_from_seconds==90 and .health.dur_hours_from_seconds==5400" /work/o-state.json >/dev/null'
 node /skill/tests/owner-probe.mjs "$OURL" /work/owner.png > /work/owner-probe.json
 CASE="the page draws the health line from the file (AC-H2)"; check bash -c 'jq -e ".health_hidden==false and (.health_head|test(\"running\")) and (.health_text|test(\"Lane tester\")) and (.health_text|test(\"busy 12 min\")) and (.health_text|test(\"waits on a gate\"))" /work/owner-probe.json >/dev/null'
 CASE="the page draws the owner card and no page errors"; check bash -c 'jq -e "(.card|test(\"Split the ticket\")) and (.errors|length==0) and (.object_object|not)" /work/owner-probe.json >/dev/null'
@@ -55,3 +57,6 @@ $B dev stop --ticket o2 "${C[@]}" >/dev/null; sleep 2
 jq '.owner_board.health_file="../x"' /work/config-owner.json > /work/config-obad.json
 set +e; out=$(node /skill/scripts/server.mjs --tier dev --ticket o3 --config /work/config-obad.json 2>&1); rc=$?; set -e
 CASE="a bad owner_board key fails at start (exit 3) naming it"; check test "$rc" = 3 -a "${out#*owner_board.health_file}" != "$out"
+jq '.owner_board.caps.decide=0' /work/config-owner.json > /work/config-ocap.json
+set +e; out=$(node /skill/scripts/server.mjs --tier dev --ticket o4 --config /work/config-ocap.json 2>&1); rc=$?; set -e
+CASE="a non-positive owner_board.caps key fails at start (exit 3) naming it"; check test "$rc" = 3 -a "${out#*owner_board.caps.decide}" != "$out"

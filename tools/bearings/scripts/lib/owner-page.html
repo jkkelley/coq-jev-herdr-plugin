@@ -1,0 +1,51 @@
+<!-- The health line (WO-20261013-b221, SPEC-17 s-owner), spliced into the page by server.mjs before </main>. Kept beside owner.mjs and not
+     in assets/page.html because that file is outside this ticket's files field (review of PR 92). It polls /state itself, draws from
+     existing classes only, says a missing or broken health file out loud, and draws a halted line like any other: the page is what a
+     halt leaves running. Where an age turns from seconds to minutes to hours, and the poll interval, are config (lib/owner-board.json). -->
+<section class="band" id="health" aria-label="State of the line" aria-live="polite" hidden>
+  <div class="inner">
+    <h2 id="health-head">The line.</h2>
+    <div id="health-list"></div>
+  </div>
+</section>
+<script>
+  (() => {
+    const POLL_MS = @@OWNER_POLL_MS@@;
+    const el = (id) => document.getElementById(id);
+    const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+    const dur = (s, h) => (s < h.dur_minutes_from_seconds ? `${s} s` : s < h.dur_hours_from_seconds ? `${Math.round(s / 60)} min` : `${Math.round(s / 3600)} hr`);
+    const row = (k, v, cls) => `<div class="item"><div><span class="k">${esc(k)}</span></div><span class="state ${cls || ""}">${esc(v)}</span></div>`;
+    const draw = (s) => {
+      const h = s.health;
+      const probs = s.owner_problems || [];
+      el("health").hidden = !h && !probs.length;
+      if (!h && !probs.length) return;
+      const rows = [];
+      if (h && !h.available) {
+        el("health-head").textContent = "The line: not reporting.";
+        rows.push(row("Health", h.reason, "active"));
+      } else if (h) {
+        const word = { running: "Running", draining: "Draining", halted: "Halted" }[h.state];
+        el("health-head").textContent = `The line: ${word.toLowerCase()}.`;
+        rows.push(row("State", `${word}${h.reason ? ` - ${h.reason}` : ""}${h.stale ? " (report is old)" : ""}`, h.state === "running" && !h.stale ? "good" : "active"));
+        if (h.at) rows.push(row("Reported", `${dur(Math.max(0, Math.round((Date.now() - Date.parse(h.at)) / 1000)), h)} ago`));
+        for (const l of h.lanes) rows.push(row(`Lane ${l.name}`, `${l.open} open, ${l.leased} leased${l.oldest_age_seconds ? `, oldest ${dur(l.oldest_age_seconds, h)}` : ""}`, l.open ? "active" : ""));
+        for (const t of h.seats) rows.push(row(`Seat ${t.seat}`, `${t.check}${t.detail ? ` - ${t.detail}` : ""}`, t.check === "ok" ? "good" : "active"));
+        for (const t of h.stalls) rows.push(row("Stall", `${t.title}${t.age_seconds !== undefined ? ` - ${dur(t.age_seconds, h)}` : ""}`, "active"));
+        for (const c of h.counters) rows.push(row(c.name, String(c.value)));
+      }
+      for (const p of probs) rows.push(row(`Owner item ${p.file}`, p.reason, "active"));
+      el("health-list").innerHTML = rows.join("");
+    };
+    const poll = async () => {
+      try {
+        const r = await fetch("state" + location.search, { cache: "no-store" });
+        if (r.ok) draw(await r.json());
+      } catch {
+        /* the page's own poll already says when the link is down */
+      }
+    };
+    poll();
+    setInterval(poll, POLL_MS);
+  })();
+</script>

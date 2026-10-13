@@ -37,13 +37,6 @@
     <div class="undo-row" id="undo-row" hidden></div>
   </section>
 
-  <section class="band" id="health" aria-label="State of the line" aria-live="polite" hidden>
-    <div class="inner">
-      <h2 id="health-head">The line.</h2>
-      <div id="health-list"></div>
-    </div>
-  </section>
-
   <section class="composer" id="composer" aria-label="Message Claude">
     <div class="composer-head">
       <span class="label">Message Claude</span>
@@ -807,42 +800,12 @@
         say("Sent. Waiting for Claude.");
       else if (answered.length) say("Claude received every answer.");
       else say("");
-      drawHealth();
       drawThread();
       drawSession();
       checkAttention();
       idleLine();
       drawUndo();
       renderTitle();
-    };
-
-    // The health line (WO-20261013-b221, SPEC-17 s-owner): pulled with every /state poll from the board's health file, drawn from
-    // existing classes only (no theme change). A missing or broken file is said out loud, never an empty strip; a halted line is
-    // drawn like any other, because the page is what a halt leaves running.
-    const dur = (s) => (s < 90 ? `${s} s` : s < 5400 ? `${Math.round(s / 60)} min` : `${Math.round(s / 3600)} hr`);
-    const drawHealth = () => {
-      const h = state.health;
-      const probs = state.owner_problems || [];
-      $("health").hidden = !h && !probs.length;
-      if (!h && !probs.length) return;
-      const row = (k, v, cls) =>
-        `<div class="item"><div><span class="k">${esc(k)}</span></div><span class="state ${cls || ""}">${esc(v)}</span></div>`;
-      const rows = [];
-      if (h && !h.available) {
-        $("health-head").textContent = "The line: not reporting.";
-        rows.push(row("Health", h.reason, "active"));
-      } else if (h) {
-        const word = { running: "Running", draining: "Draining", halted: "Halted" }[h.state];
-        $("health-head").textContent = `The line: ${word.toLowerCase()}.`;
-        rows.push(row("State", `${word}${h.reason ? ` - ${h.reason}` : ""}${h.stale ? " (report is old)" : ""}`, h.state === "running" && !h.stale ? "good" : "active"));
-        if (h.at) rows.push(row("Reported", relAge(Date.parse(h.at))));
-        for (const l of h.lanes) rows.push(row(`Lane ${l.name}`, `${l.open} open, ${l.leased} leased${l.oldest_age_seconds ? `, oldest ${dur(l.oldest_age_seconds)}` : ""}`, l.open ? "active" : ""));
-        for (const s of h.seats) rows.push(row(`Seat ${s.seat}`, `${s.check}${s.detail ? ` - ${s.detail}` : ""}`, s.check === "ok" ? "good" : "active"));
-        for (const s of h.stalls) rows.push(row("Stall", `${s.title}${s.age_seconds !== undefined ? ` - ${dur(s.age_seconds)}` : ""}`, "active"));
-        for (const c of h.counters) rows.push(row(c.name, String(c.value)));
-      }
-      for (const p of probs) rows.push(row(`Owner item ${p.file}`, p.reason, "active"));
-      $("health-list").innerHTML = rows.join("");
     };
 
     // Tab title and the jump button's unread pill: armed while a Claude reply lands off screen

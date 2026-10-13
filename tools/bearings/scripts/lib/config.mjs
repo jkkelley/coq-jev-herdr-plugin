@@ -36,6 +36,19 @@ const INT_KEYS = [
 ];
 const STR_KEYS = ["schema_version", "project", "state_root", "listen_host", "cookie_name", "open_label_prefix"];
 
+// The owner reader's text caps, age thresholds and poll interval live in lib/owner-board.json (WO-20261013-b221, review of PR 92:
+// literals in owner.mjs and the page were a second place to change a limit, and config/bearings.json is outside the ticket's files).
+// A config's owner_board may override any of them; the merged result is checked here so a bad value stops the start (exit 3).
+const OWNER_DEFAULTS = JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "owner-board.json"), "utf8"));
+export function resolveOwnerBoard(o) {
+  const m = { ...OWNER_DEFAULTS, ...o, caps: { ...OWNER_DEFAULTS.caps, ...(o.caps ?? {}) } };
+  for (const k of ["dur_minutes_from_seconds", "dur_hours_from_seconds", "poll_seconds"])
+    if (!Number.isInteger(m[k]) || m[k] < 1) die(`owner_board.${k} must be a positive integer`);
+  for (const k of Object.keys(OWNER_DEFAULTS.caps))
+    if (!Number.isInteger(m.caps[k]) || m.caps[k] < 1) die(`owner_board.caps.${k} must be a positive integer`);
+  return m;
+}
+
 export function validate(cfg) {
   if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) die("root is not an object");
   for (const k of STR_KEYS)
@@ -54,6 +67,8 @@ export function validate(cfg) {
     if (!/^[a-z][a-z0-9-]{0,31}$/.test(o.owner_lane)) die("owner_board.owner_lane must match ^[a-z][a-z0-9-]{0,31}$");
     for (const k of ["answer_scan_seconds", "owner_item_max_bytes", "health_max_bytes", "health_stale_seconds"])
       if (!Number.isInteger(o[k]) || o[k] < 0) die(`missing or non-integer key owner_board.${k}`);
+    if (o.caps !== undefined && (!o.caps || typeof o.caps !== "object" || Array.isArray(o.caps))) die("owner_board.caps must be an object");
+    resolveOwnerBoard(o);
   }
   if (cfg.idle_minutes < 1) die("idle_minutes must be >= 1");
   if (cfg.stop_tries < 1) die("stop_tries must be >= 1");
