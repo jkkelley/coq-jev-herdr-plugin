@@ -24,7 +24,8 @@
     "WO-20261013-0bda"
   ],
   "blocks": [
-    "WO-20261013-d127"
+    "WO-20261013-d127",
+    "WO-20261013-cc5b"
   ],
   "files": [
     "herdr/bin/seat.sh",
