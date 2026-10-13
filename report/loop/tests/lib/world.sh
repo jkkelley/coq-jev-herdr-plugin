@@ -60,5 +60,11 @@ collect() {
   # shellcheck disable=SC2086 # $lv is one flag or a flag and a path
   LOOP_ROOT="$ROOT_FIX" LOOP_CONFIG="$W/board.json" "$LOOP" collect --now "$NOW" --panes "$W/panes.json" $lv "$@" > "$W/entry.json" 2> "$W/collect.err"
 }
-q() { jq -e "$1" "$W/entry.json" >/dev/null 2>&1; }
+# BREADCRUMB 2026-10-13 - WO-20261013-89c7, review.changes 422 on PR 93. What broke: a collect that died (exit 3, entry.json left empty)
+#   still satisfied every RESULT_JQ, because the lint image's jq 1.6 exits 0 for `jq -e EXPR` on an empty file (host jq 1.7 exits 4), so
+#   16-live.test.sh passed in Podman on the live.jq stale filter that crashes ("Cannot index array with string branch") and failed
+#   only on the host. Why this fix: q is false unless entry.json has content, so a failed collect fails the assertion on any jq.
+#   Rejected: `jq -e -s` (still true on the empty input in 1.6) and asserting collect's exit in each case (an assertion that is
+#   forgotten again). Cost: none; an assertion about an absent entry must now say so with its own test, none does.
+q() { [ -s "$W/entry.json" ] && jq -e "$1" "$W/entry.json" >/dev/null 2>&1; }
 RESULT_JQ() { if q "$2"; then pass "$1"; else flunk "$1 ($2)"; jq -c "${3:-.}" "$W/entry.json" | head -c 1500 >&2; echo >&2; fi; }

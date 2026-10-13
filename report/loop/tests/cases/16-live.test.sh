@@ -47,9 +47,9 @@ RESULT_JQ "closed, the stale list is empty" '.stale == []'
 expect_exit 0 "validate passes once the ticket is closed" "$LOOP" validate "$W/entry.json"
 # A ticket with a branch that is gone from origin is stale too; with a live branch it is not.
 ticket "$S" in-progress feat/gone null "Left behind"
-live '[]' '[]'; collect
+live '[]' '[]'; t "collect with the live line ok and an in-progress ticket that has a branch" collect
 RESULT_JQ "an in-progress ticket whose branch is gone from origin is stale" '.stale == ["WO-20261010-dead"]'
-live '[]' '["feat/gone"]'; collect
+live '[]' '["feat/gone"]'; t "collect with the in-progress ticket's branch on origin" collect
 RESULT_JQ "and not stale while its branch is on origin" '.stale == []'
 
 # The repository's own tickets: none in progress on main may lack a branch (the check that fails the test run on one).

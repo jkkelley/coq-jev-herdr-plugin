@@ -26,4 +26,11 @@
     | map({id: prid, title: (.title | sub("^WO-[0-9]{8}-[0-9a-f]{4} - "; "")), status: "in-review", parent: null, branch: .headRefName, pr: .number, closed: null})) as $extra
 | {tickets: ($merged + $extra),
    stale: [$merged[] | select(.status == "in-progress" and .pr == null
-       and (.branch == null or ($ok and (($br | index(.branch)) == null)))) | .id] | sort}
+       and (.branch as $b | $b == null or ($ok and (($br | index($b)) == null)))) | .id] | sort}
+# BREADCRUMB 2026-10-13 - WO-20261013-89c7, review.changes 422 on PR 93 (AC-H2). What broke: the stale filter above read
+#   `$br | index(.branch)`, and inside that pipe `.` is the branches array, so jq died with "Cannot index array with string branch"
+#   whenever an in-progress ticket with a branch met LIVE.ok true; `loop.sh collect` on the repo with the live gh and ls-remote
+#   data exited 3 ("the live line could not be merged into the tickets") and the board went dark. Why this fix: bind the ticket's
+#   branch to $b before the pipe, the same shape open_pr already uses with $t. Rejected: indexing with `$t.branch` through a second
+#   def (a binding in place is smaller). Cost: none. tests/cases/16-live.test.sh now covers the path that failed (ok true, branch
+#   set, in progress), in the fixture and on the live collect.
