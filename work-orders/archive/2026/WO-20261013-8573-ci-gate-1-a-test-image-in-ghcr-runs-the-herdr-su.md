@@ -31,7 +31,10 @@
     "ci/image/README.md",
     "ci/config/images.json",
     "ci/pod/herdr-suite.pod.yaml",
-    "ci/tests/cases/01-test-image.test.sh"
+    "ci/tests/cases/01-test-image.test.sh",
+    "ci/config/images.schema.json",
+    "herdr/tests/cases/01-seat-up-check-down.test.sh",
+    "herdr/tests/cases/04-bringup-monitors.test.sh"
   ]
 }
 ---
@@ -104,6 +107,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` 2026-10-13T23:30Z: files field extended with ci/config/images.schema.json, herdr/tests/cases/01-seat-up-check-down.test.sh and herdr/tests/cases/04-bringup-monitors.test.sh, which PR 156 changes and claims.sh diff reported as outside the field (PR 141 precedent). No open PR (158, 157, 35) or in-flight ticket claims them. AC-H2 (30 of 31 herdr cases in arm64 pods) is met at 30/31 per architect ruling record 20261013T231556Z-200: case 11 is a known pod-only gap, carried by follow-up pod ticket WO-20261013-0b48.
 - `2026-10-13` Retro 2026-10-13T23:10Z: arm64 Raspberry Pi pods are slower than the amd64 host, so herdr cases that read a status once raced (01, 04 fixed with wait_until). 11-guard-ack-nudge still fails in pods: seat.sh nudge_seat needs two idle reads inside nudge_settle_seconds 4 (case config) and herdr does not report idle that fast on arm64. Follow-up ticket for pod-only failures is cut by sched-worker-1. Pods request 1 cpu, no cpu limit. A kubectl exec diagnostic was blocked twice by the removal safety check, so the cause is unconfirmed.
 - `2026-10-13` 2026-10-13T20:02Z: amended on PR 130 to fold in the design amendments 20:00Z (Jenkins, not GitHub Actions), 20:04Z (in the cluster via coqGate(), test images in GHCR, host agent fallback only) and 20:07Z (webhooks, no pollSCM, status event triggers, 5-rung ladder). The ticket is ready and amend refuses non-drafts, so the body and files were edited directly by the cut seat under the architect's order; approval and status are unchanged.
 
