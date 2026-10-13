@@ -62,7 +62,9 @@
       "blocked",
       "test",
       "review"
-    ]
+    ],
+    "compliance_agent": "compliance-officer",
+    "patrol_seconds": 60
   },
   "supervisor": {
     "step_timeout_seconds": 120,
