@@ -66,7 +66,8 @@ Cause l (record gsp29): PR 94 merged onto red main because the hold was a ruling
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* with the hold file present merge.sh merges nothing and posts one 423; without it the merge proceeds
+- [x] `AC-H1` *(human)* with the hold file present merge.sh merges nothing and posts one 423; without it the merge proceeds
+  - observed `2026-10-13` line/tests/cases/merge-hold.sh in the test pane wD3:p1HV: tests 1 passed 0 failed. With the hold file present merge.sh --pr and --all exit 3, make no gh call, merge nothing and post exactly one blocked 423 to orchestrator naming the reason (reruns post none); with the file removed the same PR merges and one merged 200 posts. make lint and make -C line test: exit 0, 14 passed 0 failed.
 
 ## Test plan
 
@@ -85,6 +86,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: hold_reason first printed the reason through $(...), which lost HOLD_SHA to the subshell and posted the 423 with no sha; the case caught it. Fixed by setting globals. The 423 is deduped on its note so the patrol tick posts it once per hold, not once a minute. Worktree was a start worktree, not a treehouse lease (seat seated with --worktree), so the lease check had nothing to find.
 
 ## Outcome
 
