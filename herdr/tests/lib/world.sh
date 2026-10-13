@@ -11,6 +11,15 @@ world_up() {
   local name="$1" filt="${2:-.}"
   WORLD="${COQ_CASE_WORK:-${WORK_ROOT:-/tmp}}/$name"; mkdir -p "$WORLD"
   REPO="$WORLD/repo"; cp -a "${REPO_ROOT:-/repo}/." "$REPO/"; rm -rf "$REPO/.git"
+  # BREADCRUMB 2026-10-12 - WO-20261012-7e13, case 17-resume-checkpoint still failed after PR 80 (WO-20261012-9f5d). What broke: every
+  #   treehouse slot has .claude/skills as a symlink to the host's installed skills (skill-sync), `cp -a` copies the link, and
+  #   inside the container its target does not exist, so the case's `mkdir -p .claude/skills` died with "File exists" and its
+  #   `cp` of the checkpoint.sh fixture found no directory (17-resume-checkpoint.test.sh line ~15, the output of run 2026-10-12
+  #   23:5x UTC). Why this fix: the world is a throwaway copy that must not depend on the host's home, so a dangling or any
+  #   .claude/skills link is dropped and the case makes the real directory it needs. Rejected: following the link with cp -aL (it
+  #   would copy the owner's whole skill set into every world) and editing the case (tests/cases is not this ticket's).
+  #   Cost: no case can use the host's installed skills from a world; none does.
+  [ ! -L "$REPO/.claude/skills" ] || rm "$REPO/.claude/skills"
   # BREADCRUMB 2026-10-12 - WO-20261012-7e13 (Roadmap A1), same ruling. What broke: event.sh add now prints the new file's path (AC-H1),
   #   and case 13-break-glass takes that output as the record id (`id=$("$EV" add ...)`, then `seat.sh --record $id` and
   #   `--answer $id`), so seven refusals became "--record needs a record id" (seat.sh line 59). Why this fix: the real event.sh runs
