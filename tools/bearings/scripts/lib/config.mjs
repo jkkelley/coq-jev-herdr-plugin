@@ -45,6 +45,16 @@ export function validate(cfg) {
   for (const k of INT_KEYS)
     if (!Number.isInteger(cfg[k]) || cfg[k] < 0) die(`missing or non-integer key ${k}`);
   if (cfg.board_dir !== undefined && (typeof cfg.board_dir !== "string" || !cfg.board_dir)) die("board_dir must be a non-empty string");
+  if (cfg.owner_board !== undefined) {
+    const o = cfg.owner_board;
+    if (!o || typeof o !== "object" || Array.isArray(o)) die("owner_board must be an object");
+    for (const k of ["dir", "records_dir", "owner_lane", "health_file"])
+      if (typeof o[k] !== "string" || !o[k]) die(`missing or empty string key owner_board.${k}`);
+    if (!/^[A-Za-z0-9._-]+$/.test(o.health_file)) die("owner_board.health_file must be a plain file name");
+    if (!/^[a-z][a-z0-9-]{0,31}$/.test(o.owner_lane)) die("owner_board.owner_lane must match ^[a-z][a-z0-9-]{0,31}$");
+    for (const k of ["answer_scan_seconds", "owner_item_max_bytes", "health_max_bytes", "health_stale_seconds"])
+      if (!Number.isInteger(o[k]) || o[k] < 0) die(`missing or non-integer key owner_board.${k}`);
+  }
   if (cfg.idle_minutes < 1) die("idle_minutes must be >= 1");
   if (cfg.stop_tries < 1) die("stop_tries must be >= 1");
   if (!Array.isArray(cfg.allowed_hosts) || !cfg.allowed_hosts.length)

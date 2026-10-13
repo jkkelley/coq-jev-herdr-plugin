@@ -183,6 +183,55 @@
       "type": "string",
       "minLength": 1,
       "description": "Where the factory board page is built (report/loop watch writes index.html and data.json there). GET /board and GET /board/data.json serve it behind the page key. Relative to the repository root, or absolute. Must equal out_dir in report/loop/config/board.json (make -C report/loop lint checks). Absent: /board answers 404."
+    },
+    "owner_board": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Where the page reads the owner lane and the health line (SPEC-17 s-owner, WO-20261013-b221). dir is the board directory of the state root (one subdirectory per lane, health_file beside them); records_dir is the records tree searched for answer records. Absent: no owner cards and no health line.",
+      "required": [
+        "dir",
+        "records_dir",
+        "owner_lane",
+        "health_file",
+        "answer_scan_seconds",
+        "owner_item_max_bytes",
+        "health_max_bytes",
+        "health_stale_seconds"
+      ],
+      "properties": {
+        "dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "records_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner_lane": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{0,31}$"
+        },
+        "health_file": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9._-]+$"
+        },
+        "answer_scan_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "owner_item_max_bytes": {
+          "type": "integer",
+          "minimum": 1024
+        },
+        "health_max_bytes": {
+          "type": "integer",
+          "minimum": 1024
+        },
+        "health_stale_seconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
     }
   }
 }

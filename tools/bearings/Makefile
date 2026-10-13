@@ -55,7 +55,7 @@ test:
 image:
 	bash $(HERE)tests/run-tests.sh --image-only
 lint:
-	bash -n $(BIN) && node --check $(HERE)scripts/server.mjs && node --check $(HERE)scripts/wait.mjs && node --check $(HERE)scripts/reply.mjs && node --check $(HERE)scripts/lib/config.mjs && node --check $(HERE)scripts/lib/sitrep.mjs && node --check $(HERE)scripts/sitrep-check.mjs && node --check $(HERE)scripts/sitrep-build.mjs
+	bash -n $(BIN) && node --check $(HERE)scripts/server.mjs && node --check $(HERE)scripts/wait.mjs && node --check $(HERE)scripts/reply.mjs && node --check $(HERE)scripts/lib/config.mjs && node --check $(HERE)scripts/lib/sitrep.mjs && node --check $(HERE)scripts/sitrep-check.mjs && node --check $(HERE)scripts/sitrep-build.mjs && node --check $(HERE)scripts/lib/owner.mjs
 	bash $(HERE)tests/run-tests.sh --lint-only
 # upgrade: the stable tier always runs the main checkout. Pull main, then restart
 # stable so server.mjs changes take effect (page.html is re-read per request anyway).

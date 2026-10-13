@@ -7,6 +7,7 @@
 - Run it
 - Ask, wait, reply
 - The factory board
+- The owner lane and the health line
 - The SITREP panel
 - Test it
 - Promote a change: dev to uat to stable
@@ -88,6 +89,17 @@ Both are read from `board_dir` in the config (relative to the repository root), 
 A board that was never built answers 503 `board not built`; a config with no `board_dir` answers 404.
 Run `report/loop/loop.sh watch` in a labelled herdr pane to keep it built (`report/loop/RUNBOOK.md`).
 
+## The owner lane and the health line
+
+The page pulls two things from the board in the state root on every `/state` poll (WO-20261013-b221, SPEC-17 s-owner); nothing pushes them.
+Both come from `owner_board` in the config; without that key the page draws neither.
+The open items of the owner lane (`<dir>/owner/*.json`) become cards: one card per ticket, kind and code, so a second 423 on one ticket is the same card, and an item that cannot be a card is listed on the page instead of dropped.
+An item carries `card`: `{about, decide, options: [{label, then}] (2 to 4), rec}`, the same shape as `questions.json`.
+A card is done when a record whose `answer` field names any of its item ids exists under `records_dir`.
+The health line is `<dir>/<health_file>`: `state` (running, draining or halted), `lanes`, `seats`, `stalls`, `counters`.
+A missing or malformed file is drawn as "not reporting" with the reason, and a halted line is drawn like any other.
+Cases: `tests/owner.sh`, with the fixtures written by the script.
+
 ## The SITREP panel
 
 A reply whose text is `#SITREP/v1#` and one JSON object draws as a colored status card on the page (WO-20261012-668a); the same text typed by the owner is a bubble, and so is a payload that does not parse.
@@ -161,6 +173,7 @@ No absolute path, hostname or port lives in a script: the file is meant to be li
 | `scripts/reply.mjs`          | appends the agent's reply to `messages.jsonl` (capped at `max_reply_chars`) |
 | `scripts/sitrep-build.mjs`   | fills `config/sitrep.template.json` from tickets, events and open PRs   |
 | `scripts/sitrep-check.mjs`   | measures a SITREP payload against the standard; exit 1 on a violation   |
+| `scripts/lib/owner.mjs`      | reads the owner lane into cards and the board's health file for the page |
 | `scripts/lib/sitrep.mjs`     | the SITREP rules, shared by the checker, builder and sender             |
 | `config/sitrep.json`         | SITREP limits, ticket id patterns and build sources                     |
 | `config/sitrep.template.json`| the shape and sentences of a briefing                                   |

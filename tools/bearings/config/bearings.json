@@ -52,5 +52,15 @@
       "checkout": "treehouse slot on the feature branch"
     }
   },
-  "board_dir": "report/loop/out"
+  "board_dir": "report/loop/out",
+  "owner_board": {
+    "dir": "${HOME}/.local/state/coq/coq-jev-herdr-plugin/board",
+    "records_dir": "${HOME}/.local/state/coq/coq-jev-herdr-plugin/records",
+    "owner_lane": "owner",
+    "health_file": "health.json",
+    "answer_scan_seconds": 2,
+    "owner_item_max_bytes": 65536,
+    "health_max_bytes": 262144,
+    "health_stale_seconds": 180
+  }
 }

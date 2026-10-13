@@ -16,7 +16,8 @@ import fs from "node:fs";
 import http from "node:http";
 import net from "node:net";
 import path from "node:path";
-import { TOOL_ROOT, argv, loadConfig, resolveTier } from "./lib/config.mjs";
+import { TOOL_ROOT, argv, interpolate, loadConfig, resolveTier } from "./lib/config.mjs";
+import { readHealthLine, readOwnerLane } from "./lib/owner.mjs";
 
 const ASSETS = path.join(TOOL_ROOT, "assets");
 const REPO_ROOT = path.resolve(TOOL_ROOT, "..", "..");
@@ -51,6 +52,12 @@ const { cfg } = loadConfig(val("--config"));
 const T = resolveTier(cfg, tier, val("--ticket"));
 // Where the factory board's page is built; relative to the repository root, or absolute. Absent: /board answers 404.
 const BOARD_DIR = cfg.board_dir ? path.resolve(REPO_ROOT, cfg.board_dir) : null;
+// The owner lane and the health line (WO-20261013-b221, SPEC-17 s-owner): read from the board's files on every /state poll, so the
+// page pulls them and nothing pushes. Absent from the config: no owner cards, no health line.
+const vars = { project: cfg.project, tier: T.tier, ticket: T.ticket };
+const OWNER_BOARD = cfg.owner_board
+  ? { ...cfg.owner_board, dir: interpolate(cfg.owner_board.dir, vars), records_dir: interpolate(cfg.owner_board.records_dir, vars) }
+  : null;
 const DIR = T.stateDir;
 const file = (f) => path.join(DIR, f);
 fs.mkdirSync(DIR, { recursive: true });
@@ -290,6 +297,16 @@ if (has("--stop")) {
       return { questions: null, error: "questions.json has no items array" };
     return { questions: q, error: null };
   };
+  // questions.json plus the open owner-lane cards. A card already shown keeps its id; a questions.json id wins a clash. A done card
+  // (its answer record exists) leaves the deck; one pull per call, so the answer endpoint and /state agree.
+  const deck = () => {
+    const base = readQuestions();
+    const lane = readOwnerLane(OWNER_BOARD);
+    if (!base.questions) return { ...base, lane };
+    const have = new Set(base.questions.items.map((i) => i.id));
+    const extra = lane.cards.filter((c) => !c.done && !have.has(c.id));
+    return { questions: { ...base.questions, items: [...base.questions.items, ...extra] }, error: base.error, lane };
+  };
   const readBody = (req, res, handle) => {
     let body = "";
     req.on("data", (c) => {
@@ -356,10 +373,12 @@ if (has("--stop")) {
       return send(res, 200, { ok: true, page: T.page, tier: T.tier, ticket: T.ticket, pid: process.pid });
     }
     if (req.method === "GET" && url.pathname === "/state") {
-      const { questions, error } = readQuestions();
+      const { questions, error, lane } = deck();
       return send(res, 200, {
         questions,
         error,
+        owner_problems: lane.problems,
+        health: readHealthLine(OWNER_BOARD),
         session: readJson("session.json", null),
         answers: answersNow(),
         delivered: readJson("delivered.json", {}),
@@ -470,7 +489,7 @@ if (has("--stop")) {
     }
     if (req.method === "POST" && url.pathname === "/answer") {
       readBody(req, res, (a) => {
-        const items = readJson("questions.json", { items: [] }).items || [];
+        const items = deck().questions?.items || [];
         const q = items.find((i) => i.id === a.id);
         if (!q || !q.options?.[a.pick]) return send(res, 400, { error: "unknown question or option" });
         const line = {
