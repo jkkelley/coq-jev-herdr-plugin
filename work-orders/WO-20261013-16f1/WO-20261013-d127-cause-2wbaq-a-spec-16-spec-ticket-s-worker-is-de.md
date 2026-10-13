@@ -24,7 +24,8 @@
     "WO-20261013-7af7"
   ],
   "blocks": [
-    "WO-20261013-496d"
+    "WO-20261013-496d",
+    "WO-20261013-bcba"
   ],
   "files": [
     "roles/spec-author.json",
