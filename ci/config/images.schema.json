@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ci/config/images.json - the test images the CI gate builds and pulls",
+  "type": "object",
+  "required": ["schema_version", "registry", "platforms", "images"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "registry": { "type": "string", "pattern": "^[a-z0-9.-]+/[a-z0-9._-]+$" },
+    "platforms": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^linux/(amd64|arm64)$" } },
+    "images": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "required": ["version", "containerfile", "base", "herdr"],
+        "additionalProperties": false,
+        "properties": {
+          "version": { "type": "string", "pattern": "^[0-9A-Za-z._-]+$" },
+          "containerfile": { "type": "string" },
+          "base": { "type": "string", "pattern": "@sha256:[0-9a-f]{64}$" },
+          "herdr": {
+            "type": "object",
+            "required": ["version", "sha256"],
+            "additionalProperties": false,
+            "properties": {
+              "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+              "sha256": {
+                "type": "object",
+                "required": ["amd64", "arm64"],
+                "additionalProperties": false,
+                "properties": {
+                  "amd64": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+                  "arm64": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
