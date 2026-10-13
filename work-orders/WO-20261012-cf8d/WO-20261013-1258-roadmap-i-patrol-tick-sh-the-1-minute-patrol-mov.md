@@ -28,7 +28,8 @@
     "WO-20261013-2fc5",
     "WO-20261013-9617",
     "WO-20261013-bf70",
-    "WO-20261013-acdd"
+    "WO-20261013-acdd",
+    "WO-20261013-ee5c"
   ],
   "files": [
     "line/bin/patrol-tick.sh",
