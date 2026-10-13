@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "state_root": "${state}",
+  "board_dir": "${state_root}/board",
+  "done_dir": "${board_dir}/done",
+  "health_file": "${board_dir}/health.json",
+  "nudge_dir": "${board_dir}/nudge",
+  "halt_flag": "${state_root}/run/halt",
+  "drain_flag": "${state_root}/run/drain",
+  "lanes": ["interface-agent", "orchestrator", "architect", "worker", "tester", "reviewer", "merger", "player", "monitor", "owner"],
+  "priorities": ["p0", "p1", "p2", "p3"],
+  "default_priority": "p2",
+  "lease_seconds": 1800,
+  "nudge_seconds": 60,
+  "digest_seconds": 1800,
+  "digest_lanes": ["architect"],
+  "retention_days": 30
+}

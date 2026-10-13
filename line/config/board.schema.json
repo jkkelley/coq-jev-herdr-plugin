@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/line/config/board.schema.json",
+  "title": "The board config (SPEC-17 s-config). Every key is required: a missing key is exit 3 naming the key. A key marked x-path holds a path and must begin with a variable (${state}, ${repo}, ${state_root} or ${board_dir}), never a literal path.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "state_root", "board_dir", "done_dir", "health_file", "nudge_dir", "halt_flag", "drain_flag", "lanes", "priorities", "default_priority", "lease_seconds", "nudge_seconds", "digest_seconds", "digest_lanes", "retention_days"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "state_root": { "type": "string", "x-path": true, "pattern": "^\\$\\{(state|repo)\\}(/.*)?$" },
+    "board_dir": { "type": "string", "x-path": true, "pattern": "^\\$\\{(state_root|repo)\\}/.+$" },
+    "done_dir": { "type": "string", "x-path": true, "pattern": "^\\$\\{(board_dir|state_root)\\}/.+$" },
+    "health_file": { "type": "string", "x-path": true, "pattern": "^\\$\\{(board_dir|state_root)\\}/.+$" },
+    "nudge_dir": { "type": "string", "x-path": true, "pattern": "^\\$\\{(board_dir|state_root)\\}/.+$" },
+    "halt_flag": { "type": "string", "x-path": true, "pattern": "^\\$\\{(state_root|board_dir)\\}/.+$" },
+    "drain_flag": { "type": "string", "x-path": true, "pattern": "^\\$\\{(state_root|board_dir)\\}/.+$" },
+    "lanes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z-]*$" } },
+    "priorities": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "pattern": "^p[0-3]$" } },
+    "default_priority": { "type": "string", "pattern": "^p[0-3]$" },
+    "lease_seconds": { "type": "integer", "minimum": 60 },
+    "nudge_seconds": { "type": "integer", "minimum": 1 },
+    "digest_seconds": { "type": "integer", "minimum": 1 },
+    "digest_lanes": { "type": "array", "uniqueItems": true, "items": { "type": "string", "pattern": "^[a-z][a-z-]*$" } },
+    "retention_days": { "type": "integer", "minimum": 1 }
+  }
+}
