@@ -7,7 +7,7 @@ set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "${REPO_ROOT:-/repo}/herdr/tests/lib/assert.sh"; . "$HERE/../lib/world.sh"
 world_up gateroute
-fives() { find "$R/events" -name '*-500-*.json' | wc -l | tr -d ' '; }
+fives() { files_code 500 | wc -l | tr -d ' '; }
 receipts() { ids_of record.routed | while read -r r; do rec_json "$r" | jq -r .note; done; }
 seat_calls() { grep -c -e "$1" "$W/seat.log" | tr -d ' '; }
 
@@ -38,7 +38,7 @@ assert_eq "no merger prompt for it" "$(grep -c "record $rc " "$HLOG" | tr -d ' '
 assert_eq "no merger seat for $T2" "$(seat_calls "--ticket $T2 --role merger")" 0
 assert_eq "the reviewer stays up: a held record takes nothing down" "$(seat_calls "--down reviewer-wo-20261012-2222")" 0
 assert_match "the receipt says held, names the record, the shas and the path" "$(receipts)" "held review.passed 201 \($rc\): test.passed .* on $A and this record's $C differ outside events/: code.txt"
-assert_eq "the ledger says held" "$(cut -d' ' -f1 "$STATE/routed/$rc")" held
+assert_eq "the ledger says held" "$(cut -d' ' -f1 "$(ledger_of $rc)")" held
 assert_eq "no 500" "$(fives)" 0
 run_once; assert_eq "a second tick does not route it again" "$(receipts | grep -c "held review.passed 201 ($rc)")" 1
 
@@ -93,6 +93,6 @@ rx=$(evo --code 201 --seat reviewer-wo-20261012-7777 --kind review.passed --tick
 run_once
 assert_eq "no herdr call for the review" "$(grep -c "record $rx " "$HLOG" | tr -d ' ')" 0
 assert_eq "exactly one 500" "$(fives)" 1
-assert_match "it names the record, the predicate and the exit code" "$(cat "$R"/events/20*/*/*-500-*.json | jq -r .note)" "route failed for review.passed 201, record $rx: gate.sh when heads_match failed \(exit 4\)"
-assert_eq "the ledger says failed" "$(cat "$STATE/routed/$rx")" failed
+assert_match "it names the record, the predicate and the exit code" "$(notes_code 500)" "route failed for review.passed 201, record $rx: gate.sh when heads_match failed \(exit 4\)"
+assert_eq "the ledger says failed" "$(cat "$(ledger_of $rx)")" failed
 case_done

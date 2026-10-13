@@ -3,9 +3,9 @@
   "description": "Standing policies (WO-20261012-9b2c). An escalation is a record the routes table sends to the architect or the owner. A row here gives one kind of escalation a deadline and a default: if no record in answered_by lands on the ticket within deadline_seconds of the escalation, factory/bin/policy.sh writes a policy.applied record naming the row and wakes the seat. A kind with no row here waits for its answer without end. break.glass never has a row and policy.sh refuses a table that gives it one.",
   "poll_seconds": 15,
   "watcher_seat": "policy-watch",
-  "events_dir": "${repo}/events",
+  "events_dir": "${tree:records}",
   "event_bin": "${repo}/events/bin/event.sh",
-  "state_dir": "${repo}/factory/state/policy",
+  "state_dir": "${tree:run}/policy",
   "runner_config": "${repo}/factory/config/runner.json",
   "policies": [
     {

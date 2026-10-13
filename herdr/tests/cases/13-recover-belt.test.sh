@@ -9,7 +9,14 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 world_up recoverbelt '.bringup_gate=true | .belt.status="${repo}/factory/bin/route.sh status"' || exit 1
 world_real_belt
 RC="$REPO/herdr/bin/recover.sh"; BU="$REPO/herdr/bin/bringup.sh"; MON="$REPO/herdr/bin/monitors.sh"
-BELT="$REPO/factory/state/belt"; STATUS="$REPO/factory/bin/route.sh"
+# BREADCRUMB 2026-10-13 - WO-20261012-0229 (Roadmap A2). What broke: BELT was $REPO/factory/state/belt, the file route.sh kept in the
+#   checkout; route.sh now keeps it at <state>/run/belt, and this world exports COQ_STATE="$STATE", so the `touch -d '-100 seconds'`
+#   below aged a file nobody read and "the belt is still stale" saw a fresh belt (got 0, want 1; FAILED belt never said "stopped").
+#   Why this fix: the one path, nothing else. The runner, route.sh status and recover.sh are the real ones and are untouched.
+#   Rejected: pointing route.sh back at factory/state for this world (a second place for the belt) and a --state flag on every
+#   call (the world already exports the root). Cost: this file is outside the ticket's declared files; no open PR touches it, and
+#   the change is forced by the ticket, so it rides the same pull request (noted in the ticket's retro).
+BELT="$STATE/run/belt"; STATUS="$REPO/factory/bin/route.sh"
 run() { "$RC" "$1" > "$WORLD/out" 2>&1; rc=$?; out="$(cat "$WORLD/out")"; }
 fresh() { for _ in $(seq 1 25); do "$STATUS" status >/dev/null 2>&1 && return 0; sleep 1; done; return 1; }
 runner_pane() { "$MON" status | sed -nE 's/^ +2\.2\.2 route runner - runner +\[([^]]+)\] +in use$/\1/p'; }

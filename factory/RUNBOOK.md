@@ -3,6 +3,7 @@
 ## Contents
 
 - What it does
+- State root
 - The routes, row by row
 - The gate rules
 - Run it here
@@ -59,6 +60,26 @@ Matching:
 - `code_gte` is a floor on the code.
 - `attempt_lt` and `attempt` compare the same way.
 - `escalations` is the number of `escalated` records the runner wrote for the ticket before this record, which is how the table tells a first 423 from a second.
+
+## State root
+
+Owner cards C10 and C11, Roadmap A2 (WO-20261012-0229 - Roadmap A2 - The belt reads the state root): route.sh, flow.sh, policy.sh and gate.sh read records from, and keep their own files under, the state root.
+The root is `$COQ_STATE`, else `${XDG_STATE_HOME:-~/.local/state}/coq/<repo>`, resolved by `bin/state-root.sh`, so every treehouse slot of the repository shares one.
+`--state DIR` on route.sh, flow.sh or policy.sh is the same thing for one run: an absolute root that replaces `$COQ_STATE`, and it reaches `route.sh status` and `event.sh` through the environment.
+A config value names a tree with `${tree:NAME}` (see `factory/bin/paths.sh`), so no config or script holds a root of its own.
+
+| Tree                       | Written by                                  | Read by                                    | Clean it                                                                                                  |
+| -------------------------- | ------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `records/YYYY/MM/`         | `events/bin/event.sh add`                   | route.sh, gate.sh, flow.sh, policy.sh      | retention removes whole `YYYY/MM` folders; never one file                                                 |
+| `ledger/routed/`           | route.sh, one entry per record file, named like it | route.sh                            | delete an entry only with its record file; alone it makes the record route again (see Read the belt)       |
+| `run/belt`, `run/since`    | route.sh                                    | route.sh status, flow.sh, the board        | the belt is safe to delete; delete `since` only to start over                                             |
+| `run/flow/`, `run/policy/` | flow.sh, policy.sh (latches and `since`)    | the same script                            | safe to delete; the stall is noted, or the default applied, once more                                     |
+
+Each of `ledger/routed/`, `run/`, `run/flow/` and `run/policy/` carries a `README.md` that says the same, written by the script that owns it on its first start.
+The ledger entry is named like the record's file (`YYYYMMDDHHMMSS-<name>`), not its id.
+The wake line, the receipts and the 500 notes still name the record's id, except the note for an interrupted entry, which has only the entry's name.
+Records are routed in id order within one tick.
+A record still in the repository's `events/` tree is not routed.
 
 ## The routes, row by row
 
@@ -140,7 +161,7 @@ It stops at once, not after the poll interval, and a restart over the same log r
 
 ## Run it against another repo
 
-Everything the runner touches hangs off `${repo}`, and three flags move it.
+Everything the runner touches hangs off `${repo}` and the state root, and three flags move them.
 
 ```sh
 factory/bin/route.sh run \
@@ -151,14 +172,14 @@ factory/bin/route.sh run \
 
 The other repo needs these, at the paths `factory/config/runner.json` names (edit the config copy, or pass `--config`):
 
-- an events directory written by an `event.sh` (`events_dir`, `event_bin`)
+- a records directory written by an `event.sh` (`events_dir`, `event_bin`); that `event.sh` writes to `$COQ_STATE`, so run it with the same `--state` as the runner
 - `roles/<role>.json` with a `label` for every role the routes name (`roles_dir`)
 - `playbooks/<role>.md` for every role a wake can reach (`playbooks_dir`)
 - `queue/bin/queue.sh` when the table has an `enqueue` row (`queue_bin`)
 - `herdr/bin/seat.sh` when the table has a `seat` row or a `down` field (`seat_bin`)
 
-`--routes` replaces `routes_file` and `--state` replaces `state_dir`.
-The state directory holds the ledger, the first-start boundary and the belt file, so give each events directory its own.
+`--routes` replaces `routes_file` and `--state` replaces the state root.
+The state root holds the records, the ledger, the first-start boundary and the belt file, so give each repo its own.
 Case 07 of the suite runs exactly this and checks that nothing of this repo is read or written.
 
 ## Add behaviour
@@ -173,7 +194,7 @@ A new `do` or a new row field is the only thing that needs runner code, and that
 
 ## Read the belt
 
-`factory/state/belt` is rewritten every tick, so its age is the age of the last tick.
+`<state>/run/belt` is rewritten every tick, so its age is the age of the last tick.
 `route.sh status` prints it and exits 1 when it is `stale_seconds` old or older (30 to 120, default 60), or missing; it is running only while fresher than that.
 A stopped runner stops touching the file and reads as stale within `stale_seconds`.
 The runner is serial, so a `seat` row holds every later record until `seat.sh` returns.
@@ -191,10 +212,10 @@ Bring-up and `seat.sh --check` will read it the same way once WO-20261011-5355 -
 | A 500 note: `seat.sh --down NAME failed`              | `seat.sh` would not take the seat down: a foreign process holds its slot, or the seat never existed (a gate record posted by hand). The row's own action was still done. |
 | A record with a ledger entry `ignored`                | A housekeeping row matched. That is the only trace it leaves.                                                                   |
 | A 500 note: `routing of record <id> was interrupted`  | The runner died between claiming a record and finishing it. The wake may or may not have been sent. Look, then re-send by hand. |
-| A 500 note: `unreadable record`                       | A file under `events/` is not JSON. Fix or remove it; the runner ignores it from then on.                                       |
+| A 500 note: `unreadable record`                       | A file under `<state>/records/` is not JSON. Fix or remove it; the runner ignores it from then on.                                       |
 | A record never routed                                 | It was written before the first start without `--from-start`, or its seat is the runner's own seat.                             |
 
-To route a record again on purpose, delete its file under `factory/state/routed/`.
+To route a record again on purpose, delete its entry under `<state>/ledger/routed/`, which is named like the record's file.
 That is the only supported way, and it is a decision, not a retry loop.
 
 ## What it never does
@@ -234,9 +255,9 @@ The route runner turns a 500 into a wake of the monitor seat, and the monitor ra
 
 | Stall       | Condition                                                                                                                     | Latch                                                              |
 | ----------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Gate record | a `gates` row of `flow.json` (kind and code) older than `stall_seconds` with no record of a `consumers` kind on the same ticket after it | `factory/state/flow/<record id>`, never removed                    |
-| Belt        | `route.sh status` exits 1 (belt file stale or missing, `stale_seconds` of `runner.json`)                                      | `factory/state/flow/belt-stale`, removed when the belt is fresh    |
-| Runner pane | no herdr pane labelled like `runner_pane_label_regex`, or its foreground is the shell                                         | `factory/state/flow/runner-gone`, removed when the pane runs again |
+| Gate record | a `gates` row of `flow.json` (kind and code) older than `stall_seconds` with no record of a `consumers` kind on the same ticket after it | `<state>/run/flow/<record id>`, never removed                    |
+| Belt        | `route.sh status` exits 1 (belt file stale or missing, `stale_seconds` of `runner.json`)                                      | `<state>/run/flow/belt-stale`, removed when the belt is fresh    |
+| Runner pane | no herdr pane labelled like `runner_pane_label_regex`, or its foreground is the shell                                         | `<state>/run/flow/runner-gone`, removed when the pane runs again |
 
 A note is written once per latch.
 A gate record is noted once for good, even if it stays stuck: the monitor owns it from there.
@@ -270,7 +291,7 @@ Everything is `factory/config/flow.json`, validated by `flow.schema.json` in `ma
 - `gates`: one row per record the line must pick up.
   A new gate is a new row with its `kind`, `code`, the `role` named in the note and the `consumers` kinds that mean someone took it.
   The script is not touched.
-- The first start judges only records written after it (`factory/state/flow/since`).
+- The first start judges only records written after it (`<state>/run/flow/since`).
   Pass `--from-start` on that first start to judge the log already there.
 
 ### When something goes wrong
@@ -283,7 +304,7 @@ Everything is `factory/config/flow.json`, validated by `flow.schema.json` in `ma
 | `flow.sh` exits 3 at start                                | `poll_seconds` plus `stall_seconds` passes `visible_within_seconds`, or `flow.json` is not JSON.                                  |
 | No note for a stuck record                                | It was written before the first start without `--from-start`, it has no ticket, or its kind and code match no `gates` row.        |
 
-To note a gate record again on purpose, delete its file under `factory/state/flow/`.
+To note a gate record again on purpose, delete its file under `<state>/run/flow/`.
 
 ### What it never does
 
@@ -353,9 +374,9 @@ The script is not touched.
 
 - `deadline_seconds` is per row.
   A default lands at most `poll_seconds` after it.
-- The first start judges only records written after it (`factory/state/policy/since`).
+- The first start judges only records written after it (`<state>/run/policy/since`).
   Pass `--from-start` on that first start to judge the log already there.
-- To apply a default again on purpose, delete its latch file under `factory/state/policy/<escalation id>` and raise `limit_per_ticket`, or write the escalation again.
+- To apply a default again on purpose, delete its latch file under `<state>/run/policy/<escalation id>` and raise `limit_per_ticket`, or write the escalation again.
 
 ### When something goes wrong
 

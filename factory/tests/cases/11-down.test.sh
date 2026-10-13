@@ -9,7 +9,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 T=WO-20261011-aaaa
 world_up down
 order() { cut -d' ' -f1 "$W/order.log" | tr '\n' ' '; }
-fives() { find "$R/events" -name '*-500-*.json' | wc -l | tr -d ' '; }
+fives() { files_code 500 | wc -l | tr -d ' '; }
 downs() { grep -c -e '--down' "$W/seat.log" | tr -d ' '; }
 next() { sleep 1; : > "$W/order.log"; }
 
@@ -65,7 +65,7 @@ echo "-- the primary action failing does not leave the seat up"
 next; W2=WO-20261011-dddd; rec pr.opened 100 worker-wo-20261011-dddd $W2 >/dev/null; run_once; next
 touch "$W/herdr.fail"; idx=$(rec test.passed 201 tester-wo-20261011-dddd $W2); run_once; rm -f "$W/herdr.fail"
 assert_eq "the tester still went down" "$(tail -1 "$W/seat.log")" "--down tester-wo-20261011-dddd"
-n=$(grep -l "$idx" "$R"/events/20*/*/*-500-*.json | head -1)
+n=$(files_code 500 | xargs -r grep -l -- "$idx" | head -1)
 assert_match "the 500 names the prompt that failed" "$(jq -r .note "$n")" "route failed for test.passed 201, record $idx: herdr agent prompt reviewer-wo-20261011-dddd failed"
 
 echo "-- a failing --down is a 500 that says so, and the primary action was still done"
@@ -73,11 +73,11 @@ next; X=WO-20261011-eeee; rec pr.opened 100 worker-wo-20261011-eeee $X >/dev/nul
 before=$(hcalls); printf 'seat.sh: slot holds a foreign process\n' > "$W/seat.fail.down"
 idy=$(rec test.passed 201 tester-wo-20261011-eeee $X); run_once; rm -f "$W/seat.fail.down"
 assert_eq "the reviewer was prompted" "$(hcalls)" "$((before + 1))"
-n=$(grep -l "$idy" "$R"/events/20*/*/*-500-*.json | head -1)
+n=$(files_code 500 | xargs -r grep -l -- "$idy" | head -1)
 assert_match "the 500 names the --down and its reason" "$(jq -r .note "$n")" "route failed for test.passed 201, record $idy: seat.sh --down tester-wo-20261011-eeee failed \(exit 3\): seat.sh: slot holds a foreign process"
 echo "-- a gate record with no ticket cannot name a seat: a 500, seat.sh not called"
 next; before=$(grep -c . "$W/seat.log"); idz=$(rec test.passed 201 tester-wo-20261011-eeee); run_once
 assert_eq "seat.sh not called" "$(grep -c . "$W/seat.log")" "$before"
-n=$(grep -l "$idz" "$R"/events/20*/*/*-500-*.json | head -1)
+n=$(files_code 500 | xargs -r grep -l -- "$idz" | head -1)
 assert_match "the 500 says both reasons" "$(jq -r .note "$n")" "record $idz: seat needs a ticket; down needs a ticket"
 case_done
