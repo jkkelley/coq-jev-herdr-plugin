@@ -4,15 +4,15 @@
   "slug": "cause-m-part-2-the-route-ignore-rows-for-note-an",
   "title": "Cause m part 2: the route ignore rows for note and verified match on kind alone, any code, with a factory case",
   "type": "bug",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T22:06:20+00:00",
   "parent": "WO-20261013-16f1",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/cause-m-part-2-the-route-ignore-rows-for-note-an",
+  "pr": 152,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect ruling 22:08Z route failures",
@@ -63,7 +63,8 @@ factory/config/routes.json ignore rows match note only at codes 100 and 300 and 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* AC-H1: note at any code and verified at any code route to ignore. AC-H2: a factory case proves note 200, 409, 422 and verified 200 write no route failure. AC-H3: make lint and make -C factory test exit 0
+- [x] `AC-H1` *(human)* AC-H1: note at any code and verified at any code route to ignore. AC-H2: a factory case proves note 200, 409, 422 and verified 200 write no route failure. AC-H3: make lint and make -C factory test exit 0
+  - observed `2026-10-13` routes.json: note and verified ignore rows match kind alone; case 23-ignore-by-kind proves note 200, 409, 422 and verified 200 ledger as ignored with no 500, no receipt, no herdr call (AC-H1, AC-H2). From test pane wD3:p1MC: make lint exit 0 and make -C factory test exit 0, 26 passed 0 failed (AC-H3).
 
 ## Test plan
 
@@ -82,6 +83,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: a bare kind-only note row would have ignored note 500, the runner's own failure report, so each kind got a code_gte 500 wake row ahead of its ignore row; cases 08 and 22 asserted note 429 and note 299 had no row and moved to test 429 and deploy 299. The seat's worktree is a start-* directory, not a treehouse lease, so playbook step 1's lease check was not applicable.
 
 ## Outcome
 
