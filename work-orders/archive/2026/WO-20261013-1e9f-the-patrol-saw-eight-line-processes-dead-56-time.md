@@ -4,7 +4,7 @@
   "slug": "the-patrol-saw-eight-line-processes-dead-56-time",
   "title": "The patrol saw eight line processes dead 56 times but only queued them for an architect who was dead, and posts no card on the owner page",
   "type": "bug",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261013-16f1",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect P0 order 2026-10-13 (owner m-20261013162710557-e4nos: always a system loop), approved by the architect in the owner place (card C29); lavish prohibited for Claude seats",
@@ -25,7 +25,8 @@
   "files": [
     "line/patrol-tick.sh",
     "line/tests/cases/patrol-escalate.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261013-9617"
 }
 ---
 
@@ -88,4 +89,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: architect ruling ykne9: re-cut after the patrol move, at line/bin/patrol-tick.sh with a runnable plan; amend refuses an approved ticket
+- superseded by: `WO-20261013-9617`
+
+No branch, no PR and no merge commit exist for this work order.
+

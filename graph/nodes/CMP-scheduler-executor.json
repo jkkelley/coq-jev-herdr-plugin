@@ -1,0 +1,39 @@
+{
+  "id": "CMP-scheduler-executor",
+  "type": "Component",
+  "title": "scheduler exec: the host half, a gRPC server on a unix socket in a labelled herdr pane that runs an allowlisted verb table (herdr, the seat script, the queue script, the event writer) with a timeout and returns exit code and output tails",
+  "status": "proposed",
+  "text": "It decides nothing: a verb not in its table is refused, an argument with a newline is refused, every call is one JSON log line. Its socket is the control plane and stays whatever the bus becomes (card C15). Revised 2026-10-13 (SPEC-16 1.1.0): the text said it is the one place that changes when the bus lands; with NATS deferred and the bus a set of files in the state root, the socket is never the bus, so nothing here waits on a bus. Rejected: keeping the sentence as a future note (it would cite a deferred decision as a plan).",
+  "sources": [
+    {
+      "kind": "spec",
+      "id": "SPEC-16",
+      "at": "2026-10-13T18:30Z"
+    },
+    {
+      "kind": "owner",
+      "id": "card-C15",
+      "at": "2026-10-12"
+    }
+  ],
+  "edges": [
+    {
+      "kind": "decided_by",
+      "to": "DEC-scheduler-two-processes"
+    },
+    {
+      "kind": "implements",
+      "to": "IFC-scheduler-executor"
+    },
+    {
+      "kind": "depends_on",
+      "to": "IFC-herdr-socket"
+    },
+    {
+      "kind": "defined_in",
+      "to": "RUN-scheduler-operate"
+    }
+  ],
+  "created": "2026-10-12T19:21Z",
+  "updated": "2026-10-13T18:30Z"
+}

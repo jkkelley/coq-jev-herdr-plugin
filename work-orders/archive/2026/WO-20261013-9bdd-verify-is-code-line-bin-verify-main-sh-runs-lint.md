@@ -22,7 +22,8 @@
   "surfaces": [],
   "depends_on": [],
   "blocks": [
-    "WO-20261013-48f2"
+    "WO-20261013-48f2",
+    "WO-20261013-acdd"
   ],
   "files": [
     "line/bin/verify-main.sh",
