@@ -79,8 +79,8 @@ factory/bin/route.sh runs seat.sh --ticket T --role R inside its serial tick (ro
   - observed `2026-10-13` herdr case 31 in the test pane: a stub claude that prints no ack, seat.sh exit 0 in 20s (budget 60s), log 'no guard ack within 15s, no nudge', nudged_at null; shipped nudge_wait_seconds 180 -> 15, schema maximum 30
 - [x] `AC-H2` *(human)* a herdr suite case: a stubbed seat that prints the ack and then idles is nudged exactly once, as WO-20261011-dc0d's case asserts today
   - observed `2026-10-13` herdr case 31 and case 11 in the test pane: a stub seat that acks then idles returns in 7s and receives exactly one continue prompt, nudged_at set; case 11 full matrix and case 36 pass, make -C herdr lint rc 0
-- [x] `AC-H3` *(human)* a live bring-up through route.sh leaves route.sh status 'running' throughout
-  - observed `2026-10-13` NOT observed live from this seat (a live route.sh bring-up would seat a real agent). Proxy: worst bring-up with the shipped wait is 20s in the case world, under the 60s stale budget; the live check is the first route.sh bring-up after merge
+- [ ] `AC-H3` *(human)* a live bring-up through route.sh leaves route.sh status 'running' throughout
+  - NOT observed, left unticked on review (PR 163): a live route.sh bring-up seats a real agent and a worker seat may not run one. Proxy only: worst bring-up with the shipped wait is 20s in the case world, under the 60s stale budget (herdr case 31). The live check is the first route.sh bring-up after merge, `route.sh status` must read 'running' throughout
 
 ## Test plan
 

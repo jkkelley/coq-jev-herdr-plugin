@@ -755,7 +755,7 @@ ensure_trust() {
 #   herdr-first, route.sh rejects a background seat.sh), dropping the wait and nudging blind (it would interrupt a working
 #   seat, the dc0d rejection), and changing the guard (outside this repo). Cost: a guard that acks later than 15 s after the
 #   brief is not nudged here; the monitor's idle re-prompt is the backstop for that seat. Record: WO-20261013-7af7.
-nudged_set() { jq --arg at "$1" '.nudged_at =(if $at == "" then null else $at end)' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }
+nudged_set() { jq --arg at "$1" '.nudged_at = (if $at == "" then null else $at end)' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }
 agent_status() {
   sl_h pane list ${ws:+--workspace "$ws"} 2>/dev/null | jq -r --arg p "$a" 'first((.result.panes // [])[] | select(.pane_id == $p) | .agent_status) // empty'
 }
