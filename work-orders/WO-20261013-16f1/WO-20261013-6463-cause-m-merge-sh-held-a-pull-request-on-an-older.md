@@ -23,7 +23,9 @@
   "depends_on": [
     "WO-20261013-2d35"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-4464"
+  ],
   "files": [
     "line/bin/merge.sh",
     "line/tests/cases/merge-newest-gate.sh"
