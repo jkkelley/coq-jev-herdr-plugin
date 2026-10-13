@@ -4,15 +4,15 @@
   "slug": "verify-is-code-line-bin-verify-main-sh-runs-lint",
   "title": "Verify is code: line/bin/verify-main.sh runs lint and the factory, herdr, events and scheduler suites on a clean worktree at the new main sha and posts verified 200 per pull request or rejected 422",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
   "created_at": "2026-10-13T14:36:09+00:00",
   "parent": "WO-20261012-cf8d",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/verify-is-code-line-bin-verify-main-sh-runs-lint",
+  "pr": 112,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect orders 2026-10-13: 9c50 split (reviewer max_seats 2 to 4), K5 reland, post-merge as code; lavish prohibited for Claude seats",
@@ -68,7 +68,8 @@ After a merge the verify on main is orchestrator hand work and was skipped or ca
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* a green stub run posts one verified 200 per pull request, a red one posts rejected 422 and the hold file exists; no file is left in the repository
+- [x] `AC-H1` *(human)* a green stub run posts one verified 200 per pull request, a red one posts rejected 422 and the hold file exists; no file is left in the repository
+  - observed `2026-10-13` line/tests/cases/verify-main.sh, run in test pane wD3:p155 through line/tests/run.sh: green stub run exit 0 and one verified 200 per pull request (2 PRs, 2 records, sha and ticket set); red stub run exit 3, one rejected 422 with the failing suite and its log, merge-hold.json under the state root run tree, no verified; git status clean and one worktree entry after every run. tests: 6 passed, 0 failed; make lint: all ok
 
 ## Test plan
 
@@ -87,6 +88,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Retro: the case file name verify-main.sh comes from the ticket; suites are overridable through VERIFY_SUITES so the stubs need no config file or schema. Open items for others: routes.json has verified 201 only (this posts 200 as ordered), merge.sh does not read the hold yet (WO-20261013-2d35), and the line suite itself is not in the default suite list because the ticket lists lint, factory, herdr, events and scheduler only.
 
 ## Outcome
 
