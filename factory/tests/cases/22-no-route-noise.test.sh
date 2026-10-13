@@ -34,13 +34,13 @@ run_once; assert_eq "record count unchanged" "$(rec_files | wc -l | tr -d ' ')" 
 
 echo "-- AC-H1: an unknown kind still posts a 500, and a 500 of either kind still wakes the monitor"
 sleep 1; u=$(rec deploy 250 someone $T); n5=$(rec note 500 route-check $T); w5=$(rec work.started 500 worker-wo-20261013-aaaa $T)
-n2=$(rec note 299 seat-check $T); w2=$(rec work.started 101 worker-wo-20261013-aaaa $T)
+d2=$(rec deploy 299 seat-check $T); w2=$(rec work.started 101 worker-wo-20261013-aaaa $T)
 run_once
 notes=$(notes_code 500)
 assert_match "the unknown kind has no row" "$notes" "no route for deploy 250, record $u"
-assert_match "note 299 is not the ignored note 300" "$notes" "no route for note 299, record $n2"
+assert_match "deploy 299 has no row" "$notes" "no route for deploy 299, record $d2"
 assert_match "work.started 101 is not the ignored work.started 100" "$notes" "no route for work.started 101, record $w2"
 assert_match "the note 500 woke the monitor" "$(cat "$HLOG")" "^--session stable agent prompt monitor record $n5 playbook $R/playbooks/monitor.md$"
 assert_match "the work.started 500 woke the monitor" "$(cat "$HLOG")" "^--session stable agent prompt monitor record $w5 playbook $R/playbooks/monitor.md$"
-assert_eq "three new 500s (deploy, note 299, work.started 101) plus the two the case wrote" "$(files_code 500 | wc -l | tr -d ' ')" 5
+assert_eq "three new 500s (deploy 250, deploy 299, work.started 101) plus the two the case wrote" "$(files_code 500 | wc -l | tr -d ' ')" 5
 case_done

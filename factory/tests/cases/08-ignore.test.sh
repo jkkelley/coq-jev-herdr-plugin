@@ -26,13 +26,13 @@ for id in $i1 $i2 $i3 $i4 $i5; do assert_eq "ledger says ignored for $id" "$(cat
 echo "-- a second tick routes none of them again"
 run_once; assert_eq "event count unchanged" "$(nrec)" 5
 
-echo "-- the rows ignore by kind and code: a note 500 still wakes the monitor, a note 429 and a gate 150 are still 500s"
-sleep 1; n5=$(rec note 500 route-check $T); n4=$(rec note 429 seat-check $T); g=$(rec gate 150 someone $T)
+echo "-- the rows ignore by kind and code: a note 500 still wakes the monitor, a test 429 and a gate 150 are still 500s"
+sleep 1; n5=$(rec note 500 route-check $T); n4=$(rec test 429 seat-check $T); g=$(rec gate 150 someone $T)
 run_once
 assert_match "the note 500 woke the monitor" "$(cat "$HLOG")" "^--session stable agent prompt monitor record $n5 playbook $R/playbooks/monitor.md$"
 fives=$(files_code 500 | wc -l | tr -d ' ')
 notes=$(notes_code 500)
-assert_match "the note 429 has no row" "$notes" "no route for note 429, record $n4"
+assert_match "the test 429 has no row" "$notes" "no route for test 429, record $n4"
 assert_match "the gate 150 has no row" "$notes" "no route for gate 150, record $g"
 assert_eq "exactly those two new 500s, plus the note 500 the case wrote" "$fives" 3
 case_done
