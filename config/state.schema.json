@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "state",
+  "description": "Where runtime data lives (ROADMAP.md, Where runtime data lives). bin/state-root.sh is the one reader: no script carries a root, a tree name or a name limit of its own. A root is COQ_STATE or COQ_CACHE when set to an absolute path, else <XDG home or $HOME/<fallback>>/<namespace>/<repo>. BREADCRUMB 2026-10-12 WO-20261012-7e13: this schema has no $id on purpose. The other schemas carry a relative $id (coq/events/schema/event.schema.json) and use no $ref; this one uses #/$defs refs, and python3-jsonschema 4.10.3 in the lint image resolves them against a relative $id as coq/config/coq/config/state.schema.json and raises RefResolutionError, which failed the configs step of make lint. Rejected: repeating the root and tree definitions inline (two copies to keep in step). Cost: none; lint finds the schema by its file name beside the config.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "state", "cache", "trees", "name_max"],
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "state": { "$ref": "#/$defs/root" },
+    "cache": { "$ref": "#/$defs/root" },
+    "trees": {
+      "description": "The directories under the state root, by the name scripts ask for. Dated trees hold YYYY/MM/YYYYMMDDHHMMSS-<descriptive name>.<ext>; the others are lookups keyed by name.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "records",
+        "logs",
+        "tests",
+        "checkpoints",
+        "plans",
+        "ledger",
+        "seats",
+        "run"
+      ],
+      "properties": {
+        "records": { "$ref": "#/$defs/tree" },
+        "logs": { "$ref": "#/$defs/tree" },
+        "tests": { "$ref": "#/$defs/tree" },
+        "checkpoints": { "$ref": "#/$defs/tree" },
+        "plans": { "$ref": "#/$defs/tree" },
+        "ledger": { "$ref": "#/$defs/tree" },
+        "seats": { "$ref": "#/$defs/tree" },
+        "run": { "$ref": "#/$defs/tree" }
+      }
+    },
+    "name_max": {
+      "type": "integer",
+      "minimum": 8,
+      "maximum": 120,
+      "description": "the longest <descriptive name>, in characters, of a dated entry file"
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["env", "xdg_env", "home_fallback", "namespace"],
+      "properties": {
+        "env": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "the variable that names the root outright; an absolute path"
+        },
+        "xdg_env": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]*$",
+          "description": "the XDG base directory variable; used only when it holds an absolute path, as the XDG specification says"
+        },
+        "home_fallback": {
+          "type": "string",
+          "pattern": "^[^/][^ ]*$",
+          "description": "relative to $HOME, used when the XDG variable is unset or relative"
+        },
+        "namespace": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "description": "the directory under the XDG home that holds every repository's root"
+        }
+      }
+    },
+    "tree": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*(/[a-z][a-z0-9-]*)*$",
+      "description": "a relative path under the state root"
+    }
+  }
+}

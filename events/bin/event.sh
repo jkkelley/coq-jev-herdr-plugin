@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
-# event.sh - the event log. One file per event under events/YYYY/MM/, named
-# <UTC>-<code>-<suffix>.json, so N seats write at once with no lock and git never
-# conflicts (REQ-event-log). Only important items: code >= 300, seat up/down, a
-# gate result, a merge, a compaction. Routine progress is not an event.
+# event.sh - the event log. One file per event, so N seats write at once with no lock and git never conflicts (REQ-event-log).
+# A record is written under the state root, <state>/records/YYYY/MM/YYYYMMDDHHMMSS-<descriptive name>.json (UTC; the name says what
+# the record is, at most name_max characters), never into the repository (ROADMAP.md, Where runtime data lives). The state root is
+# $COQ_STATE, else the default in config/state.json, both through bin/state-root.sh. Only important items: code >= 300, seat
+# up/down, a gate result, a merge, a compaction. Routine progress is not an event.
 #
 #   event.sh add --code NNN --seat NAME --kind KIND [--ticket WO-...] [--pane P] [--to ROLE] [--note "<=240 chars"]
 #                [--evidence PATH]... [--observe "path:line:saw:expected"]... [--attempt N] [--sha HEX7-40] [--pr N] [--action "<=240 chars"] [--answer ID] [--policy POL-id] [--json]
-#   event.sh list [--since YYYY-MM-DD] [--code NNN] [--seat NAME] [--ticket WO-...] [--json]
-#   event.sh check                      every file matches events/schema/event.schema.json; exit 3 names offenders
+#                prints the new file's path, or with --json the record
+#   event.sh list [--since YYYY-MM-DD] [--code NNN] [--seat NAME] [--ticket WO-...] [--json]    oldest first, by the record's time
+#   event.sh check                      every file matches events/schema/event.schema.json and its name; exit 3 names offenders
 #   event.sh tail                       newest 10, one line each (what the monitor pane shows)
+# list, tail and check read the state root and, until roadmap item A4 removes it from git, the repository's events/ tree too.
 # Exit codes: 0 ok, 2 usage, 3 validation, 4 io.
 set -euo pipefail
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); ROOT=$(cd "$HERE/.." && pwd); SCHEMA=$ROOT/schema/event.schema.json
@@ -22,6 +25,35 @@ HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd); ROOT=$(cd "$HERE/.." && pwd)
 #   required (most kinds have no PR). Cost: a seat has to pass them; one that does not still routes, on the plain line.
 die() { local c=$1; shift; printf 'event: %s\n' "$*" >&2; exit "$c"; }
 command -v jq >/dev/null || die 4 "jq is required"
+# BREADCRUMB 2026-10-12 - WO-20261012-7e13 (Roadmap A1, owner cards C10 and C11). What broke: add wrote every record into the
+#   repository, as $ROOT/YYYY/MM/<UTC>-<code>-<suffix>.json (the line this replaces), so 2,689 record files rode one pull request on
+#   2026-10-12 and a name like 20261012T223337Z-100-ms2zc says nothing until it is opened. Why this fix: add writes under the state
+#   root that bin/state-root.sh resolves (COQ_STATE, else the default in config/state.json), on the layout <state>/records/YYYY/MM/
+#   YYYYMMDDHHMMSS-<descriptive name>.json, and prints the new path. The record's own `id` field keeps its old shape: --answer and
+#   the routed ledger refer to it, and moving them is items A2 and A3. list, tail and check read both trees until item A4 takes
+#   events/ out of git. Rejected: a fallback that writes the old tree when the resolver is missing (a partial copy of this script
+#   would then put records back in git without a word; it stops with exit 4 instead) and a dual write (every post would still be a
+#   tracked file). Cost: a script or test world that copies events/bin alone must also copy bin/state-root.sh and config/state.json
+#   (factory/tests/lib/world.sh and herdr/tests/lib/world.sh do not yet, and the belt and seats read the old tree until A2).
+. "$ROOT/../bin/state-root.sh" 2>/dev/null || die 4 "bin/state-root.sh is missing beside this events/ tree; records go to the state root and nothing here may guess one"
+LEGACY=$ROOT; TREES=()
+# load_trees: TREES is the state root's records tree when it exists, then the repository's events/ tree; a malformed root stops here
+load_trees() {
+  local r rc=0; TREES=()
+  r=$(coq_tree records) || rc=$?
+  case $rc in 0) [ ! -d "$r" ] || TREES+=("$r");; 4) printf 'event: state root unresolved, reading the repository events/ only\n' >&2;; *) exit "$rc";; esac
+  [ ! -d "$LEGACY" ] || TREES+=("$LEGACY")
+}
+tree_files() { [ ${#TREES[@]} -eq 0 ] || find "${TREES[@]}" -mindepth 3 -maxdepth 3 -name '*.json' -print; }
+dated_files() { # every record, oldest first by its own time, then by path
+  local f; tree_files | while read -r f; do printf '%s\t%s\n' "$(jq -r '.at // ""' "$f" 2>/dev/null || true)" "$f"; done | LC_ALL=C sort | cut -f2-
+}
+slug() { printf '%s' "$1" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9' '-' | tr -s '-' | sed 's/^-//; s/-$//'; }
+record_name() { # record_name KIND PR TICKET SEAT MAX: kind, then pr-N, then the ticket (the seat when there is none), cut to MAX
+  local n; n=$(slug "$1"); [ "$2" = null ] || n=$n-pr-$2
+  if [ "$3" != null ]; then n=$n-$(slug "$3"); else n=$n-$(slug "$4"); fi
+  n=${n:0:$5}; printf '%s\n' "${n%-}"
+}
 # BREADCRUMB 2026-10-11 - WO-20261011-38c7. What broke: KINDS held only the twelve event-log kinds, so a factory record of
 #   kind pr.opened, test.failed, review.passed, merged and the rest (factory/schema/record.schema.json, SPEC-03 s-records) could
 #   not be written here, and the route runner (factory/bin/route.sh) would never see a real record; the runner's own receipt
@@ -73,28 +105,47 @@ case $VERB in
     [ "$ticket" = null ] || [[ $ticket =~ ^WO-[0-9]{8}-[0-9a-f]{4}$ ]] || die 3 "--ticket must be WO-YYYYMMDD-xxxx"
     [ "$sha" = null ] || [[ $sha =~ ^[0-9a-f]{7,40}$ ]] || die 2 "--sha must be 7 to 40 lowercase hex characters"
     [ "$pr" = null ] || [[ $pr =~ ^[1-9][0-9]*$ ]] || die 2 "--pr must be a pull request number, 1 or more"
-    now=$(date -u +%Y-%m-%dT%H:%M:%SZ); stamp=$(date -u +%Y%m%dT%H%M%SZ); suf=$(head -c 200 /dev/urandom | LC_ALL=C tr -dc 'a-z0-9' | cut -c1-5)
-    id="$stamp-$code-$suf"; dir="$ROOT/$(date -u +%Y/%m)"; mkdir -p "$dir"
+    # one `date` call, so the id, the `at` field, the file name and the YYYY/MM folder can never straddle a second
+    read -r now stamp fstamp ym < <(date -u '+%Y-%m-%dT%H:%M:%SZ %Y%m%dT%H%M%SZ %Y%m%d%H%M%S %Y/%m'); suf=$(head -c 200 /dev/urandom | LC_ALL=C tr -dc 'a-z0-9' | cut -c1-5)
+    id="$stamp-$code-$suf"; recs=$(coq_tree records) || exit $?; max=$(coq_state_get name_max) || exit $?
+    dir="$recs/$ym"; mkdir -p "$dir" || die 4 "cannot create $dir"
     evj=$(printf '%s\n' "${ev[@]:-}" | { grep -v '^$' || true; } | jq -R . | jq -s .)
     obj=$(printf '%s\n' "${obs[@]:-}" | { grep -v '^$' || true; } | jq -R 'split(":") | {path:.[0], line:(.[1]|tonumber? // 0), saw:.[2], expected:.[3]}' | jq -s .)
     tq() { if [ "$1" = null ]; then echo null; else jq -n --arg v "$1" '$v'; fi; }
+    tmp="$dir/.$fstamp-$id.tmp"; trap 'rm -f "$tmp"' EXIT
     jq -n --arg id "$id" --arg at "$now" --argjson code "$code" --arg seat "$seat" --arg kind "$kind" --argjson ticket "$(tq "$ticket")" --argjson pane "$(tq "$pane")" --argjson to "$(tq "$to")" --arg note "$note" --argjson evidence "$evj" --argjson observations "$obj" --argjson attempt "$attempt" --argjson sha "$(tq "$sha")" --argjson pr "$pr" --argjson action "$(tq "$action")" --argjson answer "$(tq "$answer")" --argjson policy "$(tq "$policy")" \
-      '{schema_version:"1.0.0", id:$id, at:$at, code:$code, seat:$seat, kind:$kind, ticket:$ticket, pane:$pane, note:$note, evidence:$evidence, observations:$observations} + (if $attempt==null then {} else {attempt:$attempt} end) + (if $to==null then {} else {to:$to} end) + (if $sha==null then {} else {sha:$sha} end) + (if $pr==null then {} else {pr:$pr} end) + (if $action==null then {} else {action:$action} end) + (if $answer==null then {} else {answer:$answer} end) + (if $policy==null then {} else {policy:$policy} end)' > "$dir/$id.json.tmp"
-    mv "$dir/$id.json.tmp" "$dir/$id.json"
-    if [ "$JSON" = 1 ]; then cat "$dir/$id.json"; else printf '%s\n' "$id"; fi ;;
+      '{schema_version:"1.0.0", id:$id, at:$at, code:$code, seat:$seat, kind:$kind, ticket:$ticket, pane:$pane, note:$note, evidence:$evidence, observations:$observations} + (if $attempt==null then {} else {attempt:$attempt} end) + (if $to==null then {} else {to:$to} end) + (if $sha==null then {} else {sha:$sha} end) + (if $pr==null then {} else {pr:$pr} end) + (if $action==null then {} else {action:$action} end) + (if $answer==null then {} else {answer:$answer} end) + (if $policy==null then {} else {policy:$policy} end)' > "$tmp"
+    # Exclusive create with no lock: a hard link fails when the name exists and the content is complete the instant it appears. A clash
+    # (same second, same name) takes -2, then -3; the suffix counts inside the name limit, so no name is ever over it.
+    base=$(record_name "$kind" "$pr" "$ticket" "$seat" "$max"); n=1
+    while :; do
+      sfx=""; [ "$n" -eq 1 ] || sfx="-$n"; cand=${base:0:$((max - ${#sfx}))}; cand=${cand%-}$sfx
+      target="$dir/$fstamp-$cand.json"
+      ln "$tmp" "$target" 2>/dev/null && break
+      [ -e "$target" ] || die 4 "cannot create $target"
+      n=$((n + 1)); [ "$n" -le 99 ] || die 4 "99 records named $fstamp-$base in one second"
+    done
+    if [ "$JSON" = 1 ]; then cat "$target"; else printf '%s\n' "$target"; fi ;;
   list)
     since=""; fcode=""; fseat=""; fticket=""; JSON=0
     while [ $# -gt 0 ]; do case $1 in --since) since=$2; shift 2;; --code) fcode=$2; shift 2;; --seat) fseat=$2; shift 2;; --ticket) fticket=$2; shift 2;; --json) JSON=1; shift;; *) die 2 "unknown flag $1";; esac; done
-    find "$ROOT" -path '*/20*/*.json' -name '*.json' | sort | while read -r f; do
+    load_trees
+    dated_files | while read -r f; do
       jq -e --arg s "$since" --arg c "$fcode" --arg st "$fseat" --arg t "$fticket" 'select(($s=="" or .at>=$s) and ($c=="" or (.code|tostring)==$c) and ($st=="" or .seat==$st) and ($t=="" or .ticket==$t))' "$f" >/dev/null 2>&1 || continue
       if [ "$JSON" = 1 ]; then cat "$f"; else line_of "$f"; fi; done ;;
   check)
-    command -v python3 >/dev/null || die 4 "python3 with jsonschema is required for check"; bad=0
+    command -v python3 >/dev/null || die 4 "python3 with jsonschema is required for check"; bad=0; n=0; load_trees; max=$(coq_state_get name_max) || exit $?
     while read -r f; do
+      n=$((n + 1)); b=$(basename "$f" .json)
       python3 -c 'import json,jsonschema,sys; jsonschema.validate(json.load(open(sys.argv[1])), json.load(open(sys.argv[2])))' "$f" "$SCHEMA" 2>/dev/null || { echo "invalid: $f" >&2; bad=1; }
-      [ "$(basename "$f" .json)" = "$(jq -r .id "$f")" ] || { echo "filename/id mismatch: $f" >&2; bad=1; }
-    done < <(find "$ROOT" -path '*/20*/*.json' -name '*.json')
-    [ "$bad" = 0 ] && echo "events ok: $(find "$ROOT" -path '*/20*/*.json' -name '*.json' | wc -l) files" || exit 3 ;;
-  tail) find "$ROOT" -path '*/20*/*.json' -name '*.json' | sort | tail -10 | while read -r f; do line_of "$f"; done ;;
-  *) sed -n '2,13p' "$0" >&2; exit 2 ;;
+      case $f in
+        "$LEGACY"/*) [ "$b" = "$(jq -r .id "$f" 2>/dev/null)" ] || { echo "filename/id mismatch: $f" >&2; bad=1; } ;;
+        *) at=$(jq -r '.at // ""' "$f" 2>/dev/null)
+           if [[ $b =~ ^([0-9]{14})-([a-z0-9]+(-[a-z0-9]+)*)$ ]] && [ ${#BASH_REMATCH[2]} -le "$max" ] && [ "${BASH_REMATCH[1]}" = "$(printf '%s' "$at" | tr -d ':TZ-')" ] && [ "$(dirname "$f")" = "$(dirname "$(dirname "$f")")/${b:4:2}" ] && [ "$(basename "$(dirname "$(dirname "$f")")")" = "${b:0:4}" ]; then :
+           else echo "bad name (want YYYYMMDDHHMMSS-<name of at most $max lowercase letters, digits and hyphens>.json in YYYY/MM, the time being the record's at): $f" >&2; bad=1; fi ;;
+      esac
+    done < <(tree_files)
+    [ "$bad" = 0 ] && echo "events ok: $n files" || exit 3 ;;
+  tail) load_trees; dated_files | tail -10 | while read -r f; do line_of "$f"; done ;;
+  *) sed -n '2,15p' "$0" >&2; exit 2 ;;
 esac
