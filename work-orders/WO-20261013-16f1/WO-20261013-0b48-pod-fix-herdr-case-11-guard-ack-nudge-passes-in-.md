@@ -64,8 +64,10 @@ PR 156 (WO-20261013-8573, CI gate 1) shipped with herdr case 11-guard-ack-nudge 
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* herdr case 11-guard-ack-nudge passes in at least 5 of 6 consecutive arm64 pod runs with the cause named in a breadcrumb
-- [ ] `AC-H2` *(human)* guard AC-H1 passes under the pod cpu limits
+- [x] `AC-H1` *(human)* herdr case 11-guard-ack-nudge passes in at least 5 of 6 consecutive arm64 pod runs with the cause named in a breadcrumb
+  - observed `2026-10-14` ci/pod/herdr-suite.pod.yaml: case 11-guard-ack-nudge run in 6 arm64 pods (k8s-worker-01 and -02) after the fix: 6 of 6 Succeeded; baseline before the fix, same sha: 2 of 6. Cause named in the breadcrumb: herdr fetches the remote agent-detection manifest in a pod (curl and network up), re-detects the agent when the brief arrives and reports unknown ~3.5 s, longer than nudge_settle_seconds 4. With a failing curl 3 of 3 passed.
+- [x] `AC-H2` *(human)* guard AC-H1 passes under the pod cpu limits
+  - observed `2026-10-14` The pod spec already requests cpu 1000m with no cpu limit; the same 6 pod runs passed case 11 AC-H1 (nudged once) under those requests, so no cpu change was needed. The failure was not CPU: two pods alone on a node flapped the same way.
 
 ## Test plan
 
@@ -84,6 +86,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Retro: the ticket guessed CPU speed; the measurement said otherwise (herdr-server.log: a second 'agent changed previous_agent=None' at brief time, only when curl and network exist). Fix is one env var in the pod spec; case and seat.sh untouched. Method that worked: base64 the probe into COQ_CMD, run it in 1-3 pods, read herdr-server.log.
 
 ## Outcome
 
