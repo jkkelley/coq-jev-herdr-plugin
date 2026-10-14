@@ -276,7 +276,14 @@ export async function syncOnce({
       }
     } else {
       const branch = await branchOf(cfg, d.cwd, d.git_branch, runner);
-      const ticket = branch ? (WO_RE.exec(branch)?.[0] ?? branch) : null;
+      // BREADCRUMB 2026-10-14 UTC (coordinator, owner page review: TICKET must not read "main").
+      // What broke: this line fell back to the branch name when it carried no WO- id (first version, PR 184), so a seat on
+      // main showed the bare word "main" in the TICKET field, and main is a place, not a ticket.
+      // Why this fix: ticket is the work-order id or null; page.html draws null as a muted "none", the same style WORKING ON
+      // uses for "not set". `branch` stays in session.json untouched, so no information is lost (it is also the tooltip).
+      // Rejected: writing the string "none" into the file, which would be data that looks like a ticket to every other reader.
+      // Cost: a seat on a non-WO branch (main, master, a hotfix) has no ticket value; read `branch` for where it is.
+      const ticket = branch ? (WO_RE.exec(branch)?.[0] ?? null) : null;
       const pane = await findPane(cfg, cur.session, runner);
       const win = Object.entries(cfg.context_windows).find(([p]) =>
         d.model?.startsWith(p),

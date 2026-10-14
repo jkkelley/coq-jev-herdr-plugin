@@ -889,7 +889,13 @@
       {
         label: "Ticket",
         mono: true,
-        f: ({ s }) => ({ text: s.ticket || "–", title: s.branch || "", sub: s.ticket_title || "" }),
+        // BREADCRUMB 2026-10-14 UTC (session-sync.mjs, same date): only a WO- id is a ticket; main or any other branch is
+        // shown as a muted "none" with the branch kept in the tooltip. The test also covers a session.json written by an older
+        // sync (stable keeps running the old server.mjs until restart) whose ticket is still the bare branch.
+        f: ({ s }) =>
+          /^WO-\d{8}-[0-9a-f]{4}$/.test(s.ticket || "")
+            ? { text: s.ticket, title: s.branch || "", sub: s.ticket_title || "" }
+            : { text: "none", tone: "muted", title: s.branch || "" },
       },
       {
         label: "Working on",
