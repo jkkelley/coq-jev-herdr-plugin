@@ -72,6 +72,7 @@
       <emitter node="N-04">forge.snapshot, forge.recovered</emitter>
       <emitter node="N-06">health.recovered, reload.applied</emitter>
       <emitter node="N-09">merge (merge_sha, pr, ticket, parent_main; consumed by N-26 and N-45), merge.hold.lifted</emitter>
+      <emitter node="N-12">prompt.cleared (a parked long-lived seat left blocked or its transcript moved)</emitter>
       <emitter node="N-15">seat.result outcome done with validated structured output</emitter>
       <emitter node="N-25">protection.applied</emitter>
       <emitter node="N-29 N-28 N-30 N-52">ruling, card.done, ack answered, reply, push.receipt</emitter>
@@ -169,11 +170,12 @@
     </status-code>
     <status-code id="code-423" value="423" name="blocked" lamp="amber" actor="system">
       <meaning>Blocked or held: a lease is held by another, a merge hold stands, a card is held, a run ended blocked with a terminal reason, a promotion or a Drive publish needs set-up; the work waits on a named condition with a bound.</meaning>
-      <acts>system: N-11 by terminal reason (success, error_max_turns, error_max_budget_usd, error_during_execution, error_max_structured_output_retries, killed_deadline, killed_stall, killed_lease_lost, killed_by_record, crashed, no_result, schema_invalid, output_rejected, seat_blocked); owner at a second 423 on the same key, on a stable promotion, on Drive auth and on other-repository rows.</acts>
+      <acts>system: N-11 by terminal reason (success, error_max_turns, error_max_budget_usd, error_during_execution, error_max_structured_output_retries, killed_deadline, killed_stall, killed_lease_lost, killed_by_record, crashed, no_result, schema_invalid, output_rejected, seat_blocked); owner at a second 423 on the same key, on a prompt.parked long-lived seat (one card), on a stable promotion, on Drive auth and on other-repository rows.</acts>
       <emitter node="N-02 N-05">lease.refused held, backup.busy</emitter>
       <emitter node="N-09 N-10 N-15">merge.held, merge.hold, seat.result outcome blocked</emitter>
       <emitter node="N-20 N-21 N-22 N-23 N-26">jenkins.blocked, namespace.blocked, image.blocked, plan.blocked, main.plan.blocked</emitter>
       <emitter node="N-28 N-33 N-42 N-47 N-48 N-49">card.held, ledger.row blocked, controls.held, publish blocked (Drive not authorised), promotion blocked (stable), disposition blocked (other repository)</emitter>
+      <emitter node="N-12">prompt.parked (a long-lived seat parked on an interactive prompt; system card via N-28, re-carded every 900 s)</emitter>
       <emitter node="N-45 N-47 N-50">cleanup.run failed after 3, drive.copy blocked (Drive not authorised), pr.close and branch.delete failed after 3 or harvest-late</emitter>
     </status-code>
     <status-code id="code-429" value="429" name="no-capacity" lamp="amber" actor="system">

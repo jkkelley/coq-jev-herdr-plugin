@@ -144,7 +144,7 @@ def render():
     a("  </groups>")
     a("")
     a('  <tooling id="tooling">')
-    a("    <s>check.sh runs bin/check-book.py: checks C01 to C20 as listed in nodes/N-46/spec.xml#checks (well-formed, XSD, the 1000-line cap, contents, parent, pointers, many agents, no dashes, unique ids, JSON schemas, index completeness and line counts, envelope, waits, cleanup registry, record kinds, the DAG, index freshness, codes, input and output, panel bindings); one line per failure; exit 0, 1 or 2.</s>")
+    a("    <s>check.sh runs bin/check-book.py: checks C01 to C21 as listed in nodes/N-46/spec.xml#checks (well-formed, XSD, the 1000-line cap, contents, parent, pointers, many agents, no dashes, unique ids, JSON schemas, index completeness and line counts, envelope, waits, cleanup registry, record kinds, the DAG, index freshness, codes, input and output, panel bindings); one line per failure; exit 0, 1 or 2.</s>")
     a("    <s>Generators, each with --check: bin/make-index.py (this file, with a line count per volume), bin/make-kinds.py (shared/record-kinds.xml), bin/registry.py (shared/cleanup-registry.json); bin/dag-check.py checks dag.md; bin/test-checks.py proves every check fails on a mutated copy of the book. N-37 reads the nodes element to generate machines.json.</s>")
     a("    <s>schema/volume.xsd descends from rebuild/schema/factory-rebuild-plan.xsd: the same envelope (contents, ids, UTC), extended with the volume kinds and the shared vocabulary.</s>")
     a("  </tooling>")

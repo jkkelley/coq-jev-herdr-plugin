@@ -10,8 +10,9 @@
     <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
     <entry ref="purpose">Purpose and the one sentence</entry>
     <entry ref="input">Inputs: lease.granted and lease.expired, seat.heartbeat, the tick:stall entity</entry>
-    <entry ref="output">Output record: stall</entry>
+    <entry ref="output">Output record: stall, prompt.parked, prompt.cleared</entry>
     <entry ref="mechanism">Mechanism: heartbeat age against the bound, kill, revoke</entry>
+    <entry ref="prompt-parked">A long-lived seat parked on an interactive prompt</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
     <entry ref="retries">Retries: three attempts, then recover and report</entry>
@@ -56,6 +57,7 @@
     <sentence>On every stall tick the Go service compares the age of each live run's last heartbeat with the run's stall bound and its deadline, and for every run past either it kills the process, revokes the lease with a new fencing token and writes one stall record, so no run can hold a slot or a ticket for ever and no agent is asked whether it is stuck.</sentence>
     <is>The replacement for the one-minute idle alarm, the Haiku monitor and the compliance officer (D17, C49; K04): a seat is a one-shot run that ends at its output, so idle cannot exist; a run with no event for the stall bound is killed and retried by N-11 (Symphony SPEC.md lines 823 to 829).</is>
     <is>A probe, never an opinion (V08): the only inputs are timestamps in the store and the process table; no model reads a pane.</is>
+    <is>Also the one-minute detector for a long-lived seat (the architect, the orchestrator) parked on a blocking interactive prompt: owner order 2026-10-13 02:01Z, no agent sits idle for more than one minute; the 2026-10-14 incident is in section prompt-parked. Still a probe: herdr's own agent status event plus the transcript age, never a model and never pane text.</is>
     <is-not>Not a liveness judge of system processes: units are supervised by systemd and reported by N-06's health; this node judges seat runs and code-role runs that hold a lease.</is-not>
     <is-not>Not a retry: the stall record is a failure record for N-11, which decides attempt n plus 1 or dead.</is-not>
     <decisions>D02 (C36), D08 (C46), D17 (C49), V08, T06 (lease with heartbeat, generation and compare-and-swap; never stolen when liveness is unknown), T07 rejected below.</decisions>
@@ -78,7 +80,10 @@
     <record kind="tick" subkind="stall" entity="tick:stall" from="N-06" schema="../N-06/record.schema.json#/$defs/tick">
       <field name="n, interval_seconds">Default 15 (config stall.tick_seconds, N-06 schedule); the bound minus the interval is the longest a stall stays unseen (SPEC-16.F f-stall-visible: poll interval plus the smallest deadline must not pass the visible-within bound; refused at start otherwise). An entity broadcast in process, not a log record (N-06).</field>
     </record>
-    <reads>The dispatch record of each live lease (deadline, role); the roles table (stall_seconds per role); the halt record.</reads>
+    <record kind="agent.status" from="herdr" schema="record.schema.json#/$defs/agent_status">
+      <field name="pane_id, seat, session_id, status, message, at">herdr's pane.agent_status_changed event for a registered long-lived seat, raised when the harness Notification hook reports blocked (rebuild/investigation/L04-herdr.md#7-decisions-an-llm-makes-that-a-rule-could-make, the hooks map); message is the harness notification text, matched by code against the prompt rules and never read from the pane. Consumed only by section prompt-parked.</field>
+    </record>
+    <reads>The dispatch record of each live lease (deadline, role); the roles table (stall_seconds per role); the halt record; the registered long-lived seats and their newest transcript mtime.</reads>
     <starts-when>The tick:stall entity is broadcast.</starts-when>
   </input>
 
@@ -92,6 +97,13 @@
     </record>
     <record kind="stall.kill.failed" code="500" to="N-28 N-41" schema="record.schema.json#/$defs/stall_kill_failed">
       <field name="pid, lease_key, run_id, attempts">A process that survived SIGTERM and SIGKILL three times; a system-lane fault.</field>
+    </record>
+    <record kind="prompt.parked" code="423" to="N-28 N-41" schema="record.schema.json#/$defs/prompt_parked">
+      <field name="idempotency_key">seat, colon, session id, colon, the UTC second the blocked status began; one per parked episode, re-carded under the same key (recard_count) rather than duplicated.</field>
+      <field name="seat, pane_id, session_id, rule, action, blocked_since, detected_at, age_seconds, recard_count">The seat parked, the rule that matched (or unmatched), the action chosen (card, answer, down) and how long it had been parked when detected.</field>
+    </record>
+    <record kind="prompt.cleared" code="200" to="N-28 N-41" schema="record.schema.json#/$defs/prompt_cleared">
+      <field name="idempotency_key, seat, session_id, cleared_at, parked_seconds">Closes the episode of a prompt.parked; N-28 marks the card done.</field>
     </record>
     <ends-when>Every live lease past a bound has a stall record and a revoked lease; a lease within bounds ends the traversal with no record; the next stall tick is a new traversal.</ends-when>
   </output>
@@ -123,11 +135,23 @@
   W --> N41["N-41 alerts"]</diagram>
   </mechanism>
 
+  <prompt-parked id="prompt-parked">
+    <what-broke>2026-10-14 06:46Z to 08:46Z: the architect, a long-lived interactive seat, sat two hours on a blocking model-limit choice prompt. It held no launcher lease, so no heartbeat or stall bound applied to it, the retired idle alarm no longer existed, and nothing noticed until the owner did. The owner rule is that no agent sits idle for more than one minute (2026-10-13 02:01Z).</what-broke>
+    <why-it-mattered>The whole line is ruled through the architect; one parked prompt stopped every ruling, every card answer routed to the architect lane and every spec-author cut for two hours with all lamps green.</why-it-mattered>
+    <rule id="pp-detect">A seat registered as long-lived in scheduler/config/seats.json (the architect and the orchestrator) is parked when herdr reports its agent status blocked (event pane.agent_status_changed, fed by the harness Notification hook) and the newest transcript mtime is older than stall.prompt_park_seconds (default 30). The status event starts the clock; the stall tick (15 s) judges it. Worst case from the prompt appearing to the prompt.parked record is 30 s + 15 s = 45 s, and N-28 posts the card inside the next 15 s, so the whole path is under one minute (config check: stall.prompt_park_seconds + stall.tick_seconds + 15 stays at or below 60).</rule>
+    <rule id="pp-probe">The probe reads a status field herdr computes and the harness notification message; it sends no keystroke and reads no pane text. A blocked status with a moving transcript is not parked (the harness is working through the prompt). herdr unreachable is liveness unknown and nothing is written, the same T06 rule as step m-unknown; three unknown ticks write store.unreachable 500 once.</rule>
+    <rule id="pp-route">Routing is a table, scheduler/config/prompt-rules.json, matched in order by regex over the notification message: model-limit (a model or usage limit choice) routes to action card, always, because choosing a model is a spend decision the owner owns and no standing answer is allowed to take it; permission and trust prompts route to action answer only when the rule names an owner-ruled answer for that prompt class (a standing policy with a deadline and a default, V17), else card; an unmatched message routes to card. An answer is sent by N-42 control.action, never by this node. A one-shot run that blocks is not routed here: it is a stall and N-11 retries it.</rule>
+    <rule id="pp-card">action card writes prompt.parked 423 and N-28 posts one card to the owner naming the seat, how long it has been parked and the prompt message, with the options the rule lists. The card is re-posted under the same key every stall.prompt_recard_seconds (default 900) while the status stays blocked, so a missed card cannot become a silent stall; the park clears when the status leaves blocked or the transcript moves, and a prompt.cleared 200 record closes the episode.</rule>
+    <wait id="w-prompt-park" on="a registered long-lived seat leaving blocked" timeout="stall.prompt_park_seconds 30 to the record, then recard every stall.prompt_recard_seconds 900" fallback="this node's own verdict: prompt.parked 423 and a card; if N-28 fails to post, stall.write.failed 500 as for any record write"/>
+    <many-agents>Several long-lived seats may be parked at once: one idempotency key per seat and episode, so a second stall goroutine's write is a 409; the status event and the tick may race, and the compare-and-swap on the episode entity (prompt:SEAT) lets one writer open it and one clear it, the loser re-reads and ends.</many-agents>
+    <never>No nudge, no keystroke, no Escape, no pane read, no model asked what the prompt says; the architect is never woken to answer its own prompt.</never>
+  </prompt-parked>
+
   <start id="start">
     <sentence>Nothing here starts by an agent typing.</sentence>
     <by>N-06 broadcasts the tick:stall entity every stall.tick_seconds (15) from the service's clock; each tick is a traversal.</by>
     <restart>After a crash the first stall tick re-reads leases and heartbeats from the store; a run that died with the service has no fresh heartbeat and is judged by age like any other; a run that survived (the launcher is its own process) keeps heartbeating and is left alone.</restart>
-    <never>No patrol script, no compliance officer, no monitor seat, no pane read (K04, K06).</never>
+    <never>No patrol script, no compliance officer, no monitor seat, no pane read (K04, K06); the prompt probe of section prompt-parked reads herdr's status event and the harness notification message, not pane text.</never>
   </start>
 
   <waits id="waits">
@@ -162,6 +186,8 @@
 
   <status-codes id="status-codes">
     <emits code="500" kind="stall" acts="N-11 attempt n plus 1 or dead; N-41 alerts; N-14 releases the workspace" shared="../../shared/status-codes.xml#code-500"/>
+    <emits code="200" kind="prompt.cleared" acts="N-28 marks the card done; N-41 clears the alert" shared="../../shared/status-codes.xml#code-200"/>
+    <emits code="423" kind="prompt.parked" acts="N-28 one card to the owner (re-carded every 900 s while parked); N-41 alerts; N-42 sends a standing answer only where prompt-rules.json names one" shared="../../shared/status-codes.xml#code-423"/>
     <emits code="500" kind="stall.kill.failed" acts="N-28 one card; N-41" shared="../../shared/status-codes.xml#code-500"/>
     <emits code="500" kind="stall.write.failed" acts="N-28 one card; N-41" shared="../../shared/status-codes.xml#code-500"/>
     <emits code="500" kind="store.unreachable" acts="N-28 one card; N-06 health" shared="../../shared/status-codes.xml#code-500"/>
@@ -205,7 +231,8 @@
     <item id="c-stale" proof="N-01 test TestStaleTokenRefused: a write with the old token is a 409">A fenced run cannot write.</item>
     <item id="c-kill-ladder" proof="test TestKillLadder with a fake process: TERM, KILL, three rounds, then stall.kill.failed">Three kill rounds then a card.</item>
     <item id="c-visible" proof="config check refuses stall.tick_seconds plus the smallest stall bound above stall.visible_within_seconds (default 330)">A stall shows within the visible bound.</item>
-    <item id="c-no-pane" proof="grep of internal/stall finds no herdr, tmux or pane call">No pane is read.</item>
+    <item id="c-no-pane" proof="grep of internal/stall finds no pane.read, pane.send, tmux or keystroke call; the only herdr call is the agent-status subscription">No pane text is read and no key is sent.</item>
+    <item id="c-prompt-parked" proof="test TestPromptParked with the fake clock and a fake herdr event: blocked at t0, transcript still at t0, record at the first tick after t0+30 s, card at or before t0+60 s; a blocked status with a moving transcript writes nothing; model-limit message routes to card, never answer">A long-lived seat parked on a prompt is routed within one minute.</item>
     <item id="c-dark" proof="config key stall.enabled false until the go-live ticket; while false the node judges and logs but neither revokes nor kills">Ships dark with a shadow mode.</item>
   </checklist>
 
@@ -213,7 +240,7 @@
     <process>The Go service user unit; it runs as the same user as the launchers so it may signal their processes (D22: service and seats on the WSL host).</process>
     <reads>leases, heartbeats, dispatches, roles table, halt record; the process table for pid and start time.</reads>
     <writes>stall, stall.kill.failed, stall.write.failed, store.unreachable records; the lease row by compare-and-swap (generation, token, holder); the stall log; SIGTERM and SIGKILL to run processes named by heartbeats.</writes>
-    <never>No signal to a process not named by a heartbeat or a dispatch claim; no herdr call; no pane; no prompt; no edit of heartbeat or dispatch records.</never>
+    <never>No signal to a process not named by a heartbeat or a dispatch claim; no herdr call except the agent-status subscription of section prompt-parked; no pane text; no keystroke; no prompt; no edit of heartbeat or dispatch records.</never>
     <seat>No seat can write a stall or revoke a lease (N-01 writer identity); a seat's only liveness duty is to keep producing events, which the launcher turns into heartbeats; the seat never writes a heartbeat itself (a self-report is an opinion, V08).</seat>
   </permissions>
 
@@ -242,6 +269,9 @@
   <sources id="sources">
     <source path="rebuild/investigation/03-DECISIONS.md" anchor="19-d17-the-one-minute-idle-rule" use="option B: one-shot seats cannot idle; a run with no event for the stall timeout is killed and retried"/>
     <source path="rebuild/investigation/03-DECISIONS.md" anchor="4-d02-seat-contract" use="a dead run yields a blocked record; the launcher turns the result into the record"/>
+    <source path="rebuild/investigation/L04-herdr.md" anchor="4-what-works" use="agent.wait until done or blocked and events.subscribe pane.agent_status_changed: the event the prompt probe consumes"/>
+    <source path="rebuild/investigation/L04-herdr.md" anchor="7-decisions-an-llm-makes-that-a-rule-could-make" use="the hooks map: Notification maps to blocked through pane.report_agent, so the status is mechanical"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" note="the incident, 2026-10-14 06:46Z to 08:46Z: the architect parked on a model-limit choice, nothing noticed (owner-reported; section prompt-parked what-broke)"/>
     <source path="rebuild/investigation/03-DECISIONS.md" anchor="10-d08-herdrs-role-and-version" use="herdr is the owner's window; no pane read"/>
     <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal" use="T06 lease with heartbeat, generation counter and compare-and-swap, renewed at a third of its length, never stolen when liveness is unknown"/>
     <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep" use="V08 probes not opinions; V18 the watchdog outside the line"/>
@@ -267,7 +297,7 @@
   <rejected id="rejected">
     <item id="r-idle-alarm" source="~/.cache/coq-watch/patrol-tick.sh (idle limit 60 s); specs/SPEC-17-orchestrator-and-agent-health.xml#s-health C2 (idle with open items after three nudges); the owner rule no agent sits idle for more than one minute" reason="an idle alarm taught agents to invent busywork and produced 350 notes a day (L06 section 5.6; I02 section 5.9); D17 ruled one-shot seats plus a stall timer. The rule's intent, no idle cog, holds by construction: a seat exists only between its input and its output."/>
     <item id="r-llm-monitor" source="roles/monitor.json; the compliance officer role (WO-20261013-5b33); herdr/bin/patrolwatch.sh" reason="the Haiku monitor answered OK on every tick including a blocked merger (HANDOFF 2026-10-13 01:47Z; V08); a probe is a timestamp."/>
-    <item id="r-pane-probes" source="~/.cache/coq-watch/patrol-tick.sh:15-34 (screen hash, blocked words, argv0 counts); SPEC-17 1.1.0 draft h-probes" reason="they read herdr panes, which D08 makes the owner's window only; the heartbeat from the launcher's event stream is the same signal without a pane. The blocked-words probe survives in N-15 as a terminal reason on the seat result."/>
+    <item id="r-pane-probes" source="~/.cache/coq-watch/patrol-tick.sh:15-34 (screen hash, blocked words, argv0 counts); SPEC-17 1.1.0 draft h-probes" reason="they read herdr panes, which D08 makes the owner's window only (the prompt-parked probe above reads herdr's status event and the harness notification message instead, so D08 holds); the heartbeat from the launcher's event stream is the same signal without a pane. The blocked-words probe survives in N-15 as a terminal reason on the seat result."/>
     <item id="r-nudge-ladder" source="specs/SPEC-17-orchestrator-and-agent-health.xml#s-health C2 repairs (nudge, Escape and nudge, retire and re-seat with --resume)" reason="a nudge is text typed into a pane (RC2); a resumed session carries the context that stalled (K02). The repair is kill and a fresh attempt with the stall attached."/>
     <item id="r-stuck-detector" source="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal T07 (OpenHands stuck detector over the transcript)" reason="a loop with events is not a stall by this node's definition; a transcript detector is a good N-15 addition (end the run with terminal reason looping) and is listed in N-15's volume, not here, so the stall timer stays a timer."/>
     <item id="r-two-signal-stall" source="specs/scheduler/SPEC-16.F-health-supervision.xml#f-stall-seat (design branch origin/feat/go-scheduler-design-one-xml-spec-per-domain-unde, not in this worktree; second signal: consumer seat absent or idle; busy is never a stall)" reason="busy without events for the bound is exactly the stall Symphony kills; with one-shot seats there is no idle seat to observe, and a run busy past its deadline must still end."/>

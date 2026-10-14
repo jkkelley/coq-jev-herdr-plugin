@@ -33,6 +33,11 @@ Checks (ids match the N-46 spec where one exists):
   C19 input-output    every node-spec volume has an element with id input and an element with id output
   C20 bindings        every panel kind is a registered record kind, a view of nodes/N-31/spec.xml#views or a static kind
                       of nodes/N-37/spec.xml#static-kinds
+  C21 md-labels       a pointer into a Markdown file never uses a list label (V04, T02, K07: one letter plus digits) as its anchor,
+                      in an attribute or in prose, and a "file.md#anchor" written in prose resolves like any pointer.
+                      What broke: the G4 volumes (N-20 to N-26) cited 02-MAPPING list labels as if they were anchors (R-03 review
+                      note, 2026-10-14). C06 reads attributes only, so a prose citation was never resolved, and a label in an
+                      attribute failed C06 without saying why. Cost: one more pass over every text node.
 
 Pointer forms resolved by C06 (relative paths are tried against the volume's directory, the book root, then the repository root):
   href="file#anchor"             on any element
@@ -335,6 +340,32 @@ def check_volume(volfile, validator):
                 note(path, "<%s %s=\"%s\"> is outside the repository; not resolved" % (e.tag, attr, value))
             elif why:
                 fail("C06", path, "<%s %s=\"%s\"> %s" % (e.tag, attr, value, why))
+    check_md_pointers(volfile, root, path)
+
+
+MD_PTR = re.compile(r"([\w./~-]+\.md)#([\w-]+)")
+LABEL_ANCHOR = re.compile(r"^[a-km-z]\d{1,3}$", re.I)  # L<n> is a line range, the one letter-plus-digits form that is a pointer
+
+
+def check_md_pointers(volfile, root, path):
+    """C21: list labels are not anchors; a .md#anchor written in prose must resolve."""
+    for e in root.iter():
+        if "branch" in e.attrib or "planned" in e.attrib:
+            continue
+        for attr, value in e.attrib.items():
+            for target, anchor in MD_PTR.findall(value):
+                if LABEL_ANCHOR.match(anchor):
+                    fail("C21", path, "<%s %s> anchor '#%s' is a list label, not a heading anchor or L<n>-L<m> range" % (e.tag, attr, anchor))
+            if attr == "anchor" and e.attrib.get("path", "").endswith(".md") and LABEL_ANCHOR.match(value.lstrip("#")):
+                fail("C21", path, "<%s anchor=\"%s\"> is a list label, not a heading anchor or L<n>-L<m> range" % (e.tag, value))
+        for chunk in (e.text or "", e.tail or ""):
+            for target, anchor in MD_PTR.findall(chunk):
+                if LABEL_ANCHOR.match(anchor):
+                    fail("C21", path, "prose pointer %s#%s: '%s' is a list label, not a heading anchor or L<n>-L<m> range" % (target, anchor, anchor))
+                    continue
+                why = resolve(volfile, target, anchor)
+                if why and why != "external":
+                    fail("C21", path, "prose pointer %s#%s %s" % (target, anchor, why))
 
 
 # ---------- XSD validator selection ----------

@@ -26,7 +26,7 @@
     <s>Panel bindings may also name a view (nodes/N-31/spec.xml#views) or a static kind (nodes/N-37/spec.xml#mechanism); those are not records and are not listed here.</s>
   </purpose>
 
-  <kinds id="kinds" count="221">
+  <kinds id="kinds" count="223">
     <record-kind name="ack" codes="100 200 500" writers="N-30" class="owner-surface" schema="nodes/N-30/record.schema.json"/>
     <record-kind name="alert.ack" codes="201 409" writers="N-41" class="screen" status-names="alert.ack-conflict alert.acked" schema="nodes/N-41/record.schema.json"/>
     <record-kind name="alert.aged" codes="410" writers="N-41" class="screen" schema="nodes/N-41/record.schema.json"/>
@@ -165,6 +165,8 @@
     <record-kind name="pr.close" codes="200 423" writers="N-50" class="line-op" schema="nodes/N-50/record.schema.json"/>
     <record-kind name="pr.opened" codes="100" writers="N-16" class="record" schema="nodes/N-16/record.schema.json"/>
     <record-kind name="promotion" codes="201 422 423 429" writers="N-48" class="line-op" schema="nodes/N-48/record.schema.json"/>
+    <record-kind name="prompt.cleared" codes="200" writers="N-12" class="record" schema="nodes/N-12/record.schema.json"/>
+    <record-kind name="prompt.parked" codes="423" writers="N-12" class="record" schema="nodes/N-12/record.schema.json"/>
     <record-kind name="protection.applied" codes="200" writers="N-25" class="record" status-names="DONE" schema="nodes/N-25/record.schema.json"/>
     <record-kind name="protection.failed" codes="500" writers="N-25" class="record" status-names="STALLED or DEAD" schema="nodes/N-25/record.schema.json"/>
     <record-kind name="push.client.dropped" codes="429" writers="N-31" class="owner-surface" schema="nodes/N-31/record.schema.json"/>

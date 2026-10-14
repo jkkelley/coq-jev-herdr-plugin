@@ -123,7 +123,8 @@ flowchart LR
     <emits code="200" kind="pr.close">PR 35 closed; nobody acts.</emits>
     <emits code="100" kind="ticket.request">The archive ticket of the fourteen cancels, to N-03.</emits>
     <emits code="200" kind="branch.delete">Design branch tagged and marked for deletion; N-45 acts.</emits>
-    <emits code="423" kind="pr.close or branch.delete">Failed after 3 (forge) or harvest-late (w3); system acts (daily retry) or owner acts (w3 card).</emits>
+    <emits code="423" kind="pr.close">PR close failed after 3 attempts at the forge; system acts (daily retry).</emits>
+    <emits code="423" kind="branch.delete">Branch delete failed after 3 attempts at the forge, or harvest-late (w3); system acts (daily retry) or owner acts (w3 card).</emits>
   </status-codes>
 
   <state-paths id="state-paths">

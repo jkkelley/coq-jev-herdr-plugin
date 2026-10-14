@@ -9,9 +9,60 @@
     { "$ref": "../N-15/record.schema.json#/$defs/seat.heartbeat" },
     { "$ref": "../N-06/record.schema.json#/$defs/tick" },
     { "$ref": "#/$defs/stall" },
-    { "$ref": "#/$defs/stall_kill_failed" }
+    { "$ref": "#/$defs/stall_kill_failed" },
+    { "$ref": "#/$defs/agent_status" },
+    { "$ref": "#/$defs/prompt_parked" },
+    { "$ref": "#/$defs/prompt_cleared" }
   ],
   "$defs": {
+    "agent_status": {
+      "description": "herdr pane.agent_status_changed for a registered long-lived seat; input only, section prompt-parked",
+      "type": "object",
+      "properties": {
+        "kind": { "const": "agent.status" },
+        "pane_id": { "type": "string" },
+        "seat": { "type": "string" },
+        "session_id": { "type": "string" },
+        "status": { "enum": ["idle", "working", "blocked", "done"] },
+        "message": { "type": "string", "description": "the harness Notification text; matched by code against prompt-rules.json, never read from the pane" },
+        "at": { "$ref": "#/$defs/at" }
+      },
+      "required": ["kind", "pane_id", "seat", "session_id", "status", "at"]
+    },
+    "prompt_cleared": {
+      "allOf": [{ "$ref": "#/$defs/base" }],
+      "properties": {
+        "kind": { "const": "prompt.cleared" },
+        "code": { "const": 200 },
+        "node": { "const": "N-12" },
+        "idempotency_key": { "type": "string" },
+        "seat": { "type": "string" },
+        "session_id": { "type": "string" },
+        "cleared_at": { "$ref": "#/$defs/at" },
+        "parked_seconds": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["idempotency_key", "seat", "session_id", "cleared_at", "parked_seconds"]
+    },
+    "prompt_parked": {
+      "allOf": [{ "$ref": "#/$defs/base" }],
+      "properties": {
+        "kind": { "const": "prompt.parked" },
+        "code": { "const": 423 },
+        "node": { "const": "N-12" },
+        "idempotency_key": { "type": "string", "description": "seat, colon, session id, colon, the UTC second the blocked status began" },
+        "seat": { "type": "string" },
+        "pane_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "rule": { "type": "string", "description": "the id of the matching prompt-rules.json rule, or unmatched" },
+        "action": { "enum": ["card", "answer", "down"] },
+        "message": { "type": "string" },
+        "blocked_since": { "$ref": "#/$defs/at" },
+        "detected_at": { "$ref": "#/$defs/at" },
+        "age_seconds": { "type": "integer", "minimum": 0 },
+        "recard_count": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["idempotency_key", "seat", "pane_id", "session_id", "rule", "action", "blocked_since", "detected_at", "age_seconds", "recard_count"]
+    },
     "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
     "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
     "phase": { "$ref": "../N-07/record.schema.json#/$defs/phase" },

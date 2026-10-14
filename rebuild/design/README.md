@@ -52,7 +52,7 @@ rebuild/design/check.sh
 Exit 0 means every check passed, 1 means at least one failed (one `FAIL <check> <file> <detail>` line each), 2 means the checker could not run.
 The XSD validator is the python `xmlschema` module when importable, else `uv run --with xmlschema`, else `xmllint`.
 Set `COQ_CHECK_NOTES=1` to print the NOTE lines (external sources, other-branch citations, planned files).
-The checks are C01 to C20, listed at the top of `bin/check-book.py` with the same ids as `nodes/N-46/spec.xml#checks`.
+The checks are C01 to C21, listed at the top of `bin/check-book.py` with the same ids as `nodes/N-46/spec.xml#checks`.
 To prove every check still fires, run `uv run --with xmlschema --with jsonschema python3 -I rebuild/design/bin/test-checks.py`.
 
 ## 5. The review proof

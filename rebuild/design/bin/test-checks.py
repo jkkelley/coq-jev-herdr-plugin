@@ -75,6 +75,8 @@ MUTATIONS = [
     ("C18", lambda b: sub(os.path.join(b, "nodes/N-01/spec.xml"), '<emits code="100" kind="store.opened"', '<emits code="100" kind="store.mutated"/>\n    <emits code="100" kind="store.opened"'), True),
     ("C19", lambda b: sub(os.path.join(b, "nodes/N-01/spec.xml"), '<output id="output">', '<output id="outputs">'), False),
     ("C20", lambda b: sub(os.path.join(b, "nodes/N-38/spec.xml"), '<panel id="map.canvas" kind="map.state"', '<panel id="map.canvas" kind="no.such.kind"'), False),
+    ("C21", lambda b: sub(os.path.join(b, "nodes/N-24/spec.xml"), 'rebuild/investigation/02-MAPPING.md#2-validated-keep">V04 pod', 'rebuild/investigation/02-MAPPING.md#v04">V04 pod'), False),
+    ("C21-prose", lambda b: sub(os.path.join(b, "nodes/N-19/spec.xml"), '02-MAPPING.md#2-validated-keep V15', '02-MAPPING.md#no-such-heading V15'), False),
 ]
 
 
@@ -113,20 +115,20 @@ def main():
             return 2
         missed = []
         for cid, mutate, regen in MUTATIONS:
-            if wanted and cid not in wanted:
+            if wanted and cid.split("-")[0] not in wanted:
                 continue
             d = os.path.join(tmp, cid)
             os.makedirs(d)
             book = make_copy(d)
             mutate(book)
             fired, _ = run(book, regen)
-            if cid in fired:
+            if cid.split("-")[0] in fired:
                 print("PASS %s fired (with %s)" % (cid, " ".join(sorted(fired - {cid})) or "nothing else"))
             else:
                 print("MISS %s did not fire (fired: %s)" % (cid, " ".join(sorted(fired)) or "nothing"))
                 missed.append(cid)
             shutil.rmtree(d)
-    print("%d checks proven, %d missed" % (len([m for m in MUTATIONS if not wanted or m[0] in wanted]) - len(missed), len(missed)))
+    print("%d checks proven, %d missed" % (len([m for m in MUTATIONS if not wanted or m[0].split("-")[0] in wanted]) - len(missed), len(missed)))
     return 1 if missed else 0
 
 

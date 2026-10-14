@@ -52,7 +52,8 @@
     <record kind="backup" from="N-05">A backup record (snapshot path, retention class). Trigger class backup.</record>
     <record kind="tick" from="N-06">The daily tick and the hourly tick; the registry says which entries run on which. Trigger class timer.</record>
     <record kind="disposition" from="N-49">One per 04-UNLANDED entry with action supersede or close (and land after its ticket merges). Trigger class disposition.</record>
-    <record kind="cancel and branch.delete" from="N-50">Cancel records name no paths; branch.delete names the design branch. Trigger class disposition.</record>
+    <record kind="cancel" from="N-50">Cancel records name no paths. Trigger class disposition.</record>
+    <record kind="branch.delete" from="N-50">branch.delete names the design branch. Trigger class disposition.</record>
     <schema href="record.schema.json#/$defs/input"/>
   </input>
 

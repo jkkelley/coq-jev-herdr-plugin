@@ -348,6 +348,8 @@
     <config-key name="store.min_free_mib" default="512" unit="MiB" owner="N-01"/>
     <config-key name="drain_seconds" default="30" unit="s" owner="N-06"/>
     <config-key name="stall.tick_seconds" default="15" unit="s" owner="N-12"/>
+    <config-key name="stall.prompt_park_seconds" default="30" unit="s" owner="N-12"/>
+    <config-key name="stall.prompt_recard_seconds" default="900" unit="s" owner="N-12"/>
     <config-key name="gate.absent_seconds" default="1800" unit="s" owner="N-08"/>
     <config-key name="gate.pending_seconds" default="3600" unit="s" owner="N-08"/>
     <config-key name="gate.enabled" default="false" owner="N-08">ships dark; live at cut-over step 3 (cut-over.xml#step-ci)</config-key>
