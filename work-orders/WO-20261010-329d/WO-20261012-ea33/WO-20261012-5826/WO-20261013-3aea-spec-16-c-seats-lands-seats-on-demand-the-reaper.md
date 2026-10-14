@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T03:24:56+00:00",
   "parent": "WO-20261012-5826",
   "branch": null,
@@ -24,7 +24,8 @@
     "WO-20261013-fe37"
   ],
   "blocks": [
-    "WO-20261012-be64"
+    "WO-20261012-be64",
+    "WO-20261013-e713"
   ],
   "files": [
     "specs/scheduler/SPEC-16.C-seats.xml",

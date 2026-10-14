@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T20:01:59+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -24,7 +24,8 @@
     "WO-20261013-bcba"
   ],
   "blocks": [
-    "WO-20261012-6f13"
+    "WO-20261012-6f13",
+    "WO-20261013-e880"
   ],
   "files": [
     "herdr/bin/seat.sh",

@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T14:36:14+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -21,9 +21,13 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261013-48f2"
+    "WO-20261013-48f2",
+    "WO-20261013-bed2",
+    "WO-20261013-04b8"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-3eac"
+  ],
   "files": [
     "factory/config/routes.json",
     "factory/bin/route.sh",
@@ -89,6 +93,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F4): this ticket owns the merged 200 row of factory/config/routes.json; WO-20261013-bed2 no longer touches it. It now depends on WO-20261013-bed2 and WO-20261013-04b8 (route.sh), and WO-20261013-3eac depends on it, so routes.json has one ticket in flight at a time: WO-20261013-b839, WO-20261013-bed2, this ticket, WO-20261013-3eac.
 - `2026-10-13` Correction: the SPEC-17 O9 cite in the Scope bullet for the 450 row is wrong. SPEC-17 has only O1 to O7 and none of them covers conduct or compliance reports, so no anchor applies; ignore the cite.
 
 ## Outcome

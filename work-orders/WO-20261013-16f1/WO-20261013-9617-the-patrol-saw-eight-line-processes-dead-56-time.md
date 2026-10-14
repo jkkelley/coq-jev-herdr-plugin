@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T17:54:20+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -23,7 +23,9 @@
   "depends_on": [
     "WO-20261013-1258"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-ee5c"
+  ],
   "files": [
     "line/bin/patrol-tick.sh",
     "line/tests/cases/patrol-escalate.sh"

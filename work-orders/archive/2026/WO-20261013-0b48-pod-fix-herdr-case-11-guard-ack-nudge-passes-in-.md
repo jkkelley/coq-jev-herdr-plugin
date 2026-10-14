@@ -20,7 +20,10 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [],
+  "depends_on": [
+    "WO-20261013-8573",
+    "WO-20261013-7af7"
+  ],
   "blocks": [],
   "files": [
     "herdr/tests/cases/11-guard-ack-nudge.test.sh",

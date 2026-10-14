@@ -7,7 +7,7 @@
   "status": "draft",
   "priority": "p0",
   "created": "2026-10-11",
-  "updated": "2026-10-11",
+  "updated": "2026-10-14",
   "created_at": "2026-10-11T14:39:41+00:00",
   "parent": "WO-20261010-329d",
   "branch": null,
@@ -81,6 +81,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F11): the interface agent is kept. It is in the binding ROADMAP, Phase 5 (PR 17 for this ticket closed unmerged on 2026-10-12T22:18:17Z; the architect seat becomes the interface agent). This ticket needs a fresh pull request, and the worker re-reads WO-20261013-b221 - Roadmap K6 - The owner lane on the page (merged) first, because K6 draws the owner lane as cards and lists the interface agent seat as out of scope: this ticket must build on those cards and not redraw them. WO-20261010-3593 and WO-20261012-2a12 stay as they are.
 
 ## Outcome
 

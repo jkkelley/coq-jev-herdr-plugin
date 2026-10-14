@@ -7,7 +7,7 @@
   "status": "draft",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T20:58:19+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -18,9 +18,12 @@
   "surfaces": [],
   "depends_on": [
     "WO-20261013-a0e2",
-    "WO-20261013-d127"
+    "WO-20261013-d127",
+    "WO-20261013-d0dd"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261012-6f13"
+  ],
   "files": [
     "herdr/bin/seat.sh",
     "herdr/tests/cases/35-spec-author-role.test.sh"

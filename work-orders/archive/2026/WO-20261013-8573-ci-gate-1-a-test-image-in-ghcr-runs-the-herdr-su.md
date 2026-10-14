@@ -7,7 +7,7 @@
   "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T19:46:38+00:00",
   "parent": "WO-20261013-16f1",
   "branch": "feat/ci-gate-1-a-test-image-in-ghcr-runs-the-herdr-su",
@@ -23,7 +23,8 @@
   "depends_on": [],
   "blocks": [
     "WO-20261013-ab25",
-    "WO-20261013-ca2a"
+    "WO-20261013-ca2a",
+    "WO-20261013-0b48"
   ],
   "files": [
     "ci/image/Containerfile",

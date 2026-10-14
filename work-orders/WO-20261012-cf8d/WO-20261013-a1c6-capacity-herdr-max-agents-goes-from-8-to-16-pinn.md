@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T14:35:49+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -20,7 +20,9 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [],
+  "depends_on": [
+    "WO-20261013-7af7"
+  ],
   "blocks": [
     "WO-20261013-dd47"
   ],
