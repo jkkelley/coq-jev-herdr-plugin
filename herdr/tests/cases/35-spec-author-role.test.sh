@@ -52,4 +52,13 @@ assert_eq "the seat is the worker role" "$(jq -r .role <<<"$out")" worker
 assert_eq "on the worker's model" "$(jq -r .model <<<"$out")" claude-sonnet-5-5
 S="$STATE/seats/$NM/settings.json"
 for d in specs graph roles; do assert_eq "its settings deny edits under $d/" "$(denies "$S" "$d")" 1; done
+
+# WO-20261013-dec6 (cause ag): the shared label must still name one role the record writer can address, or factory/bin/policy.sh
+# role_of_seat answers by file order (spec-author before worker) and its policy.applied --to is refused. The assertions live in
+# roles/tests/label-unique.test.sh so they run from a plain shell too; this is the line that puts them in make -C herdr test.
+echo "-- the worker lane's label resolves to exactly one addressable role"
+out="$(bash "${REPO_ROOT:-/repo}/roles/tests/label-unique.test.sh" "${REPO_ROOT:-/repo}" 2>&1)"; rc=$?
+printf '%s\n' "$out" | tail -5
+check "roles/tests/label-unique.test.sh passes" "$([ "$rc" = 0 ] && echo 1 || echo 0)"
+assert_match "it ran every assertion, none failed" "$out" 'label unique: [0-9]+ passed, 0 failed'
 case_done

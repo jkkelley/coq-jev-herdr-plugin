@@ -67,6 +67,9 @@ STATE=$(cfg state_dir)
 # cfg runs in a subshell, so a state root it could not resolve (it says why on stderr) arrives here as an empty path
 [ -n "$EVENTS" ] && [ -n "$STATE" ] || die 4 "the state root did not resolve; set COQ_STATE or pass --state DIR"
 POLICIES=$(jq -c '.policies' "$CONFIG") || die 3 "config $CONFIG is not JSON"
+# the roles the record writer accepts after --to, from the schema beside it (the enum events/bin/event.sh line 71 mirrors)
+EVENT_SCHEMA=$(dirname "$EVENT_BIN")/../schema/event.schema.json
+ADDRESSABLE=$(jq -c '.properties.to.enum // empty' "$EVENT_SCHEMA" 2>/dev/null); [ -n "$ADDRESSABLE" ] || die 4 "no --to enum in $EVENT_SCHEMA"
 rcfg() { local v; v=$(jq -r --arg k "$1" '.[$k] // empty' "$RUNNER_CFG" 2>/dev/null); [ -n "$v" ] || die 3 "runner config $RUNNER_CFG has no $1"; fx_expand "$v"; }
 [ -f "$RUNNER_CFG" ] || die 4 "runner config $RUNNER_CFG missing"
 ROLES=$(rcfg roles_dir); PLAYBOOKS=$(rcfg playbooks_dir); SESSION=${COQ_HERDR_SESSION:-$(rcfg herdr_session)}
@@ -87,9 +90,21 @@ seat_of() {
   local label; label=$(jq -r '.label // empty' "$ROLES/$1.json" 2>/dev/null) || return 1
   label=${label//\$\{ticket\}/${2,,}}; case $label in ''|*'${'*) return 1;; esac; printf '%s' "${label,,}"
 }
+# BREADCRUMB 2026-10-13 - WO-20261013-dec6, cause ag. What broke: roles/spec-author.json line 37 carries the label worker-${ticket},
+#   the same as roles/worker.json, and this loop walks roles/*.json alphabetically, so it answered spec-author for a worker seat.
+#   events/bin/event.sh refuses --to spec-author (its --to list, line 71), the policy.applied default was never written, and case
+#   12-policy failed on main from PR 136 (e82fcb2) on, with the merge hold set. Why this fix: the label is shared on purpose
+#   (roles/spec-author.json, breadcrumb "the label": route.sh, flow.sh and the patrol find a ticket's worker by that name), and a
+#   spec-author seat acts on every worker-lane wake by playbooks/worker.md, so worker is the right answer for both the --to and the
+#   playbook this function feeds; a role the writer cannot address is skipped. Rejected: the label spec-author-${ticket} (every
+#   worker-lane wake and down to a spec-author seat would end in a 500, the reason that label was rejected in WO-20261013-d127), and
+#   adding spec-author to the writer's --to list (it would point wakes at playbooks/spec-author.md, a second lane for one seat).
+#   roles/tests/label-unique.test.sh fails when two addressable roles share a label. Cost: a role outside the --to list is never
+#   the answer here, so a future role with a label of its own must join that list before a policy default can reach it by name.
 role_of_seat() {
   local f label
   for f in "$ROLES"/*.json; do
+    jq -e --arg r "$(basename "$f" .json)" 'index($r) != null' <<<"$ADDRESSABLE" >/dev/null || continue
     label=$(jq -r '.label // empty' "$f" 2>/dev/null) || continue
     label=${label//\$\{ticket\}/${2,,}}; case $label in ''|*'${'*) continue;; esac
     if [ "${label,,}" = "$1" ]; then basename "$f" .json; return 0; fi
