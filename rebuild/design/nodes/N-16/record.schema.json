@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-16/record.schema.json",
+  "title": "N-16 Worker run: structured output and output record",
+  "description": "Input: the worker brief inside a seat run (bundle ../N-13/record.schema.json#/$defs/seat.bundle plus workspace ../N-14/record.schema.json#/$defs/workspace). The seat returns worker.result as structured output (this is the file N-13 copies into bundle output.schema.json). The launcher's close-out writes pr.opened. A blocked run is seat.result in ../N-15/record.schema.json#/$defs/seat.result.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "ticket_id": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
+    "observation": {
+      "type": "object",
+      "required": ["path", "saw", "expected"],
+      "properties": {
+        "path": { "type": "string" },
+        "line": { "type": "integer", "minimum": 1 },
+        "saw": { "type": "string", "maxLength": 500 },
+        "expected": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["criterion", "command", "observed_exit"],
+      "properties": {
+        "criterion": { "type": "string", "description": "the acceptance criterion id from the ticket" },
+        "command": { "type": "string" },
+        "observed_exit": { "type": "integer" },
+        "runs_in": { "enum": ["host", "pod"] },
+        "note": { "type": "string", "maxLength": 500 }
+      }
+    },
+    "worker.result": {
+      "type": "object",
+      "description": "The seat's structured output. Exactly one of ready or blocked.",
+      "oneOf": [
+        {
+          "required": ["ready", "commit_sha", "summary", "evidence", "files_changed"],
+          "properties": {
+            "ready": { "const": true },
+            "commit_sha": { "$ref": "#/$defs/sha1" },
+            "summary": { "type": "string", "minLength": 20, "maxLength": 4000 },
+            "evidence": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/evidence" } },
+            "files_changed": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+            "breadcrumb_at": { "type": "array", "items": { "type": "string" }, "description": "path:line of each breadcrumb comment" }
+          },
+          "not": { "required": ["blocked"] }
+        },
+        {
+          "required": ["blocked"],
+          "properties": {
+            "ready": { "const": false },
+            "blocked": {
+              "type": "object",
+              "required": ["reason", "observations", "repro"],
+              "properties": {
+                "reason": { "enum": ["cannot_finish_inside_files", "acceptance_cannot_run", "conflict_outside_files", "ticket_contradicts_design", "other"] },
+                "observations": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/observation" } },
+                "repro": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "pr.opened": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node", "idempotency_key", "ticket", "run_id", "attempt", "branch", "pr", "head_sha", "base_sha", "files", "evidence", "url"],
+      "properties": {
+        "id": { "type": "string", "minLength": 8 },
+        "kind": { "const": "pr.opened" },
+        "code": { "const": 100 },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "const": "N-16" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "idempotency_key": { "type": "string", "description": "equals run_id" },
+        "version": { "type": "integer", "minimum": 0 },
+        "ticket": { "$ref": "#/$defs/ticket_id" },
+        "run_id": { "type": "string" },
+        "branch": { "type": "string", "pattern": "^wo/WO-[0-9]{8}-[0-9a-f]{4}$" },
+        "pr": { "type": "integer", "minimum": 1 },
+        "head_sha": { "$ref": "#/$defs/sha1" },
+        "base_sha": { "$ref": "#/$defs/sha1", "description": "origin/main at push time" },
+        "files": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "git diff --name-only base..head, every path inside the declared files" },
+        "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidence" } },
+        "url": { "type": "string", "pattern": "^https://github\\.com/" },
+        "session_id": { "type": "string" }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/worker.result" },
+    { "$ref": "#/$defs/pr.opened" }
+  ]
+}

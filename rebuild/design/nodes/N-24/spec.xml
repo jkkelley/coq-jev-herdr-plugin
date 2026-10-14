@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Node volume N-24 Pod run. Written by the G4 spec-author seat, 2026-10-14T04:39Z UTC, against brief C and dag.md section 3 row N-24.
+     Validated by rebuild/design/check.sh against rebuild/design/schema/ once the shared author lands them. -->
+<volume id="N-24" kind="node-spec" node="N-24" group="G4" name="Pod run" version="1.0.0" issued="2026-10-14T04:39:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: suite.plan entry</entry>
+    <entry ref="output">Output record: pod.run</entry>
+    <entry ref="mechanism">Mechanism: the pod template, the ladder, the result file, the mirror into records</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and the report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-24"/>
+    <dag href="../../dag.md#3-every-node" row="N-24"/>
+    <schema href="record.schema.json"/>
+    <sibling node="N-20" href="../N-20/spec.xml#N-20">Jenkins as code</sibling>
+    <sibling node="N-21" href="../N-21/spec.xml#N-21">Factory namespace</sibling>
+    <sibling node="N-22" href="../N-22/spec.xml#N-22">Image build</sibling>
+    <sibling node="N-23" href="../N-23/spec.xml#N-23">Suite planner</sibling>
+    <sibling node="N-25" href="../N-25/spec.xml#N-25">Gate status post</sibling>
+    <sibling node="N-26" href="../N-26/spec.xml#N-26">Main verify pipeline</sibling>
+    <shared href="../../shared/status-codes.xml#status-codes">Status code map</shared>
+    <shared href="../../shared/principles.xml#no-cog">No cog principle</shared>
+    <shared href="../../shared/state-store.xml#records">State store record envelope and tables</shared>
+    <shared href="../../shared/failure-cases.xml#failure-cases">Failure cases</shared>
+  </pointers>
+
+  <section id="purpose" title="Purpose">
+    <s>N-24 runs one planned unit as one Kubernetes pod in namespace coq-factory, hermetic, with the sha fetched by the pod itself, and turns its outcome into a pod.run record whose exit code is the truth about that unit: an assertion failure is a result and is never retried; an infrastructure failure climbs a fixed ladder and then reports.</s>
+    <s>It keeps the one piece of the old CI with measured proof: pod-per-case isolation on the arm64 cluster, 30 of 31 herdr cases then 6 of 6 after the hermetic fix (L07 section 8; V04; V05).</s>
+    <s>Input to output: one suite.plan entry starts it; one pod.run record ends it; N-25 reads every pod.run of a head sha.</s>
+  </section>
+
+  <section id="input" title="Input record: suite.plan entry">
+    <record kind="suite.plan.entry" code="100" schema="record.schema.json#/$defs/input">
+      <s>Not a separate store row: the entry is an element of suite.plan.entries (N-23) or main.plan.entries (N-26), identified by head_sha plus name plus attempt; this node's input is that element and the plan's build number.</s>
+      <field name="head_sha" type="string" required="true">The commit the pod fetches.</field>
+      <field name="name" type="string" required="true">suite or suite:case; the unit's key within the plan.</field>
+      <field name="image" type="object" required="true">name and manifest digest from N-22.</field>
+      <field name="workdir" type="string" required="true">Under /repo.</field>
+      <field name="cmd" type="string" required="true">The command run with bash -c.</field>
+      <field name="budget_minutes" type="integer" required="true">The test timeout; the pod deadline is longer.</field>
+      <field name="plan_attempt" type="integer" required="true">The plan's attempt, part of the pod's labels.</field>
+    </record>
+  </section>
+
+  <section id="output" title="Output record: pod.run">
+    <record kind="pod.run" code="201|422|500" schema="record.schema.json#/$defs/output">
+      <field name="head_sha" type="string" required="true">The commit.</field>
+      <field name="pr" type="integer" required="true">The pull request or 0 for main.</field>
+      <field name="name" type="string" required="true">The unit.</field>
+      <field name="exit_code" type="integer" required="true">The test command's exit code; -1 when no command ran (infrastructure after the ladder).</field>
+      <field name="outcome" type="string" required="true">pass, fail, timeout, infra.</field>
+      <field name="rungs" type="array" required="true">One element per infrastructure attempt: rung, reason, pod name, wait seconds; empty when the first pod ran the command.</field>
+      <field name="log" type="object" required="true">Jenkins artifact URL of units/&lt;name&gt;.log and the host copy path once mirrored.</field>
+      <field name="duration_s" type="number" required="true">Wall time of the command, the input to suite.budget.</field>
+      <field name="pod" type="object" required="true">name, node, image digest, started_at, finished_at.</field>
+      <field name="build" type="object" required="true">Jenkins job and build number.</field>
+    </record>
+    <s>Codes: pass is 201; fail and timeout are 422 (a result with evidence); infra after the ladder is 500.</s>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the pod template, the ladder, the result file, the mirror into records">
+    <s>The executor is the Jenkins job coq-gate (N-20) running ci/jenkins-lib/vars/coqGate.groovy with the plan handed in by N-23 or N-26; the Groovy keeps its runUnit and runPod ladder (coqGate.groovy lines 134 to 188) and loses its plan script, its status posts and its hostOnly skip, which moved to N-23 and N-25.</s>
+    <step n="1" id="m-template">The pod template, rendered by podYaml() from data in the plan entry: namespace coq-factory; serviceAccountName coq-pod; automountServiceAccountToken false; enableServiceLinks false; priorityClassName coq-factory-low; restartPolicy Never; activeDeadlineSeconds (connect 5 plus budget plus 5) x 60; imagePullSecrets ghcr-pull-secret; securityContext runAsNonRoot, runAsUser 1000, runAsGroup 1000, seccompProfile RuntimeDefault; container case with image &lt;name&gt;@&lt;digest&gt;, imagePullPolicy IfNotPresent (a digest never changes under a node, so Always is no longer needed; this ends the per-pod registry round trip), allowPrivilegeEscalation false, capabilities drop ALL, resources requests cpu 1000m memory 256Mi and limits memory 1Gi (the LimitRange in N-21 caps it), env HOME=/tmp/home, REPO_ROOT=/repo, COQ_TEST_IN_CONTAINER=1, LOOP_TEST_IN_CONTAINER=1, COQ_CASE, HERDR_AGENT_DETECTION_MANIFEST_CATALOG_URL=http://127.0.0.1:9/index.toml (the hermetic fix of WO-20261013-0b48, kept verbatim with its breadcrumb), volume repo as an emptyDir; labels app.kubernetes.io/part-of=coq-ci, coq-ci/sha=&lt;sha12&gt;, coq-ci/unit=&lt;name hashed&gt;, coq-ci/attempt.</step>
+    <step n="2" id="m-checkout">Inside the pod the checkout script fetches the sha by depth 1 from the public repository (no credential), then the target branch ref for a pull request so suites that read origin/main (suites.sh in a test) have it; a fetch failure is infrastructure.</step>
+    <step n="3" id="m-run">The command runs under timeout(budget) with returnStatus, so its exit code is read, never thrown; stdout and stderr tee into $WORKSPACE/units/&lt;name&gt;.log with the wall time printed at the end by the same wrapper (ci/bin/unit-wrap.sh inside the image: prints "== &lt;name&gt;", runs the command, prints "-- &lt;name&gt;: pass|FAIL rc=N wall=S").</step>
+    <step n="4" id="m-ladder">The ladder, unchanged in semantics (V05): a pod that does not come up, an image that will not pull, a checkout that fails, an agent that dies, or a connect timeout is infrastructure; rungs 1 to 3 retry on a fresh pod after 10, 30 and 90 seconds; rung 4 is one clean re-run after a 300 second cool-down; rung 5 is the report: outcome infra; a test exit code, and a test that outlives its budget, is a result and never climbs; an abort (a stop from the Go service) is rethrown and the unit ends with outcome superseded.</step>
+    <step n="5" id="m-result">At the end of every unit coqGate appends one JSON line to $WORKSPACE/gate-result.jsonl (name, exit_code, outcome, rungs, duration_s, pod name and node, log artifact path) and archives units/*.log and gate-result.jsonl as build artifacts; the build result itself is SUCCESS when every unit passed, UNSTABLE when a unit failed, FAILURE when a unit ended infra; the Jenkins build posts nothing to GitHub.</step>
+    <step n="6" id="m-mirror">The Go service follows the build (N-23 wait w3 style: GET /job/coq-gate/N/api/json every 20 s under the plan's bound) and, when it ends, fetches gate-result.jsonl and every unit log through the Jenkins artifact API (3 tries each), copies the logs under $COQ_STATE/ci/logs/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;/units/, and writes one pod.run per unit with the idempotency key repo:head_sha:name:plan_attempt; a unit whose line is missing from the result file (the build died) is written as infra 500 with reason result-missing. Then the artifact import, the one path by which a pod's own records reach the store (a pod cannot write it, D23): for every entry whose records field is not empty, fetch records/&lt;name&gt;.jsonl from the build's artifacts (3 tries), and for each line check that its kind is in the entry's records list and that its body validates against the kind's schema (shared/record-kinds.xml names it), then put it through N-01 with node set to the node the entry names, by N-24, and idempotency key repo:head_sha:name:kind:line number; a line of a kind the entry does not list is artifact.refused 412 and is not written; a passing acceptance case of a ticket also writes test.proof 201 (ticket, acceptance id, head sha, exit 0, log path). This is how art.inventory and sprite.sheet (N-36), binding.record (N-37) and check.verdict (N-46) reach the host.</step>
+    <step n="7" id="m-concurrency">maxPods inside one build is 4 (the herdr cap of config/tests.json, one herdr server per pod); across builds the Go service's two-runs-in-flight rule (N-23) bounds the namespace at 8 case pods, which the quota allows.</step>
+    <mermaid>
+flowchart LR
+  E[suite.plan entry] --> P[pod: fetch sha, run cmd under budget]
+  P -- came up, cmd ran --> R{exit code}
+  R -- 0 --> OK[pod.run pass 201]
+  R -- non-zero or budget timeout --> F[pod.run fail 422, never retried]
+  P -- did not come up or died --> L[ladder: 10 s, 30 s, 90 s, then 300 s clean re-run]
+  L -- a later pod ran the cmd --> R
+  L -- rung 5 --> I[pod.run infra 500]
+  OK --> M[Go service mirrors gate-result.jsonl and logs into records]
+  F --> M
+  I --> M
+  M --> N25[N-25 reads every pod.run of the sha]
+    </mermaid>
+    <s>Why Jenkins pods and not bare Jobs: D07 ruled Jenkins; the ladder's semantics are data (rung waits in the plan entry's defaults, overridable in JCasC), so a later port to a Kubernetes Job with podFailurePolicy (T12) is a change of executor, not of contract.</s>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <s>The coq-gate build that N-23 or N-26 triggered runs every entry of its plan without any further call; this node has no dispatcher of its own because the unit is a step inside that build.</s>
+    <s>The mirror into records (step 6) is a system job under the plan's lease, dispatched by N-07 when a suite.plan has a build number and no gate.run outcome; at service start the comparison re-attaches to builds still running (the build number is in the record), so a crash of the Go service never loses a running build or its result.</s>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait id="w1"><on>The pod agent connecting to the controller (slaveConnectTimeout).</on><timeout>PT5M (connectMinutes).</timeout><fallback>Infrastructure; the ladder; rung 5 reports infra with reason provision timed out.</fallback></wait>
+    <wait id="w2"><on>The checkout inside the pod.</on><timeout>Included in the pod's timeout(connect plus budget); a fetch has its own 120 s git timeout through GIT_HTTP_LOW_SPEED settings.</timeout><fallback>Infrastructure; the ladder.</fallback></wait>
+    <wait id="w3"><on>The test command.</on><timeout>budget_minutes from the plan entry (measured p95 x 1.5, floor 5, cap 30).</timeout><fallback>A result: outcome timeout, code 422, log kept; never retried.</fallback></wait>
+    <wait id="w4"><on>The kubelet deadline activeDeadlineSeconds as the backstop when the timeout step cannot fire.</on><timeout>(5 plus budget plus 5) minutes, always after w3.</timeout><fallback>The pod is killed; coqGate reads a lost agent, which is infrastructure; the ladder.</fallback></wait>
+    <wait id="w5"><on>A free slot among maxPods inside the build.</on><timeout>Bounded by the queue length times the budget; the build's own timeout is the plan's bound: sum over entries of budget divided by maxPods, plus 30 minutes, capped at PT3H.</timeout><fallback>The build times out, Jenkins aborts it, the Go service reads the result file for the units that finished and writes infra for the rest; N-25 reports.</fallback></wait>
+    <wait id="w6"><on>The Go service following the build.</on><timeout>The same plan bound plus 10 minutes.</timeout><fallback>POST /job/coq-gate/N/stop; the units without a result line are infra 500; N-25 reports; the plan attempt counts toward the gate run's 3.</fallback></wait>
+    <wait id="w7"><on>Fetching artifacts from Jenkins after the build.</on><timeout>60 s per file, 3 tries.</timeout><fallback>The pod.run is written with the artifact URL and host copy empty; a retry of the mirror on the next tick fills the copy; the verdict never waits on the copy.</fallback></wait>
+  </section>
+
+  <section id="retries" title="Retries, recovery and the report">
+    <s>Inside a unit: the ladder's five fixed rungs, never a loop (coqGate.groovy breadcrumb item 4); every attempt is a new pod with a new name, so a stuck pod never blocks a fresh one.</s>
+    <s>Across the build: a build that dies as a whole (controller restart, abort) leaves units without a result line; the Go service writes those as infra 500 and the gate run (N-25) counts one attempt; N-25 may re-trigger the plan up to 3 attempts in total, each a fresh build, and then reports error on the status with one card.</s>
+    <s>An assertion failure is never retried by anyone: not by the ladder, not by the Go service, not by a seat; the fix is a new commit, which is a new head and a new plan.</s>
+    <s>Recovery after a Go service crash: the suite.plan carries the build number; on start the mirror job re-attaches; a build that ended while the service was down is read from its artifacts, which Jenkins keeps for 30 days (N-20 buildDiscarder).</s>
+  </section>
+
+  <section id="many-agents-at-once" title="Many agents at once">
+    <s>Many units at once: pods are independent by construction (own /proc, HOME, /tmp, herdr session; one herdr server per pod), which is the fix that made parallel cases pass (bin/test-cases.sh breadcrumb); four at a time per build, two builds at a time, eight pods under a quota of ten.</s>
+    <s>Many heads at once: pod names and labels carry the sha12 and the attempt, so logs and results of two heads never mix; the result file lives in the build's own workspace.</s>
+    <s>Two mirrors of one build: one lease per plan with a fencing token; the second writer's pod.run puts are 409 or no-ops on the same key and payload.</s>
+    <s>A seat reading pod.run: any number of seats read the records and the mirrored logs; nothing a seat does can change a pod.run, because only the Go service holds the lease and the token.</s>
+    <s>A stuck pod from a dead build: the pod carries activeDeadlineSeconds and the daily cleanup reaps anything older than 2 hours in coq-factory; a stuck pod can delay a slot by at most its deadline.</s>
+    <s>Collision answer in one line: one pod per unit with sha and attempt in its name, one lease per plan for the mirror, idempotent pod.run keys, quota as the physical bound.</s>
+  </section>
+
+  <section id="status-codes" title="Status codes this node emits">
+    <emits code="201" name="PASSED" kind="pod.run">N-25 counts it toward success; the stats screen counts a pass.</emits>
+    <emits code="422" name="FAILED" kind="pod.run">A test failed or timed out: N-25 posts failure; the worker lane acts on the log; never retried.</emits>
+    <emits code="500" name="STALLED or DEAD" kind="pod.run">Infrastructure after the ladder or a dead build: N-25 counts an attempt and re-triggers or reports.</emits>
+    <emits code="410" name="SUPERSEDED" kind="pod.run">The build was stopped because a newer head arrived; nobody acts.</emits>
+    <emits code="409" name="CONFLICT" kind="record.conflict">Nobody acts.</emits>
+    <emits code="201" name="PROOF" kind="test.proof">A ticket's acceptance case passed in a pod at the head sha; N-18's dark-build output and N-19's evidence point at it.</emits>
+    <emits code="412" name="REFUSED" kind="artifact.refused">An artifact line named a kind the suite entry does not list, or failed its schema; not written; the suite's owner fixes the unit (a fix ticket request from N-11 after the gate goes red).</emits>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path p="$COQ_STATE/ci/logs/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;/units/&lt;name&gt;.log" cleanup="ci/bin/cleanup-ci-state.sh --what gate-logs --older-than 30d [--apply]">Host copies of unit logs; the record's log.host path.</path>
+    <path p="$COQ_STATE/ci/logs/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;/gate-result.jsonl" cleanup="ci/bin/cleanup-ci-state.sh --what gate-logs --older-than 30d (the unit logs' entry; one flag removes both)">The result file as fetched.</path>
+    <path p="Jenkins artifacts of coq-gate builds" cleanup="JCasC buildDiscarder 30 days or 200 builds; ci/bin/cleanup-cluster.sh --what jenkins-builds --older-than 30d [--apply]">Jenkins' own retention; the script forces a sweep.</path>
+    <path p="cluster: pods app.kubernetes.io/part-of=coq-ci in coq-factory" cleanup="ci/bin/cleanup-cluster.sh --what factory-pods --older-than 2h [--apply]">The plugin deletes its pods; the script reaps stuck ones.</path>
+    <s>Every script dry-runs by default, acts with --apply, retries each deletion 3 times and exits 4 listing what remains; N-45 registers them.</s>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <in from="N-21" href="../N-21/spec.xml#N-21">namespace.ready: the namespace, quota, policies and pull secret the pod needs.</in>
+    <in from="N-22" href="../N-22/spec.xml#N-22">image: the digest the pod runs.</in>
+    <in from="N-23" href="../N-23/spec.xml#N-23">suite.plan entry: the unit.</in>
+    <in from="N-26" href="../N-26/spec.xml#N-26" drawn="false">main.plan entries use this node the same way; the DAG draws N-26's edge to N-10 because its output is the main status.</in>
+    <out to="N-25" href="../N-25/spec.xml#N-25">pod.run per unit.</out>
+  </section>
+
+  <section id="checklist" title="Checklist with proofs">
+    <item><check>A failing assertion produces one pod and a 422; no second pod is created.</check><proof>ci/tests/cases/02-gate-pipeline.test.sh scenario assert-fail against the fake Jenkins: pods created 1, outcome fail.</proof></item>
+    <item><check>An unschedulable pod climbs 10, 30, 90, 300 and then reports infra.</check><proof>Scenario infra: 5 pods created, waits recorded 10, 30, 90, 300, outcome infra, rungs length 4.</proof></item>
+    <item><check>A test over its budget is a 422 with outcome timeout and the pod deadline never fired first.</check><proof>Scenario budget: outcome timeout, the pod's phase was Running at the timeout, not DeadlineExceeded.</proof></item>
+    <item><check>The pod holds no token, no secret env, runs as 1000 with no capabilities, passes Pod Security restricted.</check><proof>The live canary of N-21 uses the same template; kubectl get pod -o yaml of one gate pod shows automountServiceAccountToken false and the securityContext fields; no admission warning.</proof></item>
+    <item><check>The hermetic herdr fix is in the template verbatim.</check><proof>grep HERDR_AGENT_DETECTION_MANIFEST_CATALOG_URL ci/jenkins-lib/vars/coqGate.groovy shows the closed port and the breadcrumb.</proof></item>
+    <item><check>The image is referenced by digest and pulled IfNotPresent.</check><proof>The pod yaml shows image ghcr.io/jkkelley/coq-test@sha256:... and imagePullPolicy IfNotPresent.</proof></item>
+    <item><check>Every unit's wall time is in its record and feeds suite.budget.</check><proof>pod.run duration_s present; the daily tick's suite.budget record cites the sample count.</proof></item>
+    <item><check>A build that dies leaves infra records for the missing units within one tick.</check><proof>Scenario build-dies: pod.run infra 500 reason result-missing for each unit without a line.</proof></item>
+    <item><check>The 31 herdr cases pass in pods at the current main.</check><proof>The main.gate.status 201 of N-26 on the current main sha, with 31 pod.run 201 for herdr units.</proof></item>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <s>The pod: service account coq-pod, no token, no secrets, egress to GitHub ranges, DNS and the Jenkins service only, non-root, no capabilities, memory limit 1Gi.</s>
+    <s>Jenkins: creates pods in coq-factory through the jenkins-controller RoleBinding (N-21 step 5); reads their logs; nothing else.</s>
+    <s>The Go service: Jenkins Job/Read and artifact read; write of logs under $COQ_STATE/ci/logs; no kube call is needed for a normal run (the canary and reaper are N-21's).</s>
+    <s>Seats: read logs and records; may run a case locally in podman (bin/test-cases.sh) with the same image to reproduce; cannot create pods.</s>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <s>Status fields: pods in flight, units per outcome in the last 24 h, ladder rung counts (how often infra happened and at which rung), p50 and p95 duration per suite, pull failures.</s>
+    <s>Alerts (N-41): infra outcomes above 5 percent of units in an hour (a node or registry problem); a unit duration above its budget's 80 percent (the budget needs a measurement update, L10 section 7); a pod Pending above 2 minutes (quota or node pressure).</s>
+    <s>Map: N-24 is the belt of inserters; each pod is an item on the belt with its suite's icon; the stats screen shows pods per hour and pass rate.</s>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <step n="R1" id="r-repro">Reproducing a 422 locally: the record's log and the command; bin/test-cases.sh with the same image digest runs the case in podman on the host.</step>
+    <step n="R2" id="r-infra">A burst of infra outcomes: read the rungs' reasons; image pull means GHCR or the pull secret (N-21 check), unschedulable means quota or a cordoned node (the cluster lamp on the map), connect timeout means the Jenkins controller (N-20 alerts).</step>
+    <step n="R3" id="r-flake">A unit that passes on retry of a new head but failed before: it is a flake and a ticket, never a reason to add retries to assertions (konflux issue 9484 in S02 section 8: an agent tuning retries masks failures).</step>
+    <step n="R4" id="r-cleanup">Cleanup: ci/bin/cleanup-ci-state.sh --what gate-logs --older-than 30d; ci/bin/cleanup-cluster.sh --what factory-pods --older-than 2h; --what jenkins-builds --older-than 30d.</step>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <cite href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V04 pod per case, hermetic, no token, public fetch by sha.</cite>
+    <cite href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V05 infrastructure retried, test failures never.</cite>
+    <cite href="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal">T12 Kubernetes Job primitives as the later port.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#4-what-works">The pod spec lines, the ladder, the 1Gi answer to the 31.8G death, the hermetic fix pattern.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#6-waits-polls-sleeps-and-leases">Every cloud-side wait and its bound, carried here with the same numbers.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#8-what-to-carry-forward">Pod-per-case, the ladder, fork and secret hygiene, the hermetic fix.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#5-what-broke-and-why">Item 10: imagePullPolicy Always made every pod pull; a digest with IfNotPresent ends it.</cite>
+    <cite href="ci/jenkins-lib/vars/coqGate.groovy#L134-L201">runUnit and runPod: the ladder kept; postStatus and planScript removed.</cite>
+    <cite href="ci/jenkins-lib/vars/coqGate.groovy#L26-L41">Breadcrumb items 3, 4, 6, 7: failure sorting, fixed rungs, the plugin's cat container, the writable emptyDir.</cite>
+    <cite href="ci/pod/herdr-suite.pod.yaml#L1-L40">The pod lines and the WO-20261013-0b48 breadcrumb kept verbatim.</cite>
+    <cite href="bin/test-cases.sh#L15-L30">Why one container per case: /proc audits and pkill.</cite>
+    <cite href="ci/README.md#L140-L160">The statuses and ladder table of the old design; the ladder stays, the statuses move to N-25.</cite>
+    <cite href="rebuild/investigation/S02-k8s-jobs-tekton-jenkins.md#4-what-works">Item 3: the split matches podFailurePolicy; item 2: the pod model proven.</cite>
+    <cite href="rebuild/investigation/S02-k8s-jobs-tekton-jenkins.md#8-what-to-carry-forward">The Job primitive and the konflux warning about agents tuning retries.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#51-the-coq-lint-job-timed-out-on-every-build-for-31-hours-and-nothing-noticed">Measured: one serial suite holding one Pi core; budgets must be measured.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013194800-ci-gate-design.md#amendment-2026-10-13t2007z-hooks-and-ladder">The five-rung ladder as the owner asked for it.</cite>
+  </section>
+
+  <section id="rejected" title="Rejected with reason">
+    <rejected source="restartPolicy OnFailure or a kubelet retry of the case container"><reason>A failed case is evidence and must not be retried (pod yaml breadcrumb); the ladder retries only pods that never ran the command.</reason></rejected>
+    <rejected source="imagePullPolicy Always (Jenkinsfile and coqGate.groovy)"><reason>Needed only while a floating tag could change under a node; a digest cannot, and Always cost a registry round trip per pod over a home connection (L07 item 10).</reason></rejected>
+    <rejected source="A Jenkins inbound agent on the WSL host as a fallback executor (ci-gate-design.md amendment 20:00Z)"><reason>D22 puts tests in pods; a suite that cannot run in a pod is an image ticket (N-22), not a second executor.</reason></rejected>
+    <rejected source="Bare Kubernetes Jobs created by the Go service instead of Jenkins pods"><reason>D07 ruled Jenkins; the contract here is executor-independent so the port stays open (T12), but it is not this iteration.</reason></rejected>
+    <rejected source="coqGate posting coq/gate and coq/gate-page from the build"><reason>The Go service holds every pod.run and is the single status writer (N-25); two writers on one context would race.</reason></rejected>
+    <rejected source="Retrying a flaky assertion inside the pod wrapper"><reason>Masks failures (konflux-ci issue 9484, S02); a flake is a ticket.</reason></rejected>
+  </section>
+
+</volume>

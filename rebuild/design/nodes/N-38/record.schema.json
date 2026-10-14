@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-38/record.schema.json",
+  "title": "N-38 Map screen: input and output records",
+  "description": "Input pushed.frame (map.state view) and outputs selection and frame.report. Shared envelope per shared/state-store.xml#record-envelope. UTC everywhere.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "nodeId": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+    "code": { "type": "integer", "minimum": 100, "maximum": 599 },
+    "envelope": {
+      "type": "object",
+      "required": ["kind", "id", "at", "node", "status", "seq", "version", "idempotency_key"],
+      "properties": {
+        "kind": { "type": "string" },
+        "id": { "type": "string", "minLength": 8 },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "$ref": "#/$defs/nodeId" },
+        "status": { "$ref": "#/$defs/code" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "minLength": 8 },
+        "by": { "type": "string" }
+      }
+    },
+    "nodeState": {
+      "type": "object",
+      "required": ["node", "status", "heartbeat_age_s"],
+      "properties": {
+        "node": { "$ref": "#/$defs/nodeId" },
+        "status": { "$ref": "#/$defs/code" },
+        "status_name": { "type": "string" },
+        "heartbeat_age_s": { "type": "integer", "minimum": -1, "description": "-1 when the node has never written a record" },
+        "attempt": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "ticket": { "type": "string" },
+        "last_record_id": { "type": "string" }
+      }
+    },
+    "queue": {
+      "type": "object",
+      "required": ["name", "from", "to", "depth"],
+      "properties": {
+        "name": { "enum": ["cut", "ready", "review", "merge", "retry", "pane"] },
+        "from": { "$ref": "#/$defs/nodeId" },
+        "to": { "$ref": "#/$defs/nodeId" },
+        "depth": { "type": "integer", "minimum": 0 },
+        "oldest_at": { "$ref": "#/$defs/utc" }
+      }
+    },
+    "seatInFlight": {
+      "type": "object",
+      "required": ["lease_id", "holder", "node", "ticket", "expires_at"],
+      "properties": {
+        "lease_id": { "type": "string" },
+        "holder": { "type": "string" },
+        "node": { "$ref": "#/$defs/nodeId" },
+        "ticket": { "type": "string" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "expires_at": { "$ref": "#/$defs/utc" },
+        "fencing_token": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "mapState": {
+      "type": "object",
+      "required": ["nodes", "queues", "seats", "crates", "hold", "open_alerts"],
+      "properties": {
+        "nodes": { "type": "array", "items": { "$ref": "#/$defs/nodeState" } },
+        "queues": { "type": "array", "items": { "$ref": "#/$defs/queue" } },
+        "seats": { "type": "array", "items": { "$ref": "#/$defs/seatInFlight" } },
+        "crates": { "type": "integer", "minimum": 0, "description": "Idle workspaces" },
+        "hold": {
+          "type": "object",
+          "required": ["signal", "merge_hold"],
+          "properties": {
+            "signal": { "enum": ["HOLD", "GOFACTORY"] },
+            "merge_hold": { "type": "boolean" },
+            "since": { "$ref": "#/$defs/utc" },
+            "ruling_id": { "type": "string" }
+          }
+        },
+        "open_alerts": {
+          "type": "object",
+          "required": ["red", "amber"],
+          "properties": { "red": { "type": "integer", "minimum": 0 }, "amber": { "type": "integer", "minimum": 0 } }
+        }
+      }
+    },
+    "pushed.frame": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["client_id", "delivered_seq", "full", "map"],
+      "properties": {
+        "kind": { "const": "pushed.frame" },
+        "node": { "const": "N-31" },
+        "client_id": { "type": "string", "minLength": 8 },
+        "delivered_seq": { "type": "integer", "minimum": 0 },
+        "full": { "type": "boolean", "description": "true on connect and reconnect; false for a delta" },
+        "map": { "$ref": "#/$defs/mapState" }
+      }
+    },
+    "selection": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["client_id", "selected", "delivered_seq"],
+      "properties": {
+        "kind": { "const": "selection" },
+        "node": { "const": "N-38" },
+        "status": { "const": 201 },
+        "client_id": { "type": "string", "minLength": 8 },
+        "selected": { "$ref": "#/$defs/nodeId" },
+        "delivered_seq": { "type": "integer", "minimum": 0 },
+        "source": { "enum": ["map", "alerts"] }
+      }
+    },
+    "frame.report": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["client_id", "device", "fps_p50", "fps_p95", "frame_ms_p95", "dropped", "degrade", "delivered_seq", "stale_seconds", "renderer"],
+      "properties": {
+        "kind": { "const": "frame.report" },
+        "node": { "const": "N-38" },
+        "status": { "enum": [200, 206, 422, 502, 503, 504] },
+        "client_id": { "type": "string", "minLength": 8 },
+        "device": { "enum": ["desktop", "phone"] },
+        "viewport": { "type": "object", "required": ["w", "h", "dpr"], "properties": { "w": { "type": "integer" }, "h": { "type": "integer" }, "dpr": { "type": "number", "maximum": 2 } } },
+        "fps_p50": { "type": "number", "minimum": 0 },
+        "fps_p95": { "type": "number", "minimum": 0 },
+        "frame_ms_p95": { "type": "number", "minimum": 0 },
+        "dropped": { "type": "integer", "minimum": 0 },
+        "degrade": { "type": "integer", "minimum": 0, "maximum": 2 },
+        "delivered_seq": { "type": "integer", "minimum": 0 },
+        "stale_seconds": { "type": "integer", "minimum": 0 },
+        "renderer": { "enum": ["canvas2d", "webgl"] },
+        "reduced_motion": { "type": "boolean" },
+        "invalid_seq": { "type": "integer", "minimum": 1, "description": "Set when status is 422" }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/pushed.frame" },
+    { "$ref": "#/$defs/selection" },
+    { "$ref": "#/$defs/frame.report" }
+  ]
+}

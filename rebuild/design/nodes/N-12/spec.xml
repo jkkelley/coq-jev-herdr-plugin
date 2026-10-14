@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-12 Stall timer. Node volume of the factory rebuild spec book, group G2 Scheduler and verdicts.
+     Written 2026-10-14T05:05Z UTC by the spec-author seat for group G2, round 1, against brief C;
+     revised 2026-10-14T06:40Z UTC by the round 3 spec-author seat against the round 2 review verdict (every reason named there is fixed in this revision)
+     (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+     Every time in this volume is UTC. No em dash appears in this volume. Pointers are path plus anchor, never prose. -->
+<volume id="N-12" kind="node-spec" node="N-12" group="G2" title="Stall timer" version="1.0.2" issued="2026-10-14" timezone="UTC" author="spec-author seat, group G2, round 3">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
+    <entry ref="purpose">Purpose and the one sentence</entry>
+    <entry ref="input">Inputs: lease.granted and lease.expired, seat.heartbeat, the tick:stall entity</entry>
+    <entry ref="output">Output record: stall</entry>
+    <entry ref="mechanism">Mechanism: heartbeat age against the bound, kill, revoke</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries: three attempts, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once: the collision answer</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths written and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="schema">Schema: record.schema.json</entry>
+    <entry ref="checklist">Checklist with proof per item</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent path="../../index.xml" anchor="N-12"/>
+    <dag path="../../dag.md" anchor="3-every-node"/>
+    <sibling node="N-07" path="../N-07/spec.xml" anchor="contents"/>
+    <sibling node="N-08" path="../N-08/spec.xml" anchor="contents"/>
+    <sibling node="N-09" path="../N-09/spec.xml" anchor="contents"/>
+    <sibling node="N-10" path="../N-10/spec.xml" anchor="contents"/>
+    <sibling node="N-11" path="../N-11/spec.xml" anchor="contents"/>
+    <schema path="record.schema.json" anchor="/$defs/stall"/>
+    <shared path="../../shared/status-codes.xml" anchor="code-100"/>
+    <shared path="../../shared/status-codes.xml" anchor="code-409"/>
+    <shared path="../../shared/status-codes.xml" anchor="code-500"/>
+    <shared path="../../shared/principles.xml" anchor="no-cog"/>
+    <shared path="../../shared/principles.xml" anchor="probes-not-opinions"/>
+    <shared path="../../shared/principles.xml" anchor="three-attempts"/>
+    <shared path="../../shared/state-store.xml" anchor="table-leases"/>
+    <shared path="../../shared/state-store.xml" anchor="table-heartbeats"/>
+    <shared path="../../shared/state-store.xml" anchor="cas"/>
+    <shared path="../../shared/seat-contract.xml" anchor="heartbeat"/>
+    <shared path="../../shared/seat-contract.xml" anchor="one-shot"/>
+    <shared path="../../shared/failure-cases.xml" anchor="stall"/>
+    <shared href="../../shared/cut-over.xml#step-stall-retry" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <sentence>On every stall tick the Go service compares the age of each live run's last heartbeat with the run's stall bound and its deadline, and for every run past either it kills the process, revokes the lease with a new fencing token and writes one stall record, so no run can hold a slot or a ticket for ever and no agent is asked whether it is stuck.</sentence>
+    <is>The replacement for the one-minute idle alarm, the Haiku monitor and the compliance officer (D17, C49; K04): a seat is a one-shot run that ends at its output, so idle cannot exist; a run with no event for the stall bound is killed and retried by N-11 (Symphony SPEC.md lines 823 to 829).</is>
+    <is>A probe, never an opinion (V08): the only inputs are timestamps in the store and the process table; no model reads a pane.</is>
+    <is-not>Not a liveness judge of system processes: units are supervised by systemd and reported by N-06's health; this node judges seat runs and code-role runs that hold a lease.</is-not>
+    <is-not>Not a retry: the stall record is a failure record for N-11, which decides attempt n plus 1 or dead.</is-not>
+    <decisions>D02 (C36), D08 (C46), D17 (C49), V08, T06 (lease with heartbeat, generation and compare-and-swap; never stolen when liveness is unknown), T07 rejected below.</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="lease.granted" code="201" from="N-02" schema="../N-02/record.schema.json#/$defs/lease_granted">
+      <field name="key, holder, token, generation, expires_at, heartbeat_seconds">A lease with a holder is a live run; expires_at moves on every renewal (N-02 lease.renewed) that the launcher's heartbeat makes.</field>
+    </record>
+    <record kind="lease.expired" code="500" from="N-02" schema="../N-02/record.schema.json#/$defs/lease_expired">
+      <field name="key, generation">N-02's sweep found a lease past expires_at with no renewal, freed the key and bumped the generation; N-02 names N-12 as the reader that kills the run. It is the lease side of a dead launcher (reason lease-expired below).</field>
+    </record>
+    <record kind="seat.heartbeat" code="100" from="N-15" schema="../N-15/record.schema.json#/$defs/seat.heartbeat">
+      <field name="run_id, ticket, lease (key, token, generation), renewed">The run heartbeating and whether this heartbeat renewed the lease at N-02; a renewal refused (token stale, generation moved) is the launcher's own signal to end the run (N-15 output).</field>
+      <field name="at, seq">UTC second the launcher wrote it, every lease.heartbeat_seconds (default 30, shared/state-store.xml#config-keys; Optio renews every 20 s with a 60 s lease, I03 section 6). The lease ttl N-02 sets (900 s) is far longer on purpose, so a short service restart never expires a live run's lease; a dead launcher is found by this node's 3-beat bound (90 s), not by the ttl. The store keeps the latest heartbeat per run_id (upsert, table heartbeats).</field>
+      <field name="progress_at">The mtime of the run's session transcript, which moves on every model turn and tool call; the stall signal this node compares with the role's stall bound (N-15: the stall timer compares progress_at with stall_seconds).</field>
+      <field name="pid, started_at">The process the launcher supervises and when it started, for the kill and the pid-reuse guard.</field>
+      <field name="transcript_bytes, stderr_bytes, turns_so_far">Counters, so the Machine screen shows motion; this node branches on ages only.</field>
+    </record>
+    <record kind="tick" subkind="stall" entity="tick:stall" from="N-06" schema="../N-06/record.schema.json#/$defs/tick">
+      <field name="n, interval_seconds">Default 15 (config stall.tick_seconds, N-06 schedule); the bound minus the interval is the longest a stall stays unseen (SPEC-16.F f-stall-visible: poll interval plus the smallest deadline must not pass the visible-within bound; refused at start otherwise). An entity broadcast in process, not a log record (N-06).</field>
+    </record>
+    <reads>The dispatch record of each live lease (deadline, role); the roles table (stall_seconds per role); the halt record.</reads>
+    <starts-when>The tick:stall entity is broadcast.</starts-when>
+  </input>
+
+  <output id="output">
+    <record kind="stall" code="500" to="N-11 N-41" schema="record.schema.json#/$defs/stall">
+      <field name="idempotency_key">lease key, colon, generation at kill time; one per revoked generation, ever.</field>
+      <field name="ticket, phase, attempt, dispatch_id, run_id, lease_key, old_token, new_generation">The run killed and the lease revoked.</field>
+      <field name="reason">no-progress (now minus progress_at above the role's stall bound while heartbeats still arrive: the model is stuck), launcher-dead (the newest heartbeat older than 3 x heartbeat_seconds: the launcher process stopped writing), deadline (the dispatch deadline passed with progress still arriving), no-first-heartbeat (no heartbeat within start.grace_seconds of the dispatch, default 120: the run never started; replaces wake confirmation), lease-expired (N-02's lease.expired arrived, the lease side of launcher-dead).</field>
+      <field name="last_heartbeat_at, last_progress_at, age_seconds, bound_seconds, killed">killed is true when the process was ended by this node, false when it was already gone.</field>
+      <field name="kill_attempts">1 to 3, how many signals were needed.</field>
+    </record>
+    <record kind="stall.kill.failed" code="500" to="N-28 N-41" schema="record.schema.json#/$defs/stall_kill_failed">
+      <field name="pid, lease_key, run_id, attempts">A process that survived SIGTERM and SIGKILL three times; a system-lane fault.</field>
+    </record>
+    <ends-when>Every live lease past a bound has a stall record and a revoked lease; a lease within bounds ends the traversal with no record; the next stall tick is a new traversal.</ends-when>
+  </output>
+
+  <mechanism id="mechanism">
+    <where>Go package stall inside the service; Judge(leases, heartbeats, dispatches, roles, now) is pure and returns kill intents; the engine kills, revokes and writes.</where>
+    <step n="1" id="m-snapshot">One read transaction: every lease with a holder; the newest seat.heartbeat per run_id (table heartbeats); unhandled lease.expired records; the dispatch per lease; the roles table.</step>
+    <step n="2" id="m-age">For each lease: progress age equals now minus the newest heartbeat's progress_at; launcher age equals now minus the newest heartbeat's at; both equal now minus the dispatch's at when no heartbeat exists. Bound equals the role's stall_seconds (defaults: worker 300, reviewer 300, spec-author 300, gate 60; Symphony stall_timeout_ms 300000; SPEC-16.F f-stall-deadline: deadlines are per kind because a suite and a merge take different times; the validator is code inside the service with its own bounds, N-18, and holds no seat lease). Launcher bound equals 3 x lease.heartbeat_seconds (90 s at the default 30, shared/state-store.xml#config-keys). First-heartbeat grace equals start.grace_seconds (default 120) when no heartbeat exists.</step>
+    <step n="3" id="m-judge">Stalled when progress age is above the bound (no-progress), or launcher age is above the launcher bound (launcher-dead), or no heartbeat exists and the age is above the grace (no-first-heartbeat), or now is past the dispatch deadline (deadline), or a lease.expired names the key (lease-expired). Not stalled otherwise; end for this lease. A clock skew guard: a heartbeat with at or progress_at in the future by more than stall.tick_seconds is counted as now (the store's clock is N-06's; the launcher's is the same host, D22).</step>
+    <step n="4" id="m-unknown">If the snapshot read failed (step 1 timed out), liveness is unknown and nothing is revoked this tick (T06: never stolen when liveness is unknown; S04 section 8 item 7: alive when unknown). The tick is counted; three unknown ticks in a row write store.unreachable 500 once.</step>
+    <step n="5" id="m-revoke">Revoke first, kill second: compare-and-swap the lease's generation from the snapshot value to plus 1, holder to empty, token to the next store-wide token (N-02 revoke verb). Refused: the lease changed under us (a heartbeat renewed it in the window, or N-02's sweep already expired it); re-read and re-judge once; if still stalled, retry the swap; otherwise end. For lease-expired the swap is already done by N-02 and this step only confirms the generation. After the swap every write with the old token is refused by N-01 as stale (N-02 lease_stale), so the run is fenced before it is killed.</step>
+    <step n="6" id="m-kill">Kill the process named in the newest heartbeat's pid (or the dispatch's claimed pid from N-15 when no heartbeat exists): SIGTERM, wait 2 s, SIGKILL, wait 2 s, up to 3 rounds (herdr/bin/seat-lib.sh lines 300 to 311: 3 tries x 2 s). A pid that is gone before the first signal is killed false. The launcher (N-15) sees the kill and writes seat.result blocked with terminal_reason killed_stall (or killed_deadline, killed_lease_lost, matching the reason); if it cannot (the launcher itself died), the stall record stands alone and N-11 handles it.</step>
+    <step n="7" id="m-record">Write the stall record keyed by the lease key and the new generation. N-11 reads it as a failure of the attempt (and marks the launcher's echo handled by the same attempt); N-41 shows it; N-14 releases the workspace on the stall record (its own volume).</step>
+    <invariant>A run is fenced before it is killed, and killed before its stall is retried: order revoke, kill, record, so a zombie can never post a result after the retry started (fencing token).</invariant>
+    <invariant>One stall record per lease generation; a late heartbeat after revoke is a 409 at N-01, logged, never a resurrection.</invariant>
+    <diagram format="mermaid">flowchart TD
+  T["tick:stall entity"] --> S{"snapshot ok?"}
+  S -- no --> U["liveness unknown: revoke nothing, count"]
+  S -- yes --> J{"per lease: progress age above bound, launcher age above 3 x heartbeat, no first heartbeat past grace, past deadline, or lease.expired?"}
+  J -- no --> E["end, next tick"]
+  J -- yes --> R{"CAS lease: generation+1, token+1, holder empty"}
+  R -- refused --> RJ["re-read, re-judge once"]
+  RJ -- "still stalled" --> R
+  RJ -- "renewed" --> E
+  R -- ok --> K["SIGTERM 2 s, SIGKILL 2 s, up to 3 rounds"]
+  K -- gone --> W["stall 500 (lease key:generation)"]
+  K -- survives x3 --> KF["stall.kill.failed 500 to N-28"]
+  W --> N11["N-11 attempt n+1 or dead"]
+  W --> N41["N-41 alerts"]</diagram>
+  </mechanism>
+
+  <start id="start">
+    <sentence>Nothing here starts by an agent typing.</sentence>
+    <by>N-06 broadcasts the tick:stall entity every stall.tick_seconds (15) from the service's clock; each tick is a traversal.</by>
+    <restart>After a crash the first stall tick re-reads leases and heartbeats from the store; a run that died with the service has no fresh heartbeat and is judged by age like any other; a run that survived (the launcher is its own process) keeps heartbeating and is left alone.</restart>
+    <never>No patrol script, no compliance officer, no monitor seat, no pane read (K04, K06).</never>
+  </start>
+
+  <waits id="waits">
+    <wait id="w-snapshot" on="N-01 read of leases and heartbeats" timeout="5 s" fallback="liveness unknown: revoke nothing; three in a row write store.unreachable 500 once; the bound keeps growing, so a real stall is caught on the first good tick"/>
+    <wait id="w-cas" on="N-01 compare-and-swap of the lease" timeout="5 s" fallback="retry 1 s, 2 s, 4 s; then the lease is left as is and the next tick re-judges; stall.write.failed 500 once per lease key after the third tick"/>
+    <wait id="w-term" on="the process ending after SIGTERM" timeout="2 s" fallback="SIGKILL"/>
+    <wait id="w-kill" on="the process ending after SIGKILL" timeout="2 s" fallback="next round, up to 3; then stall.kill.failed 500 to N-28 (a process the kernel will not end is a host fault for the owner)"/>
+    <wait id="w-heartbeat" on="the next heartbeat of a run" timeout="3 x heartbeat_seconds (launcher), or start.grace_seconds before the first" fallback="this node's own verdict: stall launcher-dead or no-first-heartbeat"/>
+    <wait id="w-progress" on="the run's transcript moving (progress_at)" timeout="the role's stall_seconds" fallback="this node's own verdict: stall no-progress"/>
+    <wait id="w-deadline" on="the run ending by its dispatch deadline" timeout="the deadline (worker 3600 s default; Symphony turn_timeout_ms)" fallback="stall reason deadline even while heartbeats arrive, so a run that is busy for ever still ends"/>
+    <rule>Timers are context deadlines and the fake clock in tests; no time.Sleep outside the kill rounds, which are bounded at 12 s total and run in their own goroutine so the 15 s tick never waits on a kill.</rule>
+  </waits>
+
+  <retries id="retries">
+    <step name="snapshot" attempts="3 ticks" backoff="next tick" then="store.unreachable 500 once; nothing revoked meanwhile"/>
+    <step name="lease CAS" attempts="3" backoff="1 s, 2 s, 4 s" then="stall.write.failed 500 once; re-judged next tick"/>
+    <step name="kill" attempts="3 rounds" backoff="2 s between signals" then="stall.kill.failed 500 to N-28 and N-41; the lease stays revoked so the ticket moves on; the process is the owner's to end"/>
+    <step name="the run itself" attempts="N-11's three" backoff="N-11's" then="dead and one card"/>
+    <not-retried>A stall is never retried by this node; N-11 owns the next attempt. A kill is never repeated after a stall record is written for that generation.</not-retried>
+    <report>Every then clause is a record; a kill that fails is one card, never a loop of signals.</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Any number of seats run at once, each with its own lease and heartbeat stream; this node judges each lease on its own row, so N seats cost N rows per tick and no lock.</readers>
+    <two-timers>Two stall goroutines (a restart overlap, or two service processes before the leader lease node:N-07:leader settles) may both judge one lease stalled; the compare-and-swap on generation lets exactly one revoke; the loser re-reads, sees the new generation, and ends. N-02's sweep (lease.expired) is a third writer on the same row and the same swap settles it. The kill is idempotent (a gone pid is killed false) and the stall record key lease key:generation makes a second write a 409.</two-timers>
+    <heartbeat-versus-revoke>A heartbeat and a revoke race on one lease: N-01 serialises writes on the lease row; a heartbeat that commits first renews expires_at and the revoke's compare-and-swap is refused (re-judge once: if progress_at still shows no progress the swap is retried, because a live launcher with a stuck model is exactly no-progress; if progress moved, it ends); a revoke that commits first makes the heartbeat's renewal a lease_stale 409, which the launcher reads as its signal to end (N-15 output).</heartbeat-versus-revoke>
+    <stale-result>A killed run's late seat.result carries the old token and is refused by N-01; the fresh seat of attempt n plus 1 carries the new token; two results for one attempt cannot both land (T06; S04 section 8 item 7).</stale-result>
+    <pid-reuse>A pid reused by another process between the heartbeat and the kill is guarded by started_at in the heartbeat: the kill checks the process start time in the process table against it and skips a mismatch, writing killed false with kill_reason pid-reused.</pid-reuse>
+    <conflict-reports>Every refused compare-and-swap and every 409 is logged with the key and counted; never a silent overwrite.</conflict-reports>
+    <test>Test case two-timers-one-lease: two Judge plus revoke rounds over one stalled lease write one stall record and one 409 (checklist c-two-timers); test heartbeat-wins: a heartbeat committed between snapshot and swap leaves the run alive.</test>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="500" kind="stall" acts="N-11 attempt n plus 1 or dead; N-41 alerts; N-14 releases the workspace" shared="../../shared/status-codes.xml#code-500"/>
+    <emits code="500" kind="stall.kill.failed" acts="N-28 one card; N-41" shared="../../shared/status-codes.xml#code-500"/>
+    <emits code="500" kind="stall.write.failed" acts="N-28 one card; N-41" shared="../../shared/status-codes.xml#code-500"/>
+    <emits code="500" kind="store.unreachable" acts="N-28 one card; N-06 health" shared="../../shared/status-codes.xml#code-500"/>
+    <consumes code="100" kinds="seat.heartbeat; the tick:stall entity" shared="../../shared/status-codes.xml#code-100"/>
+    <consumes code="201" kinds="lease.granted" shared="../../shared/status-codes.xml#code-201"/>
+    <consumes code="500" kinds="lease.expired" shared="../../shared/status-codes.xml#code-500"/>
+    <meets code="409" kinds="stale-token on heartbeat, lease CAS refused" acts="logged and counted; the collision answer" shared="../../shared/status-codes.xml#code-409"/>
+    <reads code="503" kind="halt" acts="under halt this node still judges and revokes: a halt stops new work, not the bound on running work; the owner's USERHALT interrupts seats through N-42's control.action, which ends runs by their launchers, and this node records nothing for a run that ended cleanly" shared="../../shared/status-codes.xml#code-503"/>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <root>$COQ_STATE as in ../N-07/spec.xml#state-paths; path elements in N-45's generator form.</root>
+    <path id="N-12.store" glob="$COQ_STATE/store/coq.db" retention="owned by N-01" trigger="none here" cleanup="line/bin/cleanup.sh --entry N-01.store">Rows: stall and stall.kill.failed records; the leases table fields generation, token and holder by compare-and-swap. Heartbeats are an upsert per run_id (N-15), so they do not grow; terminal runs' heartbeat rows prune with the run after retention (N-01's row).</path>
+    <path id="N-12.logs" glob="$COQ_STATE/logs/stall/*/*/*-tick-*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-12.logs">One line per judged lease with ages and bound; rotated daily.</path>
+    <never>No pid file of its own (the launcher's pid is in the heartbeat), no pane, no file under the repository.</never>
+  </state-paths>
+
+  <edges id="edges">
+    <in from="N-02" record="lease.granted, lease.expired" path="../N-02/spec.xml" anchor="output"/>
+    <in from="N-15" record="seat.heartbeat" path="../N-15/spec.xml" anchor="output"/>
+    <in from="N-06" record="tick:stall entity" path="../N-06/spec.xml" anchor="output"/>
+    <out to="N-11" record="stall" path="../N-11/spec.xml" anchor="input"/>
+    <out to="N-41" record="stall, stall.kill.failed" path="../N-41/spec.xml" anchor="input"/>
+    <out to="N-28" record="stall.kill.failed, stall.write.failed" path="../N-28/spec.xml" anchor="input" note="not drawn in dag.md; owner-acts kinds reach N-28 by the status code map"/>
+    <side-effect on="N-15" what="the run's process is killed; the launcher writes seat.result blocked with terminal_reason killed_stall, killed_deadline or killed_lease_lost" path="../N-15/spec.xml" anchor="output"/>
+    <side-effect on="N-14" what="the workspace is released on the stall record" path="../N-14/spec.xml" anchor="input"/>
+  </edges>
+
+  <schema id="schema">
+    <file path="record.schema.json"/>
+    <defs>stall, stall_kill_failed; seat.heartbeat, lease_granted, lease_expired and tick are references to the N-15, N-02 and N-06 schemas; base as in N-07.</defs>
+  </schema>
+
+  <checklist id="checklist">
+    <item id="c-judge-pure" proof="go test ./internal/stall -run TestJudge with the fake clock: progress age above bound, launcher age above 3 x heartbeat, no first heartbeat past grace, past deadline, lease.expired, each stalled; within bounds not">Judge is pure over timestamps.</item>
+    <item id="c-per-role" proof="test TestPerRoleBound: gate at 61 s stalled, worker at 61 s alive, worker at 301 s stalled">Bounds are per role from config.</item>
+    <item id="c-order" proof="test TestRevokeBeforeKill asserts the CAS commits before the kill call">Revoke, kill, record, in that order.</item>
+    <item id="c-two-timers" proof="test TestTwoTimersOneLease">One stall per generation.</item>
+    <item id="c-heartbeat-wins" proof="test TestHeartbeatWins">A heartbeat in the window saves the run.</item>
+    <item id="c-unknown" proof="test TestUnknownLivenessRevokesNothing">Nothing revoked when the store is unreadable.</item>
+    <item id="c-stale" proof="N-01 test TestStaleTokenRefused: a write with the old token is a 409">A fenced run cannot write.</item>
+    <item id="c-kill-ladder" proof="test TestKillLadder with a fake process: TERM, KILL, three rounds, then stall.kill.failed">Three kill rounds then a card.</item>
+    <item id="c-visible" proof="config check refuses stall.tick_seconds plus the smallest stall bound above stall.visible_within_seconds (default 330)">A stall shows within the visible bound.</item>
+    <item id="c-no-pane" proof="grep of internal/stall finds no herdr, tmux or pane call">No pane is read.</item>
+    <item id="c-dark" proof="config key stall.enabled false until the go-live ticket; while false the node judges and logs but neither revokes nor kills">Ships dark with a shadow mode.</item>
+  </checklist>
+
+  <permissions id="permissions">
+    <process>The Go service user unit; it runs as the same user as the launchers so it may signal their processes (D22: service and seats on the WSL host).</process>
+    <reads>leases, heartbeats, dispatches, roles table, halt record; the process table for pid and start time.</reads>
+    <writes>stall, stall.kill.failed, stall.write.failed, store.unreachable records; the lease row by compare-and-swap (generation, token, holder); the stall log; SIGTERM and SIGKILL to run processes named by heartbeats.</writes>
+    <never>No signal to a process not named by a heartbeat or a dispatch claim; no herdr call; no pane; no prompt; no edit of heartbeat or dispatch records.</never>
+    <seat>No seat can write a stall or revoke a lease (N-01 writer identity); a seat's only liveness duty is to keep producing events, which the launcher turns into heartbeats; the seat never writes a heartbeat itself (a self-report is an opinion, V08).</seat>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="stall_total" from="stall records, by reason and role" screen="N-40, N-41"/>
+    <counter name="stall_kill_failed_total" from="stall.kill.failed" screen="N-41"/>
+    <gauge name="runs_live" from="leases with a holder" screen="N-38 seats in flight"/>
+    <gauge name="progress_age_max_seconds" from="the oldest progress_at age among live runs" screen="N-39, N-40"/>
+    <gauge name="heartbeat_age_max_seconds" from="the oldest heartbeat age among live runs" screen="N-39"/>
+    <gauge name="runs_near_bound" from="live runs with progress age above half their bound" screen="N-38 (an inserter blinking), N-41"/>
+    <lamp name="stall" green="no live run past half its progress bound" amber="a run past half its bound" red="a stall in the last tick, or store unreachable" screen="N-38, N-42"/>
+    <alert kind="stall" code="500" to="N-41 at once; the card is N-11's at dead"/>
+    <alert kind="stall.kill.failed" code="500" to="N-41 and one card"/>
+  </monitoring>
+
+  <runbook id="runbook">
+    <bring-up>N-15 writing seat.heartbeat; roles table with stall_seconds per role; set stall.enabled true (shadow first: judge and log, no revoke, for one day; then live). Proof: a stall record no-progress for a test run whose model process was paused with SIGSTOP for longer than its bound while the launcher kept heartbeating, a stall launcher-dead for a run whose launcher was paused, and each run's late result refused as a 409.</bring-up>
+    <read-status>Scheduler.Status lists live runs with heartbeat age, bound and deadline; the Machine screen shows one run; the Alerts screen shows stalls.</read-status>
+    <raise-a-bound>Edit the role's stall_seconds in the roles table through a ticket; Scheduler.Reload; the config check keeps the visible bound.</raise-a-bound>
+    <kill-failed>The card names the pid; the owner ends it on the host (one time); the ticket already moved on because the lease was revoked.</kill-failed>
+    <recover-store-unreachable>N-01 runbook; this node revokes nothing until the store answers.</recover-store-unreachable>
+    <cleanup entry="N-12.logs" command="line/bin/cleanup.sh --entry N-12.logs" mode="dry-run first, then --apply"/>
+    <registry>Generated into shared/cleanup-registry.json from the state-paths element (../N-45/spec.xml#state-paths); heartbeat rows prune with N-01's store row.</registry>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="19-d17-the-one-minute-idle-rule" use="option B: one-shot seats cannot idle; a run with no event for the stall timeout is killed and retried"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="4-d02-seat-contract" use="a dead run yields a blocked record; the launcher turns the result into the record"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="10-d08-herdrs-role-and-version" use="herdr is the owner's window; no pane read"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal" use="T06 lease with heartbeat, generation counter and compare-and-swap, renewed at a third of its length, never stolen when liveness is unknown"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep" use="V08 probes not opinions; V18 the watchdog outside the line"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="3-dropped-by-the-field-still-carried-here-kill" use="K03 agents waiting by polling; K04 LLM monitors and idle alarms"/>
+    <source path="rebuild/investigation/I02-postmortems-and-abandonment.md" anchor="44-work-claimed-through-files-git-or-a-tracker-code-owns-claiming-stall-and-retry" use="Symphony stall detection: elapsed above stall_timeout_ms, terminate and queue a retry, default 5 minutes"/>
+    <source path="rebuild/investigation/I02-postmortems-and-abandonment.md" anchor="6-waits-polls-sleeps-and-leases" use="turn_timeout 1 h, stall 5 min"/>
+    <source path="rebuild/investigation/I03-oss-factories-and-clones.md" anchor="6-waits-polls-sleeps-and-leases" use="Optio lease renewed every 20 s, 60 s, every write a CAS on the holder; stall threshold 15 min; liveness is a lease with a renew interval a third of its length"/>
+    <source path="rebuild/investigation/S04-agent-frameworks-seat-contracts.md" anchor="8-what-to-carry-forward" use="item 7 lease with pid probe, generation counter, alive when unknown; item 4 the seat result fields"/>
+    <source path="rebuild/investigation/L06-owner-retros-and-plans.md" anchor="56-reporting-noise-became-the-work" use="350 PATROL idle notes in one day: the condition this node makes impossible"/>
+    <source path="rebuild/investigation/L06-owner-retros-and-plans.md" anchor="8-what-to-carry-forward" use="leases and heartbeats, seats as jobs with TTL, the dead man's switch outside the line"/>
+    <source path="rebuild/investigation/L01-line-scripts.md" anchor="6-waits-polls-sleeps-and-leases" use="seat-lib.sh kill ladder 3 tries x 2 s; declared stall deadlines 600 to 900 s per kind; leases.json TTLs released by an LLM monitor"/>
+    <source path="rebuild/investigation/L13-llms-doing-scheduler-work.md" anchor="7-decisions-an-llm-makes-that-a-rule-could-make" use="D17 pane reads replaced by probes; D18 deterministic ladder"/>
+    <source path="specs/scheduler/SPEC-16-scheduler-overview.xml" anchor="d-f" use="the F health domain summary in this worktree: belt heartbeat, stalls, latches; the overview's GOOD example cites SPEC-16.F#f-stall"/>
+    <source path="specs/scheduler/SPEC-16.F-health-supervision.xml" branch="origin/feat/go-scheduler-design-one-xml-spec-per-domain-unde" anchor="f-stall" use="per-kind deadlines (f-stall-deadline), the visible-within bound refused at start (f-stall-visible), one note per stall latched (f-stall-note, f-stall-clear); the file exists only on that branch, read with git show"/>
+    <source path="specs/SPEC-17-orchestrator-and-agent-health.xml" anchor="s-health" use="C1 alive and C2 stuck checks with three repairs: replaced by kill and retry; the probe idea kept"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013021301-spec17-1-1-0-draft-loops-maintenance-controller.xml" anchor="h-probes" use="probes are code, never a model's judgement; a report that says OK does not exist"/>
+    <source path="specs/SPEC-03-dag-and-node-contract.xml" anchor="s-locks" use="every exclusive thing is a lease with a TTL renewed by the holder's records"/>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="failure-cases" use="stall: the system ends the stalled work and starts a fresh seat with the stall record attached; three retries"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C49" use="one-shot plus stall timer; idle alarm retired"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="defect-found-2026-10-14-0410z-turn-into-a-system-change-not-a-habit" use="the one-minute check of every agent (owner 2026-10-13 02:01Z) is met by a 15 s tick over heartbeats"/>
+  </sources>
+
+  <rejected id="rejected">
+    <item id="r-idle-alarm" source="~/.cache/coq-watch/patrol-tick.sh (idle limit 60 s); specs/SPEC-17-orchestrator-and-agent-health.xml#s-health C2 (idle with open items after three nudges); the owner rule no agent sits idle for more than one minute" reason="an idle alarm taught agents to invent busywork and produced 350 notes a day (L06 section 5.6; I02 section 5.9); D17 ruled one-shot seats plus a stall timer. The rule's intent, no idle cog, holds by construction: a seat exists only between its input and its output."/>
+    <item id="r-llm-monitor" source="roles/monitor.json; the compliance officer role (WO-20261013-5b33); herdr/bin/patrolwatch.sh" reason="the Haiku monitor answered OK on every tick including a blocked merger (HANDOFF 2026-10-13 01:47Z; V08); a probe is a timestamp."/>
+    <item id="r-pane-probes" source="~/.cache/coq-watch/patrol-tick.sh:15-34 (screen hash, blocked words, argv0 counts); SPEC-17 1.1.0 draft h-probes" reason="they read herdr panes, which D08 makes the owner's window only; the heartbeat from the launcher's event stream is the same signal without a pane. The blocked-words probe survives in N-15 as a terminal reason on the seat result."/>
+    <item id="r-nudge-ladder" source="specs/SPEC-17-orchestrator-and-agent-health.xml#s-health C2 repairs (nudge, Escape and nudge, retire and re-seat with --resume)" reason="a nudge is text typed into a pane (RC2); a resumed session carries the context that stalled (K02). The repair is kill and a fresh attempt with the stall attached."/>
+    <item id="r-stuck-detector" source="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal T07 (OpenHands stuck detector over the transcript)" reason="a loop with events is not a stall by this node's definition; a transcript detector is a good N-15 addition (end the run with terminal reason looping) and is listed in N-15's volume, not here, so the stall timer stays a timer."/>
+    <item id="r-two-signal-stall" source="specs/scheduler/SPEC-16.F-health-supervision.xml#f-stall-seat (design branch origin/feat/go-scheduler-design-one-xml-spec-per-domain-unde, not in this worktree; second signal: consumer seat absent or idle; busy is never a stall)" reason="busy without events for the bound is exactly the stall Symphony kills; with one-shot seats there is no idle seat to observe, and a run busy past its deadline must still end."/>
+    <item id="r-leases-json-monitor" source="herdr/config/leases.json (slot 14400 s, ticket 7200 s, seat 900 s released by the monitor seat)" reason="an LLM released expired leases (L01 section 6); here the lease is a store row with a TTL and this node revokes it by compare-and-swap."/>
+    <item id="r-watchdog-timer-here" source="~/.config/systemd/user/watchdog.timer (dead man's card after 30 min of no records)" reason="kept, but it is N-06's and N-27's: a dead man's switch outside the line watches the service and the page, not seat runs; this node is inside the service."/>
+  </rejected>
+
+</volume>

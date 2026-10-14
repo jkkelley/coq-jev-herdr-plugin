@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-44/record.schema.json",
+  "title": "N-44 Build-mode flag: input and output records",
+  "description": "Parent: ../../index.xml#N-44. Sibling: spec.xml. Envelope as in ../N-43/record.schema.json#/$defs/envelope until shared/state-store.xml#record-envelope lands.",
+  "oneOf": [ { "$ref": "#/$defs/input" }, { "$ref": "#/$defs/output" } ],
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "envelope": { "$ref": "../N-43/record.schema.json#/$defs/envelope" },
+    "scope": { "type": "string", "enum": ["rebuild", "all"] },
+    "input": {
+      "oneOf": [
+        {
+          "title": "ruling (from N-29) with body.flag build-mode",
+          "allOf": [ { "$ref": "#/$defs/envelope" } ],
+          "properties": {
+            "kind": { "const": "ruling" },
+            "body": {
+              "type": "object",
+              "required": ["flag", "state", "card_id"],
+              "properties": {
+                "flag": { "const": "build-mode" },
+                "state": { "type": "string", "enum": ["on", "off"] },
+                "scope": { "$ref": "#/$defs/scope" },
+                "expires_at": { "$ref": "#/$defs/utc", "description": "required when state is on" },
+                "card_id": { "type": "string", "minLength": 1 },
+                "words": { "type": "string", "maxLength": 240 },
+                "origin": { "type": "string", "enum": ["page", "chat-relay", "controls"] }
+              }
+            }
+          }
+        },
+        {
+          "title": "tick (from N-06)",
+          "allOf": [ { "$ref": "#/$defs/envelope" } ],
+          "properties": { "kind": { "const": "tick" }, "body": { "type": "object", "required": ["now"], "properties": { "now": { "$ref": "#/$defs/utc" }, "tick": { "type": "string", "enum": ["scheduler", "poll", "backup", "stall", "daily"] } } } }
+        }
+      ]
+    },
+    "output": {
+      "title": "build-mode.state",
+      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "properties": {
+        "kind": { "const": "build-mode.state" },
+        "code": { "enum": [200, 409] },
+        "body": {
+          "type": "object",
+          "required": ["state", "scope", "reason"],
+          "properties": {
+            "state": { "type": "string", "enum": ["on", "off"] },
+            "scope": { "$ref": "#/$defs/scope" },
+            "expires_at": { "$ref": "#/$defs/utc" },
+            "card_id": { "type": "string" },
+            "ruling_id": { "type": "string" },
+            "reason": { "type": "string", "enum": ["ruling", "extend", "expired", "start-reconcile", "duplicate", "bad-expiry", "bad-scope", "race"] },
+            "open_rebuild_tickets": { "type": "integer", "minimum": 0, "description": "set on an expiry; greater than 0 makes the record owner-acts" },
+            "flag_version": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}

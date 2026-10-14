@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/shared/state-store.schema.json",
+  "title": "State store shared definitions",
+  "description": "The record envelope every kind carries (shared/state-store.xml#envelope). Node schemas $ref #/$defs/envelope and add their body fields. The id form is the UTC-stamp form N-01 owns; see rejected-with-reason.xml#envelope-id-form for the r-prefixed form that was rejected.",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$",
+      "description": "UTC stamp, the status code, five lowercase alphanumerics; unique per writer"
+    },
+    "at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC, second precision; assigned by N-01 at commit when absent on input"
+    },
+    "kind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$",
+      "description": "dotted lowercase; registered in state-store.xml#record-kinds-registry"
+    },
+    "code": {
+      "type": "integer",
+      "enum": [100, 200, 201, 204, 206, 300, 400, 403, 404, 409, 410, 412, 422, 423, 429, 500, 502, 503, 504],
+      "description": "a value of shared/status-codes.xml#codes; N-01 validates against the live code table, this enum is the book's copy"
+    },
+    "node": {
+      "type": "string",
+      "pattern": "^N-[0-9]{2}$"
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3,
+      "description": "0 when no attempt applies; never 4"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ticket": {
+      "type": "string",
+      "pattern": "^WO-[0-9]{8}-[a-z0-9]{4}$"
+    },
+    "lease_token": {
+      "type": "string",
+      "pattern": "^t-[0-9]{6,}$",
+      "description": "fencing token from entity counter:lease_token; only grows"
+    },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "at", "kind", "code", "node"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "at": { "$ref": "#/$defs/at" },
+        "kind": { "$ref": "#/$defs/kind" },
+        "code": { "$ref": "#/$defs/code" },
+        "node": { "$ref": "#/$defs/node" },
+        "by": { "type": "string", "description": "node id or seat id that wrote the record" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "key": { "type": "string", "minLength": 3, "maxLength": 200, "description": "idempotency key; same key same payload replays 200; different payload is 409" },
+        "version": { "type": "integer", "minimum": 0, "description": "expected version for a compare-and-swap put; 0 inserts" },
+        "seq": { "type": "integer", "minimum": 1, "description": "assigned by N-01 at commit; never on input" },
+        "lease_token": { "$ref": "#/$defs/lease_token" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "note": { "type": "string", "maxLength": 240 },
+        "hash": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

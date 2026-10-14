@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-52/record.schema.json",
+  "title": "N-52 Phone push bridge: input and output records",
+  "description": "Input is the card record (schema ../N-28/record.schema.json) or a configured owner-acts alert. Outputs: push.receipt, push.failed, push.skipped, push.refused, push.folded, push.token.set. Envelope per shared/state-store.xml#envelope. No record carries the topic name, the token or the page key.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "recordId": { "type": "string", "minLength": 8, "maxLength": 64 },
+    "cardOrAlert": { "type": "string", "pattern": "^(C-[0-9]{1,6}|test|[A-Za-z0-9._:-]{8,64})$" },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node"],
+      "properties": {
+        "id": { "$ref": "#/$defs/recordId" },
+        "kind": { "type": "string" },
+        "code": { "enum": [100, 200, 201, 204, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "const": "N-52" },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "maxLength": 128 },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 }
+      },
+      "not": { "anyOf": [{ "required": ["key"] }, { "required": ["token"] }, { "required": ["topic"] }] }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "card (input; owned by N-28)",
+      "type": "object",
+      "required": ["kind", "code", "card", "tier", "about", "decide", "options", "rec"],
+      "properties": {
+        "kind": { "const": "card" },
+        "code": { "const": 300 },
+        "node": { "const": "N-28" },
+        "card": { "type": "string", "pattern": "^C-[0-9]{1,6}$" },
+        "tier": { "enum": ["stable", "uat", "dev"] },
+        "about": { "type": "string" },
+        "decide": { "type": "string" },
+        "options": { "type": "array" },
+        "rec": { "type": "integer" }
+      }
+    },
+    {
+      "title": "push.receipt (output, one per card)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "push.receipt" },
+        "code": { "const": 200 },
+        "card": { "$ref": "#/$defs/cardOrAlert" },
+        "provider": { "const": "ntfy" },
+        "provider_id": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "topic_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "sent_at": { "$ref": "#/$defs/utc" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "priority": { "enum": ["low", "default", "high"] },
+        "folded": { "type": "boolean" },
+        "idempotency_key": { "type": "string", "pattern": "^push:" }
+      },
+      "required": ["card", "provider", "provider_id", "topic_hash", "sent_at", "attempt", "priority", "idempotency_key"]
+    },
+    {
+      "title": "push.failed (output, alert)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "push.failed" },
+        "code": { "const": 500 },
+        "card": { "$ref": "#/$defs/cardOrAlert" },
+        "attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "reason": { "enum": ["network", "5xx", "4xx", "timeout"] },
+        "error": { "type": "string", "maxLength": 240 }
+      },
+      "required": ["card", "attempts", "reason", "error"]
+    },
+    {
+      "title": "push.skipped (output)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "push.skipped" },
+        "code": { "const": 100 },
+        "card": { "$ref": "#/$defs/cardOrAlert" },
+        "reason": { "enum": ["dark", "tier", "quiet-hours", "done", "duplicate", "shadow"] }
+      },
+      "required": ["card", "reason"]
+    },
+    {
+      "title": "push.refused (output, system defect)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "push.refused" },
+        "code": { "const": 400 },
+        "card": { "$ref": "#/$defs/cardOrAlert" },
+        "violations": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "type": "string", "maxLength": 240 } }
+      },
+      "required": ["card", "violations"]
+    },
+    {
+      "title": "push.folded (output)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "push.folded" },
+        "code": { "const": 100 },
+        "card": { "$ref": "#/$defs/cardOrAlert" },
+        "summary": { "$ref": "#/$defs/recordId", "description": "the push.receipt of the summary push this card rode in" }
+      },
+      "required": ["card", "summary"]
+    },
+    {
+      "title": "push.token.set (output; carries no token)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "push.token.set" },
+        "code": { "const": 100 },
+        "by": { "const": "owner" },
+        "path": { "type": "string", "description": "${COQ_STATE}/owner/push/token" }
+      },
+      "required": ["by", "path"]
+    }
+  ]
+}

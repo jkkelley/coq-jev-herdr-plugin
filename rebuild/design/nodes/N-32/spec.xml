@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-32 Bearings page service. One volume of the Factory Rebuild spec book (R-03), group G5 Owner surface.
+  Written 2026-10-14 UTC by the G5 spec-author seat, round 1, revised round 2 (review: no hand stop; break glass owner-only), against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  No em dash appears in this file. Every time is UTC.
+-->
+<volume id="N-32" kind="node-spec" node="N-32" group="G5" version="1.1.0" issued="2026-10-14" timezone="UTC"
+        author="spec-author seat, group G5 Owner surface, round 2">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, edges</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="mechanism">Mechanism: the tier unit, routes, auth, staleness, answers and messages out</entry>
+    <entry ref="routes">Routes</entry>
+    <entry ref="tiers">Tiers, ports, upgrade without stopping the watch</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup scripts</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="look">The Krastorio look of the page, with its check</entry>
+    <entry ref="cut-over">Cut-over from tools/bearings today</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-32"/>
+    <sibling href="record.schema.json" kind="schema">JSON schema of page.up, page.state and the records the page emits</sibling>
+    <sibling href="../N-31/spec.xml#N-31" relation="edge-in">Push transport: frames in</sibling>
+    <sibling href="../N-28/spec.xml#N-28" relation="edge-in">Cards</sibling>
+    <sibling href="../N-30/spec.xml#N-30" relation="edge-in-and-out">Inbox: acks and replies in, messages out</sibling>
+    <sibling href="../N-33/spec.xml#N-33" relation="edge-in">Rail panel frame</sibling>
+    <sibling href="../N-48/spec.xml#N-48" relation="edge-in">Tier promotion with screenshot</sibling>
+    <sibling href="../N-29/spec.xml#N-29" relation="edge-out">Answer intake: answers out</sibling>
+    <sibling href="../N-34/spec.xml#N-34" relation="edge-out">Tailnet front door: page.up</sibling>
+    <sibling href="../N-27/spec.xml#N-27" relation="same-tier">Watcher lamp: the strip's WATCHER cell</sibling>
+    <sibling href="../N-38/spec.xml#N-38" relation="mounts">Map screen served at /board</sibling>
+    <shared href="../../shared/status-codes.xml#owner-surface">Status codes</shared>
+    <shared href="../../shared/state-store.xml#envelope">Record envelope</shared>
+    <shared href="../../shared/principles.xml#one-surface">Bearings is the one owner surface</shared>
+    <shared href="../../shared/cut-over.xml#step-owner-surface" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>The page service is the owner's one surface per tier: it serves the owner's page, feeds it frames from the push stream, shows its own staleness, takes the owner's answers and messages into the store, and holds the key. Everything the owner sees is on it; nothing exists outside the panel.</is>
+    <is-not>It is not a store (it keeps no JSONL), not a consumer (the watcher is), not a scheduler, and never typed into by a seat.</is-not>
+    <why>The page is the one durable success of four lives of bearings (L08 section 4): 142 owner messages and 42 answers in four days, median reply 32 s. What failed around it: one agent reader, agent-only producers, idle shutdown of the owner's monitor, a board that lied for six hours with nothing saying so, hand edits live without a PR, and a server that ran inside herdr and died with it. The rebuild keeps the page and replaces everything around it with supervised code that reports on itself.</why>
+    <decisions>D20 bearings is the one surface with the rail folded in (C51), D21 push (C52), D12 system lane (C40), D08 own supervised unit (C46), D22 display stays on the WSL host (C38), D04 state outside the repo with cleanup (C35), factorio-map-replaces-board, the look rule (brief addendum 04:45Z), bearings-stable-is-the-only-always-on-monitor, screenshot-every-page-change.</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="pushed.frame (frames from N-31)" code="100">
+      <field name="records">cards and card.done (N-28), owner.message, ack and reply (N-30), plan.step and ledger.row (N-33), watcher.alive (N-27), health (N-06), promotion records (N-48) for the tier</field>
+      <field name="store_seq, at, store_stale">for the staleness line</field>
+    </record>
+    <text>The page service subscribes once per tier (class page, filter tier=&lt;tier&gt; plus the global kinds health and watcher.alive) and fans the frames out to every browser tab through the SSE adapter (N-31 step 6). The tier unit start is the traversal's beginning; the subscribe is its first act.</text>
+  </input>
+
+  <output id="output">
+    <record kind="page.up" code="100">
+      <field name="tier, page, port, pid, unit">the listener on 127.0.0.1:&lt;port&gt;</field>
+      <field name="assets_hash">sha256 of page.html plus theme.css at start, so the strip and the promotion node can tell which build is live</field>
+    </record>
+    <record kind="page.state" code="100">
+      <field name="tier, page">the tier</field>
+      <field name="seq_shown">the highest seq rendered into frames for browsers</field>
+      <field name="store_seq">the store head at the last heartbeat</field>
+      <field name="staleness_seconds">now minus the last frame from N-31</field>
+      <field name="state">live (under 3 s), stale (3 s to 60 s), disconnected (no stream)</field>
+      <field name="clients">connected browser tabs</field>
+      <field name="cards_open, messages_unanswered">counts for the strip</field>
+      <field name="watcher">alive, grace, dead, down, from the last watcher.alive</field>
+      <field name="assets_hash">as above</field>
+    </record>
+    <text>page.state is an upsert keyed page:&lt;page&gt; written every second (compare-and-swap); it is how the Controls screen (N-42) and the promotion node (N-48) see the page, and how the page shows itself: the strip's MONITORING cell draws from the same record the page wrote, so a frozen page shows stale to anyone else even when its own tab looks fine.</text>
+    <leaves>The owner's answer leaves as owner.answer to N-29 (re-entry); the owner's message leaves as owner.message to N-30 (re-entry); an attachment leaves as file.stored 100 with its path under the tier's state directory.</leaves>
+    <record kind="page.down" code="100 or 500"><field name="reason">stop (SIGTERM, 100) or crash (500, written by N-06 when the unit exits unclean)</field></record>
+    <record kind="page.refused" code="409"><field name="page">a second instance for a tier whose port is held; exit 3</field></record>
+  </output>
+
+  <mechanism id="mechanism">
+    <where>Go binary coq-bearings in the control plane module (D01), run as the systemd user unit instance coq-bearings@&lt;page&gt;.service on the WSL host (D22), listening on 127.0.0.1 only (config listen_host), one process per tier. It serves the owner's vendored assets from the checkout the tier runs from (tools/bearings/assets/page.html, theme.css, and the map bundle for /board) re-read per request as today, so a markup-only change needs no restart.</where>
+    <step n="1">Start: load tools/bearings/config/bearings.json (validated by its schema; ${HOME}, ${project}, ${tier}, ${ticket}, ${ENV:NAME} interpolation; an unknown variable is exit 3 naming it); resolve the tier and page; refuse a second instance if the port or the page lock ${COQ_STATE}/bearings/&lt;page&gt;/server.json names a live pid (page.refused 409, exit 3); mint or read the 128-bit key into server.json (mode 0600; the key is never in a record, never in a log, never in a push); listen; write page.up 100.</step>
+    <step n="2">Subscribe to N-31 as class page with since_seq 0 (a snapshot on every start: open cards, last messages_window messages with acks, rail rows, health, lamps) and keep the in-memory state the SSE adapter serves from. Reconnect by the N-31 client rule on any break.</step>
+    <step n="3">Auth: GET /?key=&lt;key&gt; sets the HttpOnly cookie and redirects to /; every other route requires the cookie; the Host header must be in allowed_hosts (loopback names and the tailnet names, PR 186); 403 otherwise; body caps from config; no CORS.</step>
+    <step n="4">Render: GET / serves page.html with the theme inlined (@@THEME@@) and a build stamp; the page opens EventSource /events and applies frames by (kind, key, version) (shared/state-store.xml#apply). The 2 s /state poll is removed; /state stays as the snapshot endpoint the page calls once on load and on a resync.</step>
+    <step n="5">Answers: POST /answer {card, pick, words} becomes owner.answer with id minted by the page (a-...), tier, source page; the service calls Intake.Answer (N-29) and returns the ruling or the refusal; the browser keeps the answer in localStorage with state queued until a reply comes, retries 3 times (1, 2, 4 s) on a network error, then shows "not recorded" with a retry button; the watcher's stream path delivers whatever the store already holds. Messages: POST /message {id, text, files, reply_to} the same way through Inbox.Message (N-30), and the ack ladder draws from pushed ack records.</step>
+    <step n="6">Attachments: POST /file stores under ${COQ_STATE}/bearings/&lt;page&gt;/files/ with the id f-..., caps file_max_bytes, inline only for the four image types, and writes file.stored 100 with the path; GET /files/&lt;id&gt; serves it behind the cookie.</step>
+    <step n="7">Staleness: every second, compute state from the last frame time and write page.state; the strip's MONITORING cell shows LIVE, STALE Ns or DISCONNECTED from the pushed page.state, and every panel on the page carries the seq it was drawn from behind a fold. A page that cannot reach the store still serves itself and says so (L08 finding 5: the owner found the lie; now the page says it first).</step>
+    <step n="8">Health: GET /health returns the page.state body plus pid and port for the watcher's probe and for N-48.</step>
+    <step n="9">Stop: SIGTERM drains connections up to 5 s (stop_tries 3 of stop_try_ms 5000 carried as one bound), writes page.down 100, removes nothing (the key stays for the next start), exits 0.</step>
+    <text>Why Go and not server.mjs: one language and one module for every supervised unit (D01, D09), a gRPC client without adding a Node dependency to a dependency-free tool, and one test harness with the fake clock. What carries forward unchanged: page.html and theme.css (the owner's), the key and cookie model, the tier config and its schema, the body caps, the Playwright suite in Podman (tests drive the Go binary the same way), and the Makefile verbs as thin wrappers over systemctl and the CLI.</text>
+    <text>Why the page service calls Intake and Inbox itself and does not only write to the store for the watcher: the owner must see his act acknowledged in the same tap; the watcher is the second path that proves it and catches a failed first call.</text>
+  </mechanism>
+
+  <routes id="routes">
+    <route m="GET" p="/">page.html with theme inlined; key to cookie on first visit</route>
+    <route m="GET" p="/events">SSE stream of frames (N-31 adapter); Last-Event-ID resumes; ?class=map or ?view=&lt;name&gt; with its params subscribes to a view (nodes/N-31/spec.xml#views), the tier always taken from the server, never from the query</route>
+    <route m="GET" p="/state">snapshot for a fresh load or a resync; never polled</route>
+    <route m="POST" p="/answer">owner.answer to N-29</route>
+    <route m="POST" p="/message">owner.message to N-30</route>
+    <route m="POST" p="/ack">browser ack of its delivered seq, every 5 s (N-31 step 5), with the card ids drawn since the last ack, which N-31 turns into card.shown</route>
+    <route m="POST" p="/selection">a map or machine selection record (N-38, N-39), idempotent by client id plus counter</route>
+    <route m="POST" p="/frame-report">a screen's frame.report every 10 s (N-38 to N-42), idempotent by client id plus counter</route>
+    <route m="POST" p="/control">an owner control.action from the Controls screen (N-42), owner cookie only</route>
+    <route m="POST" p="/alert-ack">an alert.ack from the Alerts screen (N-41), owner cookie only</route>
+    <route m="POST" p="/file">attachment</route>
+    <route m="GET" p="/files/:id">attachment</route>
+    <route m="GET" p="/health">page.state plus pid and port</route>
+    <route m="GET" p="/rail">the rail panel data (N-33) for a direct open; the panel itself is on /</route>
+    <route m="GET" p="/board">the command center map (N-38) mounted here on every tier; the old factory board is gone</route>
+  </routes>
+
+  <tiers id="tiers">
+    <tier name="stable" port="44900 fixed" checkout="the merge sha's workspace ${COQ_STATE}/tiers/&lt;project&gt;-stable/current (N-48)" idle="never">the owner's page; never stopped on a halt; upgraded in place by a restart</tier>
+    <tier name="uat" port="first free in 44910 to 44919" checkout="the gate-green head's workspace (N-48)" idle="idle_minutes then stop">the reviewer reads it; the owner confirms here a change to the owner-locked assets (nodes/N-48/spec.xml#owner-confirm)</tier>
+    <tier name="dev" port="first free in 44920 to 44939" checkout="the head sha's workspace (N-48)" idle="idle_minutes then stop">the builder and the suite</tier>
+    <upgrade>Stable upgrade is the one swap mechanism of nodes/N-48/spec.xml#mechanism step 3: N-48 renames the tier's current workspace pointer to the merge sha and runs systemctl --user restart coq-bearings@coq-stable: a 2 s gap in which browsers show DISCONNECTED and reconnect by themselves with Last-Event-ID; the watcher (N-27) keeps running as its own unit and the front door (N-34) restarts with the page by BindsTo, so nothing the owner typed is lost and the watch never stops; a failed probe renames the pointer back and restarts again (N-48 rollback). This closes the defect recorded at the 03:51Z checkpoint (make upgrade stopped stable and its waits; the server was replaced by hand).</upgrade>
+    <key>The key is minted once per page and survives restarts in server.json; rotate-key is a CLI verb that writes a new key and a key.rotated 100 record without the key in it.</key>
+  </tiers>
+
+  <start id="start">
+    <unit name="coq-bearings@.service" rendered-from="tools/bearings/units/coq-bearings@.service" installed-by="tools/bearings/bin/install-units.sh">
+      <line>[Unit] Description=coq bearings page %i; Wants=coq.service; After=coq.service network-online.target; StartLimitIntervalSec=0</line>
+      <line>[Service] Type=simple; ExecStart=%h/.local/state/coq/coq-jev-herdr-plugin/tiers/%i/current/bin/coq-bearings serve --page %i (the binary and assets of the tier's current workspace, built by N-48 at provision); Restart=always; RestartSec=2; RestartPreventExitStatus=3; MemoryMax=256M; Environment=COQ_STATE=%h/.local/state/coq/coq-jev-herdr-plugin</line>
+      <line>[Install] WantedBy=default.target</line>
+    </unit>
+    <text>Stable is enabled once with linger; dev and uat instances are started and stopped by N-48 with the ticket in the page name; a seat never runs serve by hand, and the Makefile's serve verb calls systemctl so an agent that types it still gets a unit, never a process under itself (tools/bearings/AGENTS.md NEVER example 1, kept).</text>
+  </start>
+
+  <waits id="waits">
+    <wait what="config load and port bind" timeout="5 s" fallback="retry the bind 3 times 2 s apart (a lingering socket from the previous instance), then exit 4 with page.bind.failed 500; systemd restarts after RestartSec"/>
+    <wait what="first snapshot from N-31" timeout="5 s" fallback="serve the page with state DISCONNECTED and an empty deck labelled as such; retry the subscribe by the N-31 client rule; the page says what it does not know"/>
+    <wait what="Intake.Answer or Inbox.Message call" timeout="5 s" fallback="reply 503 to the browser, which queues and retries 3 times; the watcher's stream path is the backstop; count page_intake_failed"/>
+    <wait what="attachment write" timeout="10 s" fallback="400 to the browser with the reason; no partial file is kept (write to a temp name then rename)"/>
+    <wait what="SSE client that stops reading" timeout="2 s send" fallback="close the tab's stream; EventSource reconnects"/>
+    <wait what="shutdown drain" timeout="5 s" fallback="forced exit; browsers reconnect to the next instance"/>
+    <wait what="cutover.sh: legacy server SIGTERM" timeout="10 s" fallback="SIGKILL; pids recorded either way"/>
+    <wait what="cutover.sh: /health on the new unit" timeout="15 s" fallback="retry the step 3 times 5 s apart; then restore the legacy server and write cutover.failed 500"/>
+    <no-cog>The cog that could stall this node is the service behind it being down. Timeout: 5 s per call. Fallback: the page serves itself from memory, labels everything STALE or DISCONNECTED with the age, queues the owner's acts in the browser, and the watcher plus systemd bring the path back. The owner's monitor is never silent and never dies quietly.</no-cog>
+  </waits>
+
+  <retries id="retries">
+    <rule>Every store-facing call retries 3 times with backoff then reports with a record and a visible state on the page; systemd is the process-level retry; the browser is the owner-act retry; nothing is dropped silently.</rule>
+  </retries>
+
+  <many-agents-at-once id="many-agents-at-once">
+    <readers>Any number of seats read this volume. The page assets are the owner's: one in-flight ticket may touch page.html or theme.css at a time, and every change goes dev, uat with a screenshot and card, stable (N-48).</readers>
+    <workers>Build tickets touch cmd/coq-bearings, internal/owner/page, tools/bearings/units/coq-bearings@.service, tools/bearings/assets (by the look ticket only), tools/bearings/config, tools/bearings/tests; the SSE adapter file belongs to N-31's ticket; the rail panel markup to N-33's.</workers>
+    <collision what="several tiers at once (stable, two uat, three dev)">Each is its own unit, port, state directory, key and subscription filter; a dev page cannot show or take a stable card because the tier rides on every record and the filter is server-side.</collision>
+    <collision what="the owner has the page open on the desktop and the phone">Two SSE clients; both get every frame; an answer from one reaches the other as the pushed ruling within a frame; the second answer is refused by N-29 and shown as already answered.</collision>
+    <collision what="a second instance for one tier (an agent ran serve by hand)">The port and the server.json pid lock refuse it with page.refused 409 and exit 3, and RestartPreventExitStatus=3 keeps systemd from looping.</collision>
+    <collision what="a page restart while the owner is typing">The draft is in the browser (localStorage) and the send retries; the message id is minted by the browser so a retry after the new instance is up is idempotent at N-30.</collision>
+    <collision what="two builders editing page.html">One file, one in-flight ticket (claims at cut, refused at start, N-14); the assets_hash in page.up tells N-48 which build a screenshot shows.</collision>
+    <test>tests start three tiers in the Podman harness against one fake store, drive two browsers on one tier with Playwright, kill and restart the unit mid-session, and assert: no cross-tier record, one ruling for a double answer, no lost message across the restart, STALE shown within 3 s of a stopped stream.</test>
+  </many-agents-at-once>
+
+  <status-codes id="status-codes">
+    <emits kind="page.up" code="100" acts="N-34 binds the front door; N-48 reads assets_hash">listening</emits>
+    <emits kind="page.state" code="100" acts="N-42 draws; N-48 reads; the page itself draws">heartbeat upsert with staleness</emits>
+    <emits kind="page.down" code="100" acts="N-34 waits for the next page.up">clean stop</emits>
+    <emits kind="page.down" code="500" acts="N-06 unhealthy after 3 in 5 min">unclean exit (written by N-06)</emits>
+    <emits kind="page.refused" code="409" acts="nobody; countable">second instance</emits>
+    <emits kind="page.bind.failed" code="500" acts="N-41 alert">could not bind after 3 tries</emits>
+    <emits kind="file.stored" code="100" acts="N-30 may reference">attachment</emits>
+    <emits kind="key.rotated" code="100" acts="the owner opens the new link">key rotated (no key in the record)</emits>
+    <emits kind="cutover.imported" code="100" acts="cutover.sh reads before it swaps">legacy state imported once (cut-over step 3)</emits>
+    <emits kind="cutover.swapped" code="201" acts="N-33 ledger row; N-48 closes the promotion; N-51 counts zero hand operations">the one-shot unit replaced the legacy server</emits>
+    <emits kind="cutover.refused" code="412" acts="N-28 cards it">import not recorded or watcher not alive</emits>
+    <emits kind="cutover.failed" code="500" acts="N-28 cards it; legacy restored">three tries failed; legacy server restored</emits>
+    <emits kind="control.refused" code="412" acts="N-51 counts it as an attempted hand operation">a seat typed an owner-only verb</emits>
+    <emits kind="owner.answer" code="100" acts="N-29">re-entry (schema in N-29)</emits>
+    <emits kind="owner.message" code="100" acts="N-30">re-entry (schema in N-30)</emits>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path p="${COQ_STATE}/bearings/&lt;page&gt;/server.json" what="key, port, pid, page, tier, ticket, dir; mode 0600; the only place the key lives" cleanup="tools/bearings/bin/cleanup-tier.sh &lt;page&gt; [--dry-run] (refuses on stable unless --yes-stable)"/>
+    <path p="${COQ_STATE}/bearings/&lt;page&gt;/files/" what="attachments, capped per file and per directory (config files_max_bytes_total)" cleanup="tools/bearings/bin/cleanup-files.sh &lt;page&gt; --older-than 90d [--dry-run]"/>
+    <path p="${COQ_STATE}/bearings/&lt;page&gt;/screenshots/" what="N-48 writes promotion screenshots here" cleanup="tools/bearings/bin/cleanup-files.sh &lt;page&gt; --screenshots --older-than 30d [--dry-run]"/>
+    <path p="~/.config/systemd/user/coq-bearings@.service" what="the installed unit template" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
+    <path p="~/.config/systemd/user/coq-cutover@.service" what="the one-shot cut-over unit; inert after cutover.swapped; removed by the retire ticket" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
+    <path p="${COQ_STATE}/logs/cutover/&lt;page&gt;.jsonl" what="every step, try and pid of cutover.sh; never a key" cleanup="line/bin/cleanup.sh --entry N-32.cutover [--dry-run]"/>
+    <path p="journal of coq-bearings@&lt;page&gt;" what="one line per start, stop, refusal, bind failure; never a key" cleanup="tools/bearings/bin/cleanup-journal.sh --unit 'coq-bearings@*' --older-than 30d [--dry-run]"/>
+    <path p="store rows page.up, page.state, page.down, file.stored" what="in N-01; page.state 7 days; others 90 days" cleanup="registered with N-45 as store retention class owner-surface"/>
+    <path p="~/.bearings/&lt;page&gt;/ (today's state root)" what="questions.json, answers.jsonl, messages.jsonl, delivered.json, files.jsonl, session.json, wait.lock.json, stopped.json; migrated once at cut-over then removed" cleanup="tools/bearings/bin/cleanup-tier.sh &lt;page&gt; --legacy [--dry-run]"/>
+    <text>Every path is registered with N-45 and in rebuild/README.md. The old stale pages under ~/.bearings/ (bearings-test, stable-442cf4, coq-uat-WO-20261010-ba08, the September test dirs, --help) are cleanup-tier targets in the cut-over ticket (L08 section 9).</text>
+  </state-paths>
+
+  <edges id="edges">
+    <in from="N-31" href="../N-31/spec.xml#output">frames</in>
+    <in from="N-28" href="../N-28/spec.xml#output">card, card.done</in>
+    <in from="N-30" href="../N-30/spec.xml#output">ack, reply</in>
+    <in from="N-33" href="../N-33/spec.xml#output">rail.panel frame</in>
+    <in from="N-48" href="../N-48/spec.xml#output">promotion record (the tier swap and the screenshot)</in>
+    <out to="N-34" href="../N-34/spec.xml#input">page.up</out>
+    <out to="RE" href="../../dag.md#4-re-entries">owner.answer enters N-29; owner.message enters N-30</out>
+    <mounts to="N-38" href="../N-38/spec.xml#input">/board serves the map</mounts>
+  </edges>
+
+  <look id="look">
+    <rule>Every view the owner sees on this page carries the Krastorio 2 and Factorio GUI look (brief addendum 2026-10-14 ~04:45Z: "All views shown to me better have that krastorio look to it"), from the art inventory section 4 values only, in original art: outer frame #313031 with edge #4D4643 and inner ring #231C19 as a 9-slice drawn in CSS and SVG; deep inset #242324 for the message thread; shallow inset #403F40 for bubbles and the rail; caption text #FFE6C0 at heading-1 18 px bold and heading-2 15 px bold; body text #FFFFFF at 14 px; orange accent #FAA838, hover #E69C2B, slot glow #FFAE00 at 50 percent on the recommended option; production green #2BE327, heat red #DA4535, red text #FF8E8E, blue #80CEF0 for links; shadow black at 35 percent; button minimum 108 by 28 with padding 0 8 0 8; container padding and spacing 4; slot size 40. Font Titillium Web (OFL 1.1) with a mono face for figures. No Wube or BiusArt sprite ever ships.</rule>
+    <rule>The same page on the phone (iPhone 16 Pro Max first, 430 CSS px, safe areas with a little extra gutter, build-notes 2 and 3) is the same panels, lamps and type, only stacked; a reviewer holding the phone next to the desktop sees one product (build-note 6).</rule>
+    <rule>The owner's earlier lock (the page markup and theme are not changed without an approved sample) is honoured by the path: the look ships as theme.css and page.html on dev, is screenshotted on desktop and phone sizes, read by the architect, sent to the owner with flaws named, then confirmed on the uat card before the merge, then promoted (nodes/N-48/spec.xml#owner-confirm, the one rule for who gates a page change). The owner's approval is the sample.</rule>
+    <check>Playwright asserts the computed colours of the frame, caption, recommended option, lamp states, receipt marks and STALE mark against the values above on both viewport widths; the suite fails on a drift. The screenshot record on the promotion is the owner-facing proof.</check>
+  </look>
+
+  <cut-over id="cut-over">
+    <step n="1">Ship dark: the Go page service runs as a dev tier beside the live Node stable; the Playwright suite passes against it; the look ticket lands on dev; screenshots to the owner.</step>
+    <step n="2">uat: N-48 brings a uat tier up on the PR; because the cut-over PR carries the look (page.html and theme.css), N-28 posts the confirm card with the screenshot record and the owner confirms on the uat page itself before it merges (the one rule: nodes/N-48/spec.xml#owner-confirm).</step>
+    <step n="3">Migrate state (one time, while the old stable keeps serving): coq owner import-answers and import-messages from ~/.bearings/coq-stable (dry-run, then --yes; counts and cmp of an export are the proof); questions.json's open cards become card records with their ids preserved.</step>
+    <step n="4">Swap, by the system and never by hand: the merge of the cut-over ticket is a promotion for stable (N-48), and for the sha that carries tools/bearings/bin/cutover.sh the promotion handler starts the one-shot unit coq-cutover@coq-stable.service (Type=oneshot, ExecStart=tools/bearings/bin/cutover.sh --page coq-stable, installed by install-units.sh) instead of the in-place backend swap. The script, in order and each step idempotent: (a) refuses to run unless the import of step 3 is recorded (cutover.imported 100) and the watcher unit for the tier is alive (N-27), exit 4 with cutover.refused 412; (b) installs the units; (c) starts coq-watcher@coq-stable and coq-front-door@coq-stable; (d) reads the legacy pid from ~/.bearings/coq-stable/session.json and the legacy wait lock, sends SIGTERM, waits 10 s, then SIGKILL, and writes the pids it stopped into the record; (e) starts coq-bearings@coq-stable on port 44900 with the same key copied into server.json; (f) probes /health until page.up, 15 s; (g) writes cutover.swapped 201 (legacy pids, new pid, port, assets_hash) and the ledger row for N-33 itself. Any step that fails is retried 3 times 5 s apart; after the third the script restores the legacy server from the same session.json (server.mjs --join), writes cutover.failed 500 with the step and error, and N-28 cards it to the owner. A second run after cutover.swapped exits 0 and writes nothing. The phone URL does not change. The only hand path is the owner's one-time break glass named in the runbook, which runs the same unit and is counted by N-51 as a hand line operation.</step>
+    <step n="5">Retire: make ask, make wait, reply.mjs, wait.mjs, server.mjs, front-door.mjs and the idle shutdown on stable are removed by the retire ticket after one day of the new stable serving with zero page.down 500; the Makefile verbs become wrappers over systemctl and the CLI. The old state root goes through cleanup-tier --legacy.</step>
+  </cut-over>
+
+  <checklist id="checklist">
+    <item proof="systemctl --user is-active coq-bearings@coq-stable; curl 127.0.0.1:44900/health returns page.state with state live">The page runs as a unit, no agent started it</item>
+    <item proof="Playwright: a card committed to the store appears on the page within 300 ms with the poll removed">Push, not poll</item>
+    <item proof="Playwright: an answer tap yields a ruling receipt; a second tap shows already answered; a message walks the receipt ladder">Owner acts leave as records and come back as receipts</item>
+    <item proof="test: stop coq.service; within 3 s the page shows STALE with the age, then DISCONNECTED; an answer typed meanwhile is queued and lands after restart">The page reports its own staleness and loses nothing</item>
+    <item proof="test: systemctl --user restart coq-bearings@coq-stable; the watcher and front door stay active; browsers reconnect with no gap in seq">Upgrade without stopping the watch</item>
+    <item proof="test: a second serve for the tier exits 3 with page.refused 409">One instance per tier</item>
+    <item proof="Playwright colour assertions pass on 1280 and 430 widths; screenshots sent to the owner; uat card confirmed">The Krastorio look, checked</item>
+    <item proof="migration dry-run and run with counts matching the legacy files; cmp of exports equals">State migrated once, verified</item>
+    <item proof="test world with a fake legacy server and wait lock: the promotion handler starts coq-cutover@; cutover.swapped 201 names the stopped pids; the ledger row exists; a second start exits 0 and writes nothing; a forced failure on step (e) three times yields cutover.failed 500, the legacy pid alive and a card">The swap is a one-shot unit, idempotent, retried 3 then restored; no hand stop</item>
+    <item proof="run promote.sh --tier stable and systemctl start coq-cutover@ with COQ_SEAT set: both exit 4 with control.refused 412">Break glass verbs refuse a seat</item>
+    <item proof="stable serves 24 h with zero page.down 500; retire ticket merged; make ask gone">Cut-over complete</item>
+    <item proof="cleanup-tier.sh, cleanup-files.sh and cleanup-journal.sh each run --dry-run and --yes on a dev page, exit 0">Cleanup scripts exist</item>
+  </checklist>
+
+  <permissions id="permissions">
+    <runs-as>the owner user, no sudo, MemoryMax 256M, listens on 127.0.0.1 only</runs-as>
+    <may>subscribe to its tier's frames; call Intake.Answer with source page or controls and Inbox.Message; write page.* and file.stored; read and write its own state directory; read the repository assets of its checkout</may>
+    <may-not>write a ruling, a card, a reply or any other tier's records; expose the key; listen on a non-loopback address (N-34 does the tailnet); call herdr</may-not>
+    <owner-only>rotate-key; cleanup-tier on stable; the stable promotion break glass tools/bearings/scripts/promote.sh --tier stable --sha &lt;sha&gt; (N-48 runbook step 3); the cut-over break glass systemctl --user start coq-cutover@coq-stable (one time, counted by N-51). A seat that types either is refused: the scripts check the caller against the owner's uid and the absence of COQ_SEAT in the environment, exit 4 with control.refused 412.</owner-only>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <gauge name="page_state{page}" values="live, stale, disconnected" on="N-42 Controls, the page strip"/>
+    <gauge name="page_staleness_seconds{page}" on="N-40, the page strip"/>
+    <gauge name="page_clients{page}" on="N-40"/>
+    <counter name="page_answers_total, page_messages_total" on="N-40"/>
+    <counter name="page_intake_failed_total" on="N-06; any increase is an alert"/>
+    <counter name="page_restarts_total" on="N-06; 3 in 5 min is unhealthy"/>
+    <alert when="page.state stale for more than 60 s on stable" to="N-41, N-52 when live"/>
+    <alert when="page.down 500 on stable" to="N-41, N-52 when live; the owner's monitor dying is the loudest alert there is"/>
+  </monitoring>
+
+  <runbook id="runbook">
+    <op name="url for the owner">coq owner url --page coq-stable (prints the loopback and tailnet URLs with the key, to the operator's terminal only)</op>
+    <op name="status">systemctl --user status coq-bearings@coq-stable; curl -s 127.0.0.1:44900/health</op>
+    <op name="upgrade stable">done by N-48 after a merge touching tools/bearings or the map; never by a seat. The owner's one-time break glass is tools/bearings/scripts/promote.sh --tier stable --sha &lt;sha&gt; (N-48 runbook step 3, owner-only per the permissions section), which writes the same promotion records and is counted by N-51 as a hand line operation</op>
+    <op name="cut-over swap did not happen">read the cutover.failed 500 card: the legacy server is back on its old pid; fix the step the record names through a ticket; the next merge of that ticket runs the one-shot unit again. The owner's one-time break glass is systemctl --user start coq-cutover@coq-stable (owner-only per the permissions section)</op>
+    <op name="rotate the key">coq owner rotate-key --page coq-stable; then send the owner the new link as a reply on the old page (the reply carries no key: the page shows the link only to the cookie holder)</op>
+    <op name="the page says DISCONNECTED">check coq.service (N-06 runbook); the page is fine, the store is not; never restart the page for this</op>
+    <op name="cleanup">tools/bearings/bin/cleanup-tier.sh, cleanup-files.sh, cleanup-journal.sh, install-units.sh --remove; all list first</op>
+    <cost>A Go port of a working Node server (the suite is the safety net); a 2 s DISCONNECTED on each stable upgrade; one process per tier.</cost>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/design/dag.md" anchor="3-every-node">N-32 row and its re-entries</source>
+    <source path="tools/bearings/AGENTS.md" anchor="tiers">tiers, ports, pages, who looks</source>
+    <source path="tools/bearings/AGENTS.md" anchor="promote-a-change-dev-to-uat-to-stable">the promotion flow; make migrate; state never moves with code</source>
+    <source path="tools/bearings/AGENTS.md" anchor="never-examples">no process under an agent; no page edit without an approved sample; stable from main only</source>
+    <source path="tools/bearings/config/bearings.json" anchor="/tiers">stable 44900, uat 44910 to 44919, dev 44920 to 44939, idle_minutes 240, caps</source>
+    <source path="tools/bearings/scripts/server.mjs" anchor="top">key and cookie, Host allow-list, body caps, page.html re-read per request, build stamp self-reload, /health, /state, /answer, /message</source>
+    <source path="tools/bearings/scripts/server.mjs" anchor="watcherNow">the strip's WATCHER cell</source>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="4-what-works">the page is the one durable success; security model; tiers; 135 Playwright cases</source>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="5-what-broke-and-why">findings 4 (idle stop), 5 (the board lied), 7 (polling), 10 (hand edits live), 11 (key hygiene)</source>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="9-what-to-kill">idle shutdown on stable; hand edits; artifact surfaces; stale page dirs</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="22-d20-one-owner-surface-or-two-bearings-and-the-execution-rail">bearings only, rail folded in</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="24-d22-which-steps-stay-on-the-wsl-host-and-which-go-to-pods">the bearings stable server stays on the host</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="checkpoint-2026-10-14t0351z">make upgrade stopped stable and its waits: a defect for the spec book</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="checkpoint-2026-10-14t041830z">tailnet URLs through PR 186 and 187; same key; waits alive</source>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/bearings-restart-and-page-key.md" anchor="rule">key never in records</source>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/factorio-map-replaces-board.md" anchor="rule">the map replaces /board on every tier</source>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/screenshot-every-page-change.md" anchor="rule">picture first, read, sent with flaws named, then the card</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md" anchor="4-gui-style-extraction">every colour, size and font value in the look section</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-notes.md" anchor="2-notes-in-order">notes 2, 3 and 6: phone first, padding, one product</source>
+    <source path="specs/SPEC-17-orchestrator-and-agent-health.xml" anchor="s-owner">the page server never stops; prose spacious and high level</source>
+    <source path="~/.claude/CLAUDE.md" anchor="hard-rule-owner-interaction-surface">Getting My Bearings is the only permitted visual surface</source>
+  </sources>
+
+  <rejected id="rejected">
+    <item what="keeping server.mjs and polling the store from Node" reason="K03 polling; a second language and a gRPC dependency in a dependency-free tool; the suite carries over to the Go binary"/>
+    <item what="idle shutdown on stable (idle_minutes 240)" reason="L08 finding 4; the always-on monitor rule; kept for uat and dev only"/>
+    <item what="running the page inside a herdr pane" reason="D08; the 2026-10-13 core dump took bearings with it"/>
+    <item what="a second owner surface (claude.ai artifact, lavish)" reason="D20 C; the global surface rule; the owner's standard refuses artifact links for status"/>
+    <item what="make upgrade that stops stable and its waits" reason="the 03:51Z defect; the watcher and the front door are separate units"/>
+    <item what="a make-ask style deck replaced wholesale" reason="the deck is the set of open card records (N-28)"/>
+    <item what="herdr pane.graphics for owner images" reason="the page shows images; herdr is a window, and the API was removed upstream in 0.9.2 (L04)"/>
+    <item what="binding the page to the tailnet address" reason="exposes the page process itself; the front door forwards (N-34)"/>
+    <item what="a hand stop of the legacy server as the one allowed hand step of the cut-over (round 1 of this volume)" reason="round 1 review: it starts by an agent typing and is not an owner-only break glass; the global rule is never do by hand what the system should do. The one-shot unit does the stop and writes the record itself"/>
+    <item what="coq promote --tier stable --yes as an unlisted break glass (round 1 of this volume)" reason="round 1 review: a break glass the permissions section does not list is a verb any seat may type; the break glass is now N-48's promote.sh form, owner-only, refusing a seat"/>
+  </rejected>
+</volume>

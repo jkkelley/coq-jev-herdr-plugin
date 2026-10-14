@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-19 Reviewer run. Volume of the Factory Rebuild spec book (R-03), group G3 Seats.
+  Written 2026-10-14T05:40:00Z by the G3 spec-author seat against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  Rulings: D15 (C50) machine verdict merges on green gate plus reviewer record, D05 (C43) coq/gate on the head sha,
+  D11 (C39) the semantic half of review stays an LLM, D02 (C36), V15 a separate reviewer from the writer.
+  No em dash appears in this file. Every time is UTC.
+-->
+<!--
+  Round 2, 2026-10-14T05:04:00Z, by the G3 spec-author seat, after the R-03 review seat failed round 1 on pointers.
+  What broke: this volume pointed at ../N-xx/spec.xml#N-xx-spec while every volume in the book declares
+  root id="N-xx" and links with #N-xx, and it pointed at ../../shared/*.xml anchors that no author has
+  written (shared/ belongs to the shared author, not this seat).
+  Why it mattered: a dangling pointer fails check.sh, and the architect reads nothing until the book passes.
+  The fix: root id is now the node id; every sibling, upstream, downstream and edge anchor is #N-xx; the
+  shared anchors are declared in <shared-needs> with no href so the shared author can write them and
+  check.sh can match them when shared/ lands; the principles this node obeys point at dag.md sections 7
+  and 8, which exist. The parent stays ../../index.xml#N-19 because the brief names the index volume as
+  every node's parent and the anchor is the node id, the one anchor every node is guaranteed.
+  Rejected: writing shared/ or index.xml from this seat (two authors on one file is the one-file,
+  one-in-flight-ticket collision the book forbids); leaving the hrefs to resolve later (a failing volume
+  blocks the book now).
+  Cost: a declared need is not a live pointer until shared/ lands.
+-->
+<volume id="N-19" node="N-19" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-14T05:04:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input: the reviewer brief inside a seat run</entry>
+    <entry ref="output">Output record: review.passed 201 or review.changes 422 on the head sha</entry>
+    <entry ref="mechanism">Mechanism: the brief, the run, the verdict put by code</entry>
+    <entry ref="judgement">What the reviewer judges and what code already checked</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="checklist">Checklist with proof</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with the reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-19"/>
+    <dag href="../../dag.md#3-every-node">The DAG row of this node: input record and output record</dag>
+    <principle href="../../dag.md#7-rules-every-node-obeys">Rules 1 to 9: input to output, no cog, three attempts, one store, code does mechanical jobs, the verdict the agent cannot edit, herdr is the owner's window, build mode, ships dark</principle>
+    <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, timed-out stalls, a 409 that reports</principle>
+    <needs href="spec.xml#shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <sibling href="record.schema.json" kind="schema">JSON schema of review.result (the seat's structured output) and review_record, the one definition that carries review.passed (kind, code 201) and review.changes (kind, code 422) by its enums</sibling>
+    <sibling href="../N-13/spec.xml#N-13">Seat layer render: the reviewer brief and the read-only fence</sibling>
+    <sibling href="../N-14/spec.xml#N-14">Workspace provision: detached at the head sha</sibling>
+    <sibling href="../N-15/spec.xml#N-15">One-shot seat launcher: the process and the post step</sibling>
+    <sibling href="../N-16/spec.xml#N-16">Worker run: the writer this reviewer is separate from</sibling>
+    <sibling href="../N-17/spec.xml#N-17">Spec-author run</sibling>
+    <sibling href="../N-18/spec.xml#N-18">Validator: where the observed exits the reviewer compares come from</sibling>
+    <upstream href="../N-08/spec.xml#N-08">Gate check: gate.verdict green is the re-entry that dispatches a reviewer</upstream>
+    <downstream href="../N-09/spec.xml#N-09">Merge: the consumer of review.passed with the green gate on the same head sha</downstream>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <text>Declared, not linked: the shared author writes these volumes and anchors; check.sh matches each need against shared/ when it lands. Nothing below points at a file that does not exist in this pull request.</text>
+    <need volume="../../shared/status-codes.xml" anchor="code-201" kind="status-code">201 accepted or passed: ticket, ticket-set.accepted, review.passed; acts: N-03 or N-09</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-422" kind="status-code">422 rejected with evidence: review.changes, validator.refused with the check and the command; acts: N-11</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-423" kind="status-code">423 blocked: seat.result outcome blocked with a terminal_reason from the reason table; acts: N-11 by reason</need>
+    <need volume="../../shared/seat-contract.xml" anchor="llm-only-for-judgement" kind="seat-contract">an LLM appears only in N-16 (write code), N-17 (cut tickets as data) and N-19 (judge a diff); every mechanical step around it is code</need>
+    <need volume="../../shared/seat-contract.xml" anchor="separate-reviewer" kind="seat-contract">the reviewer is a separate run from the writer, shares no session and no workspace, runs nothing, and never holds the gh write</need>
+    <need volume="../../shared/seat-contract.xml" anchor="structured-output" kind="seat-contract">every phase returns structured output against the node's record.schema.json through --json-schema; an optional blocked object carries reason, observations and repro</need>
+    <need volume="../../shared/principles.xml" anchor="verdict-readable-not-editable" kind="principle">the verdict an agent reads is coq/gate on the head sha plus the review record in the store; no agent can edit either (T04)</need>
+    <need volume="../../shared/state-store.xml" anchor="table-records" kind="store-table">records: the append-only record table with the envelope (id, kind, code, at, node, attempt, idempotency_key, version) and compare-and-swap on version</need>
+  </shared-needs>
+
+  <section id="purpose" title="Purpose">
+    <text>N-19 is where an LLM judges a diff. It is the semantic half of review: are the acceptance criteria evidenced, does the change fit the design anchor, is the breadcrumb at the fix site, is the ticket's one concern the only thing that changed. The mechanical half (the diff stays inside the declared files, no aggregate, lint, the suites) is code before the reviewer ever runs: N-16's close-out, N-23 to N-25's gate (rebuild/investigation/L13-llms-doing-scheduler-work.md#7-decisions-an-llm-makes-that-a-rule-could-make D21).</text>
+    <text>The reviewer is separate from the writer and shares no context with it (rebuild/investigation/02-MAPPING.md#2-validated-keep V15; the generator-verifier split works best with no shared context). It runs after the gate is green on the head sha, so it never re-runs tests (roles/reviewer.json breadcrumb WO-20261013-b6f3: a reviewer ran suites for 12 minutes on PR 145 for no new evidence). Its verdict is a record on the head sha that the merge (N-09) reads together with coq/gate; the owner holds the line through cards, never through the per-PR path (D15).</text>
+  </section>
+
+  <section id="input" title="Input: the reviewer brief inside a seat run">
+    <text>The dispatch's target names pr and head_sha; the gate.verdict green for that head is the record that caused the dispatch. N-13 renders bundle_dir/brief.md with:</text>
+    <field name="ticket">id and full title, concern, the design anchor text (the node volume section the ticket builds), the declared files, the acceptance commands with observed_exit_on_main (N-18) and expect_exit.</field>
+    <field name="pull request">number, head sha, title, body (the worker's summary and evidence table from pr.opened), the diff (git diff base_sha..head_sha, rendered into the brief when under seats.json brief_diff_max_bytes, default 200 KB, else the reviewer reads it from the workspace).</field>
+    <field name="gate">the gate.verdict green record id and the gate page link (coq/gate-page status), with the suites that ran; informational, so the reviewer knows what was proved by code.</field>
+    <field name="rules">what to judge (section judgement); the output contract; "run nothing"; a changes verdict needs at least one observation with path, line, saw, expected; a passed verdict needs every criterion marked evidenced with the evidence line.</field>
+    <field name="prior review">on a second review of the same ticket (a new head after review.changes), the prior review.changes record, so the reviewer checks that each observation was answered.</field>
+    <text>The workspace is read-only, detached at head_sha (N-14 base_ref refs/pull/&lt;pr&gt;/head, refused as head_moved if the ref no longer resolves to head_sha).</text>
+  </section>
+
+  <section id="output" title="Output record: review.passed 201 or review.changes 422 on the head sha">
+    <text>The seat's structured output, review.result (record.schema.json#/$defs/review.result): verdict (passed or changes), head_sha (as the reviewer saw it in the workspace), criteria (one entry per acceptance criterion: id, evidenced true or false, evidence line or the gap), observations (path, line, saw, expected; at least one when changes), design_fit (one paragraph naming the anchor), summary (one paragraph for the pull request review).</text>
+    <text>The node's record, written by the launcher's post step after the head check: review.passed, code 201, or review.changes, code 422, with ticket, pr, head_sha, run_id, attempt, criteria, observations, summary, session_id; idempotency_key = run_id. Each criteria entry names the acceptance id it evidences, so through the ticket's acceptance[].proves it ticks a checklist item of the node volume; the checklist.state view (nodes/N-31/spec.xml#views) shows the item ticked once the ticket's merge is verified (N-10), which makes this record the evidence behind the Machine screen's checklist panel. The record is on the head sha: a new head gets a new review. A mirror of the verdict is posted on GitHub as a pull request review (approve or request changes) with the summary and observations, for the owner's reading; the record in the store is the truth the merge reads (D10 one store; the GitHub review is a view).</text>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the brief, the run, the verdict put by code">
+    <mermaid>flowchart LR
+  G[gate.verdict green on head_sha] --> L[N-02 reviewer-phase claim, N-07 dispatch role reviewer]
+  L --> B[N-13 brief with ticket, anchor, diff, gate; N-14 workspace detached at head_sha]
+  B --> R[claude -p run, read-only]
+  R --> O{structured output review.result}
+  O -- head_sha equals dispatched --> P{verdict}
+  P -- passed, all criteria evidenced --> A[review.passed 201 on head_sha, GitHub approve]
+  P -- changes with observations --> C[review.changes 422 on head_sha, GitHub request changes]
+  O -- head moved --> X[seat.result 423 output_rejected head_moved; the new head has its own traversal]
+  O -- changes without observations, or passed with an open criterion --> Y[seat.result 423 output_rejected]</mermaid>
+    <step n="1">The run: the reviewer reads the brief, the diff and the changed files in the workspace; it runs no test, suite, lint, make target or podman command (denied by the fence, and the brief says why: the gate already proved them); it returns review.result.</step>
+    <step n="2">The post step (scheduler/internal/launcher/reviewer.go): check review.result.head_sha equals dispatch.target.head_sha and gh pr view headRefOid still equals it (else output_rejected head_moved: the review is of a head that no longer exists, and the new head's gate will dispatch a new review); check a changes verdict has at least one observation and a passed verdict has every criterion evidenced (else output_rejected with the reason; N-11 retries the review with the rejection in the brief); put the record; post the GitHub review with gh pr review --approve or --request-changes and the body (3 attempts; a failure to mirror is a phase.failed 500 that does not undo the record: the store is the truth, the mirror catches up on the recovery pass).</step>
+    <text>Model: roles/reviewer.json model.claude (claude-sonnet-5-5); effort high; limits from seats.json reviewer: max_turns 80, budget 5 USD, wall clock 1200 s, stall 300 s.</text>
+  </section>
+
+  <section id="judgement" title="What the reviewer judges and what code already checked">
+    <table id="split">
+      <row what="the diff stays inside the declared files; no aggregate; no runtime file" who="code: N-16 close-out before the push; N-25 gate pr-files"/>
+      <row what="lint, the suites, the acceptance commands' exits" who="code: N-23 to N-25, coq/gate on the head sha"/>
+      <row what="no em dash, UTC, contents element in long documents, no literal where config belongs" who="code: lint in the gate (lint/lint.sh rules carried into the suite)"/>
+      <row what="every acceptance criterion is evidenced by the pull request body and the diff, not only claimed" who="the reviewer"/>
+      <row what="the change does what the anchor says and nothing else; one concern" who="the reviewer"/>
+      <row what="a breadcrumb comment sits at the fix site with what broke, why it mattered, why this fix, what it costs" who="the reviewer (presence is judgement; a lint can only find the word)"/>
+      <row what="a regression guard still guards; a flipped acceptance flips for the right reason" who="the reviewer, reading observed_exit_on_main against the evidence"/>
+      <row what="the design was not changed to fit the code (a ticket that edits a volume of this book to pass its own acceptance)" who="the reviewer, and the validator's anchor_moved on the next cut"/>
+      <row what="an owner-surface change carries its screenshot proof" who="code checks the file exists (N-48); the reviewer judges that the picture shows the change"/>
+    </table>
+    <text>The reviewer never fixes the code (roles/reviewer.json forbidden, carried forward): an observation names path, line, saw, expected; the worker's next attempt answers it.</text>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <text>gate.verdict green (N-08) re-enters N-02 as a reviewer-phase claim on the ticket (../../dag.md#4-re-entries); N-07 dispatches role reviewer with the pr and head sha; N-13 and N-14 prepare; N-15 runs. No one posts pr.opened to a reviewer, no one wakes a reviewer pane, no one asks the architect. A review.changes 422 re-enters N-02 as a worker-phase claim for attempt n+1 through N-11.</text>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait what="the run" timeout="wall clock 1200 s, stall 300 s, max turns 80, budget 5 USD" attempts="1 per run" fallback="N-15 kills and records blocked; N-11 retries the review up to 3 times; a third failure is a dead review and one card, because a pull request with a green gate and no review must not sit"/>
+    <wait what="gh pr view for the head check" timeout="30 s" attempts="3" fallback="phase.failed 500; the record is not put; the recovery pass retries the post step from result.json"/>
+    <wait what="the record put" timeout="5 s" attempts="3" fallback="recovery pass; idempotent by run_id"/>
+    <wait what="the GitHub review mirror" timeout="30 s" attempts="3" fallback="phase.failed 500 mirror only; the record stands; the merge proceeds on the record; the mirror is retried by the recovery pass and reported if it never lands"/>
+    <text>The reviewer waits for nothing: the gate was green before it started and the merge happens after it is gone.</text>
+  </section>
+
+  <section id="retries" title="Retries up to 3, then recover and report">
+    <text>A blocked review run (limits, crash, output_rejected) is retried by N-11 as a fresh reviewer run on the same head, up to 3, with the rejection in the brief when the output was the fault; after 3 the head is dead for review and N-28 posts one card whose options are a reviewer on a stronger model (a ruling), merge on the gate alone (the owner's call, recorded), or close. A review.changes is not a retry of the review; it is the worker's attempt n+1 (N-16 rework), bounded by the ticket's 3 attempts. A second review on a new head is a new traversal with attempt 1 for the review and the prior review.changes attached.</text>
+  </section>
+
+  <section id="many-agents" title="Many agents at once">
+    <text>Many reviewers run at once, one per pull request head, each read-only in its own slot. A reviewer never resumes a worker's session and never shares a workspace with one (V15).</text>
+    <text>Collision 1, two reviewers for one head (a lease fencing failure): the record put is idempotent by run_id but the two runs have different run ids; the merge (N-09) reads the first review.passed on the head sha and ignores a later one; a review.changes after a review.passed on the same head is recorded and reported as a defect (two verdicts on one head), and the merge does not proceed until N-11 has dispatched a tie-break review on a fresh run; this is the one case where a third opinion is the rule.</text>
+    <text>Collision 2, the head moves during the review: the post step's head check refuses the stale review as head_moved; the new head's green gate dispatches a new review. No record is written on a head that is not the pull request's head.</text>
+    <text>Collision 3, the merge races the review: N-09 requires gate.verdict green and review.passed on the same head sha; a review.passed on an older head never merges a newer head.</text>
+    <text>Collision 4, the owner comments on the pull request on GitHub: the reviewer does not read GitHub comments (its brief is the record set); the owner's way to hold is a card or the Controls screen hold; a GitHub comment is the owner's note to a person, and it is surfaced by N-04's poll as a record for the Alerts screen so it is not lost.</text>
+  </section>
+
+  <section id="codes" title="Status codes this node emits">
+    <code value="201" kind="review.passed">Every criterion evidenced; design fit; on the head sha. Acts: N-09 merges when the gate is green on the same head.</code>
+    <code value="422" kind="review.changes">At least one observation; on the head sha. Acts: N-11 dispatches the worker's attempt n+1 with the observations; the third 422 on a ticket is a dead ticket and one card.</code>
+    <code value="423" kind="seat.result">Blocked: output_rejected (head_moved, no_observations, open_criterion_on_pass) or any launcher reason. Acts: N-11 retries the review.</code>
+    <code value="500" kind="phase.failed">The post step's head check or the record put failed 3 times; or only the GitHub mirror failed (reason mirror). Acts: the recovery pass; a mirror-only failure never blocks the merge.</code>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path dir="$COQ_STATE/seats/runs/&lt;run_id&gt;/" writes="result.json with review.result, transcript.jsonl, closeout.log for the mirror" cleanup="scheduler/host/bin/cleanup-seat-runs.sh (N-15)" retention="7 days; 30 for a dead ticket or dead review"/>
+    <path dir="$COQ_CACHE/ws/&lt;slot&gt;/ (read-only, detached)" writes="nothing" cleanup="scheduler/host/bin/cleanup-workspaces.sh (N-14)" retention="released on seat.result"/>
+    <text>Review records live in the store on the head sha; the GitHub pull request review is a mirror. Nothing is written into the repository.</text>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <text>The reviewer seat (from N-13): Read, Grep, Glob, Bash read-only (git diff|log|show|blame, gh pr diff|view, rg, ls, cat); denied: Write, Edit, Agent, Task, make *, podman *, any test or lint command, gh pr review|merge|comment, git push, git checkout|switch, any path under $COQ_STATE except its own brief. Model from roles/reviewer.json.</text>
+    <text>The post step (code, host user): gh pr view and gh pr review with the host's gh auth; gRPC put. The seat never holds the gh token: gh pr diff|view in the seat's Bash runs through the host's gh with a read-only scope check in the fence (the command list), and the mirror write is code only.</text>
+  </section>
+
+  <section id="checklist" title="Checklist with proof">
+    <item proof="probe: a reviewer seat on a fixture pull request whose brief contains a trap line asking it to run make test ends with a permission denial naming make and the verdict is still produced">A reviewer runs nothing.</item>
+    <item proof="go test ./internal/launcher -run TestReviewHeadMoved: a fake gh whose headRefOid differs from the dispatched head yields seat.result 423 output_rejected head_moved and no review record">A stale review is never recorded on a moved head.</item>
+    <item proof="go test TestChangesNeedObservations and TestPassNeedsAllCriteria: changes with zero observations and passed with one unevidenced criterion both yield 423 output_rejected">Kickback without evidence and approval with an open criterion are refused.</item>
+    <item proof="go test TestReviewRecordIdempotent: two post steps for one run_id commit one record">One record per run.</item>
+    <item proof="go test TestMirrorFailureDoesNotBlock (N-09 fixture): a review.passed with phase.failed mirror still merges when the gate is green">The store is the truth; the GitHub review is a view.</item>
+    <item proof="go test TestTwoVerdictsOneHead (N-09 and N-11 fixture): review.passed then review.changes on one head yields a defect record, no merge, and one tie-break dispatch">Two verdicts on one head are detected and resolved by rule.</item>
+    <item proof="probe: the reviewer's brief for a second review of a ticket contains the prior review.changes observations and the verdict's criteria entries reference them">A re-review checks that the prior observations were answered.</item>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <text>Counters: reviews_passed, reviews_changes, reviews_blocked_by_reason, review_seconds histogram, review_cost_usd, observations_per_changes histogram, head_moved_count, two_verdicts_defects. The Stats screen (N-40) shows the pass rate and the median time from gate green to review record; a median above seats.json review_latency_alert (default 900 s) is an alert on N-41 because a green pull request sitting unreviewed is the line's cost. The Machine screen (N-39) shows live reviews with pr, head and progress age.</text>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <text>See a review: the record on the head sha in the store; the GitHub pull request review mirrors it; the transcript is in the run directory.</text>
+    <text>A dead review after 3 blocked runs: the card names the reasons; the options are a stronger model by ruling, merge on the gate alone (the owner's call, recorded as a ruling that N-09 reads for that head only), or close.</text>
+    <text>The owner disagrees with a review.passed: a hold from the Controls screen (N-42) stops the merge; a card records the ruling; the owner never edits a record.</text>
+    <text>Cleanup: run directories by cleanup-seat-runs.sh (N-15); slots by cleanup-workspaces.sh (N-14).</text>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <edge dir="in" from="../N-15/spec.xml#N-15" record="the reviewer brief inside a seat run (pr, gate green, diff)"/>
+    <edge dir="out" to="../N-09/spec.xml#N-09" record="review.passed 201 on the head sha"/>
+    <edge dir="out" to="../N-11/spec.xml#N-11" record="review.changes 422, seat.result blocked 423, phase.failed 500 (failure records)"/>
+    <edge dir="re-entry" to="../N-02/spec.xml#N-02" record="review.changes starts the worker's attempt n+1 as a fresh claim (../../dag.md#4-re-entries); gate.verdict green started this review the same way from N-08"/>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <source href="rebuild/investigation/03-DECISIONS.md#17-d15-human-in-the-merge-path">D15 option B</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#7-d05-where-a-gate-verdict-lives">D05</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#13-d11-which-llm-roles-remain">D11: the semantic half of reviewer stays</source>
+    <source href="rebuild/investigation/L13-llms-doing-scheduler-work.md#7-decisions-an-llm-makes-that-a-rule-could-make">D21 the mechanical half is lint; D03 verify by exit codes</source>
+    <source href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V15 a separate reviewer; V12 the breadcrumb catalogue</source>
+    <source href="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal">T04 a verdict the agent can read and cannot edit</source>
+    <source href="rebuild/investigation/I02-postmortems-and-abandonment.md">section 4.2 generator-verifier split with no shared context; section 5.5 human review as the bottleneck</source>
+    <source href="roles/reviewer.json">purpose, read-only fence, must lines, forbidden, breadcrumbs 3d6g0 and b6f3</source>
+    <source href="specs/SPEC-17-orchestrator-and-agent-health.xml#n-review">the review node checklist</source>
+    <source href="specs/SPEC-03-dag-and-node-contract.xml#s-records">kickback without evidence is prose</source>
+    <source href="specs/SPEC-03-dag-and-node-contract.xml#s-sdlc">reviewer 201 then merger; 422 attempt lt 3 back to the worker</source>
+    <source href="factory/config/routes.json">pr.opened routes to the reviewer only when head_current (CI gate 5 ticket WO-20261013-3eac, L07 section)</source>
+    <source href="~/.claude/CLAUDE.md">breadcrumb at the fix site; never a ticket without its title</source>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/rulings-gates-check-are-records.md">a ruling a gate reads is a record</source>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/screenshot-every-page-change.md">owner-surface proof</source>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C43, C50</source>
+    <source href="~/.bearings/coq-stable/answers.jsonl">C36, C39</source>
+  </section>
+
+  <rejected id="rejected">
+    <item source="roles/reviewer.json inputs record.test and wakes_on record.test_passed" what="the reviewer woken by a tester's test.passed record" reason="the tester is retired (L13 D19); the gate's coq/gate on the head sha is the trigger (D05)"/>
+    <item source="roles/reviewer.json must line 4" what="the reviewer checks contents list, no em dash, UTC, config not literals" reason="L13 D21: the mechanical half is lint in the gate; the reviewer judges semantics only"/>
+    <item source="roles/reviewer.json allow.commands gh pr review and records review.passed through event.sh" what="the seat posts its own record and GitHub review" reason="S04 section 9 item 2; the launcher writes the record after the head check and mirrors it; the seat never holds the gh write"/>
+    <item source="specs/SPEC-03-dag-and-node-contract.xml#s-sdlc" what="a merger seat after the reviewer" reason="D11 and D15: the merge is code (N-09) on the two records"/>
+    <item source="rebuild/investigation/03-DECISIONS.md#17 option A" what="the owner reviews every pull request" reason="the bottleneck the field measured; the owner holds the line through cards and the hold"/>
+    <item source="rebuild/investigation/03-DECISIONS.md#17 option C" what="post-merge review only" reason="the verifier is not yet near perfect (red mains on 2026-10-13)"/>
+    <item source="mcp github pull_request_review_write and request_copilot_review" what="a vendor review bot as the reviewer" reason="allowed later as extra capacity behind the same record (S04 section 9 item 8), never the only path"/>
+  </rejected>
+</volume>

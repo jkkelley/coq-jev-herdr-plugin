@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-24/record.schema.json",
+  "title": "N-24 Pod run: input suite.plan entry and output pod.run",
+  "description": "Written 2026-10-14T04:39Z UTC by the G4 spec-author seat. Envelope repeated from N-20 until shared/state-store.schema.json lands. The input is an element of N-23's entries array, repeated here so this file validates on its own.",
+  "oneOf": [
+    { "$ref": "#/$defs/input" },
+    { "$ref": "#/$defs/output" }
+  ],
+  "$defs": {
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node", "attempt", "key", "version"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^r-[0-9]{17}-[a-z0-9]{5}$" },
+        "kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$" },
+        "code": { "type": "integer", "enum": [100, 200, 201, 300, 400, 409, 410, 412, 422, 423, 429, 500, 503] },
+        "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "attempt": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "key": { "type": "string", "minLength": 3 },
+        "version": { "type": "integer", "minimum": 1 },
+        "lease_token": { "type": "string" },
+        "note": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "sha40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "input": {
+      "type": "object",
+      "title": "suite.plan entry plus the plan's identity",
+      "required": ["head_sha", "pr", "plan_attempt", "build", "name", "suite", "image", "workdir", "cmd", "budget_minutes", "kind"],
+      "properties": {
+        "head_sha": { "$ref": "#/$defs/sha40" },
+        "pr": { "type": "integer", "minimum": 0 },
+        "plan_attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "build": { "type": "object", "required": ["job", "number"], "properties": { "job": { "const": "coq-gate" }, "number": { "type": "integer", "minimum": 1 } } },
+        "name": { "type": "string", "pattern": "^[a-z0-9-]+(:[A-Za-z0-9._-]+)?$" },
+        "suite": { "type": "string" },
+        "image": { "type": "object", "required": ["name", "digest"], "properties": { "name": { "type": "string" }, "digest": { "$ref": "#/$defs/digest" } } },
+        "workdir": { "type": "string", "pattern": "^/repo(/.*)?$" },
+        "cmd": { "type": "string", "minLength": 1 },
+        "budget_minutes": { "type": "integer", "minimum": 5, "maximum": 30 },
+        "kind": { "const": "pod" },
+        "ladder": {
+          "type": "object",
+          "description": "Defaults when absent: connect 5, waits 10 30 90, clean rerun 300.",
+          "properties": {
+            "connect_minutes": { "type": "integer", "minimum": 1, "maximum": 10 },
+            "retry_wait_seconds": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "minItems": 3, "maxItems": 3 },
+            "clean_rerun_wait_seconds": { "type": "integer", "minimum": 60, "maximum": 600 }
+          }
+        }
+      }
+    },
+    "output": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["head_sha", "pr", "name", "exit_code", "outcome", "rungs", "log", "duration_s", "pod", "build", "plan_attempt"],
+          "properties": {
+            "kind": { "const": "pod.run" },
+            "code": { "enum": [201, 422, 500, 410] },
+            "node": { "const": "N-24" },
+            "head_sha": { "$ref": "#/$defs/sha40" },
+            "pr": { "type": "integer", "minimum": 0 },
+            "plan_attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "name": { "type": "string" },
+            "exit_code": { "type": "integer", "minimum": -1, "maximum": 255 },
+            "outcome": { "type": "string", "enum": ["pass", "fail", "timeout", "infra", "superseded"] },
+            "rungs": {
+              "type": "array", "maxItems": 4,
+              "items": {
+                "type": "object", "required": ["rung", "reason", "pod", "wait_s"],
+                "properties": {
+                  "rung": { "type": "integer", "minimum": 1, "maximum": 4 },
+                  "reason": { "type": "string", "enum": ["provision", "checkout", "connect-timeout", "agent-lost", "image-pull", "unschedulable", "unknown"] },
+                  "pod": { "type": "string" },
+                  "wait_s": { "type": "integer", "enum": [10, 30, 90, 300] }
+                }
+              }
+            },
+            "log": {
+              "type": "object", "required": ["artifact"],
+              "properties": { "artifact": { "type": "string", "format": "uri" }, "host": { "type": "string" } }
+            },
+            "duration_s": { "type": "number", "minimum": 0 },
+            "pod": {
+              "type": "object", "required": ["name", "node", "image_digest", "started_at", "finished_at"],
+              "properties": {
+                "name": { "type": "string" }, "node": { "type": "string" },
+                "image_digest": { "$ref": "#/$defs/digest" },
+                "started_at": { "$ref": "#/$defs/utc" }, "finished_at": { "$ref": "#/$defs/utc" }
+              }
+            },
+            "build": { "type": "object", "required": ["job", "number", "url"], "properties": { "job": { "const": "coq-gate" }, "number": { "type": "integer" }, "url": { "type": "string" } } },
+            "reason": { "type": "string", "description": "For outcome infra: the last rung's reason, or result-missing when the build died." }
+          },
+          "allOf": [
+            { "if": { "properties": { "outcome": { "const": "pass" } } }, "then": { "properties": { "code": { "const": 201 }, "exit_code": { "const": 0 } } } },
+            { "if": { "properties": { "outcome": { "enum": ["fail", "timeout"] } } }, "then": { "properties": { "code": { "const": 422 } } } },
+            { "if": { "properties": { "outcome": { "const": "infra" } } }, "then": { "properties": { "code": { "const": 500 }, "exit_code": { "const": -1 } }, "required": ["reason"] } },
+            { "if": { "properties": { "outcome": { "const": "superseded" } } }, "then": { "properties": { "code": { "const": 410 } } } }
+          ]
+        }
+      ]
+    }
+  }
+}

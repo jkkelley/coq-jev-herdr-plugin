@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-36/record.schema.json",
+  "title": "N-36 Art pipeline: input and output records",
+  "description": "Input art.inventory and output sprite.sheet. Shared envelope per shared/state-store.xml#record-envelope. UTC everywhere.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "envelope": {
+      "type": "object",
+      "required": ["kind", "id", "at", "node", "status", "seq", "version", "idempotency_key"],
+      "properties": {
+        "kind": { "type": "string" },
+        "id": { "type": "string", "minLength": 8 },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "minLength": 8 },
+        "by": { "type": "string" }
+      }
+    },
+    "spriteGroup": {
+      "enum": ["machines", "shadows", "icons", "tech-cards", "belts", "inserters", "lamps", "pipes", "ground", "crates", "ore", "gui-frames", "buttons", "progress-bars", "status-dots", "alert-pictograms", "placeholder"]
+    },
+    "allowlistRow": {
+      "type": "object",
+      "required": ["path", "sha256", "class", "confidence", "rule"],
+      "properties": {
+        "path": { "type": "string", "description": "Path relative to Krastorio2Assets" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "class": { "const": 1 },
+        "confidence": { "enum": ["high", "medium"] },
+        "rule": { "enum": ["K1", "K2", "K3", "K4"] },
+        "first_author": { "type": "string" }
+      }
+    },
+    "denylistRow": {
+      "type": "object",
+      "required": ["path", "class", "rule"],
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "class": { "enum": [2, 3, 4] },
+        "rule": { "type": "string", "pattern": "^(W[1-9]|W2t|B1|T[0-9]{1,2}|BASE)$" }
+      }
+    },
+    "originalRow": {
+      "type": "object",
+      "required": ["path", "sha256", "group", "provenance"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^tools/map/art/original/" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "group": { "$ref": "#/$defs/spriteGroup" },
+        "provenance": {
+          "type": "object",
+          "required": ["author", "at", "tool", "statement"],
+          "properties": {
+            "author": { "type": "string" },
+            "at": { "$ref": "#/$defs/utc" },
+            "tool": { "type": "string" },
+            "statement": { "const": "drawn from scratch in the Factorio idiom; nothing traced from a Wube or Krastorio sprite" },
+            "ticket": { "type": "string" }
+          }
+        }
+      }
+    },
+    "art.inventory": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["table_sha256", "policy", "allowlist", "denylist", "originals"],
+      "properties": {
+        "kind": { "const": "art.inventory" },
+        "node": { "const": "N-36" },
+        "table_sha256": { "$ref": "#/$defs/sha256", "description": "sha256 of krastorio-art-inventory-files.tsv, equal to tools/map/art/inventory.tsv.sha256" },
+        "policy": { "enum": ["high-only", "high-and-medium"] },
+        "allowlist": { "type": "array", "items": { "$ref": "#/$defs/allowlistRow" } },
+        "denylist": { "type": "array", "items": { "$ref": "#/$defs/denylistRow" } },
+        "originals": { "type": "array", "items": { "$ref": "#/$defs/originalRow" } }
+      }
+    },
+    "sprite.sheet": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["sha", "atlas_sha256", "pages", "files", "gaps", "attribution_path", "license_paths", "silhouette_check"],
+      "properties": {
+        "kind": { "const": "sprite.sheet" },
+        "node": { "const": "N-36" },
+        "status": { "enum": [100, 200, 201, 300, 422, 500] },
+        "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$", "description": "Commit the atlas was built from" },
+        "atlas_sha256": { "$ref": "#/$defs/sha256" },
+        "dist_path": { "type": "string", "pattern": "^\\$COQ_STATE/map/art/dist/[0-9a-f]{64}/$" },
+        "pages": { "type": "array", "items": { "type": "object", "required": ["file", "width", "height"], "properties": { "file": { "type": "string" }, "width": { "type": "integer", "maximum": 2048 }, "height": { "type": "integer", "maximum": 2048 } } } },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["sprite", "group", "source"],
+            "properties": {
+              "sprite": { "type": "string" },
+              "group": { "$ref": "#/$defs/spriteGroup" },
+              "source": {
+                "oneOf": [
+                  { "type": "object", "required": ["krastorio_path", "sha256", "confidence"], "properties": { "krastorio_path": { "type": "string" }, "sha256": { "$ref": "#/$defs/sha256" }, "confidence": { "enum": ["high", "medium"] } } },
+                  { "type": "object", "required": ["original_path", "provenance_id"], "properties": { "original_path": { "type": "string" }, "provenance_id": { "type": "string" } } }
+                ]
+              },
+              "frames": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "gaps": { "type": "array", "items": { "$ref": "#/$defs/spriteGroup" }, "description": "Groups served by a placeholder; non-empty forces status 300 unless a 422 or 500 applies" },
+        "attribution_path": { "type": "string" },
+        "license_paths": { "type": "array", "minItems": 2, "items": { "type": "string" } },
+        "silhouette_check": { "enum": ["passed", "skipped"] },
+        "rejected": {
+          "type": "object",
+          "required": ["file", "rule", "stage"],
+          "properties": { "file": { "type": "string" }, "rule": { "type": "string" }, "stage": { "enum": ["inventory", "verify", "silhouette"] } }
+        }
+      },
+      "if": { "properties": { "status": { "const": 422 } } },
+      "then": { "required": ["rejected"] }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/art.inventory" },
+    { "$ref": "#/$defs/sprite.sheet" }
+  ]
+}

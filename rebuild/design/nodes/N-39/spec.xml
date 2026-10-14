@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Node volume N-39 Machine screen. Spec-author seat, group G6 Command center map, round 1, 2026-10-14 UTC.
+  Inspect one node: what it is, what it is doing, why it is lit the colour it is. No em dash appears in this file.
+-->
+<!-- N-39 round 3, 2026-10-14T05:09:51Z, by the G6 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers (verdict in
+     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-39):
+     the pointers element carried shared hrefs into rebuild/design/shared/, a directory no author had written,
+     at anchors no volume declared (record-envelope where N-01 declares envelope; record-kinds where N-18 declares
+     record-kinds-registry; and anchors only this group needed, never declared as needs).
+     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
+     The fix: every shared dependency is a <need volume= anchor=> in a shared-needs element with no href, using the anchor
+     name the owning node declares; the pointers element points at dag.md sections 3, 7 and 8 and at #shared-needs, all of which exist;
+     the status-codes map attribute points at #shared-needs for the same reason; prose that named a shared anchor now names the need.
+     Rejected: writing shared/ from this seat (one shared author owns it; two authors on one file is the collision the book forbids)
+     and leaving the hrefs to resolve later (a failing volume blocks the book now).
+     Cost: a need is not a live pointer until shared/ lands; check.sh matches each need against the shared volumes then. -->
+<volume id="N-39" kind="node-spec" node="N-39" group="G6" version="1.1.0" issued="2026-10-14" written="2026-10-14T05:09:51Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG edges</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="panels">Panels of this screen (bound by N-37)</entry>
+    <entry ref="mechanism">Mechanism: the node's state frame and the panel</entry>
+    <entry ref="states">The five states</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries: 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup scripts</entry>
+    <entry ref="look">The look</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-39"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schemas of this node</sibling>
+    <sibling href="../N-35/spec.xml#N-35">N-35 Hello page deploy</sibling>
+    <sibling href="../N-36/spec.xml#N-36">N-36 Art pipeline</sibling>
+    <sibling href="../N-37/spec.xml#N-37">N-37 Panel binding registry</sibling>
+    <sibling href="../N-38/spec.xml#N-38">N-38 Map screen</sibling>
+    <sibling href="../N-40/spec.xml#N-40">N-40 Stats screen</sibling>
+    <sibling href="../N-41/spec.xml#N-41">N-41 Alerts screen</sibling>
+    <sibling href="../N-42/spec.xml#N-42">N-42 Controls screen</sibling>
+    <shared href="../../dag.md#3-every-node" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 3; the panel opens on a selection record or a deep link, read-only</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">Per-client scoped subscriptions; every lease listed with its fencing token; lower-seq view dropped</principle>
+    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <dag href="../../dag.md#2-the-dag">
+      <in node="N-38" href="../N-38/spec.xml#N-38" record="selection record"/>
+      <in node="N-31" href="../N-31/spec.xml#N-31" record="pushed.frame carrying the selected node's state frame"/>
+      <in node="N-36" href="../N-36/spec.xml#N-36" record="sprite.sheet (machine icon, lamps, panel frames)"/>
+      <in node="N-37" href="../N-37/spec.xml#N-37" record="binding record"/>
+      <in node="N-41" kind="re-entry" href="../N-41/spec.xml#N-41" record="selection record from an alert row (source alerts)"/>
+      <out kind="screen" href="#output" record="machine.panel frame (drawn, not stored); the runbook and spec pointers opened"/>
+    </dag>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares, using the anchor name of the node that owns the thing (envelope and cas from N-01, record-kinds-registry from N-18, codes from N-43, break-glass from N-27). check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for machine.rendered 200; selection.recorded 201; machine.not-found 404; view.invalid 422; machine.stale 503; machine.view-timeout 504. Owner-acts: none.</need>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="lamp">A lamp column per code (green, amber or red) so a screen draws a code without a table of its own; N-37 generates bindings from it and the machine panel's header lamp and the last-records chips read it.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="envelope">The record envelope every kind carries: id, at (UTC), code, kind, node, attempt where one applies; this node reads and writes records only inside it.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-idempotency">idempotency(key PRIMARY KEY, seq, response JSON, at); a seen key replays its response with code 200.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="record-kinds-registry">The record kinds registry (every kind with its code set, writer node and schema path, loaded by N-43 with the code table) carries the kinds this node reads and writes: node.state (the node's state frame inside pushed.frame), selection, lease, heartbeat, seat.result, attempt; machine.panel is drawn and never stored.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-leases">leases(key, holder, token, expires_at): every lease on the selected node is listed with its fencing token and expiry; the panel never shows one current seat.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-heartbeats">heartbeats(lease, at, seq): the heartbeat age the panel shows per lease, read from the table through N-31, never computed on the page.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="fencing">A write carrying a stale fencing token is 412 and is logged; the panel shows the token so a 412 in the last records is readable against it.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="no-cog">No cog: every wait has a timeout and a fallback, nothing starts by an agent typing, no agent is a gate; the system drives (brief C rule 3).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="multi-agent-first">Many agents at once from the first line: append-only records, compare-and-swap, idempotent retryable steps, conflicts that report as 409 (brief C rule 2).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="three-attempts">Every automated step retries up to 3 times with backoff, then recovers and reports as a record; a dead record becomes exactly one card.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="level-triggered">Push transport for everything; a client re-reads full state on reconnect and drops any frame older than the one it holds (D21).</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <s>Inspect one node: its id and spec book pointer, status code and meaning, heartbeat age against its bound, current ticket and seat, input and output records, attempt and lease, checklist with proofs, timeout and fallback, the last records and the last five alerts, and the runbook pointer (wireframe-brief.json screen Machine; C32 approved).</s>
+    <s>Primary action: open the runbook. The panel is read-only; the owner acts only on Controls (N-42) and acks only on Alerts (N-41).</s>
+  </purpose>
+
+  <input id="input" record="selection plus node.state" schema="record.schema.json#/$defs/node.state">
+    <s>The selection record (N-38, or N-41 when the owner taps an alert row) names the node; the pushed.frame (N-31) carries that node's state frame: the latest record per kind the node writes, its heartbeat records, its lease, its attempt, its checklist state (from the ticket records that cite the node's checklist anchors), and the node's open alerts.</s>
+    <s>Static parts come from the registry (N-37): the spec anchor, the runbook anchor, the input and output record kinds, the timeout and fallback text generated from the node volume's #waits section.</s>
+  </input>
+
+  <output id="output" record="machine.panel" schema="record.schema.json#/$defs/machine.panel">
+    <s>machine.panel is the drawn frame for one node; it is not stored. The only store writes from this screen are a selection record when the owner follows a belt to a neighbour machine (same shape as N-38's) and the client's frame.report. Opening the runbook opens the repo viewer link read-only.</s>
+  </output>
+
+  <panels id="panels" registry="../N-37/spec.xml#panels">
+    <panel id="machine.header" kind="node.state" staleness="10" frame="wf-map/machine/default">Breadcrumb (Map, group, node), big lamp, name, status chip (code and name), one-line reason from the latest record, actions.</panel>
+    <panel id="machine.identity" kind="node.state" staleness="86400" frame="wf-map/machine/default">Node id, group, spec book pointer (path and anchor), who acts for the current code (from the code table).</panel>
+    <panel id="machine.status-heartbeat" kind="heartbeat" staleness="10" frame="wf-map/machine/default">Status code, meaning, heartbeat age with a bar against the node's stall bound (N-12), last record at.</panel>
+    <panel id="machine.timeout-fallback" kind="node.spec" staleness="86400" frame="wf-map/machine/default">Every wait of the node with its timeout and fallback, generated from the node volume's #waits; retries 3 then recover and report.</panel>
+    <panel id="machine.ticket-seat" kind="lease" staleness="10" frame="wf-map/machine/default">Current ticket id and full title, seat id and model, lease expiry and fencing token, attempt n of 3, bring-up time; empty text when no lease.</panel>
+    <panel id="machine.io" kind="node.state" staleness="10" frame="wf-map/machine/default">Input record kind and the latest one received; output record kind and the latest one written; belts in and out as links to neighbour machines.</panel>
+    <panel id="machine.checklist" kind="checklist.state" staleness="60" frame="wf-map/machine/default">The node's checklist items with their proof state: ticked with the proof pointer, or open; count done of total.</panel>
+    <panel id="machine.last-records" kind="record" staleness="10" frame="wf-map/machine/default">The last ten records this node wrote: at, kind, code, one line.</panel>
+    <panel id="machine.last-alerts" kind="alert" staleness="10" frame="wf-map/machine/default">The last five alerts on this node: code, since, cause, what the system did; tap opens Alerts filtered to the node.</panel>
+    <panel id="machine.runbook" kind="node.spec" staleness="86400" frame="wf-map/machine/default">Runbook pointer (path and anchor), opens read-only in the repo viewer.</panel>
+    <panel id="machine.actions" kind="selection" staleness="86400" frame="wf-map/machine/default">Open the runbook (primary), Jump to Alerts, Close panel; on the phone a bottom sheet.</panel>
+  </panels>
+
+  <mechanism id="mechanism">
+    <diagram format="mermaid"><![CDATA[
+flowchart LR
+  SEL[selection record: node id] --> V[client: subscribe node view on the same stream]
+  P[N-31 pushed.frame: node state frame] --> V
+  R[registry machines.json: anchors, kinds, waits text] --> V
+  V --> D[machine.panel drawn]
+  D -->|Open the runbook| RB[repo viewer, read-only]
+  D -->|Jump to Alerts| AL[N-41 filtered to the node]
+  D -->|Close panel| MAP[N-38]
+  D -->|follow a belt| SEL2[selection record for the neighbour]
+]]></diagram>
+    <step n="1" where="client">
+      <s>On a selection the client sends a view subscription on the open stream: view node, id N-xx; N-31 answers with the node's state frame as a full view and then deltas scoped to that node (shared need: N-31 view subscriptions by node id). The map's own stream stays open underneath so Close panel is instant.</s>
+    </step>
+    <step n="2" where="client">
+      <s>The header lamp and chip come from the latest record code and the code table (meaning, who acts, lamp); the one-line reason is the record's message field; the heartbeat bar divides age by the node's stall bound (from N-12's config in the registry) and turns red past 1.0.</s>
+    </step>
+    <step n="3" where="client">
+      <s>The checklist panel joins the node volume's #checklist items (static) with checklist.state records (which ticket ticked which item with which proof pointer); an item with no record is open.</s>
+    </step>
+    <step n="4" where="client">
+      <s>Open the runbook opens the repository viewer at the runbook anchor (GitHub now, Forgejo later, D18) in a new tab; the panel never embeds the repository.</s>
+    </step>
+    <step n="5" where="build">
+      <s>The panel is part of the same bundle as N-38, bound by N-37, styled from look.json, served by the tiers and the pod; there is no separate deploy.</s>
+    </step>
+  </mechanism>
+
+  <states id="states" source="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/plan.md#per-state-content-requirement">
+    <state name="default">Every panel filled for a stalled node (the approved frame shows merge stalled 39 h with ST code, cause, checklist 2 of 5, last five alerts, runbook), including one longest-plausible ticket title to expose truncation.</state>
+    <state name="empty">A node that has never written a record: grey lamp, status never ran, the explanation that the node ships dark until its own ticket lights it, and the primary recovery action Open the spec as a real button.</state>
+    <state name="loading">Skeleton blocks in the shape of the default panels; no centred spinner; until the node view arrives or the timeout fires.</state>
+    <state name="error">not-found (the node id is not in the registry: a stale link), timeout (no node view within 10 s), validation (the view failed schema); what to do next and Retry.</state>
+    <state name="offline">The last node view stays with the as-of stamp; actions that write (follow a belt) queue with the indicator; Open the runbook still works because it is a link.</state>
+  </states>
+
+  <start id="start">
+    <s>Opens on a selection record from N-38 or N-41 and on a deep link /board#machine/N-xx; the view subscription is sent by the client; nothing is typed by an agent. Ships with the N-38 bundle and is promoted by N-48.</s>
+  </start>
+
+  <waits id="waits">
+    <wait name="node-view-first-frame" timeout="PT10S" fallback="error state class timeout with Retry; the map underneath stays live">
+      <s>From the subscription to the node's full view.</s>
+    </wait>
+    <wait name="node-view-staleness" timeout="PT10S" fallback="stale chip (503) on the panel; at 60 s offline banner; last view stays">
+      <s>Deltas or the idle heartbeat from N-31 at least every 5 s.</s>
+    </wait>
+    <wait name="runbook-link" timeout="PT0S" fallback="the link is a plain anchor; if the forge is down the browser shows it, the panel does not block">
+      <s>No wait in the panel.</s>
+    </wait>
+    <wait name="selection-ack" timeout="PT5S" fallback="resend with the same idempotency key up to 3 times, then queue and resend on reconnect">
+      <s>Following a belt writes a selection record like N-38.</s>
+    </wait>
+    <wait name="unknown-node" timeout="PT0S" fallback="error state class not-found with a Back to map button">
+      <s>A node id not in machines.json (a stale deep link after a registry change).</s>
+    </wait>
+  </waits>
+
+  <retries id="retries">
+    <s>Client steps retry up to 3 with backoff then recover into a visible state (offline, queued action, not-found); the panel never loops silently. Build and promotion failures are N-11's and N-48's three attempts.</s>
+  </retries>
+
+  <many-agents id="many-agents">
+    <s>Readers: every client has its own selection and its own node view subscription; two clients looking at two nodes cost two scoped subscriptions on one transport; two clients looking at the same node receive the same deltas independently.</s>
+    <s>The panel shows many agents on one node truthfully: when a node has several leases (two attempts of two tickets on N-16 at once), the ticket-seat panel lists every lease with its fencing token and expiry, never a single current seat; the header says 3 seats where the map shows 3 inserters.</s>
+    <s>Writes: selection records only, idempotent by client id and counter; a retried send is a 409 no-op. No panel state is shared between clients; a seat that opens the Machine screen for a screenshot never changes what the owner sees.</s>
+    <s>Conflict detection: a node view whose seq is lower than the map's delivered seq for the same node is dropped and the client asks for a full view (never shows older data than the map).</s>
+  </many-agents>
+
+  <status-codes id="status-codes" map="spec.xml#shared-needs">
+    <code value="200" name="machine.rendered" kind="frame.report" lamp="green">Node view drawn and current.</code>
+    <code value="201" name="selection.recorded" kind="selection" lamp="green">A belt was followed and the selection landed.</code>
+    <code value="404" name="machine.not-found" kind="frame.report" lamp="red">Node id not in the registry; error state not-found.</code>
+    <code value="422" name="view.invalid" kind="frame.report" lamp="red">Node view failed schema; full view requested; alert raised by the transport.</code>
+    <code value="503" name="machine.stale" kind="frame.report" lamp="amber">No delta or heartbeat within 10 s.</code>
+    <code value="504" name="machine.view-timeout" kind="frame.report" lamp="red">No node view within 10 s; error state timeout, retrying.</code>
+  </status-codes>
+
+  <state-paths id="state-paths" cleanup-registry="../N-45/spec.xml#N-45">
+    <path p="store table selections" cleanup="N-45 retention class: keep 30 days">Selection records written when a belt is followed (shared with N-38).</path>
+    <path p="store table frame_reports" cleanup="N-45 retention class: keep 7 days, then hourly aggregates">Client frame reports (shared with N-38).</path>
+    <s>The panel writes no files; the screenshots for promotion are N-38's path.</s>
+  </state-paths>
+
+  <look id="look" requirement="owner 04:45Z: all views carry the Krastorio look; note 6 same on phone">
+    <s>The panel is the Factorio entity window: outer frame #313031 with the 24 px header strip and caption #FFE6C0 Titillium Web Bold 18, inside shallow frames #403F40 for the cards, deep #242324 for the record and alert lists, the big lamp as a 40 px slot with glow, the heartbeat bar as the heat progress bar (#DA4535 past the bound, #2BE327 under), mono numbers in IBM Plex Mono, the machine icon from the atlas (Krastor entity icons 64 x 64, inventory section 5.2).</s>
+    <s>Check: look-check.mjs samples the panel header, the card interior and the lamp; binding-check rule look-token; the screenshot pair read by the architect.</s>
+  </look>
+
+  <checklist id="checklist">
+    <item><check>Every panel in #panels is bound (N-37) and drawn from the node view and the registry.</check><proof>binding-check 201 for the machine screen's panel ids and a render test over a fixture node.</proof></item>
+    <item><check>The lamp, chip and meaning follow the code table for every code the node can emit.</check><proof>A test over every code in the shared code map (shared/status-codes.xml#codes with its lamp column, declared in #shared-needs) asserting lamp and meaning text.</proof></item>
+    <item><check>The heartbeat bar uses the node's stall bound and turns red past it.</check><proof>A test with age 0.5x, 1.0x and 1500x the bound.</proof></item>
+    <item><check>Multiple leases on one node are all listed with fencing tokens.</check><proof>A fixture with three leases rendering three rows.</proof></item>
+    <item><check>Checklist items join static items with checklist.state records; open items show as open.</check><proof>A fixture with 2 of 5 ticked rendering 2 of 5 and the proof pointers.</proof></item>
+    <item><check>Open the runbook opens the repo viewer at the anchor; Jump to Alerts filters to the node; Close returns to the map with the map still live.</check><proof>Playwright test asserting the href, the alerts filter and the map's delivered seq unchanged.</proof></item>
+    <item><check>All five states on desktop and mobile match the approved frames.</check><proof>Ten screenshots on the promotion record read by the architect.</proof></item>
+    <item><check>Stale, timeout and not-found behave as specified.</check><proof>Tests silencing the view, delaying it and using an unknown id.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <s>Build seat: writes tools/map/src/machine/**, the Machine #panels of this volume, and tests; declared at cut.</s>
+    <s>Viewer and owner keys both read the panel; no action on this screen writes anything but a selection.</s>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <s>The panel is the owner's drill-down; its own health is in frame.report like the map. A 404 for a node that is in index.xml but not in machines.json is a registry defect and an alert (N-41) on N-37.</s>
+  </monitoring>
+
+  <runbook id="runbook">
+    <s>Deep link for a test: /board#machine/N-12 on a dev tier; the view subscription is visible in the stream log of the tier server.</s>
+    <s>Cleanup: none beyond N-38's; the panel writes no files.</s>
+  </runbook>
+
+  <sources id="sources">
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/wireframe-brief.json">Screen Machine: purpose, data (node id and spec book pointer, status code and meaning, heartbeat age, current ticket and seat, checklist with proofs, timeout and fallback, last five alerts, runbook pointer), primary action Open the runbook.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-plan.json">Frames wf-map/machine/* desktop and mobile.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-notes.md#2-notes-in-order">Notes 1, 2, 3, 6.</src>
+    <src href="../../dag.md#3-every-node">N-02 lease (holder, fencing token, expiry), N-12 stall bound, N-11 attempts.</src>
+    <src href="~/.claude/CLAUDE.md">Hard rule: a ticket is always shown with its full title (the ticket-seat panel).</src>
+    <src href="rebuild/investigation/03-DECISIONS.md#20-d18-forgejo-now-or-later">D18: runbook links open the forge viewer, GitHub now.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md#5-sprite-groups-for-the-five-screens">5.2 Machine panel sprite groups.</src>
+  </sources>
+
+  <rejected id="rejected">
+    <item reason="the owner acts only on Controls and acks only on Alerts; a per-node action would make the panel a second control path and a per-PR path (D15)">Retry, kill or resume buttons on the Machine screen.</item>
+    <item reason="a single current seat hides the many-agents truth; leases are listed">Showing one seat per node.</item>
+    <item reason="the spec book is the truth on main; embedding a copy would drift">Embedding the node volume text in the bundle instead of linking its anchor.</item>
+    <item reason="the old blueprint page (WO-20261011-ceea) rendered graph/ and work-orders/ as a report; the machine panel reads store records and is superseded by this node (04-UNLANDED backup ceea rows)">Reviving /blueprint as the drill-down.</item>
+  </rejected>
+
+</volume>

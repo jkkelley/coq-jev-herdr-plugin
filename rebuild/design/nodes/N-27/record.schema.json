@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-27/record.schema.json",
+  "title": "N-27 Watcher lamp: input and output records",
+  "description": "Records of the watcher unit per bearings tier. Every record carries the shared envelope (shared/state-store.xml#envelope); the body fields are below. UTC everywhere, at as 2006-01-02T15:04:05Z.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "page": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$", "description": "the page name of a tier, for example coq-stable" },
+    "tier": { "enum": ["stable", "uat", "dev"] },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node"],
+      "properties": {
+        "id": { "type": "string", "minLength": 8, "maxLength": 64 },
+        "kind": { "type": "string" },
+        "code": { "enum": [100, 200, 201, 204, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "const": "N-27" },
+        "seq": { "type": "integer", "minimum": 1, "description": "assigned by the store on commit" },
+        "version": { "type": "integer", "minimum": 1, "description": "compare-and-swap guard for upserts" },
+        "idempotency_key": { "type": "string", "maxLength": 128 },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 }
+      }
+    },
+    "lease": {
+      "type": "object",
+      "required": ["name", "token", "generation", "expiry"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "pattern": "^watcher/[a-z0-9][a-z0-9-]{0,63}$" },
+        "token": { "type": "string", "minLength": 16, "maxLength": 128, "description": "fencing token from N-02; never logged in prose" },
+        "generation": { "type": "integer", "minimum": 1 },
+        "expiry": { "$ref": "#/$defs/utc" }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "unit.start (input)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "unit.start" },
+        "code": { "const": 100 },
+        "tier": { "$ref": "#/$defs/tier" },
+        "page": { "$ref": "#/$defs/page" },
+        "unit": { "type": "string", "pattern": "^coq-watcher@[a-z0-9-]+\\.service$" },
+        "pid": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["tier", "page", "unit", "pid"]
+    },
+    {
+      "title": "watcher.alive (output, upsert keyed watcher/<page>)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "watcher.alive" },
+        "code": { "const": 100 },
+        "tier": { "$ref": "#/$defs/tier" },
+        "page": { "$ref": "#/$defs/page" },
+        "lease": { "$ref": "#/$defs/lease" },
+        "pid": { "type": "integer", "minimum": 1 },
+        "unit": { "type": "string" },
+        "beat": { "$ref": "#/$defs/utc" },
+        "state": { "enum": ["alive", "grace"] },
+        "page_ok": { "type": "boolean" },
+        "store_ok": { "type": "boolean" },
+        "delivered_seq": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["tier", "page", "lease", "pid", "unit", "beat", "state", "page_ok", "store_ok", "delivered_seq", "version"]
+    },
+    {
+      "title": "watcher.down (output)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "watcher.down" },
+        "code": { "enum": [100, 500] },
+        "page": { "$ref": "#/$defs/page" },
+        "reason": { "enum": ["stop", "fenced", "store", "stream"] }
+      },
+      "required": ["page", "reason"]
+    },
+    {
+      "title": "watcher.refused (output)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "watcher.refused" },
+        "code": { "const": 409 },
+        "page": { "$ref": "#/$defs/page" },
+        "holder": { "type": "string", "description": "unit:pid of the live lease holder" }
+      },
+      "required": ["page", "holder"]
+    },
+    {
+      "title": "watcher.dead (written by the stall tick on lease expiry)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "watcher.dead" },
+        "code": { "const": 500 },
+        "page": { "$ref": "#/$defs/page" },
+        "last_beat": { "$ref": "#/$defs/utc" },
+        "reason": { "enum": ["lease-expired", "unclean-exit", "page-unreachable"] }
+      },
+      "required": ["page", "last_beat", "reason"]
+    },
+    {
+      "title": "delivery.failed (output)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "delivery.failed" },
+        "code": { "const": 500 },
+        "page": { "$ref": "#/$defs/page" },
+        "record": { "type": "string", "description": "id of the owner.answer or owner.message that could not be handed on" },
+        "target": { "enum": ["N-29", "N-30"] },
+        "attempts": { "const": 3 },
+        "error": { "type": "string", "maxLength": 240 }
+      },
+      "required": ["page", "record", "target", "attempts", "error"]
+    }
+  ]
+}

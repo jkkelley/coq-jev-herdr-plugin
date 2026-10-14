@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: the hard rules every node volume is written against. Each rule is one anchor a node volume cites
+     by href; the rule's test is what the review seat runs. Validated by rebuild/design/check.sh against schema/volume.xsd. -->
+<volume id="principles" kind="shared" version="1.0.0" issued="2026-10-14T06:30:00Z" timezone="UTC" title="Principles: the hard rules">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="rules">The rules, one anchor each</entry>
+    <entry ref="aliases">Aliases: anchors that name the same rule</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="status-codes.xml#status-codes" kind="shared"/>
+    <sibling href="seat-contract.xml#seat-contract" kind="shared"/>
+    <sibling href="state-store.xml#state-store" kind="shared"/>
+    <sibling href="failure-cases.xml#failure-cases" kind="shared"/>
+    <sibling href="rejected-with-reason.xml#rejected-with-reason" kind="shared"/>
+    <sibling href="command-center.xml#command-center" kind="shared"/>
+    <dag href="../dag.md#7-rules-every-node-obeys"/>
+    <shared href="../../factory-rebuild-plan.xml#principles" role="origin">The plan's six principles, carried here and extended</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>Brief C lists eight hard rules every volume obeys and twenty-five decisions the book is written against (D01 to D25); this volume turns them into anchors so a node volume cites a rule instead of restating it.</s>
+    <s>A rule has statements (what holds), a test (what the review seat or check.sh verifies) and sources (where the owner said it).</s>
+    <s>Nothing here reopens a decision; a rule that needs changing is a card to the owner (N-28), and the change lands as a pull request on this file.</s>
+  </purpose>
+
+  <rules id="rules">
+    <hard-rule id="no-cog" title="No cog: the system drives">
+      <statement>Every wait names a timeout and a fallback; no agent is a gate; nothing starts by an agent typing; the clock (N-06) is the only trigger and the scheduler (N-07) the only dispatcher.</statement>
+      <statement>Every automated step retries up to 3 times, then recovers and reports as a record and at most one card.</statement>
+      <statement>A recovery path (a launcher restart adopting a live run, a service restart re-attaching to a Jenkins build) obeys the same bounds as the path it recovers; it never gets a new deadline.</statement>
+      <statement>The cut-over swap and the stable upgrade are system steps; the owner holds a one-time break glass for each (seat-contract.xml#break-glass), never a routine hand step.</statement>
+      <test>check.sh C13: every wait element carries a timeout and a fallback. Review: name one place in the volume where a human or an agent has to type for the node to proceed; the volume fails if one exists.</test>
+      <source>Owner 2026-10-14: no cog should hold up the system, so we need a system, not agents or humans driving it (rebuild/factory-rebuild-plan.xml#no-cog; memory no-cog-system-drives).</source>
+      <source>Global rule: every automated step retries up to 3 times, then recovers gracefully and reports, never loops and never fails silently (~/.claude/CLAUDE.md, design first, system first, never by hand).</source>
+    </hard-rule>
+
+    <hard-rule id="multi-agent-first" title="Many agents at once from the first line">
+      <statement>Every design assumes N seats reading, working and writing at once: atomic writes, append-only records, leases with fencing tokens or compare-and-swap, idempotent retryable steps, locks with timeouts, and conflict detection that reports as a 409 record.</statement>
+      <statement>No single reader, writer or lead; a volume with no answer to two seats claiming or writing the same record is rejected by the review seat.</statement>
+      <test>check.sh C07: a many-agents section exists and is not empty. Review: the section names the collision case and the mechanism that resolves it.</test>
+      <source>Memory multi-agent-first-design (owner 2026-10-14); 02-MAPPING V02 claim before act, T06 lease with heartbeat and generation.</source>
+    </hard-rule>
+
+    <hard-rule id="three-attempts" title="Three attempts, then recover and report">
+      <statement>Backoff is min(10 s x 2^(n-1), 300 s) per attempt n; attempt 3 failing writes dead 500 with one escalation (one card by N-28), never a fourth attempt and never a silent stop.</statement>
+      <statement>Results are never retried, only infrastructure is (V05): a red gate, a failed assertion or a rejected review is evidence, not a transient.</statement>
+      <statement>A retry re-runs an idempotent step by its key; a step whose outcome is unknown is re-run idempotently, never blindly repeated (failure-cases.xml#unknown-outcome).</statement>
+      <test>Review: every retries section names the attempt counter, the backoff and the record written at 3; a volume that retries a 422 fails.</test>
+      <source>rebuild/factory-rebuild-plan.xml#no-cog; 02-MAPPING T02 capped backoff, V05.</source>
+    </hard-rule>
+
+    <hard-rule id="one-store" title="One store, no broker">
+      <statement>SQLite under the state root, served by the Go service over one gRPC socket, is the only store; no NATS, no second metrics database, no status file on a branch (D10 C34, D04 C35, D01).</statement>
+      <statement>Every count a screen shows is a query over record kinds in that store, never a seat tally; the counters view (state-store.xml#view-counters) is computed by the service every tick.</statement>
+      <test>Review: every record a volume names resolves to a kind in state-store.xml#record-kinds-registry and a table or entity there.</test>
+      <source>03-DECISIONS section 12 D10, section 6 D04, section 3 D01; memory control-plane-go-grpc.</source>
+    </hard-rule>
+
+    <hard-rule id="level-triggered" title="Level-triggered reconcile before dispatch">
+      <statement>On every tick a node compares open work with live runs before it dispatches (T02, T03); records can be lost or duplicated without stranding a ticket or double-dispatching.</statement>
+      <statement>A poll of the forge is the correctness path; a webhook can only call poll_now and never writes state (D06 C44, S03 section 8 item 3); newest sha wins (supersession 410).</statement>
+      <statement>Push transport carries everything to the screens (D21); a client re-reads full state on reconnect; an older frame than the one shown is dropped.</statement>
+      <test>Review: the mechanism section reads current state before it acts; an event alone never causes a write.</test>
+      <source>02-MAPPING T03 level-triggered reconcile; 03-DECISIONS section 8 D06, section 23 D21.</source>
+    </hard-rule>
+
+    <hard-rule id="probes-not-opinions" title="Probes, not opinions">
+      <statement>Liveness is a timestamp and the process table, never a pane read or a model's self-report (V08, K04); a seat's claim in its output is data to verify, not a verdict.</statement>
+      <test>Review: no step reads a pane, a transcript or a model answer to decide health.</test>
+      <source>02-MAPPING V08, K04; 01-ROOT-CAUSES RC4.</source>
+    </hard-rule>
+
+    <hard-rule id="one-file-one-in-flight" title="One file, one in-flight ticket">
+      <statement>No file is ever touched by two open pull requests: files are declared at cut (N-17, N-18), refused at readiness (N-03) with claim rows as the proof, checked and recorded at start (N-14), enforced by the rendered fence (N-13) and the diff check (N-16).</statement>
+      <statement>Generated aggregates (registries, indexes, bindings) are generated by a script and never hand-edited, so they are never the file two tickets fight over.</statement>
+      <test>N-51 row A5: for every merge of the day the PR's changed files are a subset of the declared files.</test>
+      <source>Memory one-file-one-in-flight-ticket (owner 2026-10-12); 02-MAPPING V07; AGENTS.md law: no file is ever touched by two open PRs.</source>
+    </hard-rule>
+
+    <hard-rule id="tickets-are-small" title="Tickets are small">
+      <statement>One concern, a few files (at most 6), a diff a reviewer reads in minutes; when in doubt split, because more tickets is fine and a big one stalls every gate behind it.</statement>
+      <test>N-18 refuses a draft ticket with more than 6 files or more than one concern named in its title.</test>
+      <source>Owner 2026-10-13 03:00Z: this is a factory not a slog fest; 02-MAPPING V09.</source>
+    </hard-rule>
+
+    <hard-rule id="artifacts-out-of-repo" title="Artifacts out of the repository">
+      <statement>Every state path lives under $COQ_STATE or $COQ_CACHE, the treehouse pool root, ~/.bearings tier pages, or git refs by name; never in the repository (owner C35).</statement>
+      <statement>Every state path a volume names is a path element of its state-paths section; rebuild/design/bin/registry.py generates shared/cleanup-registry.json from them (check.sh C14), one entry per path with its class (host, store, client, external, tracked), retention, trigger, acts and the run command the volume names (a group script such as scheduler/host/bin/cleanup-*.sh, ci/bin/cleanup-ci-state.sh, tools/bearings/bin/cleanup-*.sh or tools/map/bin/cleanup.sh is allowed); the service has one verb for every entry, line/bin/cleanup.sh --entry id, which runs the entry's command in plan, then apply, mode (N-45). A path with no cleanup is a defect unless it declares retention="never" acts="owner": kept on purpose (secrets, the owner's data, records a forge keeps), listed by cleanup.sh and removed only by the owner's break glass or disposition.</statement>
+      <statement>The hand backup tree and every unlanded worktree are disposed of by N-49 under D25 A; nothing new of that shape is created.</statement>
+      <test>check.sh C14 (registry.py --check): the registry is fresh, every path element names a cleanup, a host path with no script declares retention never and acts owner, a tracked or client path declares retention never; cleanup.sh plan refuses a glob outside an allowed root at run time (N-45 safety).</test>
+      <source>03-DECISIONS section 6 D04; memory runtime-data-never-in-the-repo, scripts-live-in-the-project.</source>
+    </hard-rule>
+
+    <hard-rule id="no-privileged-profile" title="No node selects the owner's privileged AWS profile">
+      <statement>minecraft-admin is user-initiated only; no node, unit, script or seat selects it, persists it or automates it; a cloud mirror of a backup is the owner's own one-time script (N-05).</statement>
+      <test>grep over the book and the line scripts for the profile name finds only this rule and N-05's refusal.</test>
+      <source>~/.claude/CLAUDE.md hard rule: owner aliases and privileged AWS profile.</source>
+    </hard-rule>
+
+    <hard-rule id="monitor-never-stops" title="The owner's always-on monitor never stops">
+      <statement>A halt (line.halted 503) stops dispatch; it never stops the stable bearings page, its watcher, its front door, the ticks, health, backups, the forge poll or the push transport; a HOLD dims actions on the screens, never the screens.</statement>
+      <test>N-42: under hold, map, machine, stats and alerts frames keep arriving; N-27 watcher.alive keeps its heartbeat.</test>
+      <source>Memory bearings-stable-is-the-only-always-on-monitor (owner 2026-10-12); CLAUDE.md: monitoring that the owner uses is always available, and a halt never stops it.</source>
+    </hard-rule>
+
+    <hard-rule id="system-before-agents" title="The system comes up before humans and agents">
+      <statement>The unit (N-06) is 100 percent operational and checked (store open, code table loaded, ticks running, health serving) before any seat is dispatched; like starting the machines before the line is kicked.</statement>
+      <test>N-07 refuses to dispatch while health.unhealthy stands; the bring-up runbook of N-06 ends with the health probe.</test>
+      <source>CLAUDE.md: compaction and the system operate before any human or agent starts work.</source>
+    </hard-rule>
+
+    <hard-rule id="verdict-read-only" title="The verdict an agent reads and cannot edit">
+      <statement>The verdict is the GitHub required status coq/gate on the head sha (D05) plus the review record in the store; a seat holds no Jenkins token, no kubeconfig and no GitHub token with status or administration write; a seat that tries is refused 412 (T04).</statement>
+      <test>N-13 renders the deny list for every role; N-25 posts statuses with the service token only; a seat test that calls gh api statuses gets 412 in its seat.result.</test>
+      <source>03-DECISIONS section 7 D05; 02-MAPPING T04; I03 F8a a number the agent can read but not change.</source>
+    </hard-rule>
+
+    <hard-rule id="machine-verdict-merges" title="Machine verdict merges">
+      <statement>Green coq/gate plus review.passed on the same head sha merges (N-09), one at a time under its own lease; under a merge.hold the only merge allowed is the fix pull request whose ticket entity names the standing hold id (D15).</statement>
+      <statement>The owner is an escalation after three failed fixes, never a wait in the merge path; the owner holds the line through cards and the Controls screen.</statement>
+      <test>N-09 test: a green PR with no review record does not merge; a hold with a fix ticket merges exactly that ticket.</test>
+      <source>03-DECISIONS section 17 D15 (C50); 02-MAPPING V03.</source>
+    </hard-rule>
+
+    <hard-rule id="verify-loop" title="Verify main after every merge">
+      <statement>Every merge is followed by main.gate.status on the new main sha (N-26); verified 201 per merge in a green range, rejected 422 with a merge.hold on a red one, a bisect of a red range by re-planning older main shas (N-10); hold lift only when the held sha is in a green range.</statement>
+      <test>N-10 test: a red range of three merges yields one rejected per merge naming it and one hold; a later green main lifts it.</test>
+      <source>02-MAPPING V03; 01-ROOT-CAUSES RC3 (66 of 66 hand verifies).</source>
+    </hard-rule>
+
+    <hard-rule id="code-does-mechanical-jobs" title="Code does mechanical jobs">
+      <statement>Validation, close-out, merge, verify, cleanup, promotion and every record put are code with tests; an LLM appears only to write (N-16), cut tickets as data (N-17) and judge a diff (N-19); tester, merger and verifier seats are retired (D11, C39).</statement>
+      <test>Review: no step of a mechanical node names a model.</test>
+      <source>03-DECISIONS section 13 D11; 02-MAPPING K01 LLM in the dispatch path (kill).</source>
+    </hard-rule>
+
+    <hard-rule id="breadcrumb-at-the-fix-site" title="Leave the breadcrumb at the fix site">
+      <statement>Every change someone must reason about later carries its reason as a comment next to the change: what broke (file and line), why it mattered, why this fix and the alternative rejected, what it costs; then the backup path and the record id.</statement>
+      <test>N-19 review checklist: a bare setting flipped without a comment is review.changes.</test>
+      <source>~/.claude/CLAUDE.md hard rule: leave the breadcrumb at the fix site.</source>
+    </hard-rule>
+
+    <hard-rule id="design-first" title="Design first; the book is the canonical design">
+      <statement>Tickets are cut from an anchor of this book and from nothing else; the architect never authors designs or cuts tickets (a spec-author seat does); older specs are sources, never authority (D14, C42).</statement>
+      <statement>The PR 35 closing comment carries this sentence: "Closed under ruling D14 (C42): rebuild/design/ on main is the canonical design; this pull request and its v2.0 export are sources, harvested where the book cites them, and are not authority."</statement>
+      <test>N-18 refuses a draft ticket with no anchor into rebuild/design; N-50 writes pr.close with the sentence above.</test>
+      <source>03-DECISIONS section 16 D14; owner C42 (relayed from the phone: went recommended); memory architect-sends-specs-off.</source>
+    </hard-rule>
+
+    <hard-rule id="build-mode" title="Build mode: the factory's governance never applies to the rebuild">
+      <statement>Build mode is a flag with an expiry (N-44, flags.build_mode.max_duration P7D, scope rebuild or all) set by a ruling, frozen into the dispatch record and stamped on the seat bundle; a seat reads it only from its dispatch, never declares it.</statement>
+      <statement>Under the flag, old-line gates, hooks, guards, leases, watches and status rules are not rendered into rebuild seats (N-13); a refusal naming an old rule is written as rule.bit 300 by N-11, costs no attempt, and raises one fix ticket request per rule name; nodes ship dark and go live by their own ticket with a named proof.</statement>
+      <statement>The old-rule table N-11 matches on (rule name: the refusal substring it prints): seat-caps "refused: ... agents already live (max_agents" and "seats already live (max_seats"; merge-guard "merge.sh refuses to merge:"; hold-guard "held" from refuse_on_hold with a 423 posted; break-glass-guard "break glass refused:"; monitor-tab "monitors.sh: refusing to run an agent in a monitoring tab"; test-pane "testpane: refused -"; claims "refused (the reason is on stdout, one line per path)"; self-release "a seat never releases itself"; bringup-gate "refused while the monitor seat is down"; record-lane "a record without a lane is refused"; branch-cleanup "cleanup skipped: refuses to delete branch"; compaction-guard any GOV, CMP, RES, RCV or OPS code; dead-hooks no-hand-start.mjs and shell-lex.mjs (never render).</statement>
+      <test>N-44 test: a rule refusal under build mode writes rule.bit 300 and leaves the attempt counter unchanged; N-13 test: the bundle hash input includes build_mode and scope.</test>
+      <source>Memory build-mode-rule (owner 2026-10-14); rebuild/factory-rebuild-plan.xml#build-mode; 03-DECISIONS section 15 D13.</source>
+    </hard-rule>
+
+    <hard-rule id="everything-on-main" title="Everything on main, nothing left lying around">
+      <statement>Owner 2026-10-14T02:49Z: everything needs to get on main too, dont leave that shit laying around; owner 2026-10-14T02:52Z: nothing starts again till GOFACTORY. D25 A: the later, broader order wins; unlanded cleanup is the first slice after GOFACTORY, dry run first, and the owner sees exactly what will be deleted before saying go.</statement>
+      <test>N-49: every row of 04-UNLANDED.md has a disposition record; the dry-run listing precedes every apply.</test>
+      <source>03-DECISIONS section 27 D25; 04-UNLANDED sections 1, 2 and 12.</source>
+    </hard-rule>
+
+    <hard-rule id="repo-is-truth" title="The repository spec book is the truth">
+      <statement>D24: rebuild/design on main is the only source; N-47 publishes version-named immutable copies to Drive after every merge touching the book, and every Drive folder carries a README with this sentence: "This folder is a published copy of rebuild/design at merge sha SHA, book version V; the repository is the truth and no work is built from this copy."</statement>
+      <test>N-47 test: the README of a published folder contains the sentence with the sha and version filled.</test>
+      <source>03-DECISIONS section 26 D24; L15-google-drive-designs.md.</source>
+    </hard-rule>
+
+    <hard-rule id="product-frozen" title="Product work is frozen until the line runs itself">
+      <statement>D19: product tickets (lane product) are refused 412 at intake while freeze.state is on; the freeze lifts only on an exit.verdict pass (N-51), a day with the eight audit rows green: A1 agent line operations 0, A2 attempted line operations by seats reported, A3 hand line operations 0, A4 clean checkout, A5 PR files equal declared files, A6 at least one cut to verified, A7 no dead tickets created by a line defect, A8 build mode and hold recorded.</statement>
+      <test>N-51 test day fixture: a seat's refused line-op put fails row A1; a known-dirty exception fails A4 after the harvest window.</test>
+      <source>03-DECISIONS section 21 D19 (C56); 01-ROOT-CAUSES RC1 and RC3.</source>
+    </hard-rule>
+
+    <hard-rule id="one-surface" title="Bearings is the one owner surface">
+      <statement>D20: every question, decision, report and feedback for the owner is a card on the Getting My Bearings page; the rail's plan and ledger are a panel inside it that the system writes (N-33); the Factorio map replaces /board on every tier and nothing exists outside the panel; a seat never answers the owner in a reply.</statement>
+      <statement>Lavish and lavish-axi are never a fallback for a Claude seat; a non-Claude runtime uses lavish-axi because only Claude mints a claude.ai URL (RAIL_SURFACE).</statement>
+      <test>N-28: a card cannot post without watcher.alive for its tier; N-32 Playwright: the map route answers on every tier and /board redirects to it.</test>
+      <source>03-DECISIONS section 22 D20 (C51); ~/.claude/CLAUDE.md hard rule: owner interaction surface; memory factorio-map-replaces-board, owner-page-and-process-rules.</source>
+    </hard-rule>
+
+    <hard-rule id="krastorio-look" title="Every owner-facing view carries the Krastorio look">
+      <statement>Owner 2026-10-14 ~04:45Z: all views shown to me better have that krastorio look to it. The bearings page, cards, strip, every command center screen and the rail panel use the token table below, exposed as CSS custom properties; values only, original art, no Wube or BiusArt sprite ever ships.</statement>
+      <statement>Tokens (property: value): --k2-frame: #313031; --k2-edge: #4D4643; --k2-inner-ring: #231C19; --k2-deep-inset: #242324; --k2-shallow-inset: #403F40; --k2-caption: #FFE6C0; --k2-body: #FFFFFF; --k2-accent: #FAA838; --k2-hover: #E69C2B; --k2-glow: rgba(255,174,0,0.5); --k2-green: #2BE327; --k2-red: #DA4535; --k2-red-text: #FF8E8E; --k2-blue: #80CEF0; --k2-button: 108px 28px; --k2-padding: 4px; --k2-slot: 40px; --k2-font: "Titillium Web".</statement>
+      <test>N-48 look check reads the tokens from the page's CSS custom properties and compares values; N-32 Playwright asserts them at 1440 and 430 widths.</test>
+      <source>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md section 4 (4.3 inherited vanilla palette, 4.4 panel definitions, 4.5 fonts); memory krastorio-look-on-every-view (~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/krastorio-look-on-every-view.md: the owner's rule itself, every owner-facing view including the cards, strip and rail), command-center-visual-bar, map-hosting-and-feel-rules; brief C, the look.</source>
+    </hard-rule>
+  </rules>
+
+  <aliases id="aliases">
+    <hard-rule id="one-file-one-ticket" title="Alias of one-file-one-in-flight" alias-of="one-file-one-in-flight">
+      <statement>Same rule; G3 volumes cite this anchor.</statement>
+    </hard-rule>
+    <hard-rule id="artifacts-out-of-the-repo" title="Alias of artifacts-out-of-repo" alias-of="artifacts-out-of-repo">
+      <statement>Same rule; N-14 cites this anchor.</statement>
+    </hard-rule>
+    <hard-rule id="verdict-readable-not-editable" title="Alias of verdict-read-only" alias-of="verdict-read-only">
+      <statement>Same rule; N-19 cites this anchor.</statement>
+    </hard-rule>
+    <hard-rule id="owner-surface" title="Alias of one-surface" alias-of="one-surface">
+      <statement>Same rule; N-48 cites this anchor.</statement>
+    </hard-rule>
+  </aliases>
+
+  <many-agents id="many-agents">
+    <readers>Every seat reads this file by anchor as part of its brief's rules section; the review seat reads it as the test list; nothing in it is state, so any number read it at once.</readers>
+    <writers>One pull request at a time; a rule change is cut from a ruling record (N-29), never from a seat's opinion; N-46 checks that every anchor cited by any volume still exists after the change.</writers>
+    <collision>Two volumes citing a rule by different names is the aliases section, never two rules; a volume that restates a rule in its own words is reviewed against the anchor it cites, and the anchor wins.</collision>
+  </many-agents>
+
+  <sources id="sources">
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="principles" note="no-cog, build-mode, shelf-first, design-first, crew-continuity, north-star"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="2-dependency-order" note="D01 to D25 and their rulings C34 to C58"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep" note="V01 to V18"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="3-dropped-by-the-field-still-carried-here-kill" note="K01 to K12"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal" note="T01 to T15"/>
+    <source path="rebuild/investigation/01-ROOT-CAUSES.md" anchor="3-root-causes" note="RC1 to RC5"/>
+    <source path="rebuild/investigation/05-FORGEO.md" anchor="" note="D18: GitHub now, Forgejo later; the forge is behind N-04's one interface so the swap is one node"/>
+    <source path="rebuild/investigation/L15-google-drive-designs.md" anchor="" note="D24"/>
+    <source path="rebuild/investigation/I03-oss-factories-and-clones.md" anchor="43-open-source-factories-that-match-the-owners-needs" note="F8a"/>
+    <source path="AGENTS.md" anchor="" note="the project's laws: no file touched by two open PRs, the close-out flow"/>
+    <source href="~/.claude/CLAUDE.md" note="global hard rules: owner surface, privileged profile, breadcrumb, one question at a time, design first"/>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261012212500-roadmap.md" note="binding roadmap; nothing before USERGO"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-cog-system-drives.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/spec-book-many-small-xml.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/build-mode-rule.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/command-center-visual-bar.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/factorio-map-replaces-board.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/control-plane-go-grpc.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md"/>
+  </sources>
+</volume>

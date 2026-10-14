@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: the failure cases every node volume cites. Each case names the symptom, how the system detects it
+     without anyone looking, what the system does, the records it writes, what the owner sees, and what never happens.
+     Validated by rebuild/design/check.sh against schema/volume.xsd. -->
+<volume id="failure-cases" kind="shared" version="1.0.0" issued="2026-10-14T06:30:00Z" timezone="UTC" title="Failure cases">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="cases">The cases</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="status-codes.xml#status-codes" kind="shared"/>
+    <sibling href="principles.xml#principles" kind="shared"/>
+    <sibling href="seat-contract.xml#seat-contract" kind="shared"/>
+    <sibling href="state-store.xml#state-store" kind="shared"/>
+    <sibling href="rejected-with-reason.xml#rejected-with-reason" kind="shared"/>
+    <sibling href="command-center.xml#command-center" kind="shared"/>
+    <dag href="../dag.md#4-re-entries"/>
+    <shared href="../../factory-rebuild-plan.xml#failure-cases" role="origin">The plan's four cases, carried here with the node that owns each</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>A failure case is the answer to "what happens when" for a node; a node volume cites the case by anchor and adds only what is specific to it.</s>
+    <s>Every case ends in a record with a code from status-codes.xml and, where the owner must act, in exactly one card; a case with no record is a silent failure and a defect in this volume.</s>
+  </purpose>
+
+  <cases id="cases">
+    <failure-case id="stall" title="A run stops making progress" nodes="N-02 N-12 N-11 N-41">
+      <symptom>A lease is past expires_at with no renewal, or a heartbeat shows no progress for stall_seconds while the launcher is alive.</symptom>
+      <detected-by>N-12 on the stall tick (stall.tick_seconds 15) from the heartbeats table and the process table; never from a pane or a model (principles.xml#probes-not-opinions).</detected-by>
+      <response>N-02 sweeps the lease, bumps the generation and writes lease.expired 500; N-12 kills the process group (SIGTERM, then SIGKILL after 10 s) and writes stall (run killed, lease revoked, reason); N-11 decides attempt n+1 with backoff or dead after 3.</response>
+      <response>A launcher that is alive but whose seat is silent is killed_stall; a launcher that is gone is killed_lease_lost; the record names which.</response>
+      <records>lease.expired 500, stall 500, attempt 100 or dead 500, seat.result blocked 423 with the terminal reason.</records>
+      <owner-sees>One alert row naming the reason and the next attempt (N-41); a card only on dead.</owner-sees>
+      <never>A seat is never nudged, prompted or asked whether it is stuck; a stall never extends a deadline.</never>
+      <source>rebuild/factory-rebuild-plan.xml#failure-cases stall; 02-MAPPING T06, V08.</source>
+    </failure-case>
+
+    <failure-case id="crash" title="The service or a unit crashes" nodes="N-05 N-06 N-07 N-15">
+      <symptom>The Go service, a tier unit or a launcher exits unexpectedly.</symptom>
+      <detected-by>systemd (Restart=always in 5 s, no start limit) and the unit.started record with reason on every start; N-06 counts starts in a ten-minute window.</detected-by>
+      <response>The unit restarts; migrations re-run idempotently; the scheduler re-attaches to running Jenkins builds by build number (state-store.xml#table-plans); a launcher restart adopts a live run against the same deadline (seat-contract.xml#one-shot); three starts in ten minutes is unit.crashloop 500 and one card, and the unit keeps restarting because a dark line is worse than a noisy one.</response>
+      <records>unit.started 100 with reason, unit.crashloop 500, heartbeat adopted true.</records>
+      <owner-sees>A card on crashloop; the health lamp amber during the restart; nothing on a single restart.</owner-sees>
+      <never>Never a manual restart as the fix; never a start limit that leaves the line dark.</never>
+      <source>rebuild/factory-rebuild-plan.xml#failure-cases crash; 01-ROOT-CAUSES RC1.</source>
+    </failure-case>
+
+    <failure-case id="bad-output" title="A seat produced output that fails its schema or its acceptance" nodes="N-10 N-11 N-15 N-18 N-19">
+      <symptom>structured_output fails record.schema.json, a validator command exits non-zero on main, a review returns changes, or a gate is red.</symptom>
+      <detected-by>The launcher's validator (schema_invalid), N-18 (validator.refused with the command), N-19 (review.changes 422), N-08 (gate.verdict red 422).</detected-by>
+      <response>A result is never retried as a transient (V05): N-11 cuts attempt n+1 with the evidence in the brief (a fresh seat; a rework resumes the session with the verdict in the brief); after 3, dead 500 and one card.</response>
+      <response>A red main is rejected 422 with merge.hold (N-10); the fix ticket names the hold id and is the only merge allowed under it.</response>
+      <records>seat.result blocked 423 (schema_invalid, output_rejected), validator.refused 422, review.changes 422, attempt 100, dead 500, rejected 422, merge.hold 423.</records>
+      <owner-sees>A card on dead or on rejected main; the rest is the alerts list.</owner-sees>
+      <never>Never a retry of a failed assertion; never a merge of a PR whose head moved after its review.</never>
+      <source>rebuild/factory-rebuild-plan.xml#failure-cases bad-output; 02-MAPPING V05.</source>
+    </failure-case>
+
+    <failure-case id="conflict" title="Two writers or a merge conflict" nodes="N-01 N-03 N-09 N-14">
+      <symptom>A compare-and-swap miss, an idempotency key with a different payload, a claim race at readiness, a workspace claim overlap, or git refusing the merge.</symptom>
+      <detected-by>N-01 in the write transaction (409 record.conflict); N-03 in the ticket.ready transaction; N-14 at provision; N-09 from gh pr merge or the mergeability field of the snapshot.</detected-by>
+      <response>The loser re-reads and retries inside its 3 attempts; merge.conflict 409 wakes the worker with a merge-main attempt (N-11 row for 409); a claim overlap without an attempt goes back to N-03 as waiting, not to N-11.</response>
+      <records>record.conflict 409, merge.conflict 409, workspace.refused 412 claim_overlap, ticket.waiting 100.</records>
+      <owner-sees>Nothing unless the conflict exhausts 3 attempts (then dead and one card).</owner-sees>
+      <never>Never a silent overwrite; never a second in-flight ticket on a claimed file.</never>
+      <source>02-MAPPING V02 claim before act, V07; memory one-file-one-in-flight-ticket.</source>
+    </failure-case>
+
+    <failure-case id="governance-interference" title="An old-line rule refuses a rebuild ticket" nodes="N-11 N-13 N-44">
+      <symptom>A hook, guard, cap or status rule of the old line refuses a step of a rebuild ticket while build mode is on.</symptom>
+      <detected-by>N-11 matches the refusal string against the old-rule table (principles.xml#build-mode).</detected-by>
+      <response>The refusal is written as rule.bit 300 with the rule name, costs no attempt, and raises one fix ticket request per rule name; N-13 stops rendering the rule into rebuild seats.</response>
+      <records>rule.bit 300, ticket.request 100.</records>
+      <owner-sees>The rule.bit count on the stats screen; no card.</owner-sees>
+      <never>Never a rebuild ticket blocked by a rule it is exempt from; never a hand override.</never>
+      <source>rebuild/factory-rebuild-plan.xml#failure-cases governance-interference; memory build-mode-rule.</source>
+    </failure-case>
+
+    <failure-case id="unknown-outcome" title="A step's outcome is unknown" nodes="N-45 N-47 N-49 N-09 N-35">
+      <symptom>A process died between acting and recording (a deletion ran, a Drive upload finished, a gh call returned nothing), so the record is missing but the effect may exist.</symptom>
+      <detected-by>The next tick finds a lease held by a dead holder, a plan in state running with no result, or a cursor behind the newest merge.</detected-by>
+      <response>Re-run the step idempotently by its key: a deletion lists first and deletes only what remains; an upload checks the version folder; a merge checks the PR state (MERGED is success, not a second merge); never a blind repeat.</response>
+      <records>The step's own record on completion, with attempt unchanged and note "re-run after unknown outcome"; cleanup.run with remaining; drive.copy with the rows found.</records>
+      <owner-sees>Nothing; a card only when the re-run itself fails 3 times.</owner-sees>
+      <never>Never a retry that could delete, publish or merge twice.</never>
+      <source>02-MAPPING V05; principles.xml#three-attempts.</source>
+    </failure-case>
+
+    <failure-case id="store-corrupt" title="The store fails its integrity check" nodes="N-01 N-05">
+      <symptom>PRAGMA quick_check is not ok at open, or a page error surfaces on a read.</symptom>
+      <detected-by>N-01 at open and on the health tick; the WAL size check (store.wal_large).</detected-by>
+      <response>gRPC Health goes NOT_SERVING; N-05 prepares a dry-run restore from the newest verified backup into STATE/store/restore/ and verifies it; one card carries the backup id, its top_seq and the records that would be lost; the owner confirms on the card before any file is swapped.</response>
+      <records>store.corrupt 500, health.unhealthy 503 reason store, backup restore-drill 201 or 500.</records>
+      <owner-sees>One card with the restore plan and the loss window.</owner-sees>
+      <never>Never an automatic restore over the live file; never dispatch while NOT_SERVING.</never>
+      <source>N-01 and N-05 spec volumes; C34 backups scheduled.</source>
+    </failure-case>
+
+    <failure-case id="disk-full" title="Free space under the floor" nodes="N-01 N-05 N-45">
+      <symptom>Free space on the state root is under store.min_free_mib or backup.min_free_mib.</symptom>
+      <detected-by>N-01 before a put, N-05 before a backup, N-06 on the health tick.</detected-by>
+      <response>Puts are refused 503 store.disk once per transition and the backup run is skipped with backup.disk 503; N-45 runs its registry cleanup first (expired leases, old logs, old backups by class); one card only if still under after that.</response>
+      <records>store.disk 503, backup.disk 503, cleanup.run 200 or 500, health.unhealthy 503 reason disk.</records>
+      <owner-sees>One card after cleanup if the floor still holds.</owner-sees>
+      <never>Never delete the newest verified backup or the live database to make room.</never>
+      <source>N-01, N-05 and N-45 spec volumes; owner C35.</source>
+    </failure-case>
+
+    <failure-case id="stale-ticket" title="A ticket waits past its stale bound" nodes="N-03">
+      <symptom>A ticket in status waiting for longer than intake.stale_days.</symptom>
+      <detected-by>N-03 on the daily tick.</detected-by>
+      <response>ticket.stale 500 once and one card; the owner cancels or re-cuts through N-29; nothing dispatches it meanwhile.</response>
+      <records>ticket.stale 500, then cancel or a new ticket.</records>
+      <owner-sees>One card naming the ticket with its full title, its unmet deps or claimed files, and the recommendation.</owner-sees>
+      <never>Never a silent drop; never an automatic cancel.</never>
+      <source>N-03 spec volume.</source>
+    </failure-case>
+
+    <failure-case id="forge-unreachable" title="GitHub does not answer" nodes="N-04 N-08 N-09 N-35">
+      <symptom>Three request attempts of a poll fail, or a push during the gitops manifest update fails.</symptom>
+      <detected-by>N-04 per poll (forge.request_seconds 10, poll budget 20 s); N-35 on its bounded pull-rebase-push.</detected-by>
+      <response>The snapshot entity is marked stale with failed_since; forge.unreachable 503 once per transition; N-08 reads pending; N-09 holds merges; polls continue every tick; one card after three failed polls past forge.stale_after_seconds; forge.recovered 200 on the first success. N-35 stops at 3 with deploy.timeout 504 and the next merge record retries it.</response>
+      <records>forge.unreachable 503, forge.recovered 200, deploy.timeout 504.</records>
+      <owner-sees>A card after the stale bound; the forge lamp amber meanwhile.</owner-sees>
+      <never>Never a merge on a stale snapshot; never a webhook as the recovery path.</never>
+      <source>N-04 spec volume; D06 C44.</source>
+    </failure-case>
+
+    <failure-case id="duplicate-instance" title="A second service instance is started" nodes="N-06">
+      <symptom>A second binary is started by hand or by a stray unit.</symptom>
+      <detected-by>flock on STATE/run/service.lock at start.</detected-by>
+      <response>The second instance exits 3 and writes unit.duplicate 500 naming the holder pid through the first instance's socket; RestartPreventExitStatus=3 stops systemd from looping it.</response>
+      <records>unit.duplicate 500.</records>
+      <owner-sees>An alert row; a card at the second occurrence in a day.</owner-sees>
+      <never>Never two writers on the store.</never>
+      <source>N-06 spec volume.</source>
+    </failure-case>
+
+    <failure-case id="suspend-gap" title="WSL suspends and wakes" nodes="N-06">
+      <symptom>The host sleeps; every ticker misses its interval.</symptom>
+      <detected-by>Each ticker compares the expected and actual gap on wake.</detected-by>
+      <response>Tickers fire once each; the tick counter shows the gap; tick.missed once per subkind; leases past expiry are swept normally on the next stall tick, and seats whose deadline passed during the gap are killed_deadline.</response>
+      <records>tick.missed 500 per subkind, tick 100 with the gap.</records>
+      <owner-sees>An alert row; a card only at three tick.missed in an hour.</owner-sees>
+      <never>Never a burst of catch-up ticks.</never>
+      <source>N-06 spec volume.</source>
+    </failure-case>
+  </cases>
+
+  <many-agents id="many-agents">
+    <readers>Every node cites the cases it owns; the review seat reads this volume as the list of "what happens when" questions a volume must answer.</readers>
+    <writers>A new case is a pull request on this file cut from a dead record or a defect ticket; the node it names gets a sibling pointer in the same PR.</writers>
+    <collision>Two nodes that handle one case in different ways is a defect found by N-46 (two volumes citing one anchor with contradicting responses is a review finding), resolved by the node named first in the case's nodes attribute.</collision>
+  </many-agents>
+
+  <sources id="sources">
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="failure-cases" note="stall, crash, bad-output, governance-interference"/>
+    <source path="rebuild/investigation/01-ROOT-CAUSES.md" anchor="3-root-causes" note="RC1 to RC5, the failures this volume prevents"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep" note="V02, V05, V08"/>
+    <source path="rebuild/investigation/I02-postmortems-and-abandonment.md" anchor="" note="why a dark line is worse than a noisy one"/>
+    <source path="rebuild/investigation/L10-cluster-and-gitops.md" anchor="5-what-broke-and-why" note="the lint job that timed out for 31 hours and nothing noticed"/>
+  </sources>
+</volume>

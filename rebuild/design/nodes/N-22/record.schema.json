@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-22/record.schema.json",
+  "title": "N-22 Image build: input image.config and output image",
+  "description": "Written 2026-10-14T04:39Z UTC by the G4 spec-author seat. Envelope repeated from N-20 until shared/state-store.schema.json lands.",
+  "oneOf": [
+    { "$ref": "#/$defs/input" },
+    { "$ref": "#/$defs/output" },
+    { "$ref": "#/$defs/failed" }
+  ],
+  "$defs": {
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node", "attempt", "key", "version"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^r-[0-9]{17}-[a-z0-9]{5}$" },
+        "kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$" },
+        "code": { "type": "integer", "enum": [100, 200, 201, 300, 400, 409, 410, 412, 422, 423, 429, 500, 503] },
+        "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "attempt": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "key": { "type": "string", "minLength": 3 },
+        "version": { "type": "integer", "minimum": 1 },
+        "lease_token": { "type": "string" },
+        "note": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "sha40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "name": { "type": "string", "enum": ["coq-test", "coq-lint", "coq-go", "coq-bearings", "coq-jenkins", "coq-map"] },
+    "platform": { "type": "string", "enum": ["linux/arm64", "linux/amd64"] },
+    "input": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["sha", "name", "version", "platforms", "inputs_hash", "base", "binaries", "containerfile"],
+          "properties": {
+            "kind": { "const": "image.config" },
+            "code": { "const": 100 },
+            "node": { "const": "N-04" },
+            "sha": { "$ref": "#/$defs/sha40" },
+            "name": { "$ref": "#/$defs/name" },
+            "version": { "type": "string", "pattern": "^[0-9A-Za-z._-]+$" },
+            "platforms": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "$ref": "#/$defs/platform" }, "contains": { "const": "linux/arm64" } },
+            "inputs_hash": { "$ref": "#/$defs/sha256" },
+            "base": { "type": "string", "pattern": "@sha256:[0-9a-f]{64}$" },
+            "containerfile": { "type": "string", "pattern": "^(ci/images/[a-z-]+/Containerfile|ci/image/Containerfile|lint/Containerfile|ci/jenkins/Containerfile)$" },
+            "binaries": {
+              "type": "array",
+              "items": {
+                "type": "object", "required": ["name", "version", "sha256"],
+                "properties": {
+                  "name": { "type": "string" }, "version": { "type": "string" },
+                  "sha256": { "type": "object", "properties": { "arm64": { "$ref": "#/$defs/sha256" }, "amd64": { "$ref": "#/$defs/sha256" } }, "required": ["arm64"] }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "output": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["name", "version", "inputs_hash", "manifest_digest", "per_platform", "checksums_verified", "pushed_at"],
+          "properties": {
+            "kind": { "const": "image" },
+            "code": { "const": 201 },
+            "node": { "const": "N-22" },
+            "name": { "$ref": "#/$defs/name" },
+            "version": { "type": "string" },
+            "inputs_hash": { "$ref": "#/$defs/sha256" },
+            "manifest_digest": { "$ref": "#/$defs/digest" },
+            "per_platform": {
+              "type": "array", "minItems": 1,
+              "items": {
+                "type": "object", "required": ["platform", "digest", "built_on", "build_log", "duration_s"],
+                "properties": {
+                  "platform": { "$ref": "#/$defs/platform" },
+                  "digest": { "$ref": "#/$defs/digest" },
+                  "built_on": { "type": "string", "enum": ["cluster", "host"] },
+                  "build_log": { "type": "string" },
+                  "duration_s": { "type": "number", "minimum": 0 }
+                }
+              }
+            },
+            "checksums_verified": { "const": true },
+            "pushed_at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" }
+          }
+        }
+      ]
+    },
+    "failed": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["name", "version", "inputs_hash", "reason", "log"],
+          "properties": {
+            "kind": { "const": "image.failed" },
+            "code": { "enum": [422, 500] },
+            "node": { "const": "N-22" },
+            "name": { "$ref": "#/$defs/name" },
+            "version": { "type": "string" },
+            "inputs_hash": { "$ref": "#/$defs/sha256" },
+            "reason": { "type": "string", "enum": ["checksum", "build-step", "smoke", "infrastructure"] },
+            "log": { "type": "string" },
+            "partial": { "type": "array", "items": { "type": "object", "properties": { "platform": { "$ref": "#/$defs/platform" }, "digest": { "$ref": "#/$defs/digest" } } } }
+          }
+        }
+      ]
+    }
+  }
+}

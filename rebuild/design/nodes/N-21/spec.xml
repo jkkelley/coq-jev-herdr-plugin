@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Node volume N-21 Factory namespace. Written by the G4 spec-author seat, 2026-10-14T04:39Z UTC, against brief C and dag.md section 3 row N-21.
+     Validated by rebuild/design/check.sh against rebuild/design/schema/ once the shared author lands them. -->
+<volume id="N-21" kind="node-spec" node="N-21" group="G4" name="Factory namespace" version="1.0.0" issued="2026-10-14T04:39:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: namespace.manifest</entry>
+    <entry ref="output">Output record: namespace.ready</entry>
+    <entry ref="mechanism">Mechanism: the manifests, the fence, the canary</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and the report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-21"/>
+    <dag href="../../dag.md#3-every-node" row="N-21"/>
+    <schema href="record.schema.json"/>
+    <sibling node="N-20" href="../N-20/spec.xml#N-20">Jenkins as code</sibling>
+    <sibling node="N-22" href="../N-22/spec.xml#N-22">Image build</sibling>
+    <sibling node="N-23" href="../N-23/spec.xml#N-23">Suite planner</sibling>
+    <sibling node="N-24" href="../N-24/spec.xml#N-24">Pod run</sibling>
+    <sibling node="N-25" href="../N-25/spec.xml#N-25">Gate status post</sibling>
+    <sibling node="N-26" href="../N-26/spec.xml#N-26">Main verify pipeline</sibling>
+    <shared href="../../shared/status-codes.xml#status-codes">Status code map</shared>
+    <shared href="../../shared/principles.xml#no-cog">No cog principle</shared>
+    <shared href="../../shared/state-store.xml#records">State store record envelope and tables</shared>
+    <shared href="../../shared/failure-cases.xml#failure-cases">Failure cases</shared>
+  </pointers>
+
+  <section id="purpose" title="Purpose">
+    <s>N-21 gives the factory's suite pods a namespace of their own, coq-factory, fenced so that a suite storm cannot starve the live tenants, a pod cannot read a secret, and a pod can reach only GitHub and GHCR.</s>
+    <s>The ruling is D23, card C53: own factory namespace with quota, low priority, no secrets, egress to GitHub and GHCR (03-DECISIONS.md section 25).</s>
+    <s>The facts it answers: no ResourceQuota or LimitRange on any node; the Jenkins agent Role reads secrets; nine leaked kaniko-ghcr-* secrets sit in the namespace the pods run in today; Jenkins and most platform pods share worker-01 (L10 sections 4, 5.3 and 5.4; L07 section 3).</s>
+    <s>Input to output: a namespace.manifest record (a gitops commit) starts it; a namespace.ready record ends it; N-24 and N-26 read the newest namespace.ready before any pod is asked for.</s>
+  </section>
+
+  <section id="input" title="Input record: namespace.manifest">
+    <record kind="namespace.manifest" code="100" schema="record.schema.json#/$defs/input">
+      <s>Written by the GitHub poll (N-04) when the homelab-gitops main sha changes under apps/coq-factory/ or argocd-apps/workloads/coq-factory*.</s>
+      <field name="gitops_sha" type="string" required="true">The homelab-gitops commit.</field>
+      <field name="manifest_hash" type="string" required="true">sha256 over the kustomize build of apps/coq-factory at that commit (computed by the poll with kustomize build, no cluster call).</field>
+      <field name="objects" type="array" required="true">Kind and name of every object in the build, so the check knows the expected set.</field>
+      <field name="egress_cidrs_hash" type="string" required="true">sha256 of apps/coq-factory/egress-cidrs.json, the GitHub ranges the NetworkPolicy allows.</field>
+    </record>
+    <s>Idempotency key: repo plus gitops_sha.</s>
+  </section>
+
+  <section id="output" title="Output record: namespace.ready">
+    <record kind="namespace.ready" code="201" schema="record.schema.json#/$defs/output">
+      <field name="gitops_sha" type="string" required="true">The commit the live namespace was checked against.</field>
+      <field name="argo_revision" type="string" required="true">The revision Argo reports synced and healthy for Application coq-factory.</field>
+      <field name="quota" type="object" required="true">The live ResourceQuota hard values: pods, requests.cpu, requests.memory, limits.memory.</field>
+      <field name="limit_range" type="object" required="true">Live defaults and maxima per container.</field>
+      <field name="priority_class" type="object" required="true">Name coq-factory-low and its value.</field>
+      <field name="service_account" type="object" required="true">name coq-pod, automount false, can_get_secrets false (from a SelfSubjectAccessReview impersonating it).</field>
+      <field name="policies" type="array" required="true">The NetworkPolicy names present: coq-factory-default-deny, coq-factory-egress-github, coq-factory-egress-dns.</field>
+      <field name="pull_secret" type="object" required="true">ExternalSecret ghcr-pull-secret status Ready and the secret's resourceVersion.</field>
+      <field name="canary" type="object" required="true">The canary pod result: github_fetch ok, example_blocked ok, duration_s.</field>
+      <field name="check_log" type="string" required="true">The attempt's log path.</field>
+    </record>
+    <s>On failure after three attempts the node writes namespace.unready (500) with the failed lines, and N-28 posts one card.</s>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the manifests, the fence, the canary">
+    <s>The namespace is an Argo Application coq-factory (argocd-apps/workloads/coq-factory.yaml) with its own AppProject coq-factory whose destinations are namespace coq-factory only and whose clusterResourceWhitelist allows exactly PriorityClass and Namespace; the source is apps/coq-factory/ (plain kustomize, no Helm, no AVP, because nothing here holds a secret value).</s>
+    <step n="1" id="m-ns">Namespace coq-factory with labels pod-security.kubernetes.io/enforce=restricted, pod-security.kubernetes.io/warn=restricted, and app.kubernetes.io/part-of=coq-factory; the pod template in N-24 carries the fields restricted requires (seccompProfile RuntimeDefault, allowPrivilegeEscalation false, capabilities drop ALL, runAsNonRoot).</step>
+    <step n="2" id="m-quota">ResourceQuota coq-factory: pods 10, requests.cpu 4500m, requests.memory 3Gi, limits.memory 10Gi; the numbers are 4 case pods at 1000m and 1Gi plus their jnlp sidecars at 100m and 256Mi, plus two spare slots for the canary and a spec-book check, on a cluster with about 8 unrequested cores (L10 section 8 item 1).</step>
+    <step n="3" id="m-limits">LimitRange coq-factory: per container default request cpu 500m memory 256Mi, default limit memory 1Gi, max cpu 2 memory 2Gi, so a template that forgets resources still lands inside the quota and never above.</step>
+    <step n="4" id="m-prio">PriorityClass coq-factory-low, value -100, globalDefault false, preemptionPolicy Never, description "factory suite pods yield to every tenant"; the pod template names it, so under pressure the scheduler starves a suite pod before a tenant pod.</step>
+    <step n="5" id="m-sa">ServiceAccount coq-pod with automountServiceAccountToken false and no RoleBinding of any kind; the pod template sets automountServiceAccountToken false again; Role coq-factory-pod-runner (pods, pods/exec, pods/log, pods/attach: get list watch create delete patch; events: list; no secrets, no configmaps) bound by RoleBinding to ServiceAccount jenkins:jenkins-controller (N-20 step 4) so Jenkins can run pods here and nothing else.</step>
+    <step n="6" id="m-secret">ExternalSecret ghcr-pull-secret in coq-factory, a copy of argocd-apps/infrastructure/jenkins-eso/externalsecret-ghcr.yaml with its own SecretStore coq-factory-ssm-store and a ServiceAccount coq-factory-eso-sa for the SSM read; the kubelet reads the secret to pull images, and no pod service account can (step 5).</step>
+    <step n="7" id="m-net">Three NetworkPolicies: coq-factory-default-deny (podSelector all, policyTypes Ingress and Egress, no rules); coq-factory-egress-dns (egress to kube-dns in kube-system on UDP and TCP 53); coq-factory-egress-github (egress TCP 443 to the CIDR list in apps/coq-factory/egress-cidrs.json rendered into the policy by ci/bin/egress-policy.sh render; the list is the git, web, api and packages ranges of https://api.github.com/meta). Ingress from the Jenkins controller's JNLP connection is not needed because the agent dials out to the controller service on 50000 and 8080: add coq-factory-egress-jenkins (egress TCP 8080 and 50000 to namespace jenkins, pod app=jenkins).</step>
+    <step n="8" id="m-cidr">ci/bin/egress-policy.sh diff reads api.github.com/meta (3 attempts, 10 s timeout each) and compares with egress-cidrs.json; on the daily tick (N-06) the Go service runs it; a difference opens a pull request on homelab-gitops with the new list as its one file (system-authored, kind mechanical), so the ranges track GitHub's changes by a merge, never by hand.</step>
+    <step n="9" id="m-check">ci/bin/namespace-check.sh: after Argo reports Synced and Healthy at gitops_sha it reads every object in the expected set, runs a SelfSubjectAccessReview as system:serviceaccount:coq-factory:coq-pod for get secrets (must be no), reads the ExternalSecret condition Ready, and runs the canary: one pod from ci/pod/canary.pod.yaml in coq-factory that executes git ls-remote https://github.com/jkkelley/coq-jev-herdr-plugin HEAD (must succeed within 30 s) and curl --max-time 10 https://example.com (must fail), and exits 0 only when both hold; the pod has activeDeadlineSeconds 120 and the script deletes it on every exit.</step>
+    <mermaid>
+flowchart LR
+  G[gitops commit under apps/coq-factory] --> P[N-04 writes namespace.manifest 100]
+  P --> A{Argo Synced and Healthy at that sha within 15 min?}
+  A -- no, 3 attempts --> U[namespace.unready 500, one card]
+  A -- yes --> O[objects present: quota, limits, prio, SA, policies, pull secret]
+  O --> S[can coq-pod get secrets? must be no]
+  S --> C[canary pod: github reachable, example.com blocked]
+  C -- both hold --> R[namespace.ready 201]
+  C -- a line FAILED, 3 attempts --> U
+  R --> N24[N-24 pods may run]
+  R --> N26[N-26 full set may run]
+    </mermaid>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <s>A merged gitops pull request is the only trigger; the poll (N-04) sees it on the next tick and writes namespace.manifest.</s>
+    <s>N-07 dispatches the check as a system job with a lease (key node:N-21:gitops_sha) when a namespace.manifest has no namespace.ready or namespace.unready for its sha; the same comparison runs at service start, so nothing depends on memory.</s>
+    <s>The daily tick (N-06) also dispatches a re-check against the newest gitops_sha even when a namespace.ready exists, with key node:N-21:gitops_sha:YYYYMMDD, so drift in the live cluster (a deleted quota, a hand-added RoleBinding) is found within a day and reported as namespace.unready; selfHeal in Argo repairs declared objects, and the re-check catches what Argo does not own.</s>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait id="w1"><on>Argo sync of Application coq-factory to Synced and Healthy at gitops_sha.</on><timeout>PT15M per attempt, polled every 20 s through the kube API.</timeout><fallback>Attempt fails; 3 attempts one tick apart; then namespace.unready 500 with the Argo conditions and one card.</fallback></wait>
+    <wait id="w2"><on>ExternalSecret ghcr-pull-secret reaching condition Ready (ESO refresh 168 h, first sync within a minute).</on><timeout>PT5M, polled every 10 s.</timeout><fallback>Attempt fails with "pull-secret: FAILED not ready"; 3 attempts; then unready.</fallback></wait>
+    <wait id="w3"><on>The canary pod reaching Succeeded.</on><timeout>PT3M (activeDeadlineSeconds 120 plus scheduling slack), polled every 5 s.</timeout><fallback>A pod stuck Pending past PT2M counts as "canary: FAILED unschedulable" with the pod events in the log; the pod is deleted; attempt fails; 3 attempts; then unready.</fallback></wait>
+    <wait id="w4"><on>api.github.com/meta in egress-policy.sh diff.</on><timeout>10 s per call, 3 calls.</timeout><fallback>The diff is skipped for the day and a counter increments; the policy keeps yesterday's list; after 7 skipped days an alert (N-41) fires.</fallback></wait>
+    <s>The check job's stall bound is PT30M, enforced by N-12; a stalled check is killed, its lease revoked and the attempt counted.</s>
+  </section>
+
+  <section id="retries" title="Retries, recovery and the report">
+    <s>Every kube API call retries 3 times with backoff 2 s, 4 s, 8 s before it is a failed line.</s>
+    <s>The check runs up to 3 attempts per gitops_sha with N-11's backoff; the fourth outcome is namespace.unready 500 with the failed lines and one card, deduped on node:N-21:gitops_sha.</s>
+    <s>The canary pod is deleted on every exit path of the script, including a kill: the script traps EXIT and the pod carries activeDeadlineSeconds, so a dead check leaves at most one pod that ends itself within two minutes; the daily cleanup (section state-paths) reaps any leftover.</s>
+    <s>A namespace.unready is terminal for its sha; a newer gitops commit or a ruling re-enters at N-03.</s>
+  </section>
+
+  <section id="many-agents-at-once" title="Many agents at once">
+    <s>Readers: N-24 asks for pods and N-26 asks for a full run only after reading the newest namespace.ready; the record is immutable and keyed by sha, so N readers agree on the same precondition.</s>
+    <s>Pods at once: the quota, the LimitRange and the Jenkins containerCap (8) bound how many suite pods exist whatever the number of gate runs the Go service dispatches; a pod refused by the quota is a Pending pod, which N-24 treats as infrastructure and climbs its ladder, and the Go service keeps at most two gate runs in flight (N-23 section many-agents) so the quota is rarely hit.</s>
+    <s>Two checks on two gitops shas: the newer wins; the older's lease is revoked with 410 by N-07; two Go service instances cannot both hold the lease (fencing token, 409 on the stale write).</s>
+    <s>Two canaries: the canary pod name carries the gitops sha12 and the attempt, so two checks never share a pod; the quota's pods 10 leaves room for both.</s>
+    <s>Hand edits in the cluster by anyone: Argo selfHeal reverts declared objects within its poll; undeclared additions are found by the daily re-check and reported, never silently kept.</s>
+    <s>Collision answer in one line: one lease per sha, immutable records, quota as the physical bound, newest sha wins, drift reported daily.</s>
+  </section>
+
+  <section id="status-codes" title="Status codes this node emits">
+    <emits code="100" name="ACCEPTED" kind="namespace.manifest">Nobody acts; N-07 dispatches the check.</emits>
+    <emits code="201" name="PASSED" kind="namespace.ready">N-24 and N-26 read it as their precondition.</emits>
+    <emits code="409" name="CONFLICT" kind="record.conflict">Nobody acts; the stale writer stops.</emits>
+    <emits code="410" name="SUPERSEDED" kind="check.superseded">Nobody acts; a newer gitops sha replaced this check.</emits>
+    <emits code="500" name="STALLED or DEAD" kind="namespace.unready">N-28 posts one card; N-24 and N-26 write 423 until a newer namespace.ready exists.</emits>
+    <emits code="423" name="BLOCKED" kind="namespace.blocked">Written by N-24 or N-26 when no namespace.ready 201 exists; one card per cause.</emits>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path p="$COQ_STATE/ci/namespace-check/YYYY/MM/&lt;gitops_sha12&gt;-&lt;attempt&gt;.log" cleanup="ci/bin/cleanup-ci-state.sh --what namespace-check --older-than 30d [--apply]">One log per attempt with every assertion line and the canary output.</path>
+    <path p="cluster: namespace coq-factory, pods named coq-canary-*" cleanup="ci/bin/cleanup-cluster.sh --what factory-pods --older-than 2h [--apply]">Deletes finished or stuck pods older than the age in coq-factory; dry-run lists them.</path>
+    <path p="cluster: namespace coq-factory (the whole namespace)" cleanup="ci/bin/cleanup-cluster.sh --what factory-namespace [--apply]">Only for retiring the factory: deletes the Argo Application with the resources finalizer first, then the namespace, in that order (L10 section 8 item 8); refuses while any gate.run is in flight.</path>
+    <path p="homelab-gitops: apps/coq-factory/, argocd-apps/workloads/coq-factory.yaml" class="tracked" retention="never" acts="owner" cleanup="none: tracked source, removed by a pull request">The source of truth; not state.</path>
+    <s>Every script prints its plan without --apply, acts only with --apply, retries each deletion 3 times and exits 4 listing what remains; N-45 registers them.</s>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <in from="N-04" href="../N-04/spec.xml#N-04" drawn="false">namespace.manifest is written by the GitHub poll of homelab-gitops; the DAG draws no edge into N-21 because the input is a commit.</in>
+    <out to="N-24" href="../N-24/spec.xml#N-24">namespace.ready is the precondition of every suite pod.</out>
+    <out to="N-26" href="../N-26/spec.xml#N-26">namespace.ready is the precondition of the full-set run on main.</out>
+  </section>
+
+  <section id="checklist" title="Checklist with proofs">
+    <item><check>ResourceQuota, LimitRange and PriorityClass exist with the values in section mechanism.</check><proof>namespace-check.sh lines "quota: ok", "limitrange: ok", "priorityclass: ok coq-factory-low -100" in the log named by namespace.ready.</proof></item>
+    <item><check>ServiceAccount coq-pod cannot get secrets and has no RoleBinding.</check><proof>Line "sa coq-pod: ok automount=false can-get-secrets=no bindings=0".</proof></item>
+    <item><check>Default-deny plus the three allow policies exist and the canary proves them: GitHub reachable, example.com blocked.</check><proof>Lines "policies: ok 4" and "canary: ok github=ok example=blocked".</proof></item>
+    <item><check>ghcr-pull-secret is synced by ESO into coq-factory and a suite pod can pull.</check><proof>Line "pull-secret: ok Ready" and the canary's image pull event in the log.</proof></item>
+    <item><check>Pod Security enforce=restricted is on the namespace and the N-24 template passes it.</check><proof>Line "pss: ok restricted" and the canary (which uses the same securityContext) admitted without a warning.</proof></item>
+    <item><check>The jenkins-controller service account can create pods in coq-factory and nothing else.</check><proof>Lines "can-i create pods as jenkins-controller: ok yes" and "can-i get secrets as jenkins-controller: ok no".</proof></item>
+    <item><check>The egress CIDR list is data in gitops and a diff opens a pull request, never a hand edit.</check><proof>git ls-files in homelab-gitops shows apps/coq-factory/egress-cidrs.json; the first system-authored pull request url in the daily tick's record.</proof></item>
+    <item><check>A namespace.ready 201 exists for the current gitops main sha.</check><proof>The record id on the machine screen for N-21.</proof></item>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <s>The Go service: kubeconfig for ServiceAccount coq-reconciler with get and list on applications in argocd, get and list on resourcequotas, limitranges, serviceaccounts, rolebindings, networkpolicies, externalsecrets in coq-factory, get on priorityclasses, create and delete on pods in coq-factory limited by a resourceNames-free Role but with the LimitRange as the ceiling, create on selfsubjectaccessreviews and subjectaccessreviews; GitHub token with read on homelab-gitops and pull-request create for the CIDR bump.</s>
+    <s>Jenkins controller: pods, pods/exec, pods/log in coq-factory only (step 5); no secrets anywhere once N-20 removes cluster-admin.</s>
+    <s>Suite pods: service account coq-pod with no token mounted; egress to GitHub ranges, DNS and the Jenkins service; nothing else.</s>
+    <s>Seats: may edit apps/coq-factory/ only inside a ticket declaring those files; no kube access of any kind.</s>
+    <s>The owner: kubectl as homelab-admin for break glass; a change is reverted by selfHeal or reported by the daily re-check.</s>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <s>Status call fields for N-21: newest namespace.ready sha and age, quota used versus hard (pods, cpu, memory) read on every scheduler tick, canary duration p95, egress diff skipped days.</s>
+    <s>Alerts (N-41): namespace.unready; quota used at 100 percent for more than PT10M (a stuck pod); egress diff skipped 7 days; Pod Security violation events in coq-factory (an image or template drift).</s>
+    <s>Map (N-38): the N-21 machine lamp green on 201, red on unready; the stats screen shows pods in coq-factory as a belt throughput counter.</s>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <step n="R1" id="r-first">First bring-up: the gitops pull request adds apps/coq-factory and the Application; after merge, nothing else is typed; the Go service's poll and check produce namespace.ready; the proof is the record.</step>
+    <step n="R2" id="r-cidr">GitHub range change: the daily diff opens the pull request; a reviewer seat is not needed for a system-authored one-file change (shared seat-contract clause mechanical-pr); the machine merge (N-09) lands it on green.</step>
+    <step n="R3" id="r-contention">Measured contention (tenant pod evictions or latency alerts while suites run): lower the quota in gitops first; only if that fails cut a ticket for D23 option C, a tainted node, which the owner rules.</step>
+    <step n="R4" id="r-cleanup">Cleanup: ci/bin/cleanup-cluster.sh --what factory-pods --older-than 2h; ci/bin/cleanup-ci-state.sh --what namespace-check --older-than 30d; ci/bin/cleanup-cluster.sh --what factory-namespace to retire (refuses while a gate.run is in flight).</step>
+    <step n="R5" id="r-retire">Retiring the namespace: Application with finalizer first, AppProject in a later commit, namespace last (L10 section 8 item 8 lessons).</step>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <cite href="rebuild/investigation/03-DECISIONS.md#25-d23-factory-pods-on-a-shared-cluster-isolation-and-quota">D23 facts, options and the recommendation B.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl#C53">Ruling C53.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#4-what-works">Node allocatable, Argo pattern, ESO pattern, agent Role facts.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#54-small-leaks-and-drift">Nine leaked kaniko secrets; the retirement lesson.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#8-what-to-carry-forward">Item 1 headroom, item 8 the app-of-apps deletion order.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#3-where-it-lives">No ResourceQuota, no NetworkPolicy outside argocd and calico-apiserver; the cluster read.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#5-what-broke-and-why">Item 10 capacity risk on a three-Pi cluster.</cite>
+    <cite href="rebuild/investigation/S02-k8s-jobs-tekton-jenkins.md#8-what-to-carry-forward">Kueue judged not needed; a restricted namespace with a narrow Role, quotas and default-deny as the sandbox pattern.</cite>
+    <cite href="ci/pod/herdr-suite.pod.yaml">The proven pod lines this namespace is shaped around: no token, no service links, runAsUser 1000, pull secret.</cite>
+    <cite href="~/projects/homelab-gitops/argocd-apps/infrastructure/jenkins-eso/externalsecret-ghcr.yaml">The ExternalSecret copied for coq-factory.</cite>
+    <cite href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V04 a pod per case, hermetic, no token, public fetch by sha.</cite>
+    <cite href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V11 git as the only write path for cluster config.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013194800-ci-gate-design.md#security">The security section: public repository, no fork code, no page key, no AWS profile in the runner.</cite>
+  </section>
+
+  <section id="rejected" title="Rejected with reason">
+    <rejected source="03-DECISIONS.md D23 option A, share namespace jenkins"><reason>Pods keep a path to secrets and no quota bounds them; ruled out by C53.</reason></rejected>
+    <rejected source="03-DECISIONS.md D23 option C, a tainted Pi for the factory"><reason>Loses two thirds of the cluster for slow serial suites; kept as runbook R3 only after measured contention.</reason></rejected>
+    <rejected source="DNS-name egress policy (allow github.com by name)"><reason>Calico open source has no domain selector; that needs Calico Enterprise or Cilium, a cluster change outside this rebuild; CIDRs from api.github.com/meta tracked by a daily diff do the job.</reason></rejected>
+    <rejected source="S02 Kueue for queueing and reserved slots"><reason>Kueue's supported range starts above this cluster's 1.32 and a fixed slot count already does the job (S02 section 8).</reason></rejected>
+    <rejected source="Per-build secrets created inside a build (jenkins-shared-lib buildKaniko.groovy:53)"><reason>Leaks on abort (nine leaked); the namespace has one ESO-synced pull secret and no build may create a secret here (the runner Role has no secrets verb).</reason></rejected>
+    <rejected source="Pod Security baseline instead of restricted"><reason>The pod template already runs non-root with no privileges; restricted costs three fields and closes escalation by construction.</reason></rejected>
+  </section>
+
+</volume>

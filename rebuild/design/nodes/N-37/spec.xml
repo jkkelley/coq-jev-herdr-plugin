@@ -1,0 +1,293 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Node volume N-37 Panel binding registry. Spec-author seat, group G6 Command center map, round 1, 2026-10-14 UTC.
+  The enforcement of "nothing exists outside the panel" (owner 2026-10-14, memory factorio-map-replaces-board). No em dash appears in this file.
+-->
+<!-- N-37 round 3, 2026-10-14T05:09:51Z, by the G6 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers (verdict in
+     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-37):
+     the pointers element carried shared hrefs into rebuild/design/shared/, a directory no author had written,
+     at anchors no volume declared (record-envelope where N-01 declares envelope; record-kinds where N-18 declares
+     record-kinds-registry; and anchors only this group needed, never declared as needs).
+     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
+     The fix: every shared dependency is a <need volume= anchor=> in a shared-needs element with no href, using the anchor
+     name the owning node declares; the pointers element points at dag.md sections 3, 7 and 8 and at #shared-needs, all of which exist;
+     the status-codes map attribute points at #shared-needs for the same reason; prose that named a shared anchor now names the need.
+     Rejected: writing shared/ from this seat (one shared author owns it; two authors on one file is the collision the book forbids)
+     and leaving the hrefs to resolve later (a failing volume blocks the book now).
+     Cost: a need is not a live pointer until shared/ lands; check.sh matches each need against the shared volumes then. -->
+<volume id="N-37" kind="node-spec" node="N-37" group="G6" version="1.1.0" issued="2026-10-14" written="2026-10-14T05:09:51Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG edges</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="panels">The panel inventory of the five screens</entry>
+    <entry ref="mechanism">Mechanism: registry file, generator, binding.check</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries: 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup scripts</entry>
+    <entry ref="look">The look: the registry carries the look tokens too</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-37"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schemas of this node</sibling>
+    <sibling href="../N-35/spec.xml#N-35">N-35 Hello page deploy</sibling>
+    <sibling href="../N-36/spec.xml#N-36">N-36 Art pipeline</sibling>
+    <sibling href="../N-38/spec.xml#N-38">N-38 Map screen</sibling>
+    <sibling href="../N-39/spec.xml#N-39">N-39 Machine screen</sibling>
+    <sibling href="../N-40/spec.xml#N-40">N-40 Stats screen</sibling>
+    <sibling href="../N-41/spec.xml#N-41">N-41 Alerts screen</sibling>
+    <sibling href="../N-42/spec.xml#N-42">N-42 Controls screen</sibling>
+    <shared href="../../dag.md#3-every-node" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 1 (one concern, generated files never hand-edited) and rule 3; the check runs in the suite, nobody types it</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">Each screen's panels in its own volume; registry generated; N-14 file claims refuse a second in-flight ticket</principle>
+    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <dag href="../../dag.md#2-the-dag">
+      <in node="N-43" href="../N-43/spec.xml#N-43" record="code.table record (every code names who acts and its lamp)"/>
+      <in kind="source" href="../N-38/spec.xml#panels" record="screen spec volumes: every panel of the five screens (#panels in N-38 to N-42)"/>
+      <out node="N-38" href="../N-38/spec.xml#N-38" record="binding record and binding.check"/>
+      <out node="N-39" href="../N-39/spec.xml#N-39" record="binding record and binding.check"/>
+      <out node="N-40" href="../N-40/spec.xml#N-40" record="binding record and binding.check"/>
+      <out node="N-41" href="../N-41/spec.xml#N-41" record="binding record and binding.check"/>
+      <out node="N-42" href="../N-42/spec.xml#N-42" record="binding record and binding.check"/>
+    </dag>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares, using the anchor name of the node that owns the thing (envelope and cas from N-01, record-kinds-registry from N-18, codes from N-43, break-glass from N-27). check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for binding.bound 201; binding.unbound 422; binding.failed 500. Nobody acts on 422 by hand: the build fails and the ticket that added the panel is the one that binds it.</need>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="lamp">A lamp column per code (green, amber or red) so a screen draws a code without a table of its own; N-37 generates bindings from it and every screen volume (N-38 to N-42) draws its chips from it.</need>
+    <need kind="index" volume="index.xml" anchor="nodes">index.xml carries a nodes element listing every DAG node id with its name and group; the machine registry (machines.json) is generated from it, so a node added to the DAG without a machine fails binding.check.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="envelope">The record envelope every kind carries: id, at (UTC), code, kind, node, attempt where one applies; this node reads and writes records only inside it.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-idempotency">idempotency(key PRIMARY KEY, seq, response JSON, at); a seen key replays its response with code 200.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="record-kinds-registry">The record kinds registry (every kind with its code set, writer node and schema path, loaded by N-43 with the code table) carries the kinds this node reads and writes: screen.spec (the #panels section of each screen volume), binding.record (keyed by sha), code.table (N-43); every panel kind in bindings.json must be a kind in this registry.</need>
+    <need kind="n-14">The file-claim table refuses a second in-flight ticket on tools/map/registry/** or on any one screen volume, so no two tickets touch one registry file (one file, one in-flight ticket).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="no-cog">No cog: every wait has a timeout and a fallback, nothing starts by an agent typing, no agent is a gate; the system drives (brief C rule 3).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="multi-agent-first">Many agents at once from the first line: append-only records, compare-and-swap, idempotent retryable steps, conflicts that report as 409 (brief C rule 2).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="three-attempts">Every automated step retries up to 3 times with backoff, then recovers and reports as a record; a dead record becomes exactly one card.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="artifacts-out-of-repo">Every state path this node names lives under $COQ_STATE, never in the repository, and has a cleanup script registered with N-45 (brief C rule 6, C35).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="one-file-one-in-flight">No PR file clashes: each screen's panels live in that screen's own volume, and the registry files are generated, never hand-edited.</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <s>Make "nothing exists outside the panel" a rule the build enforces: every panel of the five screens is bound to one store record kind, every DAG node is a machine on the map, and a page or a node that breaks either fails the build (owner: "everything hooks into this, without that, it should exist, how to enforce this?", memory factorio-map-replaces-board).</s>
+    <s>The registry is data, not prose: tools/map/registry/bindings.json for panels and tools/map/registry/machines.json for nodes, both checked by tools/map/bin/binding-check.mjs in lint and in the gate, and both read by the screens at build time so a screen cannot draw an unregistered panel.</s>
+  </purpose>
+
+  <input id="input" record="screen.spec" schema="record.schema.json#/$defs/screen.spec">
+    <s>The input is the set of #panels sections of the five screen volumes (N-38 to N-42), each panel with an id, the record kind it shows, the fields it reads, its staleness bound and its empty, loading, error and offline texts, plus the node list of index.xml and the code table of N-43.</s>
+    <s>At build time the input is materialised as a screen.spec record by the generator reading those volumes, so the registry is generated from the spec book and the spec book stays the truth (D14, D24).</s>
+  </input>
+
+  <output id="output" record="binding.record" schema="record.schema.json#/$defs/binding.record">
+    <s>One binding record per build: the panel to record-kind table, the node to machine table, the atlas hash pinned (N-36), the code table hash pinned (N-43), and the binding.check result: 201 bound, or 422 unbound naming every offending panel or node.</s>
+    <s>A 422 fails the build: the gate is red for the commit (N-25), the image is not built, no tier is promoted (N-48).</s>
+  </output>
+
+  <panels id="panels">
+    <s>Every panel id below appears in a screen volume's #panels section; the registry is generated from them and this list is the index a reader uses to find the owner of a panel.</s>
+    <screen id="map" volume="../N-38/spec.xml#panels">
+      <panel id="nav.top" kind="page.state"/>
+      <panel id="nav.tabs" kind="page.state"/>
+      <panel id="stamp.as-of" kind="pushed.frame"/>
+      <panel id="map.canvas" kind="map.state"/>
+      <panel id="map.ore" kind="source.inventory"/>
+      <panel id="map.tally" kind="map.state"/>
+      <panel id="map.legend" kind="code.table"/>
+      <panel id="map.selection" kind="selection"/>
+      <panel id="map.signal-lamp" kind="hold.flag"/>
+      <panel id="map.alert-chip" kind="alert"/>
+      <panel id="map.frame-report" kind="frame.report"/>
+    </screen>
+    <screen id="machine" volume="../N-39/spec.xml#panels">
+      <panel id="machine.header" kind="node.state"/>
+      <panel id="machine.identity" kind="node.state"/>
+      <panel id="machine.status-heartbeat" kind="heartbeat"/>
+      <panel id="machine.timeout-fallback" kind="node.spec"/>
+      <panel id="machine.ticket-seat" kind="lease"/>
+      <panel id="machine.io" kind="node.state"/>
+      <panel id="machine.checklist" kind="checklist.state"/>
+      <panel id="machine.last-records" kind="record"/>
+      <panel id="machine.last-alerts" kind="alert"/>
+      <panel id="machine.runbook" kind="node.spec"/>
+      <panel id="machine.actions" kind="selection"/>
+    </screen>
+    <screen id="stats" volume="../N-40/spec.xml#panels">
+      <panel id="stats.header-window" kind="counters.frame"/>
+      <panel id="stats.tickets-per-stage" kind="counters.frame"/>
+      <panel id="stats.seat-bringup" kind="counters.frame"/>
+      <panel id="stats.stalls-per-node" kind="counters.frame"/>
+      <panel id="stats.counters" kind="counters.frame"/>
+      <panel id="stats.cost" kind="counters.frame"/>
+      <panel id="stats.rail-progress" kind="rail.panel"/>
+    </screen>
+    <screen id="alerts" volume="../N-41/spec.xml#panels">
+      <panel id="alerts.header-filter" kind="alert"/>
+      <panel id="alerts.table" kind="alert"/>
+      <panel id="alerts.resolved" kind="alert"/>
+      <panel id="alerts.key" kind="code.table"/>
+      <panel id="alerts.ack" kind="alert.ack"/>
+    </screen>
+    <screen id="controls" volume="../N-42/spec.xml#panels">
+      <panel id="controls.header" kind="health"/>
+      <panel id="controls.signal-lamp" kind="hold.flag"/>
+      <panel id="controls.halt-lever" kind="control.action"/>
+      <panel id="controls.watcher-lamp" kind="watcher.alive"/>
+      <panel id="controls.build-mode" kind="build-mode.state"/>
+      <panel id="controls.health" kind="health"/>
+      <panel id="controls.open-cards" kind="card"/>
+      <panel id="controls.last-action" kind="ruling"/>
+      <panel id="controls.break-glass" kind="break-glass.token"/>
+    </screen>
+    <common>
+      <panel id="state.empty" kind="page.state"/>
+      <panel id="state.loading" kind="page.state"/>
+      <panel id="state.error" kind="page.state"/>
+      <panel id="state.offline" kind="pushed.frame"/>
+    </common>
+  </panels>
+
+  <mechanism id="mechanism">
+    <diagram format="mermaid"><![CDATA[
+flowchart LR
+  V[screen volumes N-38..N-42 #panels] --> G[registry-gen.mjs]
+  X[index.xml node list] --> G
+  C[N-43 code.table] --> G
+  A[N-36 sprite.sheet atlas hash] --> G
+  G --> B[tools/map/registry/bindings.json]
+  G --> M[tools/map/registry/machines.json]
+  B --> K[binding-check.mjs]
+  M --> K
+  S[screen source: data-panel attributes] --> K
+  T[record kinds registry, a shared need] --> K
+  K -->|201| R[binding.record bound, build continues]
+  K -->|422| F[binding.record unbound, gate red, no image, no promotion]
+]]></diagram>
+    <step n="1" where="repo: tools/map/bin/registry-gen.mjs">
+      <s>Reads the five screen volumes' #panels sections (XML), the index.xml#nodes list (a declared need of this volume) and the code table, and writes bindings.json and machines.json deterministically (sorted keys, stable ids); the committed files must equal the generated ones, so a hand edit fails the check.</s>
+    </step>
+    <step n="2" where="repo: tools/map/registry/bindings.json">
+      <s>One entry per panel: id, screen, kind (a record kind of shared/record-kinds.xml, a view of nodes/N-31/spec.xml#views or a static kind of #static-kinds, with the class named in the entry), fields read, staleness bound in seconds, texts for empty, loading, error classes (not-found, timeout, validation) and offline, and the wireframe frame id it was approved as (C32).</s>
+    </step>
+    <step n="3" where="repo: tools/map/registry/machines.json">
+      <s>One entry per DAG node: id, name, group, grid cell (column, row inside the group's region), sprite (a Krastor machine body from the atlas), belts out (edges from dag.md), input and output record kinds, runbook anchor, spec anchor. Generated from index.xml and dag.md; a node missing here is a 422.</s>
+    </step>
+    <step n="4" where="repo: tools/map/bin/binding-check.mjs">
+      <s>Checks, in order: generated equals committed; every data-panel attribute in tools/map/src/** is in bindings.json; every bindings.json entry is used by exactly one screen source; every kind is one of three classes: a record kind of shared/record-kinds.xml (a store record a node writes), a view of nodes/N-31/spec.xml#views (state the service derives from the log and pushes by subscription), or a static kind of #static-kinds below (registry data generated at build, never a store record); rebuild/design/check.sh C20 runs the same rule over the screen volumes, so a panel bound to a kind nothing produces fails the book before it fails the build; every node in index.xml has a machine; every machine sprite exists in the pinned atlas; every code the screens map to a lamp exists in the code table; the code table hash and atlas hash in the registry equal the pinned ones. Each failure is one line with the panel or node id and the rule; exit 1 on any.</s>
+    </step>
+    <static-kinds id="static-kinds">
+      <s>Kinds a panel may bind that are data generated into the bundle at build time, not records and not views; each names its generator and source, and the panel's staleness bound is the build, not the stream.</s>
+      <static-kind name="node.spec" generator="tools/map/bin/registry-gen.mjs" source="every node volume's waits, retries, runbook and checklist sections and its spec and runbook anchors (index.xml#nodes)">The Machine screen's timeout-fallback, runbook and checklist item list (the checklist ticks come from the checklist.state view).</static-kind>
+      <static-kind name="source.inventory" generator="tools/map/bin/registry-gen.mjs" source="the sources elements of index.xml and the investigation files they name, counted per file">The Map's ore patches: one per investigation source with its note count.</static-kind>
+      <s>Rejected: storing node.spec and source.inventory as records so the binding rule could stay "every kind exists in the store schema"; both change only with a merge, the log would carry a copy of the book on every build, and two sources of the same text drift (gap review R-03, 2026-10-14).</s>
+    </static-kinds>
+    <step n="5" where="gate">
+      <s>The check runs in make -C tools/map lint, in the suite planner's map suite on any commit touching tools/map/** or rebuild/design/** (so a spec change that adds a panel without a screen is caught), and in the spec book check (N-46) as the panel-binding element test the memory rule asks for.</s>
+    </step>
+  </mechanism>
+
+  <start id="start">
+    <s>A commit under tools/map/** or rebuild/design/nodes/N-3[8-9]|N-4[0-2]/** plans the map suite (N-23); the pod runs binding-check.mjs and the result reaches the sha through the gate (N-25). Locally the same check runs in lint. Nobody types it as a gate.</s>
+    <s>The binding record on the host is written by N-24's artifact import when the map suite's build ends (nodes/N-24/spec.xml#m-mirror: the map suite entry lists binding.record in its records, nodes/N-23/spec.xml#output), the same path the art pipeline uses.</s>
+  </start>
+
+  <waits id="waits">
+    <wait name="map-suite-pod" timeout="PT5M" fallback="pod.run 504, infrastructure retry by N-24, then 500 binding.failed">
+      <s>The check is a few seconds of Node; the bound is generous and measured.</s>
+    </wait>
+    <wait name="store-schema-present" timeout="PT0S" fallback="422 unbound with rule schema-missing">
+      <s>The check needs the record kinds registry (shared need shared/state-store.xml#record-kinds-registry) at the commit; a missing or unparsable schema fails at once.</s>
+    </wait>
+    <wait name="atlas-pinned" timeout="PT0S" fallback="422 unbound with rule atlas-missing">
+      <s>The registry pins an atlas hash; if N-36 has no 201 sprite.sheet for that hash, the build cannot draw and fails.</s>
+    </wait>
+  </waits>
+
+  <retries id="retries">
+    <s>Infrastructure failures retry by N-24's ladder up to 3; a 422 is never retried, because the input is wrong. After 3 infrastructure failures the node writes 500 binding.failed and N-28 builds one card.</s>
+  </retries>
+
+  <many-agents id="many-agents">
+    <s>Readers: a screen builder reads the #panels of its own screen volume and this volume's #mechanism; the registry is one generated file per concern, read by all screens at build time.</s>
+    <s>Writers: bindings.json and machines.json are generated, never hand-edited; the sources are the screen volumes, each owned by one node directory, so five authors add panels in five files and the generator merges. Two tickets that add panels to two screens never touch one file; a ticket that adds a panel to a screen already in flight is refused at N-14 by the file claim on that screen volume.</s>
+    <s>Record kinds are declared in the shared registry (shared/state-store.xml#record-kinds-registry, a need of this volume); a screen that needs a new kind cuts a ticket against that shared volume, never adds the kind in the registry.</s>
+    <s>Store writes: the binding record is keyed by commit sha with the sha as the idempotency key; a duplicate import is a 409 at N-01 reported as 200.</s>
+    <s>Two builds on two commits produce two independent records; the newest 201 on main is what N-48 promotes, so a race between branches cannot bind a page to the wrong registry.</s>
+  </many-agents>
+
+  <status-codes id="status-codes" map="spec.xml#shared-needs">
+    <code value="201" name="binding.bound" kind="binding.record" lamp="green">Every panel bound, every node a machine, atlas and code table pinned; build continues.</code>
+    <code value="422" name="binding.unbound" kind="binding.record" lamp="red">A panel, node, kind, sprite, code or hash failed a rule; gate red; the committing ticket's seat result is blocked and N-11 retries with a fresh seat and the check output attached.</code>
+    <code value="500" name="binding.failed" kind="binding.record" lamp="red">Three infrastructure failures; one card.</code>
+  </status-codes>
+
+  <state-paths id="state-paths" cleanup-registry="../N-45/spec.xml#N-45">
+    <path p="$COQ_STATE/map/registry/check/YYYY/MM/&lt;sha&gt;.txt" cleanup="tools/map/bin/cleanup.sh --registry-logs --older-than 30d">The check output per commit, imported from the CI artifact.</path>
+    <path p="store table binding_records" cleanup="N-45 retention class: keep the newest 100">Binding records.</path>
+    <s>The registry files themselves live in the repository because they are generated code the build depends on, not runtime state.</s>
+  </state-paths>
+
+  <look id="look" requirement="owner 2026-10-14 ~04:45Z: all views carry the Krastorio look">
+    <s>bindings.json also carries the look tokens every screen reads (tools/map/registry/look.json, generated from inventory section 4 values): panel, inside, deep, edge, caption, orange, glow, green, red, blue, disabled, shadow, dirt, corner 8, header 24, slot 40, button 108 x 28, fonts Titillium Web and IBM Plex Mono with their sizes. A screen that hardcodes a colour or a font fails binding-check (rule look-token: every colour literal in tools/map/src/** must come from look.json).</s>
+    <s>Check: binding-check.mjs rule look-token; look-check.mjs on the rendered page (N-38 #look).</s>
+  </look>
+
+  <checklist id="checklist">
+    <item><check>registry-gen.mjs generates bindings.json, machines.json and look.json from the spec book and the committed files equal the output.</check><proof>make -C tools/map lint output showing the generated-equals-committed rule passing.</proof></item>
+    <item><check>Every panel in the five screen volumes is in bindings.json with a kind from the store schema.</check><proof>binding-check exit 0 and its line count equal to the panel count in #panels.</proof></item>
+    <item><check>Every DAG node in index.xml is a machine in machines.json with a sprite in the pinned atlas.</check><proof>binding-check rule node-machine passing; 52 entries.</proof></item>
+    <item><check>An unbound panel fails the build.</check><proof>A test fixture adding data-panel="map.unknown" produces 422 in make -C tools/map test and a red gate on a test branch.</proof></item>
+    <item><check>A node without a machine fails the build.</check><proof>A test fixture removing N-45 from machines.json produces 422.</proof></item>
+    <item><check>A hardcoded colour fails the build.</check><proof>A test fixture with #ff0000 in a source file produces 422 with rule look-token.</proof></item>
+    <item><check>The check runs in the gate for tools/map/** and rebuild/design/** commits.</check><proof>The suite planner mapping entry (N-23) and one pod.run record for the map suite on a commit.</proof></item>
+    <item><check>Every state path has a cleanup script in the registry.</check><proof>N-45 entries and a dry-run listing.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <s>Build seat: writes tools/map/bin/registry-gen.mjs, binding-check.mjs, tests and the generated files only by running the generator.</s>
+    <s>Screen seats (N-38 to N-42): write their own screen volume's #panels and their own tools/map/src/&lt;screen&gt;/** files; never the registry by hand.</s>
+    <s>Nobody adds a record kind in the registry; kinds come from the shared registry (shared/state-store.xml#record-kinds-registry) through its own ticket.</s>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <s>The Map screen draws N-37 as a machine whose lamp is the latest binding record's code; a 422 on main is an alert (N-41) and one card, because a page bound to a missing kind would show a blank panel to the owner.</s>
+    <s>At run time every panel that receives no record of its kind within its staleness bound shows the stale chip (503) rather than old data; that run-time check is in the screens, and this registry supplies the bound.</s>
+  </monitoring>
+
+  <runbook id="runbook">
+    <s>Regenerate: node tools/map/bin/registry-gen.mjs --write; check: node tools/map/bin/binding-check.mjs; both read-only on the store.</s>
+    <s>Cleanup: tools/map/bin/cleanup.sh --registry-logs --older-than 30d, listing first, --apply to delete.</s>
+    <s>Adding a panel: add it to the screen volume's #panels with a kind that exists, regenerate, build the screen with data-panel set, run lint; the check tells you what is missing.</s>
+  </runbook>
+
+  <sources id="sources">
+    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/factorio-map-replaces-board.md">Enforcement of nothing outside the panel: node volume without a panel binding fails spec validation; machines exist only as store records keyed by node id.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/wireframe-brief.json">Screens, their data and primary actions; nav pattern tabs; states.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-plan.json">50 approved frames (C32) the registry names per panel.</src>
+    <src href="~/.bearings/coq-stable/answers.jsonl">C32 approve all five, 2026-10-14T03:31:18Z.</src>
+    <src href="rebuild/investigation/03-DECISIONS.md#14-d12-owner-surface-who-produces-cards-and-who-reads-messages">D12: the view is a render of the board data from the system lane.</src>
+    <src href="../../dag.md#3-every-node">Record names kind.state; every record carries a status code.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md#4-gui-style-extraction">Look tokens.</src>
+  </sources>
+
+  <rejected id="rejected">
+    <item reason="a hand-kept list drifts from the screens and the DAG; generation from the spec book keeps D14 true">A hand-written panel list in markdown.</item>
+    <item reason="a runtime check would show the owner a blank panel first; the build is the earliest point to fail">Checking bindings only at page load.</item>
+    <item reason="kinds in two places would disagree; the store schema is the one source">Declaring record kinds inside bindings.json.</item>
+    <item reason="the old /board data.json (tools/bearings/AGENTS.md, the factory board) was built by report/loop and polled; D20 and D21 replace it with pushed store records">Binding panels to /board/data.json.</item>
+  </rejected>
+
+</volume>

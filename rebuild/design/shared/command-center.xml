@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: the command center (the Factorio map) as a pointer volume. The screens, hosting, art and bindings
+     are specified in the G6 node volumes N-35 to N-42; this volume is the one place that points at all of them, carries
+     the owner's six notes as requirements with their proof, and names the look. Validated by check.sh. -->
+<volume id="command-center" kind="shared" version="1.0.0" issued="2026-10-14T06:30:00Z" timezone="UTC" title="Command center: pointer volume">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, the eight G6 volumes</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="screens">The five screens and where each is specified</entry>
+    <entry ref="hosting">Hosting: the existing Jenkins, ghcr, gitops, Argo path</entry>
+    <entry ref="art">Art: original only</entry>
+    <entry ref="look">The look: Krastorio tokens</entry>
+    <entry ref="requirements">The owner's requirements and their proofs</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="status-codes.xml#lamp" kind="shared"/>
+    <sibling href="principles.xml#krastorio-look" kind="shared"/>
+    <sibling href="seat-contract.xml#screenshot-seat" kind="shared"/>
+    <sibling href="state-store.xml#view-counters" kind="shared"/>
+    <sibling href="failure-cases.xml#forge-unreachable" kind="shared"/>
+    <sibling href="rejected-with-reason.xml#design-items" kind="shared"/>
+    <dag href="../dag.md#2-the-dag"/>
+    <shared href="../nodes/N-35/spec.xml#N-35" role="hosting">Hello page deploy</shared>
+    <shared href="../nodes/N-36/spec.xml#N-36" role="art">Art pipeline</shared>
+    <shared href="../nodes/N-37/spec.xml#N-37" role="bindings">Panel binding registry</shared>
+    <shared href="../nodes/N-38/spec.xml#N-38" role="screen">Map screen</shared>
+    <shared href="../nodes/N-39/spec.xml#N-39" role="screen">Machine screen</shared>
+    <shared href="../nodes/N-40/spec.xml#N-40" role="screen">Stats screen</shared>
+    <shared href="../nodes/N-41/spec.xml#N-41" role="screen">Alerts screen</shared>
+    <shared href="../nodes/N-42/spec.xml#N-42" role="screen">Controls screen</shared>
+    <shared href="../nodes/N-32/spec.xml#N-32" role="page">The bearings page the map lives inside</shared>
+    <shared href="../nodes/N-48/spec.xml#N-48" role="promotion">Tier promotion with the screenshot proof</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>The G6 node volumes already carry the map screens and hosting, so this is a pointer volume (brief C: shared/command-center.xml if no node volume carries the map, else a pointer volume); it exists so an agent asked for "the command center" reads one page and follows one pointer per concern.</s>
+    <s>The map replaces /board on every tier; nothing exists outside the panel; every panel binds to a store record (N-37 enforces it: an unbound panel fails the build).</s>
+  </purpose>
+
+  <screens id="screens">
+    <s>Map (N-38): DAG nodes as machines with status and heartbeat, queues as belts with depth, seats in flight as inserters (one per live lease row), the HOLD or GOFACTORY lamp; panels at nodes/N-38/spec.xml#panels; frame budget map.frame_budget_ms 16.</s>
+    <s>Machine (N-39): one node's input, output, attempt, lease with its fencing token, heartbeat age and last records; panels at nodes/N-39/spec.xml#panels.</s>
+    <s>Stats (N-40): the counters view (state-store.xml#view-counters) as a production statistics panel; panels at nodes/N-40/spec.xml#panels.</s>
+    <s>Alerts (N-41): every record whose code acts is owner (status-codes.xml#acts), stalls, dead, rejected main, unhealthy, with ack and the escalation bound; panels at nodes/N-41/spec.xml#panels.</s>
+    <s>Controls (N-42): hold flag, build-mode state, the watcher lamp (the C32 defect fix: a card cannot post unless the tier's watcher is alive), health, and the one-time break glass; panels at nodes/N-42/spec.xml#panels.</s>
+    <s>Mobile first: iPhone 16 Pro Max, 430 CSS px, safe areas; the Krastorio feel on web and mobile alike; the screenshot seat proves both widths (seat-contract.xml#screenshot-seat).</s>
+  </screens>
+
+  <hosting id="hosting">
+    <s>Jenkinsfile with jenkins-shared-lib, image on ghcr.io/jkkelley, app entry in homelab-gitops, Argo auto-sync, HAProxy ingress, Lightsail front door, name map.gatehouse.click, hello page first (N-35); the stable promotion is a gitops tag bump with Argo sync status readable by the tick.</s>
+    <s>The tailnet front door for the phone (PR 186, PR 187; N-34) is the current state of the bearings page and carries the live map at /board with the owner key; the map's public front door is Lightsail and serves a static build with no stream, no owner data and no key until a tunnel node exists (ruling in nodes/N-38/spec.xml#mechanism step 2; later item rejected-with-reason.xml#public-map-stream). The browser transport for both is server-sent events (nodes/N-31/spec.xml#transport-choice).</s>
+    <s>Credentials by placement: the ghcr push token and the gitops deploy key live in Jenkins credentials and the Argo cluster; no seat and no Go service process holds them (seat-contract.xml#credential-by-placement).</s>
+  </hosting>
+
+  <art id="art">
+    <s>No Wube-derived or BiusArt sprite ever ships; 260 high-confidence Krastor originals (art inventory class 1) may ship with the attribution text of the inventory's section 6; belts, inserters, lamps and pipes have no safe source and are original art (art.gap 300 cuts an originals ticket as data, N-36).</s>
+    <s>The atlas is built by a pod from the inventory record (N-36 through N-23 suite entry art and N-24); the atlas sha256 is the idempotency key; 422 art.rejected is never retried.</s>
+  </art>
+
+  <look id="look">
+    <s>Every owner-facing view carries the Krastorio 2 and Factorio GUI look, values only (principles.xml#krastorio-look carries the token table as CSS custom properties); the lamp colours of status-codes.xml#lamp map to --k2-green, --k2-accent (amber) and --k2-red.</s>
+    <s>N-48's look check and N-32's Playwright assertions read the tokens from the page; a tier promotion carries the screenshot at 1440 and 430 as proof (memory screenshot-every-page-change: picture first, read by the owner, flaws named, then the card).</s>
+  </look>
+
+  <requirements id="requirements">
+    <s>Owner notes 1 to 6 (build-notes.md), each with its proof: 1 the map is the board, proof /board redirects to the map on every tier (N-32 Playwright); 2 one to one Factorio down to the images, proof the look check and the art record with no class 2 to 4 file (N-36, N-48); 3 60 fps pushed state, proof frame.report p95 under map.frame_budget_ms (N-38); 4 every panel bound to a record, proof binding.check passing with zero unbound (N-37); 5 phone first, proof the 430 screenshot on every promotion (N-48); 6 nothing outside the panel, proof the route table of N-32 has no other owner-facing route.</s>
+    <s>The wireframe (C32 approval; scratchpad/wireframe and build-plan.json with 50 frames over five screens) is the source of the panel list; dev then uat then stable, each tier promoted by N-48 without stopping the watcher. Who gates a page change is decided once in nodes/N-48/spec.xml#owner-confirm: the owner confirms on the uat card a change to the owner-locked page assets (page.html, theme.css) before it merges; every other change, the map bundle included, merges on the machine verdict and reaches stable with an after-the-fact card carrying the screenshot.</s>
+  </requirements>
+
+  <many-agents id="many-agents">
+    <readers>Eight G6 authors and every screen read this page by anchor; it holds no state and no registry, so there is nothing to collide on.</readers>
+    <writers>Each screen's panels live in its own volume (principles.xml#one-file-one-in-flight); the registries (bindings.json, machines.json) are generated by N-37 from the screen volumes and index.xml#nodes, never hand-edited; this pointer volume changes only when a screen volume is added or renamed.</writers>
+    <collision>Two tickets touching one screen volume or tools/map/registry/** are refused at readiness by the file claim (N-14 need declared by N-37).</collision>
+  </many-agents>
+
+  <sources id="sources">
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-notes.md" note="owner notes 1 to 6"/>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-plan.json" note="50 frames, five screens"/>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md" note="sections 3 (classes), 4 (GUI style), 5 (sprite groups), 6 (attribution)"/>
+    <source path="rebuild/investigation/S01-argo.md" anchor="" note="Argo auto-sync on the existing gitops path (D07)"/>
+    <source path="rebuild/investigation/L10-cluster-and-gitops.md" anchor="3-where-it-lives" note="the cluster, HAProxy and Lightsail path"/>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="" note="the page the map lives inside"/>
+    <source path="tools/bearings/AGENTS.md" anchor="phone-on-the-tailnet-front-door" note="PR 186 and 187"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/factorio-map-replaces-board.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/command-center-visual-bar.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md"/>
+  </sources>
+</volume>

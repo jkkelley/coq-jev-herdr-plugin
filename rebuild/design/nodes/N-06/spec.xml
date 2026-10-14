@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-06 Service unit, clock and health. Node volume of the Factory Rebuild spec book, group G1 Store and leases.
+     Written 2026-10-14T04:34Z UTC by the G1 spec-author seat, round 1, against brief C.
+     Canonical by owner ruling C42; older specs cited below are sources, never authority (D14). -->
+<!-- N-06 round 2, 2026-10-14T05:01:33Z, by the G1 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers (verdict in
+     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-06):
+     every shared pointer (five per volume, into the shared directory) pointed at a directory no author had written and at anchors no volume declared.
+     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
+     The fix: shared needs are declared in <shared-needs> by volume and anchor with no href, so nothing points at a file
+     that does not exist, and the principles this node obeys point at dag.md sections 7 and 8, which do exist.
+     Rejected: writing shared/ from this seat (the brief gives shared/ to one shared author; two authors on one file is the
+     one-file, one-in-flight-ticket collision the book forbids) and leaving the hrefs to resolve later (a failing volume blocks the book now).
+     Cost: a declared need is not a live pointer until shared/ lands; check.sh matches each need's volume and anchor against the
+     shared volumes when they land, so no hand edit happens here. Cross-group edges point at volumes that now exist, and at
+     index.xml#<node-id> for a node whose volume has not landed, because the index entry is the one anchor every node is guaranteed. -->
+<volume id="N-06" kind="node-spec" node="N-06" group="G1" version="1.1.0" written="2026-10-14T05:01:33Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG and principles</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: unit.start</entry>
+    <entry ref="output">Output records: tick and health</entry>
+    <entry ref="mechanism">Mechanism: one systemd user unit, one clock, five tick loops, one health answer</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-06"/>
+    <sibling href="record.schema.json" role="schema">JSON schema of unit.start in and tick, health out</sibling>
+    <sibling href="../N-01/spec.xml#N-01" role="node">N-01 State store</sibling>
+    <sibling href="../N-02/spec.xml#N-02" role="node">N-02 Lease service</sibling>
+    <sibling href="../N-03/spec.xml#N-03" role="node">N-03 Ticket intake and readiness</sibling>
+    <sibling href="../N-04/spec.xml#N-04" role="node">N-04 GitHub poll</sibling>
+    <sibling href="../N-05/spec.xml#N-05" role="node">N-05 Backups</sibling>
+    <shared href="../../dag.md#3-every-node" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 2 (no cog: N-06 owns the clock, nothing starts by an agent typing) and rule 7 (herdr is the owner's window; every system process is its own supervised unit)</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, 409 that reports</principle>
+    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <shared href="../../shared/cut-over.xml#step-system" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+  <shared-needs id="shared-needs">
+    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares. check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for unit.started 100; tick (subkinds scheduler, poll, backup, stall, health, daily) 100; health.recovered 200; reload.applied 200; tick.missed 500; unit.crashloop 500; unit.duplicate 500; reload.failed 500; health.unhealthy 503. Owner-acts: unit.crashloop; health.unhealthy with reason store, disk or crashloop; tick.missed at three in an hour; three watchdog restarts in an hour.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-ticks">Entities tick:&lt;subkind&gt; (n, at, interval_seconds, class for backup) written by compare-and-swap once per tick; the tick record carries subkind, n, at.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-health">Entity health:service (status, reasons[], counters, version, config_hash, at) and table health_history(at, status, reasons JSON) appended on transition; pruned by cleanup-logs.sh --health.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="system-before-agents">The system comes up before humans and agents; the unit is 100 percent operational and checked before the line is kicked (global rule: design first, system first).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="no-cog">Every wait has a timeout and a fallback; nothing starts by an agent typing; the clock is the only trigger.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="monitor-never-stops">The owner's always-on monitor never stops on a halt: ticks, health, backups, the poll and the push transport keep running under hold (memory rule bearings-stable-is-the-only-always-on-monitor).</need>
+    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">tick intervals scheduler 5, poll 30, stall 15, health 15, backup 21600, daily 00:05Z; drain_seconds 30, reload_seconds 10, health.check_seconds 2, health.keep_days 30, logs.keep_days 14; env COQ_STATE, COQ_REPO, XDG_RUNTIME_DIR, the secrets file path.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="crash">Restart=always in 5 s, no start limit; unit.started with reason; three in ten minutes is unit.crashloop and one card; the unit keeps restarting because a dark line is worse than a noisy one.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="duplicate-instance">A second binary started by hand: flock on STATE/run/service.lock refuses, exit 3, unit.duplicate 500 naming the holder pid.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="suspend-gap">WSL suspend and wake: tickers fire once each, the tick counter shows the gap, tick.missed once per subkind.</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <is>N-06 is the machine that starts the factory: one systemd user unit runs the one Go binary; the binary owns the one clock; the clock emits every tick the other nodes run on (scheduler, poll, backup, stall, daily); and the unit answers health for the whole service so monitoring is the system reporting on itself.</is>
+    <is>It is the root of the DAG's time: no node polls on its own timer and no agent starts anything; the system comes up before humans and agents, like starting the machines before the line is kicked (global rule: design first, system first).</is>
+    <is-not>It is not herdr: herdr is the owner's window only (D08, C46); no pane hosts this process, and no node calls herdr to schedule, route or store. It is not a container: the small cut runs the binary on the host under systemd (D22, C38), not in Podman.</is-not>
+    <decisions>D01, D08 (C46: every system process is its own supervised unit), D22 (C38), D09 (C41: small cut, keep interfaces and the fake clock), SPEC-16 sh-unit (one supervised unit, domain loops as goroutines) kept.</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="unit.start" schema="record.schema.json#/$defs/unit_start">
+      <who>systemd --user, at boot through linger, on crash through Restart=always, or on `systemctl --user start coq-service` by the owner.</who>
+      <field name="unit">coq-service.service.</field>
+      <field name="reason">boot, restart, manual, watchdog.</field>
+      <field name="env">COQ_STATE, COQ_REPO, XDG_RUNTIME_DIR and the secrets file path; nothing else; every tunable is in scheduler/config/scheduler.json (SPEC-16 l-config kept: a missing key is exit 3 naming the key).</field>
+    </record>
+    <also kind="SIGTERM" from="systemd stop or restart" note="drain, then exit 0 within drain_seconds"/>
+    <also kind="SIGHUP or `scheduler ctl reload`" from="the owner or N-43" note="reload tables and config; the clock and the ticks are not restarted"/>
+    <also kind="flag:hold entity" from="N-29 and N-42" note="read every tick; a hold stops dispatch and merges, never ticks, health or backups (bearings-stable-is-the-only-always-on-monitor: a halt never stops monitoring)"/>
+  </input>
+
+  <output id="output">
+    <record kind="tick" schema="record.schema.json#/$defs/tick">
+      <field name="subkind">scheduler (tick.scheduler_seconds 5), poll (forge.poll_seconds 30), backup (backup.interval_seconds 21600, with class), stall (stall.tick_seconds 15), daily (tick.daily_at 00:05Z).</field>
+      <field name="at">UTC from the service clock.</field>
+      <field name="n">A per-subkind counter that only grows since start, with the start id, so a late or doubled tick is detectable.</field>
+      <rule>Ticks are entities, not log records: the entity tick:SUBKIND is CAS-written every tick (version grows) and broadcast in-process to the node loops; the records log gets only tick.missed 500 (a tick late by two intervals) and tick.daily 100, because 17,280 scheduler ticks a day in the log would bury every real record and flood N-31.</rule>
+    </record>
+    <record kind="health" code="200 or 503" schema="record.schema.json#/$defs/health">
+      <field name="status">serving or not_serving, the grpc.health.v1 answer, plus the reason list when not serving.</field>
+      <field name="checks">store (N-01), forge (N-04 snapshot age), backup (N-05 age), leases (sweep age), ticks (every subkind's age), disk (free under STATE), unit (pid, started_at, version, config hash).</field>
+      <field name="counters">Every counter the six G1 nodes and the other service nodes expose, by name, reset at start (SPEC-16.I kept as the shape: counters live in the answer, no metrics server).</field>
+      <rule>health is an entity health:service CAS-written every health.tick_seconds 15 and pushed by N-31; the log gets health.unhealthy 503 and health.recovered 200 once per transition (latched), never per tick.</rule>
+    </record>
+  </output>
+
+  <mechanism id="mechanism">
+    <component name="unit">scheduler/host/systemd/coq-service.service, installed by `make -C scheduler install-unit` into ~/.config/systemd/user/: Type=notify, ExecStart=%h/.local/bin/coq-service run (the binary make build wrote, copied by install), Restart=always, RestartSec=5, StartLimitIntervalSec=0 (never give up: a crash loop is visible in health history, and giving up is the 9.5 h dark outage of L06 section 5.2 again), WatchdogSec=60 (the binary sends WATCHDOG=1 every 20 s from the tick loop, so a hung loop is killed and restarted by systemd, never by a pane reader), TimeoutStopSec=drain_seconds plus 10, EnvironmentFile=%h/.local/state/coq/coq-jev-herdr-plugin/config/service.env, KillMode=mixed. `loginctl enable-linger` is a runbook step so the unit starts at boot with no login.</component>
+    <component name="clock">core.Clock (scheduler/internal/core/interfaces.go) with the real implementation returning time.Now().UTC() and testkit.Clock for tests; every node receives the clock by injection; nothing calls time.Now directly (go vet rule in lint: a grep for time.Now outside clock.go fails the build).</component>
+    <component name="ticks">Package scheduler/internal/unit: one goroutine per subkind on a time.Ticker from the clock; each tick writes the entity tick:SUBKIND and sends on a per-subkind channel with a buffer of 1; a slow consumer coalesces ticks (level-triggered consumers do not need every tick, T03), and a consumer that has not drained in two intervals is reported tick.missed with the subkind.</component>
+    <component name="health">grpc.health.v1.Health on the control socket XDG_RUNTIME_DIR/coq/control.sock (mode 0600) plus Status (the SPEC-16 Scheduler service shape: Health, Status, Reload, Drain, Retry kept on the same proto, generated code regenerated by `make proto` in the build container). Every check is a function returning ok or a reason with a bound of health.check_seconds 2; a check over its bound is a reason itself.</component>
+    <mermaid id="m-start">sequenceDiagram
+  participant SD as systemd --user
+  participant U as coq-service run
+  participant ST as N-01 store
+  participant T as tick loops
+  participant H as health
+  SD->>U: ExecStart (boot by linger, or Restart)
+  U->>U: resolve STATE (state-root rule), load config (exit 3 on a missing key)
+  U->>ST: open, quick_check, migrate (3 attempts)
+  ST-->>U: SERVING or NOT_SERVING
+  U->>U: recover: N-02 leases, N-03 claims, N-05 temps, flag backup:running
+  U->>T: start scheduler, poll, backup, stall, daily loops
+  U->>H: serve control.sock, store.sock
+  U->>SD: READY=1
+  loop every 20 s
+    T->>SD: WATCHDOG=1
+  end
+  loop every 15 s
+    H->>ST: CAS health:service, latched transitions to the log
+  end
+  SD->>U: SIGTERM
+  U->>T: stop ticks
+  U->>ST: finish in-flight, checkpoint TRUNCATE, close
+  U->>SD: exit 0 within drain_seconds</mermaid>
+    <schedule>Scheduler 5 s, poll 30 s, stall 15 s, health 15 s, backup every 6 h with class tick, daily at 00:05Z (and backup class daily at the first backup tick after 03:00Z, monthly at the first daily of a month). All from config keys named in record.schema.json; a tick interval under 1 s or over a day is a config validation error at start.</schedule>
+    <hold>The entity flag:hold (set by N-29 from a control.action or a card) is read into memory on every scheduler tick; N-07 and N-09 check it before any dispatch or merge; ticks, health, backups, the forge poll and the push transport keep running under hold, because the owner's monitor never stops on a halt.</hold>
+    <counters>Every node registers counters by name at start; Status returns them all; a reset at start is itself a counter (unit.restarts_total is read from the health history in the store, so it survives restarts).</counters>
+  </mechanism>
+
+  <start id="start">
+    <rule>Nothing starts by an agent typing. systemd starts the unit at boot because linger is enabled; a crash is restarted in 5 s; a hang is killed by the watchdog and restarted. The owner's only hand action is the one-time install in the runbook.</rule>
+    <step n="1">Install once: `make -C scheduler install-unit` copies the binary to ~/.local/bin/coq-service, writes the unit file, runs `systemctl --user daemon-reload`, `enable --now`, and prints `loginctl enable-linger` if linger is off; the Makefile target is the one hand step and it is a script in the repository.</step>
+    <step n="2">Start sequence as in the diagram; unit.started 100 with version, config hash, STATE path and reason; READY=1 only after the store is SERVING and the sockets listen.</step>
+    <step n="3">A start that cannot open the store after 3 attempts still reaches READY=1 with health not_serving and reason store, so the health answer and the push to the owner's page work while the store does not (the monitor stays up when the line is down); N-28 raises one card.</step>
+    <step n="4">The old bash watchers (route.sh, flow.sh, policy.sh, the five watch scripts) are not started by anything once this unit is enabled; N-49 and N-50 retire their units and cache copies (04-UNLANDED section 8).</step>
+  </start>
+
+  <waits id="waits">
+    <wait name="store-open" on="N-01" timeout="3 x 5 s then not_serving" fallback="READY with health not_serving; card; the unit keeps retrying the open every health tick so a fixed disk recovers without a restart"/>
+    <wait name="tick-consumer" on="a node loop draining its tick channel" timeout="2 intervals" fallback="tick.missed 500 for the subkind; the tick is coalesced, never queued; health lists the slow subkind"/>
+    <wait name="health-check" on="each check function" timeout="health.check_seconds 2" fallback="the check reports timeout as its reason; the health answer is never blocked by one check"/>
+    <wait name="watchdog" on="the tick loop sending WATCHDOG=1" timeout="WatchdogSec 60" fallback="systemd kills and restarts; unit.started reason watchdog; three watchdog restarts in an hour is an owner-acts code through N-28"/>
+    <wait name="drain" on="in-flight work at SIGTERM" timeout="drain_seconds 30" fallback="exit anyway; systemd's TimeoutStopSec kills at drain plus 10; the store's WAL makes that safe"/>
+    <wait name="reload" on="config and tables reloading" timeout="reload_seconds 10" fallback="the old tables stay loaded; reload.failed 500 names the key; the ctl call returns the failure"/>
+  </waits>
+
+  <retries id="retries">
+    <rule>Every automated step retries up to 3 times, then recovers and reports.</rule>
+    <step name="open">3 attempts at start, then not_serving and one card, with the open retried every health tick thereafter (recovery without the owner when the cause clears).</step>
+    <step name="crash">Restart=always with RestartSec 5 and no start limit; each start appends unit.started with reason; three crashes in ten minutes is unit.crashloop 500, one card, and the unit keeps restarting because a dark line is worse than a noisy one (L06 section 5.2: the dead man's switch never fired in a 9.5 h outage).</step>
+    <step name="health-write">A CAS 409 on health:service (only possible after a restart overlap) is re-read and rewritten once; a store 503 skips this tick's write and the next tick writes.</step>
+    <step name="reload">A failed reload is reported and not retried by itself; the next `ctl reload` or SIGHUP tries again; the running tables are never half-replaced.</step>
+  </retries>
+
+  <many-agents id="many-agents">
+    <reading>Every node, screen and seat reads one health entity and the tick entities through the store or N-31; the Status RPC is read-only and serves any number of callers concurrently.</reading>
+    <working>One process is the rule: the unit file's single instance plus a flock on STATE/run/service.lock taken at start; a second binary started by hand exits 3 with unit.duplicate 500 before touching the store, so two clocks can never tick one store.</working>
+    <collision name="two-instances">A hand start while the unit runs: the flock refuses; the record names the pid that holds it.</collision>
+    <collision name="restart-during-tick">systemd restarts the unit while a scheduler tick dispatches: the dispatch is a lease plus an idempotent Put (N-02, N-07), so the new instance's first tick finds the lease live and does not dispatch twice (level-triggered compare of open work with live runs).</collision>
+    <collision name="tick-burst">The host sleeps and wakes (WSL suspend): the tickers fire once each, not once per missed interval (Go's Ticker drops ticks), the tick counter shows the gap, and tick.missed is reported once per subkind.</collision>
+    <collision name="hold-vs-dispatch">The owner sets hold during a tick: the flag is read at the start of the tick; a dispatch already past the check completes (it holds a lease and will finish); the next tick holds. Hold is a level, not an interrupt.</collision>
+    <collision name="reload-vs-tick">A reload swaps tables between ticks under a RWMutex; a tick in progress keeps the old pointer; the next tick sees the new.</collision>
+    <test>With testkit.Clock: 24 h of simulated ticks in under a second, with a suspend gap of 2 h, three injected crashes and two reloads: every subkind's counter is monotonic, exactly one tick.missed per subkind for the gap, health transitions appear once each in the log, and the lock refuses a second instance.</test>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="100" kind="unit.started" acts="nobody; N-51 counts restarts in the day's audit"/>
+    <emits code="100" kind="tick.daily" acts="N-51 (exit test), N-05 (daily class), N-45 (timer cleanups)"/>
+    <emits code="200" kind="health.recovered" acts="nobody; N-41 clears the alert"/>
+    <emits code="200" kind="reload.applied" acts="nobody; N-43 reads the loaded hash"/>
+    <emits code="500" kind="tick.missed" acts="N-06 itself (health reason); owner card at three in an hour"/>
+    <emits code="500" kind="unit.crashloop" acts="owner, one card from N-28"/>
+    <emits code="500" kind="unit.duplicate" acts="the person who typed the second start; the record says so"/>
+    <emits code="500" kind="reload.failed" acts="the caller; the config ticket is wrong"/>
+    <emits code="503" kind="health.unhealthy" acts="owner through N-28 when the reason is owner-acts (store, disk, crashloop); otherwise the named node's own fallback"/>
+    <rule>Every code above must exist in ../../shared/status-codes.xml#codes with the same meaning and actor.</rule>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path p="~/.config/systemd/user/coq-service.service" writer="make -C scheduler install-unit" cleanup="scheduler/host/bin/cleanup-unit.sh --apply: `systemctl --user disable --now coq-service`, remove the unit file and the binary copy; dry-run prints the three commands" registry="N-45"/>
+    <path p="~/.local/bin/coq-service" writer="make -C scheduler install-unit" cleanup="scheduler/host/bin/cleanup-unit.sh" registry="N-45"/>
+    <path p="STATE/run/service.lock, STATE/run/service.pid" writer="N-06 at start" cleanup="scheduler/host/bin/cleanup-run.sh removes them when no live pid holds the lock; refuses otherwise" registry="N-45"/>
+    <path p="STATE/config/service.env" writer="the owner, once (secrets: forge tokens)" retention="never" acts="owner" cleanup="kept on purpose; listed in the README so cleanup-run.sh skips it by name; only the owner removes it, by break glass" registry="N-45"/>
+    <path p="STATE/logs/service/unit.jsonl" writer="N-06 structured log (starts, ticks missed, health transitions, reloads)" cleanup="scheduler/host/bin/cleanup-logs.sh (logs.keep_days 14)" registry="N-45"/>
+    <path p="XDG_RUNTIME_DIR/coq/control.sock" writer="N-06 at start" cleanup="removed at drain; cleanup-run.sh removes a stale one" registry="N-45"/>
+    <path p="STATE/store/coq.db (entities tick:*, health:service, table health_history)" writer="N-06 through N-01" cleanup="health_history rows older than health.keep_days 30 are pruned by scheduler/host/bin/cleanup-logs.sh --health" registry="N-45"/>
+    <path p="journald: `journalctl --user -u coq-service`" writer="systemd" cleanup="journald's own retention; `journalctl --user --vacuum-time=14d` is in cleanup-logs.sh --journal" registry="N-45"/>
+  </state-paths>
+
+
+  <edges id="edges">
+    <in from="systemd --user" record="unit.start" href="spec.xml#input"/>
+    <out to="N-04" record="poll tick" href="../N-04/spec.xml#input"/>
+    <out to="N-05" record="backup tick with class" href="../N-05/spec.xml#input"/>
+    <out to="N-07" record="scheduler tick" href="../N-07/spec.xml#input"/>
+    <out to="N-12" record="stall tick" href="../N-12/spec.xml#input"/>
+    <out to="N-28" record="health record whose status maps to owner-acts" href="../N-28/spec.xml#input"/>
+    <out to="N-42" record="health and hold state for the controls frame" href="../N-42/spec.xml#input"/>
+    <out to="N-45" record="daily tick for timer cleanups" href="../N-45/spec.xml#input"/>
+    <out to="N-51" record="daily tick for the exit test" href="../N-51/spec.xml#input"/>
+    <also to="N-02 (sweep) and N-03 (evaluate)" record="stall tick and scheduler tick" note="in-group consumers; the drawn edges go through N-07 and N-12"/>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>The unit file has Type=notify, Restart=always, RestartSec=5, StartLimitIntervalSec=0, WatchdogSec=60, EnvironmentFile under STATE.</check><proof>`systemctl --user cat coq-service` saved in the test log; scheduler/host/tests asserts the keys.</proof></item>
+    <item><check>READY=1 is sent only after the store is SERVING and both sockets listen.</check><proof>Test with NOTIFY_SOCKET captured.</proof></item>
+    <item><check>WATCHDOG=1 is sent every 20 s from the tick loop; a blocked loop stops it.</check><proof>Test with a blocked loop and a captured NOTIFY_SOCKET: no ping after the block.</proof></item>
+    <item><check>Every subkind ticks at its configured interval and the tick entity's version grows by one per tick.</check><proof>Go test with testkit.Clock.</proof></item>
+    <item><check>A consumer slower than two intervals yields one tick.missed and coalesced ticks, never a queue.</check><proof>Go test.</proof></item>
+    <item><check>health:service is written every 15 s and transitions appear once each in the log.</check><proof>Go test: 100 ticks, 2 transitions, 2 records.</proof></item>
+    <item><check>Hold stops dispatch and merges only; ticks, health, backup and poll continue.</check><proof>Integration test with flag:hold set: N-07 dispatch count 0, tick counters growing.</proof></item>
+    <item><check>A second instance exits 3 with unit.duplicate.</check><proof>Script test starting the binary twice.</proof></item>
+    <item><check>SIGTERM drains within drain_seconds and exits 0; the WAL is checkpointed.</check><proof>Script test; wal file size 0 after exit.</proof></item>
+    <item><check>No time.Now outside the clock implementation.</check><proof>lint grep rule passes.</proof></item>
+    <item><check>Every state path above has its cleanup script, dry-run by default, registered in N-45.</check><proof>Each script run with no flags prints and exits 0; the registry lists them.</proof></item>
+    <item><check>The unit starts at boot without a login.</check><proof>`loginctl show-user $USER -p Linger` says yes; a reboot test shows unit.started reason boot in the log.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <actor name="systemd --user" may="start, stop, restart, watchdog-kill the unit"/>
+    <actor name="N-06 in-process" may="write tick and health entities, the lock and pid, notify systemd"/>
+    <actor name="N-29, N-42 (code)" may="set and clear flag:hold through a ruling or control.action record"/>
+    <actor name="N-43 (code)" may="call Reload after a status-code map commit"/>
+    <actor name="seat (the model)" may="`scheduler ctl health` read-only; never systemctl on this unit (the rendered seat settings deny it, N-13)"/>
+    <actor name="owner" may="install, enable, start, stop, restart; set hold from the Controls screen; break glass is the only path to stop the unit while the line runs, and the stop itself is recorded by the drain"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <gauge name="unit.uptime_seconds"/>
+    <gauge name="unit.restarts_total" note="from health_history, survives restarts" alarm="3 in ten minutes"/>
+    <gauge name="tick.age_seconds" by="subkind" alarm="over 2 intervals"/>
+    <counter name="tick.total" by="subkind"/>
+    <counter name="tick.missed_total" by="subkind"/>
+    <gauge name="health.status" note="1 serving, 0 not_serving"/>
+    <gauge name="health.reasons" by="check"/>
+    <gauge name="hold.active"/>
+    <gauge name="config.hash"/>
+    <surface>The Controls screen (N-42) shows the unit as the reactor: running, hold, build-mode, watcher lamp, health reasons; the Map (N-38) shows the clock as the belt drive; Alerts (N-41) shows health.unhealthy, unit.crashloop, tick.missed. The bearings page (N-32) shows staleness from the health entity's age, so a dead unit is visible as a stale page within one health interval.</surface>
+  </monitoring>
+
+  <runbook id="runbook">
+    <task name="install">`make -C scheduler build` then `make -C scheduler install-unit`; run the `loginctl enable-linger` line it prints if needed; `systemctl --user status coq-service` shows active (running).</task>
+    <task name="read health">`scheduler ctl health` (the grpc.health.v1 answer plus reasons) and `scheduler ctl status` (counters, ticks, tables, held and dead jobs).</task>
+    <task name="logs">`journalctl --user -u coq-service -f` for the process; STATE/logs/service/*.jsonl for structured lines by node.</task>
+    <task name="reload config or tables">Merge the config ticket; `scheduler ctl reload`; reload.applied names the hashes.</task>
+    <task name="hold the line">From the Controls screen (N-42) or `scheduler ctl hold set --reason ...` (recorded as a control.action through N-29); `hold clear` resumes; ticks and monitoring never stop.</task>
+    <task name="restart">`systemctl --user restart coq-service`; the drain finishes in-flight Puts; leases survive (N-02 recover); nothing is lost.</task>
+    <task name="upgrade the binary">`make -C scheduler build` then `make -C scheduler install-unit`, then restart; the version appears in unit.started.</task>
+    <task name="cleanup">scheduler/host/bin/cleanup-unit.sh, cleanup-run.sh, cleanup-logs.sh; dry-run first.</task>
+  </runbook>
+
+  <rejected id="rejected">
+    <item source="specs/scheduler/SPEC-16-scheduler-overview.xml#l-herdr" what="every long-running process is a labelled herdr pane; the container runs in one, the executor in one" reason="C46 ruled herdr is the owner's window only and every system process is its own supervised unit; RC6 named one herdr server hosting everything as a root cause"/>
+    <item source="specs/scheduler/SPEC-16-scheduler-overview.xml#DEC-scheduler-two-processes" what="the scheduler in a rootless Podman container with an executor on the host behind a unix socket" reason="the small cut (C41) runs one binary on the host under systemd; there is no herdr pane to type into, so the executor verb table has no job; builds and tests still run in Podman (l-make kept), the service does not"/>
+    <item source="scheduler/config/scheduler.json" what="belt.file and belt.stale_seconds as the liveness signal; seat.busy_regex and seat.done_regex screen reads" reason="liveness is systemd's watchdog plus the health entity's age; screen regexes are K04 and V08 violations (an LLM screen is not a probe)"/>
+    <item source="rebuild/investigation/L01-line-scripts.md#8-what-to-carry-forward" what="watchdog.timer as a separate dead man's switch unit" reason="item 10 is honoured by WatchdogSec in the same unit plus the bearings page staleness; a second unit that counts records was the one that never fired (L06 section 5.2); the exit test (N-51) is the outside-the-line timer that remains"/>
+    <item source="rebuild/investigation/04-UNLANDED.md#8-runtime-and-scripts-outside-the-repository" what="~/.cache/coq-watch/patrol-tick.sh and watchdog.sh as running line processes" reason="their probes are health checks here; the scripts are retired by N-49 under the LAND verdicts of WO-20261013-9617 and WO-20261013-bf70, which fold into this node"/>
+    <item source="scheduler/host/bin/run.sh" what="run.sh resolving the image digest and passing env into a container pane" reason="no container for the service; the digest pin survives for the pod images (N-22)"/>
+    <item source="rebuild/investigation/03-DECISIONS.md#24-d22-which-steps-stay-on-the-wsl-host-and-which-go-to-pods" what="the Go service as a cluster pod (option C)" reason="C38 ruled test steps in pods and the service on the host; the store is a host file (SQLite does not work over a network filesystem)"/>
+  </rejected>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="3-d01-control-plane-shape"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="10-d08-herdrs-role-and-version"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="11-d09-the-spec-16-go-scheduler-and-its-14-build-tickets"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="24-d22-which-steps-stay-on-the-wsl-host-and-which-go-to-pods"/>
+    <source path="rebuild/investigation/01-ROOT-CAUSES.md" anchor="rc1-the-code-exists-nothing-starts-it-so-an-agent-is-the-trigger"/>
+    <source path="rebuild/investigation/01-ROOT-CAUSES.md" anchor="rc6-one-herdr-server-hosts-every-seat-every-line-process-and-the-owner-page"/>
+    <source path="rebuild/investigation/00-INVENTORY.md" anchor="2-the-table" note="row J17: supervision and crash recovery: systemd units; restart is a non-event"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep" note="V08, V18"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal" note="T02, T03, T13"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="3-dropped-by-the-field-still-carried-here-kill" note="K04, K06, K12"/>
+    <source path="rebuild/investigation/L06-owner-retros-and-plans.md" anchor="52-one-herdr-server-holds-every-seat-and-every-line-process-2026-10-13-0332z" note="the dead man's switch never fired in a 9.5 h outage"/>
+    <source path="rebuild/investigation/L04-herdr.md" anchor="9-what-to-kill" note="herdr as supervisor killed"/>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="8-runtime-and-scripts-outside-the-repository"/>
+    <source path="specs/scheduler/SPEC-16-scheduler-overview.xml" anchor="sh-unit" note="one supervised unit, loops as goroutines, kept"/>
+    <source path="specs/scheduler/SPEC-16-scheduler-overview.xml" anchor="l-config" note="nothing hardcoded, kept"/>
+    <source path="specs/scheduler/SPEC-16-scheduler-overview.xml" anchor="l-first" note="system before agents, kept"/>
+    <source path="specs/scheduler/SPEC-16-scheduler-overview.xml" anchor="l-pure" note="injected clock, kept"/>
+    <source path="scheduler/api/scheduler/v1/scheduler.proto" anchor="Scheduler" note="Health, Status, Reload, Drain, Retry kept"/>
+    <source path="scheduler/internal/core/interfaces.go" anchor="Clock"/>
+    <source path="scheduler/internal/testkit/clock.go" anchor="Clock" note="the fake clock, kept"/>
+    <source path="scheduler/internal/core/status.go" anchor="StatusSnapshot" note="counters in the answer, no metrics server, kept"/>
+    <source path="scheduler/RUNBOOK.md" anchor="bring-up" note="environment variable names kept where they survive"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C46"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C38"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C41"/>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="no-cog"/>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="failure-cases"/>
+    <source path="~/.claude/CLAUDE.md" anchor="hard-rule-design-first-system-first-never-by-hand"/>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/bearings-stable-is-the-only-always-on-monitor.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-cog-system-drives.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+  </sources>
+</volume>

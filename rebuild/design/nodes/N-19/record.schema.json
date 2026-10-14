@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-19/record.schema.json",
+  "title": "N-19 Reviewer run: structured output and output records",
+  "description": "Input: the reviewer brief inside a seat run (bundle ../N-13/record.schema.json#/$defs/seat.bundle with target.pr and target.head_sha, plus a read-only workspace). The seat returns review.result as structured output (copied by N-13 into bundle output.schema.json). The launcher's post step writes review.passed or review.changes on the head sha.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "ticket_id": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
+    "observation": {
+      "type": "object",
+      "required": ["path", "line", "saw", "expected"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "line": { "type": "integer", "minimum": 1 },
+        "saw": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "expected": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "answers_prior": { "type": "string", "description": "the prior observation index this one follows up, on a re-review" }
+      }
+    },
+    "criterion": {
+      "type": "object",
+      "required": ["id", "evidenced"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^a[0-9]{1,2}$" },
+        "evidenced": { "type": "boolean" },
+        "evidence": { "type": "string", "maxLength": 500, "description": "the pull request body line or diff hunk that proves it" },
+        "gap": { "type": "string", "maxLength": 500, "description": "what is missing when evidenced is false" },
+        "observed_exit_on_main": { "type": "integer" },
+        "expect_exit": { "type": "integer" }
+      },
+      "allOf": [
+        { "if": { "properties": { "evidenced": { "const": true } } }, "then": { "required": ["evidence"] } },
+        { "if": { "properties": { "evidenced": { "const": false } } }, "then": { "required": ["gap"] } }
+      ]
+    },
+    "review.result": {
+      "type": "object",
+      "description": "The seat's structured output.",
+      "required": ["verdict", "head_sha", "criteria", "observations", "design_fit", "summary"],
+      "properties": {
+        "verdict": { "enum": ["passed", "changes"] },
+        "head_sha": { "$ref": "#/$defs/sha1" },
+        "criteria": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/criterion" } },
+        "observations": { "type": "array", "items": { "$ref": "#/$defs/observation" } },
+        "design_fit": { "type": "string", "minLength": 20, "maxLength": 2000, "description": "names the anchor and says whether the change does what it says and nothing else" },
+        "breadcrumb_present": { "type": "boolean" },
+        "summary": { "type": "string", "minLength": 20, "maxLength": 3000 }
+      },
+      "allOf": [
+        { "if": { "properties": { "verdict": { "const": "changes" } } }, "then": { "properties": { "observations": { "minItems": 1 } } } },
+        { "if": { "properties": { "verdict": { "const": "passed" } } }, "then": { "properties": { "criteria": { "items": { "properties": { "evidenced": { "const": true } } } } } } }
+      ]
+    },
+    "review_record": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node", "idempotency_key", "ticket", "pr", "head_sha", "run_id", "attempt", "criteria", "observations", "summary", "session_id"],
+      "properties": {
+        "id": { "type": "string", "minLength": 8 },
+        "kind": { "enum": ["review.passed", "review.changes"] },
+        "code": { "enum": [201, 422] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "const": "N-19" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3, "description": "the review attempt on this head" },
+        "idempotency_key": { "type": "string", "description": "equals run_id" },
+        "version": { "type": "integer", "minimum": 0 },
+        "ticket": { "$ref": "#/$defs/ticket_id" },
+        "pr": { "type": "integer", "minimum": 1 },
+        "head_sha": { "$ref": "#/$defs/sha1" },
+        "run_id": { "type": "string" },
+        "gate_verdict_ref": { "type": "string", "description": "the gate.verdict green record id for this head" },
+        "prior_review_ref": { "type": "string", "description": "the review.changes this head answers, when any" },
+        "criteria": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/criterion" } },
+        "observations": { "type": "array", "items": { "$ref": "#/$defs/observation" } },
+        "design_fit": { "type": "string" },
+        "summary": { "type": "string" },
+        "session_id": { "type": "string" },
+        "mirror": {
+          "type": "object",
+          "description": "the GitHub pull request review that mirrors this record; absent until the post step lands it",
+          "properties": { "review_id": { "type": "integer" }, "state": { "enum": ["APPROVED", "CHANGES_REQUESTED"] }, "at": { "$ref": "#/$defs/utc" } }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "kind": { "const": "review.passed" } } }, "then": { "properties": { "code": { "const": 201 } } } },
+        { "if": { "properties": { "kind": { "const": "review.changes" } } }, "then": { "properties": { "code": { "const": 422 }, "observations": { "minItems": 1 } } } }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/review.result" },
+    { "$ref": "#/$defs/review_record" }
+  ]
+}

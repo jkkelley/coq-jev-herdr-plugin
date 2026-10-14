@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-31/record.schema.json",
+  "title": "N-31 Push transport: input and output records, and the frame",
+  "description": "record.committed (input, the store's stream), the frame sent to clients (not stored), and pushed.frame (output, per-client watermark) with the transport's events. Envelope per shared/state-store.xml#envelope.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "recordId": { "type": "string", "minLength": 8, "maxLength": 64 },
+    "clientClass": { "enum": ["page", "map", "watcher", "tail"] },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node"],
+      "properties": {
+        "id": { "$ref": "#/$defs/recordId" },
+        "kind": { "type": "string" },
+        "code": { "enum": [100, 200, 201, 204, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "const": "N-31" },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "maxLength": 128 }
+      }
+    },
+    "committedEnvelope": {
+      "title": "record.committed (input): any record as committed by N-01",
+      "type": "object",
+      "required": ["seq", "id", "kind", "code", "at", "node", "hash", "version"],
+      "properties": {
+        "seq": { "type": "integer", "minimum": 1 },
+        "id": { "$ref": "#/$defs/recordId" },
+        "kind": { "type": "string" },
+        "code": { "enum": [100, 200, 201, 204, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "tier": { "enum": ["stable", "uat", "dev"] },
+        "ticket": { "type": ["string", "null"] },
+        "hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "version": { "type": "integer", "minimum": 1 },
+        "body": { "type": "object" }
+      }
+    },
+    "frame": {
+      "title": "frame (sent to clients, not stored)",
+      "type": "object",
+      "required": ["kind", "from_seq", "to_seq", "store_seq", "at", "records"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["frame", "snapshot", "heartbeat"] },
+        "from_seq": { "type": "integer", "minimum": 0 },
+        "to_seq": { "type": "integer", "minimum": 0, "description": "the SSE event id" },
+        "store_seq": { "type": "integer", "minimum": 0 },
+        "at": { "$ref": "#/$defs/utc" },
+        "records": { "type": "array", "items": { "$ref": "#/$defs/committedEnvelope" } },
+        "dropped": { "type": "integer", "minimum": 0, "description": "records collapsed by key coalescing" },
+        "store_stale": { "type": "boolean", "description": "heartbeat only: the store's own heartbeat is older than 10 s" }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/committedEnvelope" },
+    { "$ref": "#/$defs/frame" },
+    {
+      "title": "pushed.frame (output, per-client watermark upsert keyed push:<client>)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "pushed.frame" },
+        "code": { "const": 100 },
+        "client": { "type": "string", "pattern": "^sub-[a-z0-9]{8,16}$" },
+        "class": { "$ref": "#/$defs/clientClass" },
+        "tier": { "enum": ["stable", "uat", "dev"] },
+        "delivered_seq": { "type": "integer", "minimum": 0 },
+        "acked_seq": { "type": "integer", "minimum": 0 },
+        "connected_at": { "$ref": "#/$defs/utc" },
+        "last_frame_at": { "$ref": "#/$defs/utc" },
+        "resyncs": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["client", "class", "delivered_seq", "acked_seq", "connected_at", "last_frame_at", "resyncs", "version"]
+    },
+    {
+      "title": "push.subscribed / push.client.dropped / push.snapshot.failed / push.stalled (events)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "enum": ["push.subscribed", "push.client.dropped", "push.snapshot.failed", "push.stalled"] },
+        "code": { "enum": [100, 429, 500] },
+        "client": { "type": "string" },
+        "class": { "$ref": "#/$defs/clientClass" },
+        "since_seq": { "type": "integer", "minimum": 0 },
+        "reason": { "enum": ["backpressure", "ack-timeout", "send-timeout", "snapshot-timeout", "store-heartbeat-missing"] },
+        "pending": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["kind"]
+    }
+  ]
+}

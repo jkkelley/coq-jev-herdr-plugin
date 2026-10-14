@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-50 Cut-over records. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
+     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh. -->
+<volume id="N-50" kind="node-spec" node="N-50" group="G7" version="1.0.0" issued="2026-10-14" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, shared</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="cancel-set">The cancel set: fourteen tickets, by rule not by list</entry>
+    <entry ref="mechanism">Mechanism</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="shared-needs">What this volume needs from the shared volumes</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-50"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schema of this node</sibling>
+    <sibling href="../N-49/spec.xml#N-49" kind="node">Unlanded cleanup, which carries every other row</sibling>
+    <sibling href="../N-45/spec.xml#N-45" kind="node">Cleanup registry and runs, which deletes the design branch</sibling>
+    <shared href="../../shared/principles.xml#design-first">The book is the canonical design (D14)</shared>
+    <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
+    <shared href="../../shared/rejected-with-reason.xml#spec-16">SPEC-16 and SPEC-17 as sources, never authority</shared>
+    <shared href="../../dag.md#3-every-node">DAG row N-50</shared>
+    <shared href="../../shared/cut-over.xml#step-gofactory" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>Writes the three cut-over records the D09 and D14 rulings call for, at GOFACTORY: cancel records for the fourteen SPEC-16 build tickets, a close record for PR 35, and a delete record for the SPEC-16 design branch once the small Go cut has taken the files it needs.</is>
+    <is-not>It does not cut the small-cut tickets (N-17 and N-18 do, from the G1 and G2 volumes) and it does not delete anything itself (N-45 does, from its branch.delete record).</is-not>
+    <why>HANDOFF ruling 27: small Go cut on the same proto, keep interfaces and fake clock, cancel the fourteen SPEC-16 tickets; cancels and the small-cut tickets land only at GOFACTORY through the normal ticket path. 04-UNLANDED section 2: PR 35 is DECIDE D14 then CLOSE; D14 is ruled (C42, the owner from the phone).</why>
+  </purpose>
+
+  <input id="input">
+    <record kind="ruling" from="N-29">The GOFACTORY ruling record.</record>
+    <record kind="ruling" from="N-29">The D09 ruling (card C41) and the D14 ruling (card C42) as records in the store (rulings a gate checks are records; the system lane records the answers.jsonl rows as ruling records at bring-up).</record>
+    <record kind="merge" from="N-09" via="store query">Merges of small-cut tickets whose declared files came from the design branch (the ticket carries source_branch and source_sha); the design branch delete waits on the last of them.</record>
+    <schema href="record.schema.json#/$defs/input"/>
+  </input>
+
+  <output id="output">
+    <record kind="cancel" code="200">One per ticket in the cancel set: ticket id, full title from the ticket file, reason (D09 ruling id), the epic it belongs to, and the ticket.request id for the archive PR.</record>
+    <record kind="pr.close" code="200">PR 35: number, title, head sha, the closing comment text (D14 ruling id, the book's path as the canonical design), the treehouse slot 2 lease released.</record>
+    <record kind="branch.delete" code="200">feat/go-scheduler-design-one-xml-spec-per-domain-unde: the sha at deletion (012fa41 expected; the record carries the actual), the tag rebuild/spec-16-design-&lt;date&gt; made first, the list of small-cut tickets that harvested files from it.</record>
+    <record kind="cancel" code="409">The cancel set did not count fourteen; nothing is cancelled; the record names the set found and the rule that produced it; owner acts through one card.</record>
+    <schema href="record.schema.json#/$defs/output"/>
+  </output>
+
+  <cancel-set id="cancel-set">
+    <rule>The set is computed, not typed: every child ticket of epic WO-20261012-ea33 - Go scheduler: a lightweight Go service in Podman on WSL schedules the small loop and the software factory DAG, designed by a Fable architect and built by four Opus workers, with status ready on main at the GOFACTORY sha, minus any child that 04-UNLANDED.md gives its own verdict row (WO-20261012-8d87 - Replay fixtures: one golden case per routes row and per policies row under scheduler/testdata/replay, derived from the factory suite's cases, synthetic, with a schema and a check script, which is a KEEP row in section 3 and goes through N-49), minus the epic itself.</rule>
+    <expected>Fourteen: WO-20261012-9790 (config), 5a3d (intake), 32fe (routes), 7a9a (job), 8e69 (seat), 6e43 (policy), 3c7a (health), d7f4 (executor), b12c (observe and status), 1ccf (engine and run, check, retry), fa36 (cut-over and shadow mode), 379f (contract tests), 0113 (lint and CI wiring), 1635 (end-to-end acceptance). Full titles are taken from the ticket files at cancel time and written into the records; L14 section 4.1 truncates them.</expected>
+    <check>If the computed count is not fourteen, the node writes cancel 409 and one card with the set it found; the owner's answer is a ruling that names the set, and the node re-runs on it. A count mismatch is a sign the tree moved since the investigation, which the owner must see, never a reason to cancel more or fewer silently.</check>
+    <what-cancel-means>A cancel record is the ticket's status in the store (D04 C). While ticket files still live under work-orders/ on main, one ticket request to N-03 archives the fourteen files as cancelled with the reason (the normal ticket path, one small PR touching only those files and the index), so main and the store agree. The archive ticket declares exactly those files.</what-cancel-means>
+  </cancel-set>
+
+  <mechanism id="mechanism">
+    <where>Go package cutover in the service; forge calls through the service's gh auth; file reads from the mirror at the GOFACTORY sha.</where>
+    <step n="1">On GOFACTORY: verify the D09 and D14 ruling records exist (by card id C41 and C42); if either is missing, write cancel 412 reason ruling-missing and one card; nothing else runs.</step>
+    <step n="2">Compute the cancel set (rule above) from the ticket files at the sha; write one cancel 200 per ticket, idempotent by key cancel:&lt;ticket&gt;; write one ticket.request for the archive PR.</step>
+    <step n="3">PR 35: gh pr close 35 --comment with the text; release the treehouse slot lease (slot 2) through N-45 with a disposition pointing at N-49's entry U02-35; write pr.close 200. Its branch is then a CLOSE row for N-45 (the record carries the branch name and sha).</step>
+    <step n="4">Design branch: wait until every merged small-cut ticket that names source_branch feat/go-scheduler-design-one-xml-spec-per-domain-unde has its merge record, and no open small-cut ticket names it; then tag rebuild/spec-16-design-&lt;YYYYMMDD&gt; at the branch sha (history kept), write branch.delete 200, and N-45 deletes the branch on that record.</step>
+    <step n="5">The two kept worktrees (~/.cache/wt-sched, ~/.cache/wt-sched-w3) are N-49 section 6 rows whose trigger is this node's branch.delete and N-49's replay-fixtures re-verdict.</step>
+    <diagram>
+      <mermaid><![CDATA[
+flowchart LR
+  G[GOFACTORY ruling] --> V{D09 + D14 rulings present?}
+  V -- no --> M[cancel 412 + one card]
+  V -- yes --> S[compute cancel set at sha]
+  S --> C{count == 14?}
+  C -- no --> X[cancel 409 + one card]
+  C -- yes --> R[14 cancel records + archive ticket.request]
+  G --> P[gh pr close 35 + slot 2 release] --> Q[pr.close 200]
+  G --> W[wait: small-cut merges naming the design branch]
+  W --> T[tag then branch.delete 200] --> N45[N-45 deletes]
+      ]]></mermaid>
+    </diagram>
+  </mechanism>
+
+  <start id="start">
+    <s>The GOFACTORY ruling record starts it; the D09 and D14 rulings are already records; the small-cut merges are records; nobody types a cancel verb and nobody closes PR 35 by hand.</s>
+  </start>
+
+  <waits id="waits">
+    <wait id="w1" class="bounded" what="the D09 and D14 ruling records" timeout="PT0S: checked once when the GOFACTORY ruling arrives, never waited on" fallback="cancel 412 and one card; GOFACTORY's other nodes (N-49) proceed"/>
+    <wait id="w2" what="gh pr close" timeout="PT30S" fallback="ladder 10, 30, 90 s; then 423 and an alert; N-49's entry for PR 35 stays planned and the daily retry applies"/>
+    <wait id="w3" what="small-cut merges naming the design branch" timeout="P14D from GOFACTORY" fallback="branch.delete 423 reason harvest-late with the open tickets named; one card: delete anyway (the tag keeps history) or extend; default after 7 more days is delete, because the tag holds every file"/>
+    <wait id="w4" what="the archive ticket's merge" timeout="P7D" fallback="N-11's dead path for the ticket; the cancel records are already the truth in the store; the file status lags, which N-51's audit shows as a known row, not a failure"/>
+    <cog-test>The cog that could stall this node is a human waiting to be sure the small cut took every file it needs. The tag removes the risk: a deleted branch's files are one git show away.</cog-test>
+  </waits>
+
+  <retries id="retries">
+    <policy attempts="3" backoff="min(10 s x 2^(n-1), 5 min)">Forge calls and store puts; cancel records are idempotent by key.</policy>
+    <recover>After three failures the record is 423 with the error; the daily tick retries transient classes for 7 days; the cancel set is never partially applied silently: each ticket's record stands alone and the archive ticket lists exactly the ones recorded.</recover>
+    <report>412, 409 and the w3 timeout are one card each; 423 is an alert record.</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Small-cut workers read their own tickets; none reads this volume to know what is cancelled, because a cancelled ticket is never dispatched (N-07 reads the store status).</readers>
+    <writers>One run under lease cutover:run; records are idempotent by key, so a second GOFACTORY traversal (refused upstream anyway) would write nothing new.</writers>
+    <collision>A small-cut ticket starting on a file from the design branch while the branch delete runs: the ticket's workspace is a worktree from origin/main plus a git show of the source sha, never a checkout of the branch; the tag exists before the delete; nothing a seat reads disappears.</collision>
+    <collision>N-49's section 3 row for the design branch and this node's branch.delete: N-49 marks that row as owned by N-50 (action re-verdict, result_ref the branch.delete id) and never emits its own disposition for it.</collision>
+    <collision>The archive ticket and another ticket touching work-orders/ at once: one file, one in-flight ticket; the archive ticket declares exactly the fourteen files plus the index, and N-14 refuses an overlap.</collision>
+    <collision>A worker that was dispatched on one of the fourteen before GOFACTORY: impossible, the line is held; after GOFACTORY N-07 reads the cancel status before any dispatch.</collision>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="200" kind="cancel">Ticket cancelled in the store; system acts (archive ticket).</emits>
+    <emits code="409" kind="cancel">Cancel set count not fourteen; owner acts (one card naming the set).</emits>
+    <emits code="412" kind="cancel">D09 or D14 ruling record missing; owner acts (one card); N-29 records the ruling.</emits>
+    <emits code="200" kind="pr.close">PR 35 closed; nobody acts.</emits>
+    <emits code="100" kind="ticket.request">The archive ticket of the fourteen cancels, to N-03.</emits>
+    <emits code="200" kind="branch.delete">Design branch tagged and marked for deletion; N-45 acts.</emits>
+    <emits code="423" kind="pr.close or branch.delete">Failed after 3 (forge) or harvest-late (w3); system acts (daily retry) or owner acts (w3 card).</emits>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path id="N-50.log" glob="$COQ_STATE/logs/cutover/*.jsonl" retention="P90D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-50.log">Run output.</path>
+    <path id="N-50.cancel-set" glob="$COQ_STATE/cutover/cancel-set-&lt;sha&gt;.json" retention="P365D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-50.cancel-set">The computed set with full titles at the GOFACTORY sha.</path>
+  </state-paths>
+
+  <edges id="edges">
+    <in ref="../N-29/spec.xml#N-29">ruling (GOFACTORY, D09 C41, D14 C42)</in>
+    <in ref="../N-09/spec.xml#N-09">merge (small-cut tickets naming the design branch; a store query, not a drawn edge)</in>
+    <out ref="../N-45/spec.xml#N-45">branch.delete; the PR 35 branch and slot through N-49's entry</out>
+    <out ref="../../dag.md#4-re-entries">ticket.request to N-03 (the archive PR)</out>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>The cancel set computed on main at GOFACTORY counts fourteen and matches the expected ids.</check><proof>The cancel-set JSON file and fourteen cancel 200 records with full titles; a test world with fifteen ready children yields 409 and one card.</proof></item>
+    <item><check>PR 35 is closed with the comment naming D14 and the book.</check><proof>gh pr view 35 --json state,comments shows CLOSED and the comment; pr.close 200.</proof></item>
+    <item><check>The design branch is tagged before deletion and deleted only after the harvest.</check><proof>git tag -l rebuild/spec-16-design-* non-empty; branch.delete 200 lists the harvesting tickets; N-45 cleanup.run row for the branch with the sha.</proof></item>
+    <item><check>A missing ruling record stops the node with 412.</check><proof>A test world without the C41 record; cancel 412; no cancel records; one card.</proof></item>
+    <item><check>No cancelled ticket is ever dispatched.</check><proof>N-07 test: a ticket with a cancel record is not in the ready set after the next tick.</proof></item>
+    <item><check>Main and the store agree on the fourteen.</check><proof>The archive PR merged: the fourteen files under work-orders/archive with status cancelled and the D09 reason; N-51's audit shows no status lag row for them.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <may role="system" do="compute the set; write cancel, pr.close, branch.delete; close PR 35; tag the design branch; request the archive ticket"/>
+    <may role="owner" do="rule a different cancel set on the 409 card; rule on the w3 card"/>
+    <may-not role="seat" do="cancel a ticket; close a PR; delete or tag a branch"/>
+    <may-not role="system" do="cancel outside the computed set; delete the design branch before the tag exists; delete before the harvest or the w3 default"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="cutover_cancels" kind="gauge">Cancel records written over fourteen.</counter>
+    <counter name="cutover_pr35_state" kind="gauge-label">open or closed, from the forge snapshot.</counter>
+    <counter name="cutover_design_branch" kind="gauge-label">present, tagged, deleted; and the count of open small-cut tickets naming it.</counter>
+    <panel screen="Rail">The R-04 row shows PR 35 closed and the branch state.</panel>
+  </monitoring>
+
+  <runbook id="runbook">
+    <step n="1" when="a 409 card">Read the set found; if the tree moved (a ticket was done or re-cut), answer with the set to cancel; the ruling re-runs the node.</step>
+    <step n="2" when="a 412 card">The system lane records the missing ruling from answers.jsonl (C41 or C42) as a ruling record; the node re-runs on the next tick.</step>
+    <step n="3" when="the w3 card">Delete anyway (the tag keeps the files) or extend; the default is delete after 7 more days.</step>
+    <step n="4" when="a file from the deleted branch is needed later">git show rebuild/spec-16-design-&lt;date&gt;:&lt;path&gt; from the mirror; no branch restore needed.</step>
+    <cleanup>line/bin/cleanup.sh --entry N-50.log, N-50.cancel-set.</cleanup>
+    <cold-start>Records are in the store; the node re-runs idempotently on the GOFACTORY ruling at start.</cold-start>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#11-d09-the-spec-16-go-scheduler-and-its-14-build-tickets">D09 B: cancel the fourteen, keep the proto, interfaces and testkit; the design branch kept only for the files the cut packages take, then deleted</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#16-d14-the-canonical-design-document">D14 D: a new rebuild design; PR 35 closed; SPEC-17 and its draft become sources</source>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C41 and C42">The owner's picks: small cut, cancel fourteen; new rebuild design (from the phone, went recommended)</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="Checkpoint 2026-10-14T03:51Z">Ruling 27: cancels and the small-cut tickets land only at GOFACTORY through the normal ticket path</source>
+    <source path="rebuild/investigation/L14-go-grpc-control-plane.md" anchor="#41-the-go-scheduler-spec-16">The fourteen unbuilt tickets under work-orders/WO-20261010-329d/WO-20261012-ea33/ (fifteen lines listed; 8d87 has its own verdict)</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#2-open-pull-requests">PR 35: DECIDE D14 then CLOSE; its slot 2 lease goes with it</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#3-remote-branches-not-merged-to-main">go-scheduler-design KEEP until D09; under D09 B keep only what the cut packages need, then delete</source>
+    <source path="rebuild/investigation/L05-git-state.md" anchor="#9-what-to-kill">Each ticket takes its file from this branch at 012fa41; delete after the last build ticket merges</source>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/rulings-gates-check-are-records.md" anchor="file">Rulings a gate checks are records; post via the record path before any node reads them</source>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="#steps">R-04: PR 35 landed, superseded or closed with a reason</source>
+  </sources>
+
+  <rejected id="rejected">
+    <reject source="a typed list of fourteen ids as the cancel set" reason="A list drifts (L14 lists fifteen lines); the set is computed from the epic's children at the sha and checked against fourteen, with a card on mismatch."/>
+    <reject source="deleting the design branch at GOFACTORY" reason="The small cut takes files from it (D09 B); the tag plus the harvest wait keeps the files reachable without a hand restore."/>
+    <reject source="cancelling by editing the fourteen ticket files on main by hand" reason="A hand line operation; the store status is the truth (D04 C) and the archive PR goes through the normal path (ruling 27)."/>
+    <reject source="D09 option A (build as written) and C (freeze until the slice runs)" reason="D09 ruled B on C41."/>
+    <reject source="SPEC-17 1.0.1, its 1.1.0 draft and PR 35's v2.0 export as authority" reason="D14: sources only; listed in shared/rejected-with-reason.xml by the shared author."/>
+  </rejected>
+
+  <shared-needs id="shared-needs">
+    <need kind="principle">principles.xml#design-first naming the book as the canonical design (D14) and the sentence the PR 35 closing comment carries.</need>
+    <need kind="rejected">shared/rejected-with-reason.xml#spec-16 and #spec-17 entries for the SPEC-16 domain specs, SPEC-17 1.0.1, the 1.1.0 draft and PR 35's export, each with the reason and what was harvested (proto, interfaces, fake clock, H01 to H26, B1 to B10).</need>
+    <need kind="store-table">ticket status values including cancelled with reason and ruling id; a query for children of an epic by status at a sha; leases cutover:run.</need>
+    <need kind="record-kinds">cancel, pr.close, branch.delete, ruling (with card_id and decision), ticket.request, merge (with source_branch and source_sha on the ticket).</need>
+    <need kind="status-codes">200, 409 set mismatch (owner acts), 412 ruling missing (owner acts), 423.</need>
+    <need kind="n-29">answers.jsonl rows C34 to C42 and rulings-r02.jsonl rows C43 to C58 are recorded as ruling records at bring-up, keyed by card id.</need>
+    <need kind="n-17 n-18">Small-cut tickets carry source_branch and source_sha when their files come from the design branch.</need>
+    <need kind="config">cutover.epic WO-20261012-ea33, cutover.expected_count 14, cutover.harvest_timeout P14D, cutover.harvest_default_days 7, cutover.pr 35.</need>
+  </shared-needs>
+
+</volume>

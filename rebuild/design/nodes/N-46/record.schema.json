@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-46/record.schema.json",
+  "title": "N-46 Spec book check: input and output records",
+  "description": "Parent: ../../index.xml#N-46. Sibling: spec.xml. Envelope as in ../N-43/record.schema.json#/$defs/envelope.",
+  "oneOf": [ { "$ref": "#/$defs/input" }, { "$ref": "#/$defs/output" } ],
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "envelope": { "$ref": "../N-43/record.schema.json#/$defs/envelope" },
+    "check-id": { "type": "string", "pattern": "^C(0[1-9]|1[0-9])$" },
+    "input": {
+      "title": "suite.plan (from N-23) containing the spec-book case",
+      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "properties": {
+        "kind": { "const": "suite.plan" },
+        "body": {
+          "type": "object",
+          "required": ["head_sha", "pr", "cases"],
+          "properties": {
+            "head_sha": { "$ref": "#/$defs/sha" },
+            "pr": { "type": "integer" },
+            "changed_paths": { "type": "array", "items": { "type": "string" } },
+            "cases": { "type": "array", "items": { "type": "object", "required": ["suite", "command"], "properties": { "suite": { "type": "string" }, "command": { "type": "string" }, "image": { "type": "string" } } }, "contains": { "properties": { "suite": { "const": "spec-book" } } } }
+          }
+        }
+      }
+    },
+    "failure-row": {
+      "type": "object",
+      "required": ["volume", "check", "message"],
+      "properties": {
+        "volume": { "type": "string", "pattern": "^rebuild/design/" },
+        "check": { "$ref": "#/$defs/check-id" },
+        "line": { "type": "integer", "minimum": 1 },
+        "message": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "volume-row": {
+      "type": "object",
+      "required": ["volume", "lines", "kind"],
+      "properties": {
+        "volume": { "type": "string" },
+        "lines": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "kind": { "type": "string", "enum": ["node-spec", "node-schema", "node-checklist", "node-permissions", "node-monitoring", "node-runbook", "shared", "index", "json-schema"] }
+      }
+    },
+    "output": {
+      "title": "check.verdict",
+      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "properties": {
+        "kind": { "const": "check.verdict" },
+        "code": { "enum": [201, 422, 503] },
+        "body": {
+          "type": "object",
+          "required": ["head_sha", "exit", "checks_run"],
+          "properties": {
+            "head_sha": { "$ref": "#/$defs/sha" },
+            "pr": { "type": "integer" },
+            "exit": { "type": "integer", "enum": [0, 1, 2] },
+            "checks_run": { "type": "array", "items": { "$ref": "#/$defs/check-id" } },
+            "failures": { "type": "array", "items": { "$ref": "#/$defs/failure-row" } },
+            "volumes": { "type": "array", "items": { "$ref": "#/$defs/volume-row" } },
+            "generated_hashes": { "type": "object", "additionalProperties": { "$ref": "#/$defs/sha256" } },
+            "log_path": { "type": "string" },
+            "seconds": { "type": "number", "minimum": 0 },
+            "reason": { "type": "string", "maxLength": 240, "description": "required when code is 503" }
+          }
+        }
+      }
+    }
+  }
+}

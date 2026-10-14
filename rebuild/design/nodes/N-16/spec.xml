@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-16 Worker run. Volume of the Factory Rebuild spec book (R-03), group G3 Seats.
+  Written 2026-10-14T05:40:00Z by the G3 spec-author seat against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  Rulings: D11 (C39) an LLM only to write code, D02 (C36), D05 (C43) the verdict is coq/gate on the head sha,
+  D15 (C50) machine verdict merges, one file one in-flight ticket (owner 2026-10-12), D22 (C38) tests as pods.
+  No em dash appears in this file. Every time is UTC.
+-->
+<!--
+  Round 2, 2026-10-14T05:04:00Z, by the G3 spec-author seat, after the R-03 review seat failed round 1 on pointers.
+  What broke: this volume pointed at ../N-xx/spec.xml#N-xx-spec while every volume in the book declares
+  root id="N-xx" and links with #N-xx, and it pointed at ../../shared/*.xml anchors that no author has
+  written (shared/ belongs to the shared author, not this seat).
+  Why it mattered: a dangling pointer fails check.sh, and the architect reads nothing until the book passes.
+  The fix: root id is now the node id; every sibling, upstream, downstream and edge anchor is #N-xx; the
+  shared anchors are declared in <shared-needs> with no href so the shared author can write them and
+  check.sh can match them when shared/ lands; the principles this node obeys point at dag.md sections 7
+  and 8, which exist. The parent stays ../../index.xml#N-16 because the brief names the index volume as
+  every node's parent and the anchor is the node id, the one anchor every node is guaranteed.
+  Rejected: writing shared/ or index.xml from this seat (two authors on one file is the one-file,
+  one-in-flight-ticket collision the book forbids); leaving the hrefs to resolve later (a failing volume
+  blocks the book now).
+  Cost: a declared need is not a live pointer until shared/ lands.
+-->
+<volume id="N-16" node="N-16" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-14T05:04:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input: the worker brief inside a seat run</entry>
+    <entry ref="output">Output record: pr.opened, or seat.result blocked</entry>
+    <entry ref="mechanism">Mechanism: the brief, the run, the close-out by code</entry>
+    <entry ref="closeout">Close-out: push, pull request, pr.opened</entry>
+    <entry ref="rework">Rework on attempt n+1: resume by session id</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="checklist">Checklist with proof</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with the reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-16"/>
+    <dag href="../../dag.md#3-every-node">The DAG row of this node: input record and output record</dag>
+    <principle href="../../dag.md#7-rules-every-node-obeys">Rules 1 to 9: input to output, no cog, three attempts, one store, code does mechanical jobs, the verdict the agent cannot edit, herdr is the owner's window, build mode, ships dark</principle>
+    <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, timed-out stalls, a 409 that reports</principle>
+    <needs href="spec.xml#shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <sibling href="record.schema.json" kind="schema">JSON schema of worker.result (the seat's structured output) and pr.opened</sibling>
+    <sibling href="../N-13/spec.xml#N-13">Seat layer render: the brief template and the fence</sibling>
+    <sibling href="../N-14/spec.xml#N-14">Workspace provision: the branch wo/&lt;ticket&gt;</sibling>
+    <sibling href="../N-15/spec.xml#N-15">One-shot seat launcher: the process and the post step</sibling>
+    <sibling href="../N-17/spec.xml#N-17">Spec-author run</sibling>
+    <sibling href="../N-18/spec.xml#N-18">Validator: where the ticket's acceptance commands and observed exits come from</sibling>
+    <sibling href="../N-19/spec.xml#N-19">Reviewer run: the consumer of the pull request after the gate</sibling>
+    <downstream href="../N-23/spec.xml#N-23">Suite planner: the consumer of pr.opened</downstream>
+    <downstream href="../N-48/spec.xml#N-48">Tier promotion with screenshot: pr.opened touching tools/bearings or the map app</downstream>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <text>Declared, not linked: the shared author writes these volumes and anchors; check.sh matches each need against shared/ when it lands. Nothing below points at a file that does not exist in this pull request.</text>
+    <need volume="../../shared/status-codes.xml" anchor="code-100" kind="status-code">100 exists or in progress: seat.bundle, workspace, seat.heartbeat, pr.opened, ticket-set.draft; acts: the next node on the edge</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-423" kind="status-code">423 blocked: seat.result outcome blocked with a terminal_reason from the reason table; acts: N-11 by reason</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">500 failed after 3 or a defect: seat.bundle.failed, workspace.failed, phase.failed, validator.failed, launcher.defect; acts: N-11, or N-06 health then N-28 for a defect</need>
+    <need volume="../../shared/seat-contract.xml" anchor="llm-only-for-judgement" kind="seat-contract">an LLM appears only in N-16 (write code), N-17 (cut tickets as data) and N-19 (judge a diff); every mechanical step around it is code</need>
+    <need volume="../../shared/seat-contract.xml" anchor="brief-shape" kind="seat-contract">brief.md sections in order: ticket, input and output, files, acceptance with observed exits, steps, rules, verdict on a retry, limits once as information</need>
+    <need volume="../../shared/seat-contract.xml" anchor="structured-output" kind="seat-contract">every phase returns structured output against the node's record.schema.json through --json-schema; an optional blocked object carries reason, observations and repro</need>
+    <need volume="../../shared/principles.xml" anchor="one-file-one-ticket" kind="principle">no file is ever touched by two open pull requests: declared at cut (N-18), checked at readiness (N-03), checked and recorded at start (N-14), enforced by the fence (N-13) and the diff check (N-16)</need>
+    <need volume="../../shared/principles.xml" anchor="breadcrumb-at-the-fix-site" kind="principle">every change carries its reason as a comment next to the change: what broke, why it mattered, why this fix, what it costs</need>
+    <need volume="../../shared/state-store.xml" anchor="table-tickets" kind="store-table">tickets: the whole ticket as a record (files, acceptance with observed_exit_on_main, depends_on, status, set_id); retention by N-45</need>
+  </shared-needs>
+
+  <section id="purpose" title="Purpose">
+    <text>N-16 is where an LLM writes code. It is one of the three places an LLM appears in the factory (with N-17 and N-19; ../../dag.md#7-rules-every-node-obeys rule 5). The worker implements exactly one ticket inside its declared files in the workspace N-14 gave it, and its turn ends at a commit on the ticket's branch. Everything mechanical after that commit (push, pull request, record) is code in the launcher's post step, so a worker never runs git push, gh pr create or event.sh, and the pr.opened record is written only after code has checked that the pull request exists at the claimed head (rebuild/investigation/L13-llms-doing-scheduler-work.md#7-decisions-an-llm-makes-that-a-rule-could-make D22).</text>
+    <text>The worker's verdict comes later from a status it can read and cannot edit: coq/gate on the head sha (D05) and the reviewer's record (N-19). The worker never tests in a pane and never waits for a result: it runs the ticket's host-runnable acceptance commands itself, commits, and ends; the pods run the suites (D22; rebuild/investigation/L11-governance-layer.md#52-findings-f1-to-f18 F13 is the polling this ends).</text>
+  </section>
+
+  <section id="input" title="Input: the worker brief inside a seat run">
+    <text>The brief is bundle_dir/brief.md rendered by N-13 from the ticket record (D04: the ticket is a record in the store, never a file on a branch). Its sections, in order:</text>
+    <field name="ticket">id and full title, the parent epic id and title when one exists, the DAG node the ticket was cut from (anchor into this book).</field>
+    <field name="input and output">the input record that starts the ticket and the output record that ends it, as declared at cut (D16).</field>
+    <field name="files">the declared files; the fence of the bundle allows writes only there (N-13).</field>
+    <field name="acceptance">every acceptance command with its observed exit code on main (N-18) and the exit the ticket expects after the change, and where it runs (host or pod).</field>
+    <field name="steps">the ticket's numbered steps and its degrees of freedom; the only choices the worker makes are the ones the ticket names (roles/worker.json must line 2, carried forward).</field>
+    <field name="rules">the few that are judgement, not fence: a breadcrumb comment at the fix site with what broke, why it mattered, why this fix, what it costs (global rule); no em dash; UTC; one concern; the structured output contract below.</field>
+    <field name="verdict">on attempt n+1, the failure record verbatim: review.changes observations, merge.conflict detail, the prior seat.result's blocked reason, or the gate's failing suite with its log link.</field>
+    <field name="limits">stated once as information: max turns, budget, wall clock, stall, with "the launcher enforces these".</field>
+    <text>The workspace is cwd, on branch wo/&lt;ticket&gt; at origin/main (attempt 1) or at origin/wo/&lt;ticket&gt; (attempt n+1), clean.</text>
+  </section>
+
+  <section id="output" title="Output record: pr.opened, or seat.result blocked">
+    <text>The seat's structured output, worker.result (record.schema.json#/$defs/worker.result): ready (true), commit_sha (the branch head the worker left), summary (one paragraph for the pull request body), evidence (one entry per acceptance criterion: criterion id, command, observed exit, note), files_changed (as the worker sees them; checked by code), or blocked (reason, observations, repro) when the worker cannot finish inside its files.</text>
+    <text>The node's output record, pr.opened, code 100, written by the launcher's close-out: ticket, run_id, attempt, branch, pr (number), head_sha, base_sha (origin/main at push), files (from git diff --name-only base..head), evidence (copied from worker.result), url. idempotency_key = run_id. Or seat.result blocked 423 from N-15 with reason seat_blocked, output_rejected (closeout detail) or any launcher reason.</text>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the brief, the run, the close-out by code">
+    <mermaid>flowchart LR
+  B[bundle brief.md plus workspace on wo/ticket] --> R[claude -p run: edit inside declared files, run host acceptance, commit]
+  R --> O{structured output worker.result}
+  O -- ready --> C[close-out by code: diff check, push, gh pr create or find, verify head, pr.opened 100]
+  O -- blocked --> X[seat.result 423 seat_blocked with observations]
+  C -- check fails --> Y[seat.result 423 output_rejected with detail]
+  C -- push or gh fails 3 times --> Z[phase.failed 500; the branch keeps the commit]</mermaid>
+    <step n="1">The run. The worker reads the brief and the files it names; it edits only inside them (a write outside is a recorded permission denial, not a prompt); it runs the acceptance commands marked host (lint, unit tests runnable without the cluster) through the repository's make targets; it fixes until they pass or until its limits end the run; it commits with the message "&lt;ticket id&gt; - &lt;title&gt;" plus a body naming the breadcrumb; it returns worker.result. A worker that cannot finish inside its files returns blocked with observations (path, line, saw, expected) and a repro command; a blocked output with no observation is refused by the launcher as output_rejected no_observations (kickback without evidence is prose, specs/SPEC-03-dag-and-node-contract.xml#s-records).</step>
+    <step n="2">The fence (N-13): Write and Edit only under the declared files; Bash allows make *, the acceptance commands, and git status|diff|log|add|commit|rev-parse|branch --show-current; git push, gh, podman, herdr, treehouse and rm -rf outside the workspace are denied. make targets that would touch the cluster are not allowed in the worker's Bash list; the pods run them.</step>
+    <step n="3">Commit identity: GIT_AUTHOR_NAME and GIT_COMMITTER_NAME from seats.json git identity (the owner's git user); the trailer is the session link the harness names, rendered by the launcher into the commit through a commit template, never typed by the worker (L11 F14: the hard-coded trailer named one old session; the launcher writes the run's own session id).</step>
+    <step n="4">Close-out, section closeout.</step>
+  </section>
+
+  <section id="closeout" title="Close-out: push, pull request, pr.opened">
+    <text>Function closeout(run, worker.result) in scheduler/internal/launcher/worker.go, run by N-15 after seat.result done. Every step is idempotent so a retry after a crash finishes what the previous pass began.</text>
+    <step n="1">Diff check. git -C ws diff --name-only origin/main...HEAD; every path must match a declared file pattern (the claims rule of N-14) and none may be an aggregate or a runtime file (events/, logs, CHANGELOG.md, INDEX.md, CONTEXT_STATE.md); HEAD must equal worker.result.commit_sha; the tree must be clean. A failure is seat.result blocked 423 output_rejected with the stray paths, and attempt n+1 gets them in its brief. This is factory/bin/gate.sh pr-files moved to the moment before the push.</step>
+    <step n="2">Push. git -C ws push origin wo/&lt;ticket&gt; (never --force; a rework attempt is on the same branch and fast-forwards). A non-fast-forward rejection means something else pushed this branch: blocked push_rejected and a defect record, because N-02 should have fenced it.</step>
+    <step n="3">Pull request. gh pr list --head wo/&lt;ticket&gt; --json number,headRefOid; if one exists, reuse it; else gh pr create --base main --head wo/&lt;ticket&gt; --title "&lt;ticket id&gt; - &lt;title&gt;" --body-file (the summary, the acceptance evidence table, the ticket anchor, and the session link line). The title format is the ticket id and its full title (global rule: never a ticket without its title).</step>
+    <step n="4">Verify. gh pr view N --json headRefOid,state; headRefOid must equal the pushed head; state open. Then pr.opened 100 with idempotency_key run_id. The branch stays checked out in the slot until N-45 releases it on merge or dead; nothing else holds wo/&lt;ticket&gt; because every workspace is its own worktree from the mirror, so the old "release the branch before pr.opened" defect cannot recur (memory release-branch-before-pr-opened).</step>
+    <text>gh runs with the host user's gh auth (owner-initiated once, like the Claude login); the token is never given to the seat. The close-out log is runs/&lt;run_id&gt;/closeout.log.</text>
+  </section>
+
+  <section id="rework" title="Rework on attempt n+1: resume by session id">
+    <text>A review.changes 422, a merge.conflict 409 or a red coq/gate on the head sha is a failure record to N-11, which dispatches attempt n+1 with target.verdict_ref. N-14 cuts the workspace from origin/wo/&lt;ticket&gt; (the branch has the prior commit); N-13 renders the brief with the verdict verbatim and sets session_id to the prior run's session when the prior run ended done (its context is worth keeping) and to a fresh UUID when the prior run was blocked or crashed (a broken context is not resumed). N-15 launches with --resume when the bundle says so. The worker fixes, commits, and the close-out pushes the same branch; the pull request is reused; a new head sha starts a new gate and a new review. There is no fourth attempt: after attempt 3 the ticket is dead and the owner sees one card.</text>
+    <text>A merge.conflict: the brief says "merge origin/main into wo/&lt;ticket&gt;, resolve inside your declared files, keep the deletion of gitignored aggregates" (specs/SPEC-17-orchestrator-and-agent-health.xml#n-merge). A conflict outside the declared files is a scheduling defect, not a worker task (memory one-file-one-in-flight-ticket): the worker returns blocked conflict_outside_files and N-11 reports it as a defect card rather than retrying.</text>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <text>A worker exists only inside an N-15 run that was started from a dispatch; the dispatch came from a lease on a ticket.ready record (N-02, N-07). The brief is an argument of the process, never a typed prompt. The close-out runs in the same launcher call. No person and no agent starts, wakes, nudges or ends a worker.</text>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait what="the run" timeout="wall clock 5400 s, stall 600 s, max turns 300, budget 15 USD (seats.json worker defaults)" attempts="1 per run" fallback="N-15 kills and records blocked; N-11 counts the attempt"/>
+    <wait what="a host acceptance command inside the run" timeout="the command's own, bounded by the run's limits; the brief tells the worker which commands are host-runnable" attempts="the worker's judgement inside its limits" fallback="the run ends by stall or wall clock; the gate runs the suites anyway"/>
+    <wait what="git push" timeout="60 s" attempts="3, backoff 5 s, 15 s, 45 s" fallback="phase.failed 500 push; the commit is on the branch locally; attempt n+1 workspace is cut from origin/wo/ticket if the push landed or from origin/main plus the slot's branch is pushed first by the recovery pass"/>
+    <wait what="gh pr create or list or view" timeout="30 s" attempts="3" fallback="phase.failed 500 pr; the branch is pushed, so the recovery pass finds the pull request by head or creates it"/>
+    <wait what="pr.opened put" timeout="5 s" attempts="3" fallback="the recovery pass re-puts from closeout.log; idempotent by run_id"/>
+    <text>The worker never waits for the gate, the reviewer or the merge. Those are new traversals that the records start.</text>
+  </section>
+
+  <section id="retries" title="Retries up to 3, then recover and report">
+    <text>Inside the run the worker's own fix loop is bounded by the launcher's limits, not by a sentence. Across runs N-11 counts attempts to 3, with backoff min(10 s times 2 to the n minus 1, 5 min), then dead and one card. The close-out's mechanical steps retry 3 times each; a phase.failed leaves the branch intact and the recovery pass (every tick, level-triggered: runs with seat.result done and no pr.opened and no phase.failed younger than its backoff) finishes the close-out without a new LLM run. A phase.failed three times is a defect record on the infrastructure (GitHub or git), and N-28 posts one card.</text>
+  </section>
+
+  <section id="many-agents" title="Many agents at once">
+    <text>Many workers run at once, one per ticket, each in its own slot and branch; they never share a file because claims are disjoint (N-14) and the fence denies writes outside them (N-13). A worker cannot see another worker's workspace or run directory.</text>
+    <text>Collision 1, two workers on one ticket: impossible by the lease (N-02 fencing) and by the claims rows (N-14 ticket_in_flight); if both exist anyway, the second's heartbeat renewal is refused and it kills itself (N-15), and the close-out's non-fast-forward push refusal catches the last case.</text>
+    <text>Collision 2, main moves while the worker works: the worker's branch is from origin/main at provision time; the merge (N-09) handles a clean rebase or returns merge.conflict 409 for attempt n+1; disjoint files make a textual conflict rare, and one outside the declared files is a defect card, not a retry.</text>
+    <text>Collision 3, the reviewer and a rework worker at the same head: the reviewer is detached at the head sha; the worker pushes a new head; the review on the old head is discarded by N-19 as head_moved and the new head gets its own gate and review. Records are keyed by head sha, so nothing is overwritten.</text>
+    <text>Collision 4, two close-out passes for one run (crash during close-out, then recovery): push is idempotent, gh pr list finds the existing pull request, pr.opened is idempotent by run_id; the second pass commits nothing new.</text>
+    <text>Collision 5, the owner's break glass on a worker's branch: a hand push to wo/&lt;ticket&gt; makes the close-out's push non-fast-forward; it is recorded as push_rejected and the ticket goes to N-11; the hand push is visible as a defect, never silently merged into.</text>
+  </section>
+
+  <section id="codes" title="Status codes this node emits">
+    <code value="100" kind="pr.opened">The pull request exists at the head sha. Acts: N-23 plans the suites; N-48 when the diff touches an owner surface.</code>
+    <code value="423" kind="seat.result">Blocked: seat_blocked with observations, output_rejected (stray files, dirty tree, no observations, conflict_outside_files, push_rejected), or any launcher reason. Acts: N-11.</code>
+    <code value="500" kind="phase.failed">Close-out infrastructure failed 3 times; the branch keeps the commit. Acts: the recovery pass, then N-11, then a card.</code>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path dir="$COQ_STATE/seats/runs/&lt;run_id&gt;/closeout.log" writes="argv and results of diff check, push, gh" cleanup="scheduler/host/bin/cleanup-seat-runs.sh (N-15)" retention="7 days, 30 for a dead ticket"/>
+    <path dir="$COQ_CACHE/ws/&lt;slot&gt;/" writes="the worker's edits and commit" cleanup="scheduler/host/bin/cleanup-workspaces.sh (N-14)" retention="until merge, dead or cancel; a slot with unpushed commits is kept and reported"/>
+    <path dir="origin wo/&lt;ticket&gt;" writes="the pushed branch" cleanup="N-45 branch delete on merge or dead (scheduler/host/bin/cleanup-branches.sh, dry run then --apply, never a branch with an open pull request)" retention="until merge or dead"/>
+    <text>Nothing is written into the repository on main by this node; the pull request is the only path (AGENTS.md#law-runtime-data-never-lives-in-git, GOOD line).</text>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <text>The worker seat (from N-13): Read, Grep, Glob, Write, Edit, Bash; writes only inside declared files; Bash: make *, the acceptance commands, git status|diff|log|add|commit|rev-parse|branch --show-current; denied: Agent, Task, git push, gh *, podman *, herdr *, treehouse *, rm -rf outside the workspace, any path under $COQ_STATE except its own run directory for reading the brief. Model: roles/worker.json model.claude (claude-sonnet-5-5), effort high.</text>
+    <text>The close-out (code, host user): git push through the mirror remote with the host credential helper; gh with the host's gh auth; gRPC to the store. No cluster access.</text>
+  </section>
+
+  <section id="checklist" title="Checklist with proof">
+    <item proof="go test ./internal/launcher -run TestCloseoutStrayFile: a fixture branch with a change outside the declared files yields seat.result 423 output_rejected naming the path and no push">The diff check refuses a stray path before the push.</item>
+    <item proof="go test TestCloseoutIdempotent: closeout run twice against a fake gh and git yields one push, one pull request, one pr.opened">Close-out is idempotent.</item>
+    <item proof="go test TestCloseoutVerifiesHead: a fake gh returning a different headRefOid yields 423 output_rejected pr_head_mismatch">pr.opened is written only after the head is verified.</item>
+    <item proof="probe: a worker seat whose brief asks it to run gh pr create ends with a permission denial naming gh and the close-out still opens the pull request">The worker cannot push or open a pull request; code does.</item>
+    <item proof="probe: a worker seat on a fixture ticket with one acceptance command produces a commit whose message starts with the ticket id and full title and whose diff carries a breadcrumb comment at the fix site; the pull request title equals the commit subject">Title and breadcrumb rules hold.</item>
+    <item proof="go test TestReworkResumes: attempt 2 after review.changes renders a bundle with the prior session id and a brief containing the observations verbatim; attempt 2 after crashed renders a fresh session id">Rework resumes only a done session and carries the verdict.</item>
+    <item proof="go test TestBlockedNeedsObservations: a worker.result with blocked and no observations yields 423 output_rejected no_observations">Blocked without evidence is refused.</item>
+    <item proof="go test TestNoFourthAttempt (N-11 fixture): the third seat.result blocked yields a dead record and exactly one card">Attempts stop at 3.</item>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <text>Counters: workers_done, workers_blocked_by_reason, prs_opened, closeout_failed, rework_attempts_by_number (1, 2, 3), cost_usd by ticket. The Machine screen (N-39) for N-16 shows live workers with ticket, attempt, progress age and cost; the Stats screen (N-40) shows pull requests opened per hour and the attempt histogram; the Alerts screen (N-41) shows push_rejected and conflict_outside_files because both are scheduling defects.</text>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <text>See a worker's work: the pull request on GitHub (title is the ticket id and title); the transcript in runs/&lt;run_id&gt;/transcript.jsonl; closeout.log for the push and gh steps.</text>
+    <text>A phase.failed on push or gh: the recovery pass retries each tick; if GitHub is down for longer than the backoff schedule, N-06 health shows it and nothing is lost because the commit is on the slot's branch. Never push a worker's branch by hand; if it happens, the close-out records push_rejected and N-11 continues.</text>
+    <text>A dead ticket after three blocked runs: the card (N-28) carries the three reasons and the last observations; the owner's options are re-cut (a spec-author run against the same anchor), split, or cancel; never "try again" without a change, because the third attempt already was that.</text>
+    <text>Cleanup: the run directory by cleanup-seat-runs.sh (N-15), the slot by cleanup-workspaces.sh (N-14), the branch by cleanup-branches.sh (N-45); all dry-run first and registered.</text>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <edge dir="in" from="../N-15/spec.xml#N-15" record="the worker brief inside a seat run (bundle plus workspace)"/>
+    <edge dir="out" to="../N-23/spec.xml#N-23" record="pr.opened"/>
+    <edge dir="out" to="../N-48/spec.xml#N-48" record="pr.opened touching tools/bearings or the map app"/>
+    <edge dir="out" to="../N-11/spec.xml#N-11" record="seat.result blocked 423, phase.failed 500 (failure records, written by N-15 on this node's behalf)"/>
+    <edge dir="re-entry" to="../N-02/spec.xml#N-02" record="attempt n+1 after review.changes, merge.conflict or a red gate re-enters as a fresh claim (../../dag.md#4-re-entries)"/>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <source href="rebuild/investigation/03-DECISIONS.md#13-d11-which-llm-roles-remain">D11 option B: worker as a one-shot run</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#7-d05-where-a-gate-verdict-lives">D05 coq/gate on the head sha</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#17-d15-human-in-the-merge-path">D15</source>
+    <source href="rebuild/investigation/L13-llms-doing-scheduler-work.md#7-decisions-an-llm-makes-that-a-rule-could-make">D22 close-out by script, D19 tester retired, D20 merger retired</source>
+    <source href="rebuild/investigation/L03-design-vs-built.md#48-designs-held-only-in-the-state-root">an agent exists only for judgement: writing code and judging a diff</source>
+    <source href="rebuild/investigation/L11-governance-layer.md#52-findings-f1-to-f18">F9 (git read verbs), F13 (polling), F14 (trailer)</source>
+    <source href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V07, V09, V10</source>
+    <source href="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal">T04 a verdict the agent can read and cannot edit, T05 hooks as enforcement (deferred)</source>
+    <source href="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#4-what-works">4.2 limits as fields, resume by id</source>
+    <source href="roles/worker.json">inputs, outputs, must, forbidden, breadcrumbs 9639 and 3d6g0</source>
+    <source href="specs/SPEC-03-dag-and-node-contract.xml#s-node">the node contract: schema in, schema out, black box</source>
+    <source href="specs/SPEC-03-dag-and-node-contract.xml#s-records">kickback without evidence is prose</source>
+    <source href="specs/SPEC-17-orchestrator-and-agent-health.xml#n-work">the work node checklist, carried as the close-out checks</source>
+    <source href="specs/SPEC-17-orchestrator-and-agent-health.xml#n-merge">merge main, keep the deletion of aggregates</source>
+    <source href="factory/bin/claims.sh">diff verb: the diff stays inside the files field; aggregates refused</source>
+    <source href="AGENTS.md#the-close-out-flow">evidence per criterion, one pull request, then the merge</source>
+    <source href="AGENTS.md#law-no-file-is-ever-touched-by-two-open-prs">the rule</source>
+    <source href="~/.claude/CLAUDE.md">hard rules: breadcrumb at the fix site, never a ticket without its title, no em dash, UTC</source>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/one-file-one-in-flight-ticket.md">a merge.conflict on code is a scheduling defect</source>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/release-branch-before-pr-opened.md">the branch-holding defect this design removes</source>
+    <source href="~/.bearings/coq-stable/answers.jsonl">C36, C39</source>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C43, C50</source>
+  </section>
+
+  <rejected id="rejected">
+    <item source="roles/worker.json must line 6" what="the worker's close-out chain: evidence, retro note, commit, push, gh pr create, work-order.sh submit, done, archive move, post pr.opened" reason="L13 D22: a script does it; the LLM's turn ends at the commit; tickets are records, not files to archive (D04)"/>
+    <item source="roles/worker.json must line 1" what="post work.started 100 first; treehouse status must show the lease" reason="the launcher records the start and the workspace record proves the slot; a seat posts no record"/>
+    <item source="roles/worker.json must line 3 and roles/tester.json" what="tests only in the labelled test pane through testpane.sh; a tester seat runs the plan" reason="D22 and D11: pods run the suites and post coq/gate; the tester role is retired (L13 D19); the worker runs host acceptance inside its own run"/>
+    <item source="roles/worker.json records" what="the worker writes work.started, pr.opened, test.failed, blocked through event.sh" reason="S04 section 9 item 2: the result comes from the harness; pr.opened is written by code after verification"/>
+    <item source="specs/SPEC-03-dag-and-node-contract.xml#s-sdlc" what="worker to tester to reviewer to merger to architect verify" reason="D11, D05, D15: tester, merger and architect verify are code (N-23 to N-26, N-09, N-10); only the reviewer remains an LLM"/>
+    <item source="bin/step.sh" what="the step command with a hard-coded session trailer and a compaction prompt" reason="L11 F14; the launcher writes the run's own session link; a one-shot run does not compact"/>
+    <item source="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal T05" what="a Stop hook as the definition of done" reason="deferred: the launcher's structured output plus the gate are the definition of done in slice one; a Stop hook that re-runs acceptance is a later ticket once hooks in the bundle are proven"/>
+  </rejected>
+</volume>

@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-35/record.schema.json",
+  "title": "N-35 Hello page deploy: input and output records",
+  "description": "Input map.commit (the merge record touching tools/map/**) and output deploy.record. Every record carries the shared envelope (shared/state-store.xml#record-envelope). UTC everywhere.",
+  "$defs": {
+    "utc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC as 2006-01-02T15:04:05Z"
+    },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "envelope": {
+      "type": "object",
+      "required": ["kind", "id", "at", "node", "status", "seq", "version", "idempotency_key"],
+      "properties": {
+        "kind": { "type": "string" },
+        "id": { "type": "string", "minLength": 8 },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "minLength": 8 },
+        "by": { "type": "string", "description": "system, owner, or a seat id" }
+      }
+    },
+    "map.commit": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["sha", "paths", "jenkinsfile", "image", "gitops_entry"],
+      "properties": {
+        "kind": { "const": "map.commit" },
+        "node": { "const": "N-09" },
+        "sha": { "$ref": "#/$defs/sha" },
+        "paths": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string" },
+          "contains": { "type": "string", "pattern": "^tools/map/" }
+        },
+        "jenkinsfile": { "const": "tools/map/Jenkinsfile" },
+        "image": { "const": "ghcr.io/jkkelley/coq-map" },
+        "gitops_entry": { "const": "homelab-gitops/apps/coq-map" },
+        "pr_number": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "deploy.prereq": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["prereq", "proof_command", "proof_path"],
+      "properties": {
+        "kind": { "const": "deploy.prereq" },
+        "node": { "const": "N-35" },
+        "status": { "const": 201 },
+        "prereq": { "enum": ["dns-a-record", "vps-server-block", "haproxy-route"] },
+        "proof_command": { "type": "string" },
+        "proof_path": { "type": "string", "pattern": "^\\$COQ_STATE/map/deploy/prereq/" }
+      }
+    },
+    "deploy.record": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["sha", "attempt", "stage"],
+      "properties": {
+        "kind": { "const": "deploy.record" },
+        "node": { "const": "N-35" },
+        "status": { "enum": [100, 200, 201, 409, 500, 502, 504] },
+        "sha": { "$ref": "#/$defs/sha" },
+        "image_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "image_tag": { "type": "string", "minLength": 1 },
+        "argo_app": { "const": "coq-map" },
+        "argo_synced_at": { "$ref": "#/$defs/utc" },
+        "haproxy_route": { "const": "map.gatehouse.click" },
+        "public_200_at": { "$ref": "#/$defs/utc" },
+        "stage": { "enum": ["build", "status", "gitops", "sync", "front-door", "done", "superseded"] },
+        "build_url": { "type": "string", "format": "uri" },
+        "superseded_by": { "$ref": "#/$defs/sha" },
+        "probe_log": { "type": "string", "pattern": "^\\$COQ_STATE/map/deploy/probe/" }
+      },
+      "if": { "properties": { "status": { "const": 201 } } },
+      "then": { "required": ["image_digest", "image_tag", "argo_synced_at", "public_200_at"] }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/map.commit" },
+    { "$ref": "#/$defs/deploy.prereq" },
+    { "$ref": "#/$defs/deploy.record" }
+  ]
+}

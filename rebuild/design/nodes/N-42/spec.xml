@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Node volume N-42 Controls screen. Spec-author seat, group G6 Command center map, round 1, 2026-10-14 UTC.
+  The reactor panel: the signal lamp, the halt lever, the watcher lamp, build mode, health, open cards, break glass. No em dash appears in this file.
+-->
+<!-- N-42 round 3, 2026-10-14T05:09:51Z, by the G6 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers (verdict in
+     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-42):
+     the pointers element carried shared hrefs into rebuild/design/shared/, a directory no author had written,
+     at anchors no volume declared (record-envelope where N-01 declares envelope; record-kinds where N-18 declares
+     record-kinds-registry; and anchors only this group needed, never declared as needs).
+     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
+     The fix: every shared dependency is a <need volume= anchor=> in a shared-needs element with no href, using the anchor
+     name the owning node declares; the pointers element points at dag.md sections 3, 7 and 8 and at #shared-needs, all of which exist;
+     the status-codes map attribute points at #shared-needs for the same reason; prose that named a shared anchor now names the need.
+     Rejected: writing shared/ from this seat (one shared author owns it; two authors on one file is the collision the book forbids)
+     and leaving the hrefs to resolve later (a failing volume blocks the book now).
+     Cost: a need is not a live pointer until shared/ lands; check.sh matches each need against the shared volumes then. -->
+<volume id="N-42" kind="node-spec" node="N-42" group="G6" version="1.1.0" issued="2026-10-14" written="2026-10-14T05:09:51Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG edges</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="panels">Panels of this screen (bound by N-37)</entry>
+    <entry ref="mechanism">Mechanism: the controls frame, the actions, the re-entry at N-29</entry>
+    <entry ref="actions">The four actions and their rules</entry>
+    <entry ref="states">The five states</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries: 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup scripts</entry>
+    <entry ref="look">The look: the reactor panel</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-42"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schemas of this node</sibling>
+    <sibling href="../N-35/spec.xml#N-35">N-35 Hello page deploy</sibling>
+    <sibling href="../N-36/spec.xml#N-36">N-36 Art pipeline</sibling>
+    <sibling href="../N-37/spec.xml#N-37">N-37 Panel binding registry</sibling>
+    <sibling href="../N-38/spec.xml#N-38">N-38 Map screen</sibling>
+    <sibling href="../N-39/spec.xml#N-39">N-39 Machine screen</sibling>
+    <sibling href="../N-40/spec.xml#N-40">N-40 Stats screen</sibling>
+    <sibling href="../N-41/spec.xml#N-41">N-41 Alerts screen</sibling>
+    <shared href="../../dag.md#3-every-node" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 3; the hold is a flag every tick reads, never a message typed to seats</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">Compare-and-swap on hold.flag, build-mode.state and the break-glass token; replay by action id a 409 no-op</principle>
+    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <dag href="../../dag.md#2-the-dag">
+      <in node="N-06" href="../N-06/spec.xml#N-06" record="health record (gRPC Health, counters)"/>
+      <in node="N-27" href="../N-27/spec.xml#N-27" record="watcher.alive record per tier (the C32 defect fix: a card cannot post unwatched; shown as a lamp)"/>
+      <in node="N-44" href="../N-44/spec.xml#N-44" record="build-mode.state record (on or off, expiry)"/>
+      <in node="N-31" href="../N-31/spec.xml#N-31" record="pushed.frame carrying the controls frame: hold flag, build-mode state, watcher lamps, health, open cards, last ruling"/>
+      <in node="N-36" href="../N-36/spec.xml#N-36" record="sprite.sheet (lever, signal lamp, status dots, panel frames)"/>
+      <in node="N-37" href="../N-37/spec.xml#N-37" record="binding record"/>
+      <out node="N-29" kind="re-entry" href="../N-29/spec.xml#N-29" record="control.action record (owner-initiated: hold, resume, build-mode, one-time break glass) as a new traversal at N-29; one ruling per action id"/>
+    </dag>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares, using the anchor name of the node that owns the thing (envelope and cas from N-01, record-kinds-registry from N-18, codes from N-43, break-glass from N-27). check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for controls.rendered 200; control.recorded 201; control.conflict 409; controls.held 423; hold.ignored 500; controls.stale 503; controls.view-timeout 504. Owner-acts: hold.ignored (a tick ran a dispatch under a hold; one card).</need>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="lamp">A lamp column per code (green, amber or red) so a screen draws a code without a table of its own; N-37 generates bindings from it and the signal lamp, the watcher lamp and the health dots read it.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="envelope">The record envelope every kind carries: id, at (UTC), code, kind, node, attempt where one applies; this node reads and writes records only inside it.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="cas">Compare-and-swap: expected_version on an entity write; 409 with the current version on a miss; expected 0 inserts.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="flag-hold">The hold flag is an entity every tick reads before dispatch; set and cleared by compare-and-swap on its version; a tick that dispatches under a set flag writes 500 hold.ignored.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-entities">entities(key, version, body, updated_at): hold.flag, build-mode.state and break-glass.token are entities; two owner devices acting at once yield one 201 and one 409.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-build-mode">build_mode(state, scope, expires_at, ruling_id): the build-mode lever reads and writes this table through N-44, never a file.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-idempotency">idempotency(key PRIMARY KEY, seq, response JSON, at); a seen key replays its response with code 200.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="record-kinds-registry">The record kinds registry (every kind with its code set, writer node and schema path, loaded by N-43 with the code table) carries the kinds this node reads and writes: controls.frame (N-31), hold.flag, build-mode.state (N-44), watcher.alive (N-27), health (N-06), card (N-28), ruling (N-29), break-glass.token, control.action (origin page or break-glass).</need>
+    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">owner_key and viewer_key (N-32), hold.effect_timeout_s (60), watcher.heartbeat_timeout_s (30).</need>
+    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="owner-key">The owner key in the first URL becomes the cookie and is the only credential that renders an action; the viewer key draws the panel read-only; no seat ever holds either key, writes a control.action, a ruling, a hold flag or a token; a seat that needs a ruling posts a card (N-28) and leaves.</need>
+    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="break-glass">Break glass is owner-only and one time: the token is minted by a ruling on a card (N-29), consumed by compare-and-swap, recorded as control.action with origin break-glass; when the page is unreachable the same record is posted through the Go service CLI on the host and read back before acting; N-51 counts every such record.</need>
+    <need kind="n-29">Every control.action is a new traversal at N-29: one ruling per action id, replay by the same id a 409 no-op.</need>
+    <need kind="n-27">A card cannot post unless a watcher.alive for that tier is fresh (the C32 defect fix); the watcher lamp on this screen is that record.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="no-cog">No cog: every wait has a timeout and a fallback, nothing starts by an agent typing, no agent is a gate; the system drives (brief C rule 3).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="multi-agent-first">Many agents at once from the first line: append-only records, compare-and-swap, idempotent retryable steps, conflicts that report as 409 (brief C rule 2).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="three-attempts">Every automated step retries up to 3 times with backoff, then recovers and reports as a record; a dead record becomes exactly one card.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="monitor-never-stops">The owner's always-on monitor never stops on a halt; a HOLD dims actions, never the screens (brief C, command center volume).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="level-triggered">Push transport for everything; a client re-reads full state on reconnect and drops any frame older than the one it holds (D21).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="build-mode">Build mode is a flag with an expiry set by a ruling, never a mode a seat declares; this screen shows it and lets the owner set it, nothing else.</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <s>The reactor panel: the signal lamp HOLD or GOFACTORY, the halt lever with its two-step confirm, the watcher lamp per tier, build mode with its expiry, the system's health, the owner's open decision cards, and the last owner action with its UTC time (wireframe-brief.json screen Controls; C32 approved). Primary action: pull the halt lever.</s>
+    <s>The owner is the only operator and the only break glass (no-cog); every action here is a record that enters the DAG at N-29 as a ruling, so a gate reads a record and never a chat line (memory rulings-gates-check-are-records).</s>
+    <s>The C32 defect fix lives here: a card cannot be posted unless a watcher for that tier is alive, and the Controls screen shows the watcher as a lamp (HANDOFF.md, defect found 2026-10-14 ~04:10Z).</s>
+  </purpose>
+
+  <input id="input" record="controls.frame" schema="record.schema.json#/$defs/controls.frame">
+    <s>N-31 pushes the controls frame: the hold flag (signal HOLD or GOFACTORY with its ruling id and since; merge.hold from N-10 with the red main sha), the build-mode state (N-44: on or off, expiry, ruling id), the watcher.alive lamps per tier (N-27: tier, pid, last heartbeat, lock path), the health record (N-06: gRPC Health status, counters, tick age), the open cards (N-28: id, about, decide, options, recommendation, posted at), the last ruling (N-29: card or action id, pick, words, at), and the break-glass token state (minted, consumed, or none).</s>
+  </input>
+
+  <output id="output" record="control.action" schema="record.schema.json#/$defs/control.action">
+    <s>A control.action record, owner-initiated, with an action id the client mints (idempotency key), the action (hold, resume, build-mode-on with expiry, build-mode-off, break-glass with the target), the expected version of the flag it changes (compare-and-swap), the owner's words, and at UTC. It enters N-29 as an answer record and becomes a ruling; N-44 reads build-mode rulings, N-07 reads the hold flag, N-10 reads a break-glass ruling for a held merge.</s>
+    <s>Draws controls.frame on screen (not stored). A second action on the same flag version is refused 409 and shown; break glass is one time: the token is consumed by compare-and-swap and a second use is 409.</s>
+  </output>
+
+  <panels id="panels" registry="../N-37/spec.xml#panels">
+    <panel id="controls.header" kind="health" staleness="10" frame="wf-map/controls/default">Title Controls, the operator line (the owner is the only operator; read-only while offline with the last known time), the health dot of the Go service.</panel>
+    <panel id="controls.signal-lamp" kind="hold.flag" staleness="10" frame="wf-map/controls/default">CURRENT signal with its big lamp (HOLD red, GOFACTORY green) and since; NEXT on request; merge.hold shown as an amber lamp with the red main sha; the Give GOFACTORY or Hold button (owner key).</panel>
+    <panel id="controls.halt-lever" kind="control.action" staleness="10" frame="wf-map/controls/default">The lever in three positions (rest, armed, pulled) with the two-step confirm: 1 Arm the lever (disarms itself after 10 s), 2 Confirm halt; the result line.</panel>
+    <panel id="controls.watcher-lamp" kind="watcher.alive" staleness="10" frame="wf-map/controls/default">One lamp per bearings tier (stable, uat, dev when up): green with the heartbeat age when a wait loop holds the lock, red with "no watcher, cards cannot post" otherwise.</panel>
+    <panel id="controls.build-mode" kind="build-mode.state" staleness="10" frame="wf-map/controls/default">Build mode on or off, the expiry countdown in UTC, the ruling that set it; the Turn on with expiry and Turn off buttons (owner key).</panel>
+    <panel id="controls.health" kind="health" staleness="10" frame="wf-map/controls/default">Go service health (serving or not), tick age, store seq, backups last at, push clients connected.</panel>
+    <panel id="controls.open-cards" kind="card" staleness="10" frame="wf-map/controls/default">Open decision cards from the system lane with about, decide and the recommendation; Open Getting My Bearings; the count; the empty block when none.</panel>
+    <panel id="controls.last-action" kind="ruling" staleness="10" frame="wf-map/controls/default">When (UTC), action, result of the last ruling or control action; the empty block when none recorded.</panel>
+    <panel id="controls.break-glass" kind="break-glass.token" staleness="10" frame="wf-map/controls/default">The one-time break glass: token state, what it would bypass (a merge.hold or a dead record on one named ticket), the two-step confirm; consumed tokens listed with their time.</panel>
+  </panels>
+
+  <mechanism id="mechanism">
+    <diagram format="mermaid"><![CDATA[
+flowchart LR
+  F[N-31 controls frame: hold, build-mode, watcher, health, cards, last ruling, token] --> C[client: controls module]
+  C --> D[controls.frame drawn]
+  C -->|owner key: hold, resume, build-mode, break glass| A[control.action: action id, expected version]
+  A --> R[N-29 owner answer intake: ruling record]
+  R --> H[N-07 reads hold flag]
+  R --> B[N-44 build-mode flag with expiry]
+  R --> G[N-10 reads break-glass ruling for a held merge]
+  R -->|409 version changed or token consumed| C
+  W[N-27 watcher.alive] --> F
+  K[N-28 cards: refused without watcher.alive] --> F
+]]></diagram>
+    <step n="1" where="client">
+      <s>The frame is drawn from the push; the action buttons are enabled only on the owner key and only while the stream is live (offline is read-only: "Halt needs a live connection. Reconnect first, or use the owner break-glass path." from the approved frame).</s>
+    </step>
+    <step n="2" where="client">
+      <s>Every action is a control.action with a client-minted action id (UUID) as idempotency key and the expected version of the flag it changes, taken from the frame; the server applies compare-and-swap at N-01 and N-29 records the ruling; 201 with the new version, or 409 with the current state.</s>
+    </step>
+    <step n="3" where="go-service">
+      <s>N-29 treats a control.action as an answer record whose card id is the action id; one ruling per action id; a second answer to the same action id is refused (dag.md section 4 re-entry rule). The hold flag is the entity flag:hold with a version (shared/state-store.xml#flag-hold), drawn through the hold.flag view (nodes/N-31/spec.xml#views); N-07 reads it level-triggered every tick, so a hold takes effect within one tick and nothing is typed to any seat.</s>
+    </step>
+    <step n="4" where="go-service">
+      <s>Halt stops every agent except monitoring: N-07 dispatches nothing while hold is set; N-12 keeps its stall timers; N-15 running seats finish their one shot or are stopped by the halt ruling's stop-running flag (owner's choice on the confirm step); the bearings stable page, its wait loops, the push transport and the map keep running (bearings-stable-is-the-only-always-on-monitor; R-08 note: a halt never stops the owner monitoring surface).</s>
+    </step>
+    <step n="5" where="system-lane">
+      <s>Watcher lamp and the card rule: N-27 holds a lock with a heartbeat per tier; N-28 refuses to post a card with a clear 423 record unless watcher.alive for that tier is fresh; the lamp shows the same record; a red lamp on stable while cards are pending is an alert (N-41) and the one thing the system cannot fix by itself: N-28 holds the card three times with backoff and then writes card.unwatched 500, which is an alert row here and, once live, a phone push (N-52); a card is never moved to another tier, because a uat or dev deck is not the owner's deck (the one rule: nodes/N-28/spec.xml#mechanism step 5).</s>
+    </step>
+  </mechanism>
+
+  <actions id="actions">
+    <action name="hold" flag="hold.flag" steps="2">Arm (10 s self-disarm), then Confirm halt with the stop-running choice (finish one-shots, or stop them now); result: hold.flag signal HOLD, N-07 dispatches nothing, monitoring keeps running.</action>
+    <action name="resume" flag="hold.flag" steps="1">Give GOFACTORY; the confirm line names how many machines are stalled ("4 machines are stalled; the line starts anyway if you say so"); result: hold.flag signal GOFACTORY with the ruling id; the first GOFACTORY after the rebuild is the GOFACTORY ruling N-49 and N-50 read.</action>
+    <action name="build-mode" flag="build-mode.state" steps="1">Turn on with an expiry the owner picks (1 h, 6 h, 24 h, 7 d) or turn off; result: a ruling N-44 applies; the flag clears itself at expiry (N-44), never by a seat.</action>
+    <action name="break-glass" flag="break-glass.token" steps="2">One time, owner only: pick the one target (a merge.hold on a named sha, or a dead record on a named ticket) and confirm; the token is minted by a prior ruling on a card (N-29) and consumed by compare-and-swap; result: a ruling N-10 or N-03 reads once; the token is gone; a second use is 409; the action and its target are an alert row so it is never silent.</action>
+    <s>No other action exists on the page: no per-ticket retry, kill or merge (D15: the owner holds the line through cards, never the per-PR path).</s>
+  </actions>
+
+  <states id="states" source="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/plan.md#per-state-content-requirement">
+    <state name="default">Signal HOLD with GOFACTORY next, lever at rest with the three positions drawn, watcher lamps per tier, build mode off, health serving, one open card, the last action with its UTC time.</state>
+    <state name="empty">No cards and no action ever recorded: the empty blocks ("No open decision cards" with Open Getting My Bearings as the real button; "None recorded yet" for the last action); the lever and signal still drawn.</state>
+    <state name="loading">Skeleton blocks in the shape of the panel; no centred spinner.</state>
+    <state name="error">not-found (the controls view is absent), timeout (no frame within 10 s), validation (frame failed schema); what to do next and Retry.</state>
+    <state name="offline">Read-only with the last known frame and time; every action button disabled with the reason; the break-glass path line names the owner-only recovery (runbook); no queued action on this screen because an action must act on a live version.</state>
+  </states>
+
+  <start id="start">
+    <s>The controls frame is pushed as soon as the Go service serves; the client subscribes on open; the owner acts when he chooses; nothing is typed to any seat. Ships in the N-38 bundle, promoted by N-48.</s>
+  </start>
+
+  <waits id="waits">
+    <wait name="controls-first-frame" timeout="PT10S" fallback="error state class timeout with Retry; automatic retry continues">
+      <s>From the subscription to the first controls frame.</s>
+    </wait>
+    <wait name="controls-staleness" timeout="PT10S" fallback="stale chip (503) and every action disabled; at 60 s offline banner">
+      <s>Actions need a live version; a stale frame disables them rather than risk a 409 storm.</s>
+    </wait>
+    <wait name="arm-self-disarm" timeout="PT10S" fallback="the lever returns to rest; nothing recorded">
+      <s>The two-step confirm's first step expires on its own.</s>
+    </wait>
+    <wait name="action-reply" timeout="PT5S" fallback="resend with the same action id and expected version up to 3 times; then the result line says not recorded and the button re-enables; never a silent drop and never a second action id">
+      <s>From send to 201 or 409.</s>
+    </wait>
+    <wait name="hold-takes-effect" timeout="PT1M" where="go-service" fallback="if N-07 dispatches after a hold ruling (a dispatch record newer than the ruling), that is a 500 hold.ignored alert and one card; the hold ruling itself stands">
+      <s>One tick; the page shows the signal change the moment the ruling lands and the dispatch count stop on the next tick.</s>
+    </wait>
+    <wait name="watcher-heartbeat" timeout="PT30S" where="n-27" fallback="lamp red; N-28 refuses cards for that tier with 423; alert row; one card on another watched tier or the phone bridge">
+      <s>The lock's heartbeat bound.</s>
+    </wait>
+  </waits>
+
+  <retries id="retries">
+    <s>Client sends retry 3 times with the same action id and version, then recover into a visible not-recorded line; the owner may act again, which mints a new action id against the current version. Server-side, a ruling is one record; there is nothing to retry; a flag a node ignores is an alert and a card.</s>
+  </retries>
+
+  <many-agents id="many-agents">
+    <s>Readers: every client draws the same controls frame; only owner-key clients can act; N viewer clients cost N subscriptions.</s>
+    <s>Two owner devices acting at once (the phone and the desktop): both send against the same flag version; compare-and-swap lets one win 201 and answers the other 409 with the new state; both screens end identical; no double hold, no double resume, no lost action.</s>
+    <s>An action racing a system change: merge.hold set by N-10 bumps the hold.flag version; an owner resume sent against the old version gets 409 and the screen shows the red main first, so the owner resumes knowing main is red (or uses break glass once, deliberately).</s>
+    <s>Break glass under concurrency: the token is one record; consumption is compare-and-swap from minted to consumed with the action id; two uses at once yield one 201 and one 409; a replay of the same action id is a 409 no-op.</s>
+    <s>Many seats under a hold: the hold is a flag every tick reads (J18: halt as a flag every loop reads), not a message to each seat, so twenty running seats are stopped or allowed to finish by one record; no seat is told anything, and no seat can miss it.</s>
+    <s>Cards from many sources at once: N-28 builds cards idempotently by source id and refuses without watcher.alive; the open-cards panel lists them all by id; answering is on the bearings page (N-29), one answer per card id.</s>
+  </many-agents>
+
+  <status-codes id="status-codes" map="spec.xml#shared-needs">
+    <code value="200" name="controls.rendered" kind="frame.report" lamp="green">Frame drawn and current; actions enabled on the owner key.</code>
+    <code value="201" name="control.recorded" kind="control.action" lamp="green">A control.action landed and became a ruling; new flag version returned.</code>
+    <code value="409" name="control.conflict" kind="control.action" lamp="amber">Flag version changed, token consumed or action id replayed; current state shown; nobody acts.</code>
+    <code value="423" name="controls.held" kind="control.action" lamp="amber">An action was refused because the page is stale or offline, or a card was refused by N-28 because no watcher is alive for the tier.</code>
+    <code value="500" name="hold.ignored" kind="hold.ignored" lamp="red">A dispatch landed after a hold ruling; alert and one card.</code>
+    <code value="503" name="controls.stale" kind="frame.report" lamp="amber">No frame or heartbeat within 10 s; actions disabled.</code>
+    <code value="504" name="controls.view-timeout" kind="frame.report" lamp="red">No frame within 10 s; error state, retrying.</code>
+  </status-codes>
+
+  <state-paths id="state-paths" cleanup-registry="../N-45/spec.xml#N-45">
+    <path p="store table control_actions" cleanup="N-45 retention class: keep every record (owner audit trail, small)">Control actions and their results.</path>
+    <path p="store table rulings" cleanup="N-45 retention class: keep every record">Rulings (owned by N-29; listed here because this screen shows the last one).</path>
+    <path p="store table break_glass_tokens" cleanup="N-45 retention class: keep every record">Tokens minted and consumed.</path>
+    <path p="store rows watcher.alive and the lease row watcher/&lt;page&gt; (N-27)" class="store" cleanup="N-45 retention class owner-surface; the lease row is released by the watcher on exit and expired by N-02 after its 15 s ttl, so no file exists to clean (the old ~/.bearings/&lt;page&gt;/wait.lock.json is retired with wait.mjs, shared/cut-over.xml#step-retire-legacy-page; it is a cleanup-tier.sh --legacy target, nodes/N-32/spec.xml#state-paths)">The watcher lease and heartbeat the lamp reads (owned by N-27, nodes/N-27/spec.xml#mechanism).</path>
+    <s>This screen writes no files.</s>
+  </state-paths>
+
+  <look id="look" requirement="owner 04:45Z all views carry the Krastorio look; command-center-visual-bar: the nuclear reactor command center">
+    <s>The reactor panel: a wide frame #313031 with the caption Controls #FFE6C0, the signal lamp as a 40 px slot in a deep frame #242324 with glow (red #DA4535 HOLD, green #2BE327 GOFACTORY, amber #FAA838 merge.hold), the lever as original pixel art in three positions with hazard stripes, the watcher lamps as original status dots, build mode as a tool button pair with the orange selected state #F1BE64, health as mono figures, cards as inside shallow frames #403F40 with a subheader strip, the break-glass block behind a red-edged frame with the heat red; disabled controls at #B3B3B3 with the reason.</s>
+    <s>Check: look-check.mjs samples the signal lamp in both states, the lever art presence, a disabled button and the card frame; binding-check look-token; the screenshot pair read by the architect.</s>
+  </look>
+
+  <checklist id="checklist">
+    <item><check>Every panel in #panels is bound and drawn from the controls frame.</check><proof>binding-check 201 for the controls ids and a render test over a fixture frame.</proof></item>
+    <item><check>The four actions write control.action with an action id and expected version; N-29 records one ruling per action id; a replay is 409.</check><proof>Go tests for each action and a replay.</proof></item>
+    <item><check>Hold takes effect within one tick: no dispatch after the ruling; monitoring keeps running.</check><proof>A test with a hold ruling and ten ticks writing zero dispatch records while the push stream stays connected.</proof></item>
+    <item><check>Two owner clients acting at once end identical with one 201 and one 409.</check><proof>A test running two actions concurrently against one version.</proof></item>
+    <item><check>Break glass is one time: minted by a ruling, consumed by CAS, second use 409, listed as an alert row.</check><proof>A test minting, using, re-using and reading the alert view.</proof></item>
+    <item><check>The watcher lamp reads N-27's lock and N-28 refuses a card with 423 when it is stale.</check><proof>A test stopping the wait loop, asserting the red lamp, a refused card record, and a card on the next watched tier.</proof></item>
+    <item><check>Actions are disabled while stale or offline with the reason shown.</check><proof>Playwright test silencing the stream and asserting disabled buttons and the reason text.</proof></item>
+    <item><check>The arm step disarms itself after 10 s.</check><proof>Playwright test with a 10 s clock advance.</proof></item>
+    <item><check>All five states on desktop and mobile match the approved frames.</check><proof>Ten screenshots on the promotion record read by the architect.</proof></item>
+    <item><check>Every state path has a cleanup script in the registry.</check><proof>N-45 entries and a dry-run listing.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <s>Build seat: writes tools/map/src/controls/**, the Controls #panels of this volume, and tests; the control.action intake at N-29 and the hold flag read at N-07 are G5 and G2 tickets (shared needs).</s>
+    <s>Actions require the owner key; the viewer key draws the panel read-only. No seat ever writes a control.action, a ruling, a hold flag or a token; a seat that needs a ruling posts a card (N-28) and leaves.</s>
+    <s>Break glass is owner-initiated and one time; nothing automates it; the token is minted only by a ruling on a card.</s>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <s>The watcher lamp is the monitor of the monitor: it is the one record the owner reads to know a card can reach him. The health panel shows the Go service's own gRPC Health and tick age. A hold the system ignores is a 500 alert and one card. The map draws N-42 as a machine whose lamp is the latest controls code.</s>
+  </monitoring>
+
+  <runbook id="runbook">
+    <s>Owner break-glass path when the page is unreachable: a ruling record posted through the Go service's CLI on the host (reading the record back before acting), the clause shared/seat-contract.xml#break-glass declared in #shared-needs; it is one time and recorded like a page action.</s>
+    <s>Watcher down on stable: the tools/bearings wait loop is a supervised unit (N-27); restart is the unit's job; the lamp turns green when the lock heartbeat resumes; a card refused meanwhile is re-posted by N-28 on the next tick, never by hand.</s>
+    <s>Cleanup: nothing on disk from this screen; store tables by N-45 retention; the watcher lock by N-27.</s>
+  </runbook>
+
+  <sources id="sources">
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/wireframe-brief.json">Screen Controls: data (signal state HOLD or GOFACTORY, halt lever state, open cards from bearings, last owner action with time), primary action Pull the halt lever.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-plan.json">Frames wf-map/controls/* desktop and mobile; the approved default frame's two-step lever and confirm lines.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md">Defect 2026-10-14 ~04:10Z: a card posted unwatched for 40 minutes; make ask refuses unless a wait is alive; the Controls screen shows the watcher as a lamp.</src>
+    <src href="../../dag.md#4-re-entries">N-42 control.action enters N-29 as an owner action; break glass is one time; one ruling per card id.</src>
+    <src href="../../dag.md#3-every-node">N-27 watcher.alive; N-28 a card cannot post without it; N-44 build-mode flag with expiry cleared by the system; N-10 merge.hold.</src>
+    <src href="rebuild/investigation/00-INVENTORY.md">J18 halt, drain, resume: halt as a flag every loop reads; USERHALT was done by hand.</src>
+    <src href="rebuild/investigation/03-DECISIONS.md#17-d15-human-in-the-merge-path">D15: the owner holds the line through cards, never the per-PR path.</src>
+    <src href="rebuild/investigation/03-DECISIONS.md#15-d13-seat-governance-layer-and-the-build-mode-switch">D13: build mode is a flag with an expiry.</src>
+    <src href="rebuild/factory-rebuild-plan.xml#principles">no-cog: the owner is the only break-glass; build-mode.</src>
+    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/bearings-stable-is-the-only-always-on-monitor.md">Page server and wait loop never shut off; USERHALT stops everything else.</src>
+    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/rulings-gates-check-are-records.md">Rulings a gate checks are records, posted before anything acts.</src>
+    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/build-mode-rule.md">Governance never applies to the rebuild; a rule that blocks a rebuild ticket is a defect.</src>
+    <src href="rebuild/investigation/L08-bearings-owner-surface.md#8-what-to-carry-forward">The gmb break-glass and incident write-up as the template for owner-only, one-time recovery.</src>
+    <src href="~/.bearings/coq-stable/answers.jsonl">C22: USERHALT next to USERGO; C32 approval.</src>
+  </sources>
+
+  <rejected id="rejected">
+    <item reason="D15 and no-cog: the owner holds the line through cards and the panel, never per PR; a per-ticket lever would recreate the hand merges (43 of 92) the investigation measured">Per-ticket retry, kill or merge controls.</item>
+    <item reason="a message to each seat can be missed (391 wake failures, L01); a flag every tick reads cannot">Halt as a prompt typed to seats.</item>
+    <item reason="rulings a gate checks must be records; a chat line is not a record (rulings-gates-check-are-records)">Accepting HOLD or GOFACTORY from a chat message as the flag.</item>
+    <item reason="break glass is one time and owner-only; a standing override would be a second control path (no-cog)">A persistent force-merge switch.</item>
+    <item reason="an action against a stale version would 409 at once; disabling is honest">Allowing actions while offline and queuing them.</item>
+    <item reason="the card is answered on the bearings page where its options live (N-29); duplicating the answer UI makes two surfaces disagree">Answering decision cards inside the Controls screen.</item>
+  </rejected>
+
+</volume>

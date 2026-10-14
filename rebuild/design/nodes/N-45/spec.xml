@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-45 Cleanup registry and runs. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
+     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh. -->
+<volume id="N-45" kind="node-spec" node="N-45" group="G7" version="1.0.0" issued="2026-10-14" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, shared</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="registry">The registry: derived from the volumes, never hand-kept</entry>
+    <entry ref="mechanism">Mechanism: the Go service and line/bin/cleanup.sh</entry>
+    <entry ref="safety">Safety rules every run obeys</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="shared-needs">What this volume needs from the shared volumes</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-45"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schema of this node</sibling>
+    <sibling href="../N-49/spec.xml#N-49" kind="node">Unlanded cleanup, which feeds this node its one-time dispositions</sibling>
+    <sibling href="../N-50/spec.xml#N-50" kind="node">Cut-over records, which feed branch deletions</sibling>
+    <sibling href="../N-47/spec.xml#N-47" kind="node">Drive publish, same group</sibling>
+    <shared href="../../shared/principles.xml#artifacts-out-of-repo">Artifacts out of the repository, cleanup scripts for every state path (owner C35)</shared>
+    <shared href="../../shared/state-store.xml#leases">Leases with fencing tokens</shared>
+    <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
+    <shared href="../../dag.md#3-every-node">DAG row N-45</shared>
+    <shared href="../../shared/cut-over.xml#legacy" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>Owns the one list of every state path the design names and the one script that deletes any of them, so that "keep all artifacts out of the git repo ... ensure we have cleanup scripts for that shit available too" (owner, C35) is a registry the system runs, not a README someone reads.</is>
+    <is>Runs cleanup on three triggers: a merge (branch gone on the forge, worktree and slot released, the ticket's seat workspaces removed), a backup (retention of older snapshots), and a timer (every registered path by its retention), plus the one-time dispositions of N-49 and N-50.</is>
+    <is-not>It never decides what is junk by looking; it deletes only what a registry entry or a disposition record names, after a dry-run listing that is itself a record.</is-not>
+    <why>88 registered worktrees, 34 remote branches and 5,812 untracked event copies accumulated because cleanup was a hand step nobody owned (04-UNLANDED.md sections 3, 6, 7; L05 section 5 item 7). merge.sh deletes its branch (merge.sh line 306) but nothing calls merge.sh (L05 section 5 item 11).</why>
+  </purpose>
+
+  <input id="input">
+    <record kind="merge" from="N-09">The merge record (PR number, branch, merge sha, ticket id). Trigger class merge.</record>
+    <record kind="backup" from="N-05">A backup record (snapshot path, retention class). Trigger class backup.</record>
+    <record kind="tick" from="N-06">The daily tick and the hourly tick; the registry says which entries run on which. Trigger class timer.</record>
+    <record kind="disposition" from="N-49">One per 04-UNLANDED entry with action supersede or close (and land after its ticket merges). Trigger class disposition.</record>
+    <record kind="cancel and branch.delete" from="N-50">Cancel records name no paths; branch.delete names the design branch. Trigger class disposition.</record>
+    <schema href="record.schema.json#/$defs/input"/>
+  </input>
+
+  <output id="output">
+    <record kind="cleanup.run" code="100">Phase plan: the dry-run listing (every path or ref that would go, its registry entry, its size, its lease state), the plan hash, nothing deleted.</record>
+    <record kind="cleanup.run" code="200">Phase apply: what was deleted, what was skipped and why (lease held, not matching the plan, missing already), the plan hash it executed.</record>
+    <record kind="cleanup.run" code="423">Three attempts failed on at least one entry; the failed entries and the last error; N-28 posts one card only when the failed entry is in the owner-acts set of the registry (a path only the owner can remove).</record>
+    <schema href="record.schema.json#/$defs/output"/>
+  </output>
+
+  <registry id="registry">
+    <s>The registry is generated, like dag.md: rebuild/design/bin/registry.py reads every state-paths element of every node volume and every runbook volume under rebuild/design/nodes and writes rebuild/design/shared/cleanup-registry.json (committed, generated, checked for drift by N-46).</s>
+    <s>One entry per path (shared/cleanup-registry.schema.json): id (the path's id attribute, or node plus a slug of the glob), node, glob, class (host: a path on the host under an allowed root; store: rows N-45 prunes by the kind's retention class; client: the owner's browser storage; external: another system's retention such as the journal, Jenkins, GHCR or GitHub; tracked: a file in a repository, removed by pull request), retention (an ISO 8601 duration, never, or the run command's rule), trigger (timer, merge, backup, disposition), acts (system or owner), run (the command the volume names; per-group scripts are allowed) and verb, which is always line/bin/cleanup.sh --entry &lt;id&gt;: the one verb the service runs, which looks the entry up and runs its command in plan, then apply, mode.</s>
+    <s>Retention never with acts owner is the class for a path kept on purpose: long-lived secrets (STATE/config/service.env, $COQ_STATE/secrets/*), the owner's data (the art reference copy, the unlanded backups), records another system keeps (GitHub statuses), the owner's browser storage and tracked sources; cleanup.sh lists such an entry in every plan and refuses to apply it, and only the owner removes it, by break glass or a disposition (registry.py rule R2 and R3; brief C rule 6).</s>
+    <s>A volume that names a state path with no cleanup and no declared retention never fails N-46 (check.sh C14: every state path the design names has a cleanup script or is declared kept on purpose, brief rule 6).</s>
+    <s>Git objects are entries too: remote branches (glob refs/remotes/origin/feat/*, trigger merge, retention P0D), local worktrees (the treehouse pool and $COQ_CACHE/worktrees, trigger merge), stale remotes (trigger disposition).</s>
+    <example><![CDATA[
+{ "id": "N-14.workspace", "node": "N-14", "glob": "$COQ_CACHE/ws/<slot>/ and $COQ_CACHE/ws/<slot>.json", "class": "host",
+  "retention": "removed on merge, dead or cancel (N-45 trigger), or 24 h after", "trigger": "timer", "acts": "system",
+  "run": "scheduler/host/bin/cleanup-workspaces.sh", "verb": "line/bin/cleanup.sh --entry N-14.workspace",
+  "holds": "", "note": "...", "volume": "nodes/N-14/spec.xml" }
+    ]]></example>
+  </registry>
+
+  <mechanism id="mechanism">
+    <where>Go package cleanup in the service decides when; line/bin/cleanup.sh does the deleting as an Executor.Run verb (scheduler.proto line 19) with a timeout; the script lives in the repository (owner 2026-10-12, scripts live in the project).</where>
+    <step n="1">On a trigger record, select the registry entries whose trigger class matches and whose retention has elapsed (timer), or whose key matches the record (merge: ticket id and branch; backup: retention class; disposition: the entry or ref the record names).</step>
+    <step n="2">Take the lease cleanup:&lt;entry-id&gt; for each selected entry (N-02, fencing token, expiry 15 minutes). An entry whose lease is held is skipped with reason lease-held and tried on the next trigger.</step>
+    <step n="3">Run cleanup.sh plan --entry &lt;ids&gt; --trigger &lt;record id&gt;: it expands globs, checks every path is under an allowed root, asks the store whether a live lease (workspace, seat, tier) holds the path, and prints the listing as JSON. The service writes cleanup.run 100 with the listing and its hash.</step>
+    <step n="4">Run cleanup.sh apply --plan &lt;hash&gt; --fence &lt;token&gt;: the script re-expands, refuses if the expansion differs from the plan hash (409, something changed; replan on the next trigger), then deletes with rm -rf for paths, git worktree remove --force then git worktree prune for worktrees, git push origin --delete for remote branches (through the service's gh auth), git branch -D for local branches, git remote remove for stale remotes, and treehouse return for pool slots. Each deletion is one row in the result.</step>
+    <step n="5">Write cleanup.run 200 with the rows; release the leases. On any failure retry the failed entries only, up to 3, then cleanup.run 423.</step>
+    <merge-trigger-detail>For a merge record: delete the remote branch (the repository setting delete_branch_on_merge is set true by N-49 step 5, so this is a check, not a delete, once that lands), remove the ticket's worktrees and seat workspaces (after N-15 has written seat.result for every run of the ticket; a running seat holds a lease and is skipped), return the slot, remove the dev and uat tier pages of the ticket (N-48 registers them).</merge-trigger-detail>
+    <backup-trigger-detail>Keep the newest N per retention class from the backup record (daily 14, weekly 8, monthly 6 from config); list and delete older snapshots; never delete the newest, never delete a snapshot whose checksum is unverified (N-05 marks it).</backup-trigger-detail>
+    <diagram>
+      <mermaid><![CDATA[
+sequenceDiagram
+  participant T as trigger record
+  participant S as Go cleanup package
+  participant L as N-02 leases
+  participant X as cleanup.sh (Executor.Run)
+  participant R as N-01 store
+  T->>S: merge / backup / tick / disposition
+  S->>L: lease cleanup:<entry> (fence)
+  S->>X: plan --entry ids
+  X-->>S: listing + hash
+  S->>R: cleanup.run 100 (plan)
+  S->>X: apply --plan hash --fence token
+  X-->>S: rows (deleted, skipped, failed)
+  S->>R: cleanup.run 200 or 423
+  S->>L: release
+      ]]></mermaid>
+    </diagram>
+  </mechanism>
+
+  <safety id="safety">
+    <rule>Allowed roots only: $COQ_STATE, $COQ_CACHE, the treehouse pool root from treehouse.toml, ~/.bearings for tier pages, and git refs by name. A path outside them is refused 400 and the entry is reported as a registry defect.</rule>
+    <rule>Never the repository working tree of the owner checkout, never origin/main, never a branch with an open PR unless a disposition record names it, never a worktree whose lease is live, never the stable tier page directory, never the backup newest snapshot.</rule>
+    <rule>Plan before apply, always; apply refuses a plan older than 1 hour or whose expansion changed.</rule>
+    <rule>Every deletion of a git ref records the sha it pointed at in the result row, so a wrong deletion is recoverable from the reflog or the row for 30 days (N-05 backs up the mirror).</rule>
+    <rule>Dry-run output for a disposition run is attached to the owner's card before GOFACTORY (N-49, D25 A); the apply waits for the GOFACTORY ruling record.</rule>
+  </safety>
+
+  <start id="start">
+    <s>Triggers are records; the service selects entries and runs the script. The daily tick at 02:00Z runs timer entries; the hourly tick runs entries with retention under one day.</s>
+    <s>No agent runs cleanup.sh in the line; the script is also runnable by hand for the owner's break glass with the same plan-then-apply contract.</s>
+  </start>
+
+  <waits id="waits">
+    <wait id="w1" what="lease cleanup:entry" timeout="PT5S to acquire" fallback="skip the entry this run with reason lease-held; next trigger retries; a lease older than its 15 minute expiry is reclaimed by N-02"/>
+    <wait id="w2" what="cleanup.sh plan" timeout="PT2M" fallback="kill, count one attempt; after 3 cleanup.run 423 naming the entry"/>
+    <wait id="w3" what="cleanup.sh apply" timeout="PT10M" fallback="kill; rows already written are kept; the remaining entries retry; an apply killed mid-row leaves a path half-deleted, which the next plan lists again (idempotent)"/>
+    <wait id="w4" what="git push --delete to the forge" timeout="PT30S per ref" fallback="retry by the N-04 ladder 10, 30, 90 s; then 423; the branch stays and the next merge trigger retries"/>
+    <wait id="w5" what="a running seat holding a workspace" timeout="until seat.result (N-15 stall timer bounds it)" fallback="the entry is skipped, never killed by cleanup; N-12 kills stalls"/>
+    <cog-test>The cog that could stall this node is a human deciding what is safe to delete. The registry and the disposition records decide; the dry run makes the decision visible; the lease check makes it safe.</cog-test>
+  </waits>
+
+  <retries id="retries">
+    <policy attempts="3" backoff="min(10 s x 2^(n-1), 5 min)">Per failed entry, not per run; entries that succeeded are not re-run.</policy>
+    <recover>After the third failure the run ends with cleanup.run 423 naming the entries; the next trigger of the same class plans them again, so nothing is lost and nothing loops within a run.</recover>
+    <report>A 423 on a system-acts entry is an alert record (N-41) and a counter; a 423 on an owner-acts entry is one card (N-28) with the dry-run rows attached.</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Any seat may read the registry volume to learn where its artifacts go; every seat writes only under the paths its node registers.</readers>
+    <writers>Only the service runs apply. Two triggers selecting the same entry at once (a merge and the hourly tick) are serialized by the per-entry lease; the loser skips with lease-held and the record shows it.</writers>
+    <collision>A seat starts on a ticket while the merge-trigger cleanup of a previous attempt runs: the new workspace is a new path (attempt in the name) and holds its own lease; the old attempt's path is the one deleted.</collision>
+    <collision>Cleanup and N-05 backup on the same snapshot directory: the backup holds lease backup:&lt;snapshot&gt; while writing; cleanup skips it; the newest snapshot is never selected.</collision>
+    <collision>Two applies with the same plan hash (a retry after an unknown outcome): the second finds the paths gone and writes rows with reason already-gone; no error.</collision>
+    <collision>A disposition record from N-49 and a merge trigger naming the same branch: both plan it; the first apply deletes; the second records already-gone.</collision>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="100" kind="cleanup.run">Plan written; system acts (apply follows unless the trigger is a pre-GOFACTORY disposition dry run).</emits>
+    <emits code="200" kind="cleanup.run">Applied; system acts (nothing).</emits>
+    <emits code="409" kind="cleanup.run">Plan expansion changed before apply; system acts (replan next trigger).</emits>
+    <emits code="400" kind="cleanup.run">A registry entry names a path outside an allowed root; system acts (fix ticket request for the volume that registered it).</emits>
+    <emits code="423" kind="cleanup.run">Three attempts failed; system acts on system entries (alert), owner acts on owner entries (one card).</emits>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path id="N-45.plans" glob="$COQ_STATE/cleanup/plans/*.json" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-45.plans">Every plan listing by hash (the record holds it too; this is the file the script reads at apply).</path>
+    <path id="N-45.log" glob="$COQ_STATE/logs/cleanup/*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-45.log">Script output per run.</path>
+    <path id="N-45.registry-cache" glob="$COQ_CACHE/cleanup/registry-&lt;sha&gt;.json" retention="P7D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-45.registry-cache">The registry as read at a main sha.</path>
+    <rule>cleanup.sh --entry N-45.* is the one entry cleanup never selects while a run is in progress (self-cleaning only on the timer trigger when no lease cleanup:* is live).</rule>
+  </state-paths>
+
+  <edges id="edges">
+    <in ref="../N-05/spec.xml#N-05">backup (retention)</in>
+    <in ref="../N-06/spec.xml#N-06">tick (daily, hourly)</in>
+    <in ref="../N-09/spec.xml#N-09">merge (branch, worktree, slot, tier pages)</in>
+    <in ref="../N-49/spec.xml#N-49">disposition (supersede, close)</in>
+    <in ref="../N-50/spec.xml#N-50">branch.delete (design branch)</in>
+    <out ref="../../dag.md#2-the-dag">None drawn: cleanup.run is a sink; N-28 and N-41 read 423 by code, N-40 counts.</out>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>The registry is generated from the volumes and drift fails the check.</check><proof>registry.py --check exits non-zero after a volume gains a state path with no regenerated registry; N-46 runs it.</proof></item>
+    <item><check>Every entry's glob is under an allowed root.</check><proof>A test registry with a path under /home refused 400 at plan.</proof></item>
+    <item><check>Plan then apply, with a changed expansion refused.</check><proof>A test that adds a file between plan and apply; apply exits 409; nothing deleted.</proof></item>
+    <item><check>A leased worktree is skipped, not deleted.</check><proof>A test holding lease workspace:T; the merge trigger run lists the path as skipped lease-held.</proof></item>
+    <item><check>A merge cleans its branch, worktree and tier pages.</check><proof>An end-to-end test world: after merge record, the branch ref is gone, the worktree is gone, the dev page dir is gone, one cleanup.run 200 with three rows.</proof></item>
+    <item><check>Three failures end in one 423, never a loop.</check><proof>A test with an undeletable path (chattr or a mount); three attempts with backoff on the fake clock; one 423; no fourth attempt.</proof></item>
+    <item><check>Backups keep the newest per class.</check><proof>A test with 20 daily snapshots; 14 remain; the newest is among them.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <may role="system" do="plan and apply any registry entry; take cleanup leases; delete refs through the service's forge auth"/>
+    <may role="owner" do="run cleanup.sh plan and apply by hand as break glass, recorded by N-42"/>
+    <may-not role="seat" do="run cleanup.sh apply; delete any path it did not create in its own workspace; delete branches or worktrees"/>
+    <may-not role="system" do="delete outside the allowed roots; delete origin/main; delete the stable tier page; delete the newest backup"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="cleanup_runs_total" labels="trigger,result"/>
+    <counter name="cleanup_bytes_freed_total"/>
+    <counter name="cleanup_entries_skipped_total" labels="reason">lease-held, already-gone, plan-changed.</counter>
+    <counter name="cleanup_failed_entries" kind="gauge">Entries in 423 state; an alert record when greater than 0 for 24 hours.</counter>
+    <counter name="worktrees_registered" kind="gauge">From git worktree list on the mirror and the pool; the Stats screen shows it beside the 88 of 2026-10-14 as the baseline.</counter>
+  </monitoring>
+
+  <runbook id="runbook">
+    <step n="1" when="a 423 names a system entry">Read the row's error; if it is a permission or mount problem, fix the host and the next trigger retries; if it is a registry defect (bad glob), the fix ticket request is already cut.</step>
+    <step n="2" when="a 423 names an owner entry">Answer the card; the owner removes the path or rules it kept (a ruling record adds an exclusion to the registry through a ticket).</step>
+    <step n="3" when="break glass">line/bin/cleanup.sh plan --entry &lt;id&gt; then apply --plan &lt;hash&gt;; both write records; both refuse without the state root set.</step>
+    <step n="4" when="a wrong deletion">The result row holds the sha of a deleted ref; git push origin &lt;sha&gt;:refs/heads/&lt;name&gt; restores it from the mirror backup; a deleted state path is restored from the N-05 backup of that day.</step>
+    <cleanup>Every path in this volume's state-paths element, through this node's own script.</cleanup>
+    <cold-start>Nothing to restore; plans are re-made from triggers.</cold-start>
+  </runbook>
+
+  <sources id="sources">
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C35">Owner: keep all artifacts out of the git repo, ensure we have cleanup scripts</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#6-d04-where-tickets-and-their-status-live">D04 C: whole tickets in the state root, no cut PRs, no residue</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#12-ordering-and-trigger">Each step three attempts then a record, never a hand step; dry-run first</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#6-worktrees-88">88 worktrees, 73 to close</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#3-remote-branches-not-merged-to-main">28 deletions, delete_branch_on_merge true</source>
+    <source path="rebuild/investigation/L05-git-state.md" anchor="#5-what-broke-and-why">Item 7 branch hygiene is manual; merge.sh line 306 deletes its branch but nothing calls it</source>
+    <source path="rebuild/investigation/00-INVENTORY.md" anchor="#5-build-items-named-by-this-inventory">BI09 cleanup script generated from the tables, dry-run first, three attempts per step</source>
+    <source path="rebuild/README.md" anchor="#7-cleanup">The existing cleanup command pattern for a directory's outputs</source>
+    <source path="bin/state-root.sh" anchor="header">The one resolver for $COQ_STATE and $COQ_CACHE; every script asks it</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#9-merged-but-dark-and-ruled-or-ready-but-unbuilt">WO-20261013-48f2 - Post-merge cleanup is code: line/bin/after-merge.sh cleans the branches, downs the ticket's seats and returns their slots, restores the checkout's ticket copies, starts verify-main.sh in an unowned pane and posts one record (superseded by D01 B; its cleanup list is carried here)</source>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/scripts-live-in-the-project.md" anchor="How to apply">Artifacts under $COQ_STATE with a README; scripts in the repo</source>
+    <source path="treehouse.toml" anchor="max_trees">The pool root is user-level, never in-project</source>
+  </sources>
+
+  <rejected id="rejected">
+    <reject source="line/bin/after-merge.sh (WO-20261013-48f2) as a shell driver" reason="Its list of post-merge chores is kept as the merge trigger detail; a shell script that also starts verify-main in a pane and restores checkout copies is the old line (herdr as supervisor, tickets in git); the service drives and the script only deletes."/>
+    <reject source="a README cleanup command per directory as the only mechanism" reason="rebuild/README.md section 7 is the right documentation, but a command nobody runs is not cleanup; the registry entry is generated from the same information and the timer runs it."/>
+    <reject source="work-order.sh cleanup (git checkout main in the project directory)" reason="Fails across worktrees (L11 F2, merge.sh lines 289-300); under D04 C there is no ticket close-out in git."/>
+    <reject source="deleting by age alone (find -mtime)" reason="Age does not know about leases; a slow seat's workspace is not junk. Retention is applied only to entries whose lease is free."/>
+  </rejected>
+
+  <shared-needs id="shared-needs">
+    <need kind="volume">shared/cleanup-registry.json (generated) and its JSON schema; the generator rebuild/design/bin/registry.py and N-46 running registry.py --check.</need>
+    <need kind="xsd">A state-paths element with path children carrying id, glob, retention, trigger, acts, cleanup, holds; required in every node and runbook volume.</need>
+    <need kind="store-table">cleanup_runs: id, trigger_record, plan_hash, phase, rows JSON, attempt; leases named cleanup:&lt;entry&gt;, workspace:&lt;ticket&gt;, seat:&lt;run&gt;, tier:&lt;name&gt;, backup:&lt;snapshot&gt; so the script can ask whether a path is held.</need>
+    <need kind="record-kinds">cleanup.run, disposition, branch.delete, merge (with branch, ticket, pr), backup (with snapshot path and retention class), tick (daily, hourly).</need>
+    <need kind="status-codes">100 plan, 200 applied, 409 plan changed, 400 bad registry entry, 423 failed after 3.</need>
+    <need kind="config">cleanup.allowed_roots, cleanup.backup_keep {daily 14, weekly 8, monthly 6}, cleanup.plan_ttl PT1H, cleanup.lease_ttl PT15M, forge auth for ref deletion.</need>
+    <need kind="executor-verb">cleanup with plan and apply subcommands and the timeouts above in the verb table.</need>
+    <need kind="principle">principles.xml#artifacts-out-of-repo stating the allowed roots and that every state path has a registry entry.</need>
+  </shared-needs>
+
+</volume>

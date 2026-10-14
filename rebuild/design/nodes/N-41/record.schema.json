@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-41/record.schema.json",
+  "title": "N-41 Alerts screen: input and output records",
+  "description": "Input alert (the alert view N-31 pushes, joined by the Go service) and output alert.ack. Shared envelope per shared/state-store.xml#record-envelope. UTC everywhere.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "nodeId": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+    "code": { "type": "integer", "minimum": 100, "maximum": 599 },
+    "envelope": {
+      "type": "object",
+      "required": ["kind", "id", "at", "node", "status", "seq", "version", "idempotency_key"],
+      "properties": {
+        "kind": { "type": "string" },
+        "id": { "type": "string", "minLength": 8 },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "$ref": "#/$defs/nodeId" },
+        "status": { "$ref": "#/$defs/code" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "minLength": 8 },
+        "by": { "type": "string" }
+      }
+    },
+    "alert": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["alert_id", "source_record_id", "source_node", "lamp", "code_name", "since", "cause", "retries", "system_did", "acts"],
+      "properties": {
+        "kind": { "const": "alert" },
+        "node": { "const": "N-31" },
+        "alert_id": { "type": "string", "description": "Equal to the source record id; one alert per alerting record" },
+        "source_record_id": { "type": "string" },
+        "source_node": { "$ref": "#/$defs/nodeId" },
+        "source_kind": { "type": "string" },
+        "lamp": { "enum": ["red", "amber"] },
+        "code_name": { "type": "string" },
+        "acts": { "enum": ["owner", "system"] },
+        "ticket": { "type": "string" },
+        "ticket_title": { "type": "string" },
+        "since": { "$ref": "#/$defs/utc" },
+        "cause": { "type": "string", "maxLength": 300 },
+        "retries": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "system_did": { "type": "string", "maxLength": 300 },
+        "card_id": { "type": "string" },
+        "resolved_at": { "$ref": "#/$defs/utc" },
+        "resolved_by_record": { "type": "string" },
+        "escalation_bound_s": { "type": "integer", "minimum": 60 },
+        "ack": {
+          "type": "object",
+          "required": ["by", "at", "version"],
+          "properties": {
+            "by": { "const": "owner" },
+            "at": { "$ref": "#/$defs/utc" },
+            "version": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "alert.ack": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["alert_id", "expected_version", "client_id"],
+      "properties": {
+        "kind": { "const": "alert.ack" },
+        "node": { "const": "N-41" },
+        "status": { "enum": [201, 202, 409] },
+        "by": { "const": "owner" },
+        "alert_id": { "type": "string" },
+        "expected_version": { "type": "integer", "minimum": 1 },
+        "client_id": { "type": "string", "minLength": 8 },
+        "conflict": {
+          "type": "object",
+          "description": "Filled by the server on 409",
+          "required": ["reason"],
+          "properties": {
+            "reason": { "enum": ["already-acked", "version-changed", "resolved"] },
+            "acked_by": { "type": "string" },
+            "acked_at": { "$ref": "#/$defs/utc" },
+            "current_version": { "type": "integer", "minimum": 1 }
+          }
+        }
+      },
+      "if": { "properties": { "status": { "const": 409 } } },
+      "then": { "required": ["conflict"] }
+    },
+    "alerts.frame": {
+      "type": "object",
+      "description": "The drawn frame; not a store record.",
+      "required": ["delivered_seq", "state", "status", "filter", "open_red", "open_amber", "resolved_7d"],
+      "properties": {
+        "delivered_seq": { "type": "integer", "minimum": 0 },
+        "state": { "enum": ["default", "empty", "loading", "error", "offline"] },
+        "error_class": { "enum": ["not-found", "timeout", "validation"] },
+        "status": { "enum": [200, 422, 503, 504] },
+        "filter": { "enum": ["all", "red", "amber"] },
+        "node_filter": { "$ref": "#/$defs/nodeId" },
+        "open_red": { "type": "integer", "minimum": 0 },
+        "open_amber": { "type": "integer", "minimum": 0 },
+        "resolved_7d": { "type": "integer", "minimum": 0 },
+        "queued_acks": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/alert" },
+    { "$ref": "#/$defs/alert.ack" },
+    { "$ref": "#/$defs/alerts.frame" }
+  ]
+}

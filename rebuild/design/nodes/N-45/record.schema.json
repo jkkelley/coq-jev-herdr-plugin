@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-45/record.schema.json",
+  "title": "N-45 Cleanup registry and runs: input and output records",
+  "description": "Parent: ../../index.xml#N-45. Sibling: spec.xml. Envelope as in ../N-43/record.schema.json#/$defs/envelope.",
+  "oneOf": [ { "$ref": "#/$defs/input" }, { "$ref": "#/$defs/output" } ],
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "envelope": { "$ref": "../N-43/record.schema.json#/$defs/envelope" },
+    "entry-id": { "type": "string", "pattern": "^N-[0-9]{2}\\.[a-z0-9-]+$" },
+    "registry-entry": {
+      "type": "object",
+      "required": ["id", "node", "glob", "retention", "trigger", "acts", "cleanup"],
+      "properties": {
+        "id": { "$ref": "#/$defs/entry-id" },
+        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "glob": { "type": "string", "pattern": "^(\\$COQ_STATE|\\$COQ_CACHE|\\$TREEHOUSE_ROOT|~/\\.bearings|refs/)" },
+        "retention": { "type": "string", "pattern": "^P" },
+        "trigger": { "type": "string", "enum": ["timer", "merge", "backup", "disposition"] },
+        "acts": { "type": "string", "enum": ["system", "owner"] },
+        "cleanup": { "type": "string", "pattern": "^line/bin/cleanup\\.sh --entry N-[0-9]{2}\\." },
+        "holds": { "type": "string" }
+      }
+    },
+    "input": {
+      "oneOf": [
+        { "title": "merge (from N-09)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "merge" }, "body": { "type": "object", "required": ["pr", "branch", "merge_sha", "ticket"], "properties": { "pr": { "type": "integer" }, "branch": { "type": "string" }, "merge_sha": { "$ref": "#/$defs/sha" }, "ticket": { "type": "string" } } } } },
+        { "title": "backup (from N-05)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "backup" }, "body": { "type": "object", "required": ["snapshot", "retention_class", "checksum_verified"], "properties": { "snapshot": { "type": "string" }, "retention_class": { "type": "string", "enum": ["daily", "weekly", "monthly"] }, "checksum_verified": { "type": "boolean" } } } } },
+        { "title": "tick (from N-06)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "tick" }, "body": { "type": "object", "required": ["now", "tick"], "properties": { "now": { "$ref": "#/$defs/utc" }, "tick": { "type": "string", "enum": ["daily", "hourly"] } } } } },
+        { "title": "disposition (from N-49)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "disposition" }, "body": { "$ref": "../N-49/record.schema.json#/$defs/disposition-body" } } },
+        { "title": "branch.delete (from N-50)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "branch.delete" }, "body": { "type": "object", "required": ["branch", "sha"], "properties": { "branch": { "type": "string" }, "sha": { "$ref": "#/$defs/sha" }, "reason": { "type": "string" } } } } }
+      ]
+    },
+    "row": {
+      "type": "object",
+      "required": ["entry", "target", "action", "result"],
+      "properties": {
+        "entry": { "$ref": "#/$defs/entry-id" },
+        "target": { "type": "string", "description": "path or ref" },
+        "action": { "type": "string", "enum": ["rm", "worktree-remove", "branch-delete-remote", "branch-delete-local", "remote-remove", "slot-return", "tag-then-delete"] },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "sha": { "$ref": "#/$defs/sha", "description": "the sha a deleted ref pointed at" },
+        "result": { "type": "string", "enum": ["planned", "deleted", "skipped", "failed"] },
+        "reason": { "type": "string", "enum": ["lease-held", "already-gone", "plan-changed", "outside-root", "error"] },
+        "error": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "output": {
+      "title": "cleanup.run",
+      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "properties": {
+        "kind": { "const": "cleanup.run" },
+        "code": { "enum": [100, 200, 400, 409, 423] },
+        "body": {
+          "type": "object",
+          "required": ["trigger_record", "phase", "plan_hash", "rows"],
+          "properties": {
+            "trigger_record": { "type": "string" },
+            "trigger_class": { "type": "string", "enum": ["timer", "merge", "backup", "disposition"] },
+            "phase": { "type": "string", "enum": ["plan", "apply"] },
+            "plan_hash": { "$ref": "#/$defs/sha256" },
+            "registry_sha": { "$ref": "#/$defs/sha", "description": "main sha the registry was read at" },
+            "rows": { "type": "array", "items": { "$ref": "#/$defs/row" } },
+            "failed_entries": { "type": "array", "items": { "$ref": "#/$defs/entry-id" } },
+            "owner_acts": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

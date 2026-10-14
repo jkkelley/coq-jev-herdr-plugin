@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: every source the brief named that no volume cites as authority, with the reason, and every design
+     item the book rejected book-wide. Brief C hard rule 8: nothing from prior iterations is lost. Per-node rejections
+     live in each node volume's rejected section; this volume carries the book-wide ones. Validated by check.sh. -->
+<volume id="rejected-with-reason" kind="shared" version="1.0.0" issued="2026-10-14T06:30:00Z" timezone="UTC" title="Rejected with reason">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings</entry>
+    <entry ref="purpose">Purpose and the citation grep</entry>
+    <entry ref="rejected">Sources that are sources only (harvested, never authority)</entry>
+    <entry ref="spec-16">SPEC-16 and the Go scheduler branch</entry>
+    <entry ref="design-items">Design items rejected book-wide</entry>
+    <entry ref="uncited">Brief sources no node volume cites, and where this book cites them</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="status-codes.xml#status-codes" kind="shared"/>
+    <sibling href="principles.xml#principles" kind="shared"/>
+    <sibling href="seat-contract.xml#seat-contract" kind="shared"/>
+    <sibling href="state-store.xml#state-store" kind="shared"/>
+    <sibling href="failure-cases.xml#failure-cases" kind="shared"/>
+    <sibling href="command-center.xml#command-center" kind="shared"/>
+    <dag href="../dag.md#10-sources"/>
+    <shared href="../nodes/N-50/spec.xml#N-50" role="cut-over">N-50 writes the cancel and close records this volume's rulings call for</shared>
+    <shared href="../nodes/N-49/spec.xml#N-49" role="unlanded">N-49 disposes of the branches and worktrees named here</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>Brief C lists the sources to gather and rules that each is cited in a volume or listed here with a reason.</s>
+    <s>The grep that produced the uncited section: for every source in the brief, grep -l over rebuild/design/nodes/N-*/spec.xml and dag.md; a source with zero hits is listed under uncited with the shared volume that now cites it; a source every volume treats as authority but the rulings demote is listed under rejected.</s>
+    <s>Status values: source-only (read and harvested, never authority), rejected (a design item not taken), retired (a running thing the cut-over stops), fix-ticket (a defect, not a design item), later (an accelerator the design allows after the correctness path works).</s>
+  </purpose>
+
+  <rejected id="rejected">
+    <rejection id="pr-35" source="PR 35 and its v2.0 export, branch origin/feat/factory-design-spec-v2-0-every-agent-workflow-ru" status="source-only">
+      <reason>D14 (C42): this book is the canonical design; PR 35 closes with the sentence in principles.xml#design-first (N-50 writes pr.close). The ids S7-tester, S1-021, S2-059, S1-084 and S1-023 that node volumes cite exist only on that branch; a citation of them carries branch= and is not resolved on disk by check.sh.</reason>
+      <harvested>The every-agent workflow shapes: one-shot seats (S1), the tester route (S7, retired by D11), the status code families, the verdict-in-brief rework pattern.</harvested>
+      <superseded-by>nodes/N-15, N-16, N-19; shared/seat-contract.xml#one-shot and #roles.</superseded-by>
+    </rejection>
+    <rejection id="spec-17" source="specs SPEC-17 1.0.1 and its 1.1.0 draft (the factory specification before the rebuild)" status="source-only">
+      <reason>D14: sources, never authority. SPEC-17 1.0.1 described the herdr-driven line (K01 LLM in the dispatch path, K03 polling waits); the 1.1.0 draft was never ruled. Both are harvested where a node cites them (s-codes, s-architect digest, the hold file semantics).</reason>
+      <harvested>The HTTP-shaped code map (status-codes.xml), the architect digest lane (N-30 R08, R99), the merge hold as a concept (now a record, N-10).</harvested>
+      <superseded-by>This book; the hold file is replaced by the merge.hold record (state-store.xml).</superseded-by>
+    </rejection>
+    <rejection id="hook-listener" source="line/bin/hook-listener.sh, line/config/hook.json handlers, the webhook listener of PR 177" status="retired">
+      <reason>D06 (C44): the Go service polls GitHub every tick; a webhook can only call poll_now and never writes state. The listener is started by nothing from cut-over step 3 and its units and handlers are removed at step 4, after the first main.gate.status 201 exists (cut-over.xml#step-ci, cut-over.xml#step-verify).</reason>
+      <superseded-by>nodes/N-04 (the poll) and N-07 (dispatch from the snapshot).</superseded-by>
+    </rejection>
+    <rejection id="ci-gate-design-webhook" source="plans/2026/10/20261013194800-ci-gate-design.md amendment 20:20Z: gh webhook forward into Jenkins" status="later">
+      <reason>Folded into N-04 as a later accelerator only: it may call poll_now; the poll stays the correctness path (principles.xml#level-triggered). GitHub cannot reach 192.168.1.245 today, which is the second reason the poll comes first.</reason>
+    </rejection>
+    <rejection id="actions-runner-controller" source="GitHub Actions Runner Controller CRDs left on the cluster from 2026-07-20" status="retired">
+      <reason>Stale: no controller runs them and no node uses GitHub Actions (D07: Jenkins as code on the existing path). N-45 cleanup-cluster.sh lists them under its dry run; they are deleted by a disposition in N-49's order.</reason>
+    </rejection>
+    <rejection id="makefile-lint-image" source="Makefile LINT_IMAGE double definition" status="fix-ticket">
+      <reason>A defect, not a design item: two definitions of one variable; it gets a fix ticket cut from nodes/N-22 (image pins), never a volume.</reason>
+    </rejection>
+    <rejection id="compaction-guard-codes" source="compaction-guard GOV, CMP, RES, RCV and OPS code families" status="source-only">
+      <reason>The compaction guard's codes govern a session, not a record; they are not in status-codes.xml. They are harvested as the old-rule table rows in principles.xml#build-mode so N-11 can match a guard refusal under build mode.</reason>
+    </rejection>
+    <rejection id="herdr-exemptions-shape" source="herdr/config/exemptions.json" status="source-only">
+      <reason>Its shape (rule, until, card_id, why) is harvested for the flags table (state-store.xml#table-flags: name, state, scope, expires_at, card_id, ruling_id); the file itself is an old-line artifact that build mode does not render (N-44).</reason>
+    </rejection>
+    <rejection id="process-seed-drive" source="PROCESS-SEED: Drive is truth" status="rejected">
+      <reason>D24 (C54): the repository spec book is the truth; Drive holds version-named immutable copies published by N-47, each with the README sentence in principles.xml#repo-is-truth.</reason>
+    </rejection>
+    <rejection id="work-order-cleanup-approve" source="bin/work-order.sh cleanup and approve clauses" status="retired">
+      <reason>A hand close-out: cleanup is N-45 by registry entry from a merge record; approval is a machine verdict (D15) or a ruling record (N-29); neither is typed. The script's cut and note clauses stay as the ticket format source until N-17 and N-18 ship.</reason>
+    </rejection>
+    <rejection id="dead-hooks" source=".claude/hooks/no-hand-start.mjs and shell-lex.mjs" status="retired">
+      <reason>Dead hooks: they guarded a hand start that no longer exists (nothing starts by typing) and a shell lexer the fence replaces (N-13 dontAsk plus the allow list). Never rendered into a seat bundle; listed in the old-rule table so a refusal from a stale copy is rule.bit.</reason>
+    </rejection>
+    <rejection id="envelope-id-form" source="the r-prefixed record id form (r-17 digits-5 alnum) in G4 and G7 record.schema.json files" status="rejected">
+      <reason>One id form across the store: N-01 owns the records table and today's event writers mint the UTC-stamp form (events/schema/event.schema.json); the prefix carries no information the stamp lacks. Those schemas $ref shared/state-store.schema.json#/$defs/envelope by their own ticket (state-store.xml#envelope).</reason>
+    </rejection>
+    <rejection id="n-32-round-1" source="N-32 round 1: a hand stop as the allowed cut-over step; coq promote --tier stable --yes as an unlisted break glass" status="rejected">
+      <reason>Both are hand line operations: the cut-over is the one-shot unit coq-cutover@PAGE (N-34, N-50) and the only stable promotion verb is promote.sh --tier stable --sha under seat-contract.xml#break-glass; an unlisted verb is control.refused 412 and counted by N-51.</reason>
+    </rejection>
+  </rejected>
+
+  <spec-16 id="spec-16">
+    <rejection id="spec-16-domain-specs" source="specs/scheduler/SPEC-16-scheduler-overview.xml, SPEC-16.G-config-schema.xml on main, and the per-domain volumes SPEC-16.A to SPEC-16.F on branch origin/feat/go-scheduler-design-one-xml-spec-per-domain-unde" status="source-only">
+      <reason>D09 (C41): a small Go cut on the same proto (about four packages), keeping the interfaces and the fake clock; the fourteen SPEC-16 build tickets are cancelled at GOFACTORY (N-50) and the design branch is deleted once the small cut has taken what it needs (N-49). A node citing a SPEC-16.x file names the branch with branch= and check.sh does not resolve it on disk.</reason>
+      <harvested>scheduler/api/scheduler/v1/scheduler.proto (kept whole), the Store, Clock and Executor interfaces, the fake clock in scheduler/internal/testkit/, the belt heartbeat and stall latch of SPEC-16.F (N-12), the config schema of SPEC-16.G (state-store.xml#config-keys), hypotheses H01 to H26 and bounds B1 to B10 as test names.</harvested>
+      <superseded-by>nodes/N-01, N-02, N-06, N-07, N-12 and shared/state-store.xml; small-cut tickets carry source_branch and source_sha (state-store.xml#table-tickets).</superseded-by>
+    </rejection>
+  </spec-16>
+
+  <design-items id="design-items">
+    <rejection id="broker" source="NATS or any broker beside the store (docker.io/library/nats image pulled 2026-10-12)" status="rejected">
+      <reason>D10 (C34): one store, no broker; the stream is the store's own seq (state-store.xml#stream).</reason>
+    </rejection>
+    <rejection id="herdr-as-system" source="herdr as scheduler, router or store (L04)" status="rejected">
+      <reason>D08 (C46): herdr is the owner's window only; every system process is its own supervised unit (N-06, N-27, N-34).</reason>
+    </rejection>
+    <rejection id="idle-alarm" source="the one-minute idle rule and the idle watches (memory arm-herdr-idle-watch-on-every-resume)" status="retired">
+      <reason>D17 (C49): one-shot seats plus a stall timer (N-12); an idle seat cannot exist because a seat exists only between its input and output records.</reason>
+    </rejection>
+    <rejection id="tester-merger-verifier-seats" source="the tester, merger and verifier roles of the old line (factory/config/routes.json rows, line/bin/merge.sh, line/bin/verify-main.sh, line/bin/merge-watch.sh)" status="retired">
+      <reason>D11 (C39): code does mechanical jobs; N-24 runs tests as pods, N-09 merges on the machine verdict, N-26 verifies main. verify-main.sh is retired at the first main.gate.status 201 (cut-over.xml#step-verify); merge.sh, merge-watch.sh and the tester, merger and verifier routes at the first machine merge after USERGO (cut-over.xml#step-usergo); both as N-49 step 7 dispositions (D25 first slice).</reason>
+    </rejection>
+    <rejection id="two-surfaces" source="the Execution Rail as a page beside bearings, and /board as a separate route" status="retired">
+      <reason>D20 (C51): one owner surface; the rail is a panel the system writes (N-33); the map replaces /board on every tier (N-38).</reason>
+    </rejection>
+    <rejection id="polling-page" source="the page polling the server (tools/bearings/scripts/wait.mjs loop as transport)" status="retired">
+      <reason>D21 (C52): push transport for everything with full state re-read on reconnect (N-31); the wait loop stays as the watcher unit (N-27), not as transport.</reason>
+    </rejection>
+    <rejection id="public-map-stream" source="nodes/N-38 round 1: the public map pod proxying /stream to the host over a cluster to host tunnel, with the owner key's cookie on map.gatehouse.click" status="later">
+      <reason>D23 gives cluster pods egress to GitHub and GHCR only, N-34 is the bearings page's tailnet forwarder and not a public ingress, and a static nginx pod has no issuer for the owner key's cookie; the public name serves the static base until a node of its own designs a cluster to host tunnel with auth (nodes/N-38/spec.xml#mechanism step 2). Live state reaches the owner's phone over the tailnet today.</reason>
+    </rejection>
+    <rejection id="forgejo-now" source="05-FORGEO.md: move to Forgejo before the rebuild" status="later">
+      <reason>D18 (C55): GitHub now, Forgejo later; N-04 is the one forge interface so the move is one node later.</reason>
+    </rejection>
+    <rejection id="wube-sprites" source="any Wube-derived or BiusArt sprite from the Krastorio 2 assets (art inventory classes 2 to 4)" status="rejected">
+      <reason>Original art only (command-center.xml#art): 260 high-confidence Krastor originals may be used with attribution; belts, inserters, lamps and pipes are original art because no safe source exists.</reason>
+    </rejection>
+  </design-items>
+
+  <uncited id="uncited">
+    <s>Brief sources with zero citations in the node volumes at the time of this volume, and where the book now carries them.</s>
+    <rejection id="uncited-05-forgeo" source="rebuild/investigation/05-FORGEO.md" status="source-only">
+      <reason>Cited by principles.xml sources (D18) and by the forgejo-now item above.</reason>
+    </rejection>
+    <rejection id="uncited-l12-forgeo" source="rebuild/investigation/L12-forgeo.md" status="source-only">
+      <reason>The area report that tried to resolve the word forgeo (Forgejo, lucaGazzola/forgeo or the owner's Go control plane); superseded by its own addendum below, which the owner confirmed. Harvested: Forgejo as a shelf candidate for the forge and its runners, never for scheduling seats (D18 C55: GitHub now, Forgejo later, N-04 the one forge interface); the Go and gRPC control plane question it raised is D01, decided separately (nodes/N-01, N-06, N-07).</reason>
+      <superseded-by>rebuild/investigation/L12-addendum-owner-confirmed-forgejo.md; principles.xml sources (D18); #forgejo-now.</superseded-by>
+    </rejection>
+    <rejection id="uncited-l12-addendum" source="rebuild/investigation/L12-addendum-owner-confirmed-forgejo.md" status="source-only">
+      <reason>The owner's ruling that forgeo means Forgejo ("yah i was say it wrong lol", 2026-10-14). It changes no node: the forge stays GitHub until D18's later move, which N-04 makes one node wide; lucaGazzola/forgeo is dropped except as an idea source; the readings of forgeo as rime or SPEC-16 are withdrawn, which shared/rejected-with-reason.xml#spec-16 already reflects.</reason>
+      <superseded-by>#forgejo-now (later); nodes/N-04/spec.xml#N-04 as the one forge interface.</superseded-by>
+    </rejection>
+    <rejection id="uncited-brief" source="rebuild/investigation/BRIEF.md and rebuild/investigation/README.md" status="source-only">
+      <reason>The investigation's own brief and index; cited by index.xml sources as the lineage of the DAG, not as design.</reason>
+    </rejection>
+    <rejection id="uncited-s01-argo" source="rebuild/investigation/S01-argo.md" status="source-only">
+      <reason>Cited by command-center.xml hosting (Argo auto-sync on the existing gitops path, D07).</reason>
+    </rejection>
+    <rejection id="uncited-rebuild-schema-roles" source="rebuild/schema/factory-rebuild-plan.xsd and rebuild/roles/rebuild-architect.json" status="source-only">
+      <reason>The plan's XSD is the ancestor of schema/volume.xsd (cited there and in index.xml); the architect role file is the shape seat-contract.xml#limits-are-fields names.</reason>
+    </rejection>
+    <rejection id="uncited-pr-177" source="PR 177 (the webhook listener)" status="retired">
+      <reason>Listed under hook-listener above.</reason>
+    </rejection>
+  </uncited>
+
+  <many-agents id="many-agents">
+    <readers>The review seat reads this volume to confirm every brief source is cited or listed; any author reads it before citing an old spec as authority.</readers>
+    <writers>An entry is added by the author whose volume stops citing a source, in the same pull request, so the source is never lost between two PRs; N-46 fails a book where a brief source has neither a citation nor an entry.</writers>
+    <collision>Two volumes rejecting one item for different reasons is resolved here: this volume's reason wins and the node volumes point at it.</collision>
+  </many-agents>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="2-open-pull-requests" note="PR 35 DECIDE row"/>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="12-ordering-and-trigger" note="the cleanup order N-49 follows"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="11-d09-the-spec-16-go-scheduler-and-its-14-build-tickets" note="D09"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="16-d14-the-canonical-design-document" note="D14"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="8-d06-how-github-events-reach-the-system" note="D06"/>
+    <source path="rebuild/investigation/00-INVENTORY.md" anchor="" note="the inventory that named SPEC-16, SPEC-17 and PR 35"/>
+    <source path="rebuild/investigation/L09-earlier-factory-iterations.md" anchor="" note="what each earlier iteration left behind"/>
+    <source path="rebuild/investigation/L11-governance-layer.md" anchor="" note="the hooks and guards the old-rule table names"/>
+    <source path="rebuild/investigation/L01-line-scripts.md" anchor="" note="line/bin scripts retired by the cut-over"/>
+    <source path="rebuild/investigation/L12-forgeo.md" anchor="8-what-to-carry-forward" note="Forgejo as a later forge; the uncited entry above"/>
+    <source path="rebuild/investigation/L12-addendum-owner-confirmed-forgejo.md" anchor="1-the-ruling" note="the owner's confirmation that forgeo means Forgejo"/>
+    <source path="rebuild/investigation/05-FORGEO.md" anchor="" note="the forge decision record D18 rests on"/>
+    <source href="~/.bearings/coq-stable/answers.jsonl" note="C34 to C42"/>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" note="C43 to C58"/>
+  </sources>
+</volume>

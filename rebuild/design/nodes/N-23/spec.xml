@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Node volume N-23 Suite planner. Written by the G4 spec-author seat, 2026-10-14T04:39Z UTC, against brief C and dag.md section 3 row N-23.
+     Validated by rebuild/design/check.sh against rebuild/design/schema/ once the shared author lands them. -->
+<volume id="N-23" kind="node-spec" node="N-23" group="G4" name="Suite planner" version="1.0.0" issued="2026-10-14T04:39:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: pr.opened</entry>
+    <entry ref="output">Output record: suite.plan</entry>
+    <entry ref="mechanism">Mechanism: the mirror, the map from main, the units, the budgets, the job trigger</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and the report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-23"/>
+    <dag href="../../dag.md#3-every-node" row="N-23"/>
+    <schema href="record.schema.json"/>
+    <sibling node="N-20" href="../N-20/spec.xml#N-20">Jenkins as code</sibling>
+    <sibling node="N-21" href="../N-21/spec.xml#N-21">Factory namespace</sibling>
+    <sibling node="N-22" href="../N-22/spec.xml#N-22">Image build</sibling>
+    <sibling node="N-24" href="../N-24/spec.xml#N-24">Pod run</sibling>
+    <sibling node="N-25" href="../N-25/spec.xml#N-25">Gate status post</sibling>
+    <sibling node="N-26" href="../N-26/spec.xml#N-26">Main verify pipeline</sibling>
+    <shared href="../../shared/status-codes.xml#status-codes">Status code map</shared>
+    <shared href="../../shared/principles.xml#no-cog">No cog principle</shared>
+    <shared href="../../shared/state-store.xml#records">State store record envelope and tables</shared>
+    <shared href="../../shared/seat-contract.xml#roles">Seat contract: the tester role is retired, code does this</shared>
+  </pointers>
+
+  <section id="purpose" title="Purpose">
+    <s>N-23 turns a pull request head into the exact list of test units the gate must run, from the changed files and the data map factory/config/suites.json, and hands that list to Jenkins as one coq-gate build; it is the tester seat's job done by code (D11, ruling C39: the tester becomes code).</s>
+    <s>It keeps the owner's proven rule: suites planned from the diff, rows union, an unmapped path plans the full set (V06; suites.sh breadcrumb items 1 and 2), so a gap costs time and never a missed suite.</s>
+    <s>It removes the stalls of models polling a pane (ci-gate-design.md Problem: 9 to 14 minutes on a one-minute lint) and the plan pod that had to start before any status could be posted (coqGate.groovy breadcrumb item 2).</s>
+    <s>Input to output: a pr.opened record starts it; a suite.plan record ends it; the plan's entries are the inputs of N-24 (pods) and N-46 (spec book check).</s>
+  </section>
+
+  <section id="input" title="Input record: pr.opened">
+    <record kind="pr.opened" code="100" schema="record.schema.json#/$defs/input">
+      <s>Two writers, one shape: a worker seat's run (N-16) writes it when it pushes a branch and opens a pull request; the scheduler (N-07) synthesizes one with source poll for any open pull request head in forge.snapshot (N-04) that has no suite.plan, which covers a pushed update to a branch (synchronize), a re-opened pull request and a record lost to a crash.</s>
+      <field name="repo" type="string" required="true">jkkelley/coq-jev-herdr-plugin.</field>
+      <field name="pr" type="integer" required="true">The pull request number.</field>
+      <field name="head_sha" type="string" required="true">The head commit; the idempotency key with repo.</field>
+      <field name="base_ref" type="string" required="true">main.</field>
+      <field name="head_repo" type="string" required="true">The head repository full name; a value other than repo is a fork and is refused.</field>
+      <field name="ticket" type="string" required="false">WO id from the title when present.</field>
+      <field name="source" type="string" required="true">seat or poll.</field>
+    </record>
+  </section>
+
+  <section id="output" title="Output record: suite.plan">
+    <record kind="suite.plan" code="100" schema="record.schema.json#/$defs/output">
+      <field name="head_sha" type="string" required="true">The sha planned.</field>
+      <field name="pr" type="integer" required="true">The pull request; 0 for a main run (N-26 uses the same record shape with kind main.plan).</field>
+      <field name="kind" type="string" required="true">pr or main.</field>
+      <field name="merge_base" type="string" required="true">The merge base with origin/main used for the diff.</field>
+      <field name="changed_paths" type="array" required="true">The diff, renames split into delete and add.</field>
+      <field name="map_sha" type="string" required="true">The main commit whose suites.json and tests.json were read (never the head's).</field>
+      <field name="full_set" type="boolean" required="true">True when an unmapped path or a map change forced the full set.</field>
+      <field name="entries" type="array" required="true">One per unit: name (suite:case or suite), suite, image (name and manifest digest from N-22), workdir, cmd, budget_minutes, kind (pod or spec-check), skip false always, and records: the record kinds the unit may hand to the host through its artifact, with the node they are written for, copied from the suite's row in factory/config/suites.json (art: art.inventory and sprite.sheet for N-36; map: binding.record for N-37; spec-book: check.verdict for N-46; an acceptance case of a ticket: test.proof for the ticket), empty for every other unit; N-24 step 6 imports exactly these and refuses any other kind.</field>
+      <field name="build" type="object" required="true">The Jenkins job, build number and URL the plan was handed to, filled when the trigger succeeded.</field>
+    </record>
+    <s>Refusals end the node without a plan: plan.refused 412 for a fork head, for a suite without an image, or for a diff that could not be computed after the ladder; plan.blocked 423 when no job.registered, namespace.ready or image record exists.</s>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the mirror, the map from main, the units, the budgets, the job trigger">
+    <step n="1" id="m-pre">Preconditions read from the store: newest job.registered 201 (N-20), newest namespace.ready 201 (N-21), an image 201 for every image images.json names at map_sha (N-22); a missing one writes plan.blocked 423 (one card, deduped on the cause) and the pr.opened stays unplanned until the precondition appears, when the level-triggered tick plans it.</step>
+    <step n="2" id="m-fork">Fork guard: head_repo must equal repo; otherwise plan.refused 412 with reason fork and no job is ever triggered; the Jenkinsfile's CHANGE_FORK refusal inside coqGate() stays as a second wall.</step>
+    <step n="3" id="m-mirror">The diff comes from a bare mirror on the host, $COQ_STATE/ci/mirror/repo.git, kept by git fetch --prune origin on every poll tick (N-04 owns the fetch; this node only reads); the planner fetches head_sha into the mirror if missing (git fetch origin &lt;sha&gt;), computes merge_base = git merge-base origin/main head_sha, and changed_paths = git diff --name-only --no-renames merge_base..head_sha.</step>
+    <step n="4" id="m-map">The map is read from main, never from the head: git show origin/main:factory/config/suites.json and config/tests.json into an ephemeral detached worktree of main under $COQ_STATE/ci/plan/&lt;sha12&gt;-&lt;attempt&gt;/, and factory/bin/suites.sh plan --repo &lt;that worktree&gt; --base merge_base --head head_sha prints the commands (the script runs nothing); a diff that touches factory/config/suites.json, config/tests.json or ci/config/images.json plans the full set, because the map that would judge the change is the change.</step>
+    <step n="5" id="m-units">ci/bin/plan-units.sh (the BEGIN-PLAN-SCRIPT block of coqGate.groovy, extracted into a tracked script with its existing test ci/tests/cases/02-gate-pipeline.test.sh) expands the commands into units: herdr and factory fan out to one unit per case file (a case audits /proc and kills processes, bin/test-cases.sh breadcrumb); every other command is one unit; a unit whose suite has no image in images.json is a refusal, never a skip; the lint unit's command is bash lint/lint.sh /repo in coq-lint (never make lint, which needs podman); sitrep and loop run their run.sh directly with their in-container flag; reindex runs the vendored skill copy in coq-lint; a change under rebuild/design/** adds the unit spec-book of kind spec-check (rebuild/design/check.sh in coq-lint), which N-46 consumes.</step>
+    <step n="6" id="m-budget">Budgets: per suite, the newest suite.budget record (computed nightly by N-06's daily tick from the last 20 pod.run durations as p95 x 1.5, floor 5 minutes, cap 30 minutes) or, with fewer than 20 samples, config/tests.json per_suite budget or its default; the budget goes into each entry so the pod's timeout is data the gate cannot guess (L07 section 5 item 8; L10 section 7).</step>
+    <step n="7" id="m-trigger">Trigger: POST /job/coq-gate/buildWithParameters with SHA, PR, KIND=pr, ATTEMPT, PLAN_JSON (the entries, under 100 KiB; a larger plan is passed as a file parameter), IMAGES_JSON (name to digest); follow the queue item to the build number; write suite.plan with build filled; the Jenkinsfile ci/jenkins/gate.Jenkinsfile calls coqGate(plan: params.PLAN_JSON, sha: params.SHA, images: params.IMAGES_JSON) and nothing else.</step>
+    <step n="8" id="m-superseded">Supersession: when forge.snapshot shows the pull request's head moved to a newer sha before this plan's run ended, N-07 marks this plan superseded (410), N-25 posts coq/gate error superseded on the old sha, and the Go service stops the old build (POST /job/coq-gate/N/stop); the newer head gets its own pr.opened and plan.</step>
+    <mermaid>
+flowchart LR
+  O[pr.opened: seat or poll] --> P{job.registered, namespace.ready, images all 201?}
+  P -- no --> B[plan.blocked 423, one card; re-planned when they appear]
+  P -- yes --> F{head repo == base repo?}
+  F -- no --> X[plan.refused 412 fork]
+  F -- yes --> D[mirror: merge base and changed paths]
+  D --> M[suites.sh plan with the map from main]
+  M --> U[plan-units.sh: one unit per case or suite, images and budgets]
+  U -- a suite without an image --> X2[plan.refused 412 no-image]
+  U --> T[trigger coq-gate with PLAN_JSON]
+  T --> S[suite.plan 100 with build url]
+  S --> N24[N-24 one pod per entry]
+  S --> N46[N-46 spec-check entry]
+    </mermaid>
+    <s>The plan is the same for a pull request and for main (N-26) except the command: plan for a pull request, full for main; the unit expansion, the images, the budgets and the trigger are this node's code called by N-26 with kind main.</s>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <s>A worker seat ends by pushing and opening the pull request; its seat.result carries the pr.opened record; the seat is gone before anything here runs.</s>
+    <s>N-07 dispatches the planner as a system job with a lease (key node:N-23:repo:head_sha) on its tick when a pr.opened has no suite.plan, plan.refused or plan.blocked for its head_sha; the same comparison runs for every open pull request head in forge.snapshot, so a push to a branch is planned within one tick without any record from a seat.</s>
+    <s>At service start the comparison runs once; a planner lost to a crash is dispatched again; the trigger is idempotent because a coq-gate build already queued for SHA and ATTEMPT is found by the Go service before it posts (GET /job/coq-gate/api/json?tree=builds[number,actions[parameters[name,value]]] filtered by SHA), so a duplicate build is never queued.</s>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait id="w1"><on>git fetch origin head_sha into the mirror (a network call to GitHub).</on><timeout>120 s, 3 tries with 5 s, 15 s, 45 s between.</timeout><fallback>Attempt fails as infrastructure; the job-level ladder applies; after 3 attempts plan.refused 412 reason diff-unavailable and one card.</fallback></wait>
+    <wait id="w2"><on>suites.sh plan and plan-units.sh (local, deterministic).</on><timeout>60 s.</timeout><fallback>A timeout here is a bug: plan.refused 412 reason planner-error with the stderr, one card, never retried beyond the ladder.</fallback></wait>
+    <wait id="w3"><on>The Jenkins queue item becoming a build.</on><timeout>PT10M polled every 10 s.</timeout><fallback>Cancel the queue item; attempt fails as infrastructure; ladder; after 3 attempts plan.blocked 423 reason jenkins-queue and one card.</fallback></wait>
+    <wait id="w4" class="level-triggered"><on>Preconditions (job.registered, namespace.ready, images).</on><timeout>None inside this node: a missing precondition is plan.blocked 423 at once; the level-triggered tick re-plans when it appears; the card's dedupe key keeps it to one card per cause.</timeout><fallback>The card itself; the owner sees why the gate is dark.</fallback></wait>
+    <s>The planner job's stall bound under N-12 is PT15M; a stalled planner is killed, its lease revoked and the attempt counted.</s>
+  </section>
+
+  <section id="retries" title="Retries, recovery and the report">
+    <s>Infrastructure (fetch, Jenkins API, queue) climbs the ladder: 3 attempts with N-11 backoff, each a fresh job; results (fork, no image, planner error) are refusals written once with evidence and never retried.</s>
+    <s>After the third infrastructure failure the node writes plan.refused 412 or plan.blocked 423 with the last error and N-28 posts one card; the pull request's coq/gate status is posted by N-25 as error with the same reason so the worker and reviewer see it where they look.</s>
+    <s>The ephemeral worktree is removed on every exit path (trap), and the daily cleanup reaps leftovers.</s>
+    <s>A refused plan is terminal for its head_sha; a new push re-enters with a new head.</s>
+  </section>
+
+  <section id="many-agents-at-once" title="Many agents at once">
+    <s>Many pull requests at once: every open head gets its own pr.opened and plan; the Go service keeps at most 2 gate runs (pull request or main) in flight, main first, then oldest pr.opened first, with the rest waiting in the store as planned-not-triggered (suite.plan with build empty and code 100), so the quota and the Jenkins cap are never hit by design and the map shows the queue depth.</s>
+    <s>Two heads of one pull request: only the newest is run; the older plan is superseded (410) and its build stopped; the status on the old sha says superseded.</s>
+    <s>Two writers of pr.opened for one head (a seat and the poll in the same tick): the key repo:head_sha makes the second put a no-op (same payload) or a 409 (different payload, logged); one plan results.</s>
+    <s>Two planner jobs for one head: one lease with a fencing token; the loser's writes are 409; the Jenkins duplicate check in section start makes even a double trigger harmless.</s>
+    <s>Seats cannot plan: no seat holds the Jenkins token or the mirror; a reviewer reads the plan through gh pr checks and the record.</s>
+    <s>Collision answer in one line: key per head sha, one lease per plan, newest head wins, at most two runs in flight, duplicate trigger detected on the Jenkins side.</s>
+  </section>
+
+  <section id="status-codes" title="Status codes this node emits">
+    <emits code="100" name="ACCEPTED" kind="suite.plan">N-24 and N-46 act on the entries; N-25 waits for all of them.</emits>
+    <emits code="412" name="GATE_FAILED" kind="plan.refused">Fork, no image, planner error or diff unavailable: the worker lane acts (fix the ticket or the map); N-25 posts coq/gate error with the reason.</emits>
+    <emits code="423" name="BLOCKED" kind="plan.blocked">A precondition is missing: one card per cause; the plan happens when it appears.</emits>
+    <emits code="410" name="SUPERSEDED" kind="plan.superseded">Nobody acts; the newer head is planned.</emits>
+    <emits code="409" name="CONFLICT" kind="record.conflict">Nobody acts.</emits>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path p="$COQ_STATE/ci/mirror/repo.git" cleanup="ci/bin/cleanup-ci-state.sh --what mirror [--apply]">The bare mirror; the script deletes it and the next poll re-clones it (about 60 s); refuses while a planner runs.</path>
+    <path p="$COQ_STATE/ci/plan/&lt;sha12&gt;-&lt;attempt&gt;/" cleanup="ci/bin/cleanup-ci-state.sh --what plan-worktrees --older-than 1h [--apply]">Ephemeral detached worktrees; removed by the planner on exit; the script prunes leftovers and runs git worktree prune on the mirror.</path>
+    <path p="$COQ_STATE/ci/plan/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;.json" cleanup="ci/bin/cleanup-ci-state.sh --what plan-logs --older-than 30d [--apply]">The planner's full output (commands, units, stderr) for the record's log path.</path>
+    <s>Every script dry-runs by default, acts with --apply, retries each deletion 3 times, exits 4 listing what remains; N-45 registers them.</s>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <in from="N-16" href="../N-16/spec.xml#N-16">pr.opened from a worker run.</in>
+    <in from="N-20" href="../N-20/spec.xml#N-20">job.registered as a precondition.</in>
+    <in from="N-04" href="../N-04/spec.xml#N-04" drawn="false">forge.snapshot heads synthesize pr.opened through N-07; the DAG draws N-16 as the named writer.</in>
+    <out to="N-24" href="../N-24/spec.xml#N-24">One suite.plan entry per pod run.</out>
+    <out to="N-46" href="../N-46/spec.xml#N-46">The spec-check entry when rebuild/design paths changed.</out>
+  </section>
+
+  <section id="checklist" title="Checklist with proofs">
+    <item><check>A pull request that changes only work-orders/ and changelog/ plans exactly lint and reindex.</check><proof>ci/tests/cases/02-gate-pipeline.test.sh scenario tickets-only asserts the entry names.</proof></item>
+    <item><check>A diff with an unmapped path plans the full set, and a diff that changes suites.json plans the full set.</check><proof>Scenarios unmapped and map-change in the same test case; full_set true in the record.</proof></item>
+    <item><check>The map is read from main, not from the head.</check><proof>Scenario head-edits-map: the head removes a row and the plan still contains that row's suites; map_sha equals origin/main.</proof></item>
+    <item><check>A suite without an image is a 412, never a skip.</check><proof>Scenario no-image asserts plan.refused reason no-image and no Jenkins call (the test's fake Jenkins records zero posts).</proof></item>
+    <item><check>A fork head is refused before any network call to Jenkins.</check><proof>Scenario fork asserts plan.refused reason fork and zero Jenkins calls.</proof></item>
+    <item><check>Budgets come from suite.budget records or tests.json, never from a Jenkinsfile literal.</check><proof>grep budgetMinutes ci/jenkins/gate.Jenkinsfile returns nothing; the entry's budget_minutes equals the fixture's p95 x 1.5.</proof></item>
+    <item><check>A duplicate trigger for the same SHA and ATTEMPT is never queued.</check><proof>Scenario double-dispatch with the fake Jenkins already holding a build for SHA asserts one build.</proof></item>
+    <item><check>The planner runs under a lease and writes nothing without its fencing token.</check><proof>Scenario stale-token asserts the store returns 409 and the planner exits 3 without a second write.</proof></item>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <s>The Go service: read of the mirror and write of the ephemeral worktree under $COQ_STATE; Jenkins Job/Build, Job/Read, Job/Cancel on coq-gate; GitHub read of pull requests (through N-04's snapshot, no extra call).</s>
+    <s>Seats: the worker's run ends at pr.opened; it may run factory/bin/suites.sh plan locally to see what will run (read-only script); no seat triggers Jenkins or reads the mirror.</s>
+    <s>Reviewer: reads the suite.plan record and gh pr checks; may not change the plan.</s>
+    <s>The map file factory/config/suites.json is edited only through a ticket that declares it; lint runs images.sh check and the case 19 row test on every pull request.</s>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <s>Status fields: plans in flight, planned-not-triggered depth, refusals by reason in the last 24 h, full-set rate (how often an unmapped path forced the full set), p95 planner duration.</s>
+    <s>Alerts (N-41): plan.blocked (a precondition missing); full-set rate above 50 percent over a day (the map needs rows); a pr.opened older than 2 ticks with no plan and no refusal (a lost dispatch).</s>
+    <s>Map: the N-23 machine shows the queue of heads waiting on a belt into N-24; the machine screen lists the newest plans with their unit counts.</s>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <step n="R1" id="r-rows">A high full-set rate: add rows to factory/config/suites.json in a ticket; case 19 pins cross-suite rows; the next plans shrink.</step>
+    <step n="R2" id="r-refused">On plan.refused no-image: the images.json suites mapping is missing a suite; a ticket adds it (N-22 R1); on planner-error: the stderr in the plan log names the line.</step>
+    <step n="R3" id="r-blocked">On plan.blocked: the card names the precondition; the N-20, N-21 or N-22 runbook applies; nothing here is touched.</step>
+    <step n="R4" id="r-cleanup">Cleanup: ci/bin/cleanup-ci-state.sh --what plan-worktrees --older-than 1h; --what plan-logs --older-than 30d; --what mirror (re-clone follows).</step>
+    <step n="R5" id="r-local">A worker wanting to know what the gate will run: factory/bin/suites.sh plan in its worktree prints the commands; ci/bin/plan-units.sh --dry prints the units without images.</step>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <cite href="rebuild/investigation/03-DECISIONS.md#13-d11-which-llm-roles-remain">D11, ruling C39: the tester becomes code.</cite>
+    <cite href="~/.bearings/coq-stable/answers.jsonl#C39">Ruling C39 text.</cite>
+    <cite href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V06 suites planned from the diff; unmapped path plans the full set; executor-independent.</cite>
+    <cite href="factory/bin/suites.sh#L1-L50">The planner script and its breadcrumb items 1 to 8, kept unchanged.</cite>
+    <cite href="factory/config/suites.json">The map, with the always and full lists and the rows.</cite>
+    <cite href="ci/jenkins-lib/vars/coqGate.groovy#L286-L325">The plan script extracted into ci/bin/plan-units.sh.</cite>
+    <cite href="ci/jenkins-lib/vars/coqGate.groovy#L22-L25">Breadcrumb item 2: a plan pod had to start before a status could be posted; the host planner removes that.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#5-what-broke-and-why">Items 6 (make lint, sitrep, reindex cannot run as written), 8 (budgets are guesses).</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#7-decisions-an-llm-makes-that-a-rule-could-make">Running the tests, noticing the end, choosing suites and budgets: all rules here.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#7-decisions-an-llm-makes-that-a-rule-could-make">Budget from a measured p95.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013160000-test-speed-design.md#d-shape">d-shape 1 to 4: the map, the plan, the parallel runner, wall time and budgets.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013194800-ci-gate-design.md#problem">The tester stall problem this node ends.</cite>
+    <cite href="bin/test-cases.sh#L15-L30">Why one pod per case: cases audit /proc and kill processes.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261012212500-roadmap.md#L304">Ruling 18:32Z: the gate is the planned cases plus lint; the full suite is the main verify's job.</cite>
+    <cite href="rebuild/investigation/04-UNLANDED.md#9-merged-but-dark-and-ruled-or-ready-but-unbuilt">Row WO-20261013-3eac, pr.opened routes to the reviewer only, the tester role retired: landed here as code.</cite>
+    <cite href="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal">T02 reconcile before dispatch; level-triggered planning of every open head.</cite>
+  </section>
+
+  <section id="rejected" title="Rejected with reason">
+    <rejected source="coqGate.groovy plan unit in a pod"><reason>A pod must start before the first status and the plan would read the map from the head; the host planner reads the map from main and posts pending at once.</reason></rejected>
+    <rejected source="Choosing suites from ticket text (test-speed design, rejected there too)"><reason>The changed files are the truth, the text is not.</reason></rejected>
+    <rejected source="First-match rows instead of union (suites.sh breadcrumb item 2)"><reason>A specific row could hide the suites a broader one demands.</reason></rejected>
+    <rejected source="make lint as the lint unit (factory/config/suites.json commands.lint)"><reason>The Makefile target needs podman, which the pod image does not have (L07 item 6); the unit runs lint/lint.sh directly in coq-lint.</reason></rejected>
+    <rejected source="hostOnly skip list (Jenkinsfile)"><reason>A skip is a silent green; a suite without an image refuses the plan and the images.json mapping is the fix.</reason></rejected>
+    <rejected source="A tester seat (playbooks/tester.md, routes.json pr.opened to tester)"><reason>D11 retires it; every decision it made is a rule here (L07 section 7).</reason></rejected>
+    <rejected source="Reading the budget from the Jenkinsfile budgetMinutes map"><reason>Guesses that aborted 54 builds (L10 section 5.1); budgets are measured records or config data.</reason></rejected>
+  </section>
+
+</volume>

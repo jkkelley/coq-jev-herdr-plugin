@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/rebuild/design/nodes/N-05/record.schema.json",
+  "title": "N-05 Backups records",
+  "description": "Input backup tick (defined in ../N-06/record.schema.json) and backup.now; output backup, backup.failed, backup.busy, backup.mirror_failed, backup.rotten, backup.disk, backup.started of node N-05. Parent volume: spec.xml#N-05. UTC everywhere.",
+  "$defs": {
+    "envelope": { "$ref": "../N-01/record.schema.json#/$defs/envelope" },
+    "at": { "$ref": "../N-01/record.schema.json#/$defs/at" },
+    "sha256": { "$ref": "../N-01/record.schema.json#/$defs/sha256" },
+    "retention_class": { "enum": ["tick", "daily", "monthly", "manual"] },
+    "backup_path": {
+      "type": "string",
+      "pattern": "^.+/backup/store/[0-9]{4}/[0-9]{2}/[0-9]{8}T[0-9]{6}Z-coq\\.db\\.zst$"
+    },
+    "stage": { "enum": ["snapshot", "compress", "verify", "write", "mirror"] },
+    "backup_tick": { "$ref": "../N-06/record.schema.json#/$defs/tick" },
+    "backup_now": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["by", "reason"],
+      "properties": {
+        "by": { "enum": ["N-49", "N-50", "N-01", "ctl"] },
+        "reason": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "backup": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": [
+            "path",
+            "checksum",
+            "checksum_raw",
+            "bytes",
+            "top_seq",
+            "retention_class",
+            "verified",
+            "snapshot_at",
+            "run_seconds"
+          ],
+          "properties": {
+            "kind": { "const": "backup" },
+            "code": { "const": 201 },
+            "node": { "const": "N-05" },
+            "path": { "$ref": "#/$defs/backup_path" },
+            "checksum": {
+              "$ref": "#/$defs/sha256",
+              "description": "sha256 of the compressed file"
+            },
+            "checksum_raw": {
+              "$ref": "#/$defs/sha256",
+              "description": "sha256 of the uncompressed database"
+            },
+            "bytes": { "type": "integer", "minimum": 1 },
+            "top_seq": { "type": "integer", "minimum": 0 },
+            "retention_class": { "$ref": "#/$defs/retention_class" },
+            "verified": { "const": true },
+            "snapshot_at": { "$ref": "#/$defs/at" },
+            "run_seconds": { "type": "integer", "minimum": 0 },
+            "mirror": {
+              "type": "object",
+              "required": ["path", "checksum"],
+              "properties": {
+                "path": { "type": "string", "minLength": 1 },
+                "checksum": { "$ref": "#/$defs/sha256" }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "backup_failed": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["stage", "reason", "attempts", "retention_class"],
+          "properties": {
+            "kind": { "const": "backup.failed" },
+            "code": { "const": 500 },
+            "node": { "const": "N-05" },
+            "stage": { "$ref": "#/$defs/stage" },
+            "reason": { "type": "string", "maxLength": 240 },
+            "attempts": { "const": 3 },
+            "retention_class": { "$ref": "#/$defs/retention_class" },
+            "newest_verified_at": { "$ref": "#/$defs/at" }
+          }
+        }
+      ]
+    },
+    "backup_report": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["reason"],
+          "properties": {
+            "kind": {
+              "enum": [
+                "backup.started",
+                "backup.busy",
+                "backup.mirror_failed",
+                "backup.rotten",
+                "backup.disk"
+              ]
+            },
+            "code": { "enum": [100, 423, 500, 503] },
+            "node": { "const": "N-05" },
+            "reason": { "type": "string", "maxLength": 240 },
+            "path": { "type": "string" },
+            "age_seconds": { "type": "integer", "minimum": 0 },
+            "free_mib": { "type": "integer", "minimum": 0 },
+            "attempts": { "type": "integer", "minimum": 1, "maximum": 3 }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/backup_tick" },
+    { "$ref": "#/$defs/backup_now" },
+    { "$ref": "#/$defs/backup" },
+    { "$ref": "#/$defs/backup_failed" },
+    { "$ref": "#/$defs/backup_report" }
+  ]
+}
