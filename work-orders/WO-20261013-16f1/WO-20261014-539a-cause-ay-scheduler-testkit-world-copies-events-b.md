@@ -62,7 +62,8 @@ scheduler/internal/testkit/world.go worldFiles (line 22) copies events/bin/event
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* worldFiles carries bin/state-root.sh and config/state.json with a breadcrumb; make -C scheduler test passes in the pod
+- [x] `AC-H1` *(human)* worldFiles carries bin/state-root.sh and config/state.json with a breadcrumb; make -C scheduler test passes in the pod
+  - observed `2026-10-14` make -C scheduler test green in pod from pane wD3:p1VW: ok cmd/scheduler, internal/core, internal/testkit (before: 2 testkit cases failed, exit 4 bin/state-root.sh missing); make -C scheduler lint and make lint green; worldFiles carries bin/state-root.sh and config/state.json with a breadcrumb (scheduler/internal/testkit/world.go:18-35)
 
 ## Test plan
 
@@ -81,6 +82,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Retro: the ticket named world.go only, but once the writer could run, two more drifts in testkit_test.go surfaced: the writer prints the state-root file path (not an id) and writes under HOME, and gate kind test.failed needs --sha since WO-20261013-f298. Fixed in the same PR: test sets COQ_STATE to the world state dir and reads the printed path, builderSpecs test.failed gets SHA abc1234, World.CheckRecords sets COQ_STATE. Files touched beyond the ticket list: scheduler/internal/testkit/testkit_test.go. Cause class: a testkit copy of a script drifts when the script gains a dependency; world.go errors name a missing file but not a missing sourced file.
 
 ## Outcome
 
