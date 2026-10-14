@@ -4,15 +4,15 @@
   "slug": "cause-z-a-belt-seated-tester-runs-the-full-suite",
   "title": "Cause z: a belt-seated tester runs the full suites; its playbook runs factory/bin/suites.sh plan on the PR diff and only the commands it prints",
   "type": "bug",
-  "status": "in-progress",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T21:59:04+00:00",
   "parent": "WO-20261013-16f1",
   "branch": "feat/cause-z-a-belt-seated-tester-runs-the-full-suite",
-  "pr": null,
-  "closed": null,
+  "pr": 157,
+  "closed": "2026-10-14",
   "approval": {
     "via": "override",
     "reason": "architect ruling 22:12Z: belt-seated testers run only the suites the diff needs",
@@ -67,7 +67,8 @@ The belt-seated tester runs the ticket's whole test plan, so a ten-line PR waits
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* AC-H1: the rendered tester playbook has a step that runs factory/bin/suites.sh plan on the PR diff and runs only its output. AC-H2: render-playbook.sh roles playbooks --check exits 0. AC-H3: a roles test case fails if the step is removed. AC-H4: make lint and make -C factory test exit 0
+- [x] `AC-H1` *(human)* AC-H1: the rendered tester playbook has a step that runs factory/bin/suites.sh plan on the PR diff and runs only its output. AC-H2: render-playbook.sh roles playbooks --check exits 0. AC-H3: a roles test case fails if the step is removed. AC-H4: make lint and make -C factory test exit 0
+  - observed `2026-10-14` PR 157 merged 2026-10-13T23:26:11Z as 6e21deb. At 105e35c: playbooks/tester.md step 3-4 run factory/bin/suites.sh plan and only what it prints (AC-H1); roles/bin/render-playbook.sh roles playbooks --check exits 0 (AC-H2); bash roles/tests/tester-plan.test.sh prints 'tester plan: 31 passed, 0 failed' (AC-H3 case present and passing; the remove-the-step mutation was not re-run here); AC-H4 make lint and make -C factory test were the PR 157 gate and are not re-run by this sweep (the lint run for this PR is in its body)
 
 ## Test plan
 

@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T20:07:59+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261013-1258"
+    "WO-20261013-1258",
+    "WO-20261013-9617"
   ],
   "blocks": [],
   "files": [

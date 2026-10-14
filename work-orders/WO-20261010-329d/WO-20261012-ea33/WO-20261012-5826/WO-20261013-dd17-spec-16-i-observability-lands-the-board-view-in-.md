@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T03:25:12+00:00",
   "parent": "WO-20261012-5826",
   "branch": null,
@@ -23,7 +23,9 @@
   "depends_on": [
     "WO-20261013-fe37"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-7951"
+  ],
   "files": [
     "specs/scheduler/SPEC-16.I-observability.xml"
   ]

@@ -4,22 +4,21 @@
   "slug": "pr-12-and-the-foundation-branch-go-through-the-l",
   "title": "PR 12 and the foundation branch go through the line: a reviewer seat passes SPEC-00 and SPEC-01 for the P0 gate",
   "type": "feature",
-  "status": "draft",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-11",
-  "updated": "2026-10-11",
+  "updated": "2026-10-13",
   "created_at": "2026-10-11T14:39:43+00:00",
   "parent": "WO-20261010-329d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": null,
   "evidence": null,
   "surfaces": [],
-  "depends_on": [
-    "WO-20261011-fa78"
-  ],
-  "blocks": []
+  "depends_on": [],
+  "blocks": [],
+  "superseded_by": null
 }
 ---
 
@@ -85,4 +84,9 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: Duplicate audit F8, ruled 2026-10-13T23:55Z: PR 12 merged on 2026-10-11T15:34:59Z and the foundation branch content is on main (PR 1, bec8276); the scope is overtaken.
+
+No branch, no PR and no merge commit exist for this work order.
+

@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T22:52:32+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -20,7 +20,9 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [],
+  "depends_on": [
+    "WO-20261013-10d8"
+  ],
   "blocks": [],
   "files": [
     "report/loop/loop.sh",

@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T23:16:06+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -78,6 +78,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F15): this ticket is interim. It fixes the live tester-era line and retires with WO-20261013-3eac (CI gate 5), which retires the tester role; nobody extends it past that.
 
 ## Outcome
 

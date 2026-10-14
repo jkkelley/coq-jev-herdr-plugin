@@ -4,15 +4,15 @@
   "slug": "tester-reviewer-and-merger-seats-come-up-through",
   "title": "Tester, reviewer and merger seats come up through seat.sh and each writes one record on a real PR",
   "type": "feature",
-  "status": "in-progress",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-11",
-  "updated": "2026-10-11",
+  "updated": "2026-10-13",
   "created_at": "2026-10-11T14:39:38+00:00",
   "parent": "WO-20261010-329d",
   "branch": "feat/tester-reviewer-and-merger-seats-come-up-through",
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "Claude seat; Lavish is prohibited for Claude seats by the owner hard rule, decisions recorded in the ticket note",
@@ -21,10 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [
-    "WO-20261011-5355",
-    "WO-20261011-fa78"
-  ]
+  "blocks": [],
+  "superseded_by": null
 }
 ---
 
@@ -93,4 +91,9 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: Duplicate audit F8, ruled 2026-10-13T23:55Z: PR 15 closed unmerged on 2026-10-12T22:17:15Z; seat.sh already seats tester, reviewer and merger seats today, so the scope is overtaken.
+
+No branch, no PR and no merge commit exist for this work order.
+

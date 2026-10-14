@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T13:20:39+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -21,7 +21,10 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [],
+  "blocks": [
+    "WO-20261012-41a3",
+    "WO-20261012-99d6"
+  ],
   "files": [
     "bin/aggregates.sh",
     "Makefile",

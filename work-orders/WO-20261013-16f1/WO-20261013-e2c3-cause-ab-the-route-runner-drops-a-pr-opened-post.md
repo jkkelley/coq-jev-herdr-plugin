@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T22:14:52+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -20,10 +20,11 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [
-    "WO-20261013-439d"
+  "depends_on": [],
+  "blocks": [
+    "WO-20261013-0ad7",
+    "WO-20261013-e9c0"
   ],
-  "blocks": [],
   "files": [
     "factory/bin/route.sh",
     "events/bin/event.sh",

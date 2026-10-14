@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T14:47:03+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261013-7951"
+    "WO-20261013-7951",
+    "WO-20261013-b296"
   ],
   "blocks": [
     "WO-20261013-d101"
@@ -89,6 +90,9 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F16): WO-20261013-30bb wins. s-supervision says 'systemd user units supervise every unit in the supervisor's unit list' (the scheduler binary and the interim belt until the SPEC-16.J cut-over, and bearings stable as its own unit), not 'exactly the scheduler binary and the interim belt'. It cites the SPEC-16.F anchor of WO-20261013-b296 for the list and does not restate it.
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F12): added acceptance criterion. AC-H2: every section this ticket writes cites the SPEC-16 anchor of ticket WO-20261013-b296 (SPEC-16.F) and does not restate its rule, so one change cannot leave SPEC-16 and SPEC-17 disagreeing. Order: the SPEC-16 land ticket WO-20261013-b296 first, this SPEC-17 part second; the depends_on edge says so.
 
 ## Outcome
 
