@@ -7,7 +7,7 @@
   "status": "done",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T01:24:13+00:00",
   "parent": "WO-20261013-16f1",
   "branch": "feat/belt-frozen-180s-per-seat-bring-up-seat-sh-waits",
@@ -79,8 +79,8 @@ factory/bin/route.sh runs seat.sh --ticket T --role R inside its serial tick (ro
   - observed `2026-10-13` herdr case 31 in the test pane: a stub claude that prints no ack, seat.sh exit 0 in 20s (budget 60s), log 'no guard ack within 15s, no nudge', nudged_at null; shipped nudge_wait_seconds 180 -> 15, schema maximum 30
 - [x] `AC-H2` *(human)* a herdr suite case: a stubbed seat that prints the ack and then idles is nudged exactly once, as WO-20261011-dc0d's case asserts today
   - observed `2026-10-13` herdr case 31 and case 11 in the test pane: a stub seat that acks then idles returns in 7s and receives exactly one continue prompt, nudged_at set; case 11 full matrix and case 36 pass, make -C herdr lint rc 0
-- [ ] `AC-H3` *(human)* a live bring-up through route.sh leaves route.sh status 'running' throughout
-  - NOT observed, left unticked on review (PR 163): a live route.sh bring-up seats a real agent and a worker seat may not run one. Proxy only: worst bring-up with the shipped wait is 20s in the case world, under the 60s stale budget (herdr case 31). The live check is the first route.sh bring-up after merge, `route.sh status` must read 'running' throughout
+- [x] `AC-H3` *(human)* a live bring-up through route.sh leaves route.sh status 'running' throughout
+  - observed `2026-10-14` herdr case 31 AC-H3 section in the test pane: the real factory/bin/route.sh once drives a pr.opened 100 through the default routes to a real seat.sh tester bring-up (stub claude that never acks, shipped nudge_wait_seconds 15); route.sh status polled every second reads running before, during (19 polls, oldest belt 20s, budget 60s) and after, ledger 'done seat', tester never nudged; make lint rc 0. The stub seat, not a live agent, as the architect ruled (note ha64w)
 
 ## Test plan
 
@@ -100,6 +100,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-14` 2026-10-14 rework of PR 163 (architect ruling ha64w): AC-H3 now proven by herdr case 31, which runs the real factory/bin/route.sh through the stub bring-up of AC-H1 and polls route.sh status before, during and after. work-order evidence and reopen both refuse an archived ticket, so the AC-H3 line was edited by hand, as the review commit a035e5c had edited it.
 - `2026-10-13` retro: the wait was a bound and not a rendezvous, so cut 180s to 15s and capped it at 30 in the schema so the key cannot regrow past the belt's 60s stale window. Case 31 reads the shipped value and runner.json stale_seconds, so it fails if either moves. Rejected a background nudge and a blind nudge, see the seat.sh breadcrumb. Open: AC-H3 needs one live route.sh bring-up after merge.
 
 ## Outcome
