@@ -21,7 +21,11 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [],
+  "files": [
+    "line/bin/merge.sh",
+    "line/tests/cases/merge-cleanup.test.sh"
+  ]
 }
 ---
 

@@ -21,7 +21,13 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [],
+  "files": [
+    "roles/bin/brief.sh",
+    "playbooks/tester.md",
+    "playbooks/reviewer.md",
+    "roles/tests/gate-writer-path.test.sh"
+  ]
 }
 ---
 

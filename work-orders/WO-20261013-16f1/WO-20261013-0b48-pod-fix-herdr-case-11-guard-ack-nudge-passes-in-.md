@@ -21,7 +21,11 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [],
+  "files": [
+    "herdr/tests/cases/11-guard-ack-nudge.test.sh",
+    "ci/pod/herdr-suite.pod.yaml"
+  ]
 }
 ---
 

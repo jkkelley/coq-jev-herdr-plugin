@@ -21,7 +21,12 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [],
+  "files": [
+    "line/bin/merge.sh",
+    "playbooks/merger.md",
+    "line/tests/cases/merge-hold-exempt.test.sh"
+  ]
 }
 ---
 

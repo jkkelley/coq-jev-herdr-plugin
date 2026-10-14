@@ -21,7 +21,10 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [],
+  "files": [
+    "herdr/tests/cases/38-tester-plan-runs.test.sh"
+  ]
 }
 ---
 
