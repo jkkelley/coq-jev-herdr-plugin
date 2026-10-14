@@ -1,0 +1,263 @@
+WO-20261010-1c23	draft	live	0	0	WO-20261010-329d	SPEC-13 testing and lint: local fast, CI full, container-sandbox as source of tr
+WO-20261010-2dab	draft	live	0	0	WO-20261010-329d	SPEC-15 SDLC end to end with parallel PRs and cleanup
+WO-20261010-329d	ready	live	2	2	-	P0 foundation: specs, knowledge graph, factory scripts
+WO-20261010-976e	draft	live	0	0	WO-20261010-329d	SPEC-02 roles and permissions written from roles/*.json
+WO-20261010-d354	ready	live	1	0	WO-20261010-329d	Dated entry files: YYYY/MM/YYYYMMDD-name.ext, frontmatter, UTC, one script per t
+WO-20261011-3435	draft	live	1	1	WO-20261010-329d	Worker test-pane fence closes its gaps: SPEC-04 s-seat lists COQ_TEST_PANE, test
+WO-20261011-5355	draft	live	0	0	WO-20261010-329d	Belt on: bringup.sh starts the route runner in its own pane before any seat and 
+WO-20261011-e618	draft	live	0	0	WO-20261010-329d	Interface agent seat owns the bearings page: owner requests become records and t
+WO-20261012-187e	ready	live	0	0	WO-20261010-329d	The line runs without the architect: every station is a seat or a rule, so a dea
+WO-20261012-265d	ready	live	0	0	WO-20261010-329d	Seats compact the bearings-v2 way: live seats only, on request after each step, 
+WO-20261012-898a	ready	live	0	0	WO-20261012-265d	Compact request: make step's last act raises the seat's compact request and the 
+WO-20261012-c41f	ready	live	0	0	WO-20261012-265d	Threshold per role: seat.sh renders a guard schema per seat from its role, so th
+WO-20261012-2a12	draft	live	0	0	WO-20261010-329d	Break glass live proof: the owner's first real grant through the interface card 
+WO-20261012-0113	ready	live	0	0	WO-20261012-ea33	Scheduler lint and CI wiring: lint/lint.sh runs specs/scheduler/bin/check.sh and
+WO-20261012-1635	ready	live	0	0	WO-20261012-ea33	Scheduler end-to-end acceptance: in a scratch herdr session with a stub agent a 
+WO-20261012-1ccf	ready	live	0	0	WO-20261012-ea33	Scheduler engine and the run, check and retry subcommands: the tick loop composi
+WO-20261012-32fe	ready	live	0	0	WO-20261012-ea33	Scheduler routes package: the table loaded and checked, the first-row match, the
+WO-20261012-379f	ready	live	0	0	WO-20261012-ea33	Scheduler contract tests: every record kind the scheduler emits through the real
+WO-20261012-3c7a	ready	live	0	0	WO-20261012-ea33	Scheduler health package: the belt heartbeat from the tick loop, two-signal stal
+WO-20261013-18d6	ready	live	0	0	WO-20261012-5826	SPEC-16.H runtime and executor lands, revised for no NATS and the owner record i
+WO-20261013-223e	ready	live	0	0	WO-20261012-5826	SPEC-16.J cut-over lands: j-retire names every interim script the scheduler reti
+WO-20261013-31d1	ready	live	0	0	WO-20261012-5826	SPEC-16.K testing lands: cases for the reaper, the idle limit, probes as code, t
+WO-20261013-3aea	ready	live	0	0	WO-20261012-5826	SPEC-16.C seats lands: seats on demand, the reaper, the one-minute idle limit an
+WO-20261013-4ce5	ready	live	0	0	WO-20261012-5826	SPEC-16.D jobs lands: the confirmed wake and the merge as a job with a head guar
+WO-20261013-b296	ready	live	0	0	WO-20261012-5826	SPEC-16.F health lands: probes as code, exactly two supervised units, the dead m
+WO-20261013-badd	ready	live	0	0	WO-20261012-5826	SPEC-16.A intake lands: records read once from the state root, and the record ro
+WO-20261013-c64d	ready	live	0	0	WO-20261012-5826	SPEC-16.E policies and break glass lands, revised for cards C10 to C18
+WO-20261013-dd17	ready	live	0	0	WO-20261012-5826	SPEC-16.I observability lands: the board view in one herdr pane, read from the s
+WO-20261013-e3f6	ready	live	0	0	WO-20261012-5826	SPEC-16.B routing lands: the wake is one herdr prompt to the item's owner on a s
+WO-20261012-5a3d	ready	live	0	0	WO-20261012-ea33	Scheduler intake package: roots, id order, the routed ledger with claim before a
+WO-20261012-6e43	ready	live	0	0	WO-20261012-ea33	Scheduler policy package: the policies table with the break glass refusal, open 
+WO-20261012-7a9a	ready	live	0	0	WO-20261012-ea33	Scheduler job package: the durable store, idempotency keys and unknown-outcome d
+WO-20261012-8d87	ready	live	0	0	WO-20261012-ea33	Replay fixtures: one golden case per routes row and per policies row under sched
+WO-20261012-8e69	ready	live	0	0	WO-20261012-ea33	Scheduler seat package: names from role labels, the observer with three signals,
+WO-20261012-9790	ready	live	0	0	WO-20261012-ea33	Scheduler config package: the loader for scheduler.json and executor.json, varia
+WO-20261012-b12c	ready	live	0	0	WO-20261012-ea33	Scheduler observe package and the status subcommand: JSON log lines per change, 
+WO-20261012-d7f4	ready	live	0	0	WO-20261012-ea33	Scheduler executor package: the gRPC server on the host with the verb table, ref
+WO-20261012-ea33	ready	live	0	0	WO-20261010-329d	Go scheduler: a lightweight Go service in Podman on WSL schedules the small loop
+WO-20261012-fa36	ready	live	0	0	WO-20261012-ea33	Scheduler cut-over: shadow mode and its decision files, the parity report and su
+WO-20261010-5b17	ready	live	0	0	-	Delivery: public repo, SPEC-12, README, gitops
+WO-20261010-8e3b	ready	live	0	0	WO-20261010-5b17	Create the public GitHub repo and push main with branch protection
+WO-20261010-beba	draft	live	0	0	WO-20261010-5b17	README that humans want to read
+WO-20261010-7083	ready	live	1	0	WO-20261010-84f1	Quiet window in compaction-guard: quiet.json, 5 second countdown, watchers pause
+WO-20261010-84f1	ready	live	0	0	-	Monitoring: monitor seat, tab group, notifications, status-change wakeups
+WO-20261010-090c	draft	live	0	0	WO-20261010-98ea	SITREP site: Go server, websocket owner channel, wireframe viewer, link to the f
+WO-20261010-3593	draft	live	0	0	WO-20261010-98ea	Handoff to the interface agent: page state, transcript, memory, hydration
+WO-20261010-7c55	draft	live	0	0	WO-20261010-98ea	Wireframes: herdr tab and pane layouts, SITREP site, factory dashboard, game pan
+WO-20261010-98ea	ready	live	0	0	-	Owner surface: bearings page, SITREP site and factory dashboard
+WO-20261010-c180	draft	live	0	0	WO-20261010-98ea	Factory dashboard: live view of the queue, seats, records and leases, Factorio f
+WO-20261010-0651	draft	live	0	0	WO-20261010-da54	Spike 4: Haiku 5.5 on the text map vs a screenshot
+WO-20261010-5f68	draft	live	0	0	WO-20261010-da54	Spike 7: share of turns a deterministic layer absorbs
+WO-20261010-6624	draft	live	0	0	WO-20261010-da54	Spike 3: file IPC vs socket for the adapter
+WO-20261010-c6e9	ready	live	0	0	WO-20261010-da54	Spike 9: Haiku 5.5 seat with bypassPermissions, remote-control, hooks and compac
+WO-20261010-cc10	draft	live	0	0	WO-20261010-da54	Spike 8: memory across permadeath
+WO-20261010-d08d	ready	live	0	0	WO-20261010-da54	Spike 10: coq-term variant A, Rust pane program with the pane.graphics.set backe
+WO-20261010-d3a8	draft	live	0	0	WO-20261010-da54	Spike 6: Windows capture and SendInput microservice from WSL
+WO-20261010-d58d	draft	live	0	0	WO-20261010-da54	Spike 2: Harmony mod exports state per turn and consumes actions
+WO-20261010-da54	ready	live	0	0	-	Discovery spikes: prove the game, the pane and the seat before building
+WO-20261010-4beb	draft	live	0	0	WO-20261010-e1e5	Frame and input protocol shared by every coq-term variant and game host
+WO-20261010-4c71	draft	live	0	0	WO-20261010-e1e5	Per-package CI: GitHub Actions matrix, semver tags per package, ghcr push via ka
+WO-20261010-a945	draft	live	0	0	WO-20261010-e1e5	coq-term variant B: Kitty graphics protocol from inside the pane
+WO-20261010-e1e5	draft	live	0	0	-	coq-term: our own pane program, variants in parallel, per-package CI and semver
+WO-20261012-41a3	ready	live	0	0	WO-20261012-cf8d	Roadmap F - Changelog rendered from merged pull request titles at release: make 
+WO-20261012-6f13	ready	live	0	0	WO-20261012-cf8d	Roadmap B - Seats act on rules: the merger merges on the gate and verifies on ma
+WO-20261012-7a46	ready	live	0	0	WO-20261012-cf8d	Roadmap E - Carry rule: gate.sh carries a test and review when a pull request's 
+WO-20261012-99d6	ready	live	0	0	WO-20261012-cf8d	Roadmap A4 - events/ and factory/state leave git: cut over under USERHALT, recor
+WO-20261012-be64	ready	live	0	0	WO-20261012-cf8d	Roadmap L - Decision nodes for the locked roadmap decisions in the design graph,
+WO-20261012-cf8d	ready	live	5	1	-	Roadmap: the repository is source only and no agent is a gate
+WO-20261013-04b8	ready	live	0	0	WO-20261012-cf8d	The router posts each routed record to its board lane and prompts the owning sea
+WO-20261013-1258	ready	live	0	0	WO-20261012-cf8d	Roadmap I - patrol-tick.sh, the 1-minute patrol moves from ~/.cache/coq-watch/pa
+WO-20261013-2fc5	ready	live	0	0	WO-20261012-cf8d	Roadmap I - watchdog.sh, the patrol's watchdog and dead man's switch, moves from
+WO-20261013-3a6e	ready	live	0	0	WO-20261012-cf8d	Roadmap I - flow-tick.sh, the 3-minute flow tick moves from ~/.cache/coq-watch/f
+WO-20261013-3f2e	ready	live	0	0	WO-20261012-cf8d	SPEC-17 1.1.0, part 4: s-maintenance, the maintenance worker role
+WO-20261013-44aa	ready	live	0	0	WO-20261012-cf8d	Routes lint: a check fails a record kind with no routes row, a kind with two row
+WO-20261013-48f2	ready	live	0	0	WO-20261012-cf8d	Post-merge cleanup is code: line/bin/after-merge.sh cleans the branches, downs t
+WO-20261013-4f4c	ready	live	0	0	WO-20261012-cf8d	Roadmap I - architect-rounds.sh, the architect's 1-minute fact sheet moves from 
+WO-20261013-5dce	ready	live	0	0	WO-20261012-cf8d	K5 reland, part 3: factory cases 14 and 17 post every gate record with its sha
+WO-20261013-5f41	ready	live	1	0	WO-20261012-cf8d	Role caps pinned: herdr case 28 asserts the seat caps pull request 99 sets (work
+WO-20261013-612d	ready	live	0	0	WO-20261012-cf8d	Route row: merged 200 runs line/bin/after-merge.sh instead of waking the archite
+WO-20261013-74ae	ready	live	0	0	WO-20261012-cf8d	SPEC-17 1.1.0, part 1: version, contents and the two mermaid diagrams, the hiera
+WO-20261013-74b6	ready	live	0	0	WO-20261012-cf8d	Test speed: every case prints its wall time and fails over its budget, from conf
+WO-20261013-7757	ready	live	0	0	WO-20261012-cf8d	Test speed: the events and line suites run their cases through bin/test-cases.sh
+WO-20261013-7951	ready	live	0	0	WO-20261012-cf8d	SPEC-17 1.1.0, part 6: s-delivery, the board in a herdr pane and one prompt per 
+WO-20261013-8d8a	ready	live	0	0	WO-20261012-cf8d	SPEC-17 1.1.0, part 2: the rule-to-domain table, the inventory rows H27 to H32 a
+WO-20261013-8e0c	ready	live	0	0	WO-20261012-cf8d	The supervisor keeps only bearings stable alive while the halt flag exists, and 
+WO-20261013-8ed9	ready	live	0	0	WO-20261012-cf8d	make line-resume: the preflight judges open items by rule, the system comes up B
+WO-20261013-9189	ready	live	0	0	WO-20261012-cf8d	K5 reland, part 2: factory cases 10, 11, 12 and 13 post every gate record with i
+WO-20261013-9506	ready	live	0	0	WO-20261012-cf8d	Roadmap A3 - The monitor and orchestrator roles read records from the state root
+WO-20261013-992d	ready	live	0	0	WO-20261012-cf8d	SPEC-17 1.1.0, part 3: s-loops, the system and product loops
+WO-20261013-a0d1	ready	live	0	0	WO-20261012-cf8d	Roadmap A3 - The bearings sitrep build reads records from the state root
+WO-20261013-a1c6	ready	live	0	0	WO-20261012-cf8d	Capacity: herdr max_agents goes from 8 to 16, pinned by a herdr test case
+WO-20261013-a7e6	ready	live	0	0	WO-20261012-cf8d	The stall policy in flow.sh wakes the seat that owes the next record, retries, t
+WO-20261013-a91a	ready	live	0	0	WO-20261012-cf8d	Orchestrator role and playbook: the seat rules on the findings the code raises; 
+WO-20261013-acdd	ready	live	0	0	WO-20261012-cf8d	Roadmap I closes - verify-phase1.sh retires into line/bin/verify-main.sh, line/R
+WO-20261013-bd4e	ready	live	0	0	WO-20261012-cf8d	SPEC-17 1.1.0, part 7: s-supervision and the shim column of s-build
+WO-20261013-bed2	ready	live	0	0	WO-20261012-cf8d	Routes rows: 429 and 500 to the orchestrator lane, merged 200 to the merger only
+WO-20261013-ced5	ready	live	0	0	WO-20261012-cf8d	make line-check: the bring-up checklist B1 to B8 read-only, one line per node ok
+WO-20261013-d101	ready	live	0	0	WO-20261012-cf8d	SPEC-17 1.1.0, part 8: the cross-walk X14 to X17, s-config and the tests T16 to 
+WO-20261013-d1cd	ready	live	0	0	WO-20261012-cf8d	K5 reland, part 1: the factory test world and cases 03, 06 and 09 post every gat
+WO-20261013-e713	ready	live	0	0	WO-20261012-cf8d	SPEC-17 1.1.0, part 5: the input-to-output table, seat lifetime and the one-minu
+WO-20261013-e9c0	ready	live	0	0	WO-20261012-cf8d	K5 reland: re-apply 32fc429, event.sh refuses a gate record without --sha and an
+WO-20261013-f2c0	ready	live	0	0	WO-20261012-cf8d	Test speed, polls part 5: fixed sleeps become wait_until polls in herdr cases 14
+WO-20261013-fd7d	ready	live	0	0	WO-20261012-cf8d	make line-halt and line-drain: the halt and drain flags in the state root's run 
+WO-20261014-8814	ready	live	0	0	WO-20261012-cf8d	Roadmap I cutover - the running digest, record-bus, aq, start-roadmap and seat-q
+WO-20261013-0529	ready	live	1	0	WO-20261013-16f1	Cause z follow-up 2: a herdr case runs roles/tests/tester-plan.test.sh, so the t
+WO-20261013-0ad7	ready	live	1	0	WO-20261013-16f1	Before seating a gate seat, route.sh and seat.sh refuse when a seat of that role
+WO-20261013-0bda	ready	live	0	0	WO-20261013-16f1	Cause h: a stale queued seat down killed a freshly seated seat of the same name;
+WO-20261013-16f1	ready	live	3	1	-	System maintenance - causes of stuck seats and processes
+WO-20261013-2298	ready	live	0	0	WO-20261013-16f1	Cause t, part 2: nothing checks who changed roles/, specs/ or graph/; gate.sh pr
+WO-20261013-249e	ready	live	1	0	WO-20261013-16f1	Cause w: every test container runs with --rm and a coq.run label, and a reaper r
+WO-20261013-30bb	ready	live	0	0	WO-20261013-16f1	bearings stable runs inside herdr panes, so a herdr crash takes the owner page d
+WO-20261013-3217	ready	live	0	0	WO-20261013-16f1	CI gate 3: line/bin/merge.sh keys on the coq/gate status of the head sha plus re
+WO-20261013-32bd	ready	live	1	0	WO-20261013-16f1	Cause q: the starter leaves the main checkout dirty; bin/wo-start.sh commits the
+WO-20261013-3eac	ready	live	0	0	WO-20261013-16f1	CI gate 5: pr.opened routes to the reviewer only; the tester role is retired and
+WO-20261013-4464	ready	live	0	0	WO-20261013-16f1	Cause t, part 3: merge.sh merges a pull request whatever its fence verdict; it r
+WO-20261013-4dc2	ready	live	1	0	WO-20261013-16f1	Cause r: a tickets-only pull request is gated by a script, not a tester seat; li
+WO-20261013-6463	ready	live	0	0	WO-20261013-16f1	Cause m: merge.sh held a pull request on an older sha-less test.passed; it judge
+WO-20261013-7000	ready	live	1	0	WO-20261013-16f1	Cause x: claims.sh start sees a ticket that is live in a treehouse slot, so two 
+WO-20261013-77c0	ready	live	0	0	WO-20261013-16f1	herdr-stable dies with a SEGV at 31.8G and nothing brings the seats back: it has
+WO-20261013-9040	ready	live	0	0	WO-20261013-16f1	A tester plan runs reindex --check in a fresh tree where INDEX.md is gitignored,
+WO-20261013-9617	ready	live	0	0	WO-20261013-16f1	The patrol saw eight line processes dead 56 times but only queued them for an ar
+WO-20261013-aff2	ready	live	0	0	WO-20261013-16f1	CI gate 4: a green coq/gate status on main posts verified for every merge since 
+WO-20261013-b839	ready	live	0	0	WO-20261013-16f1	Cause n: review.changes and test.failed prompt a worker that was already downed;
+WO-20261013-bcba	ready	live	0	0	WO-20261013-16f1	Cause u: seat.sh has no --model, so the architect cannot start a tester on Sonne
+WO-20261013-bf70	ready	live	0	0	WO-20261013-16f1	The dead man's switch counts the patrol's own notes as records, so it never fire
+WO-20261013-cc5b	ready	live	1	0	WO-20261013-16f1	Cause z follow-up 1: seat.sh passes --worktree to roles/bin/brief.sh so the brie
+WO-20261013-d0dd	ready	live	0	0	WO-20261013-16f1	Cause t, part 1: the worker fence renders deny.paths as Edit rules only, and PR 
+WO-20261013-d182	ready	live	1	0	WO-20261013-16f1	A board line is a ticket with a live seat or an open PR; in-progress with neithe
+WO-20261013-e2c3	ready	live	1	0	WO-20261013-16f1	Cause ab: the route runner drops a pr.opened posted with code 200 and stalls its
+WO-20261013-e880	draft	live	0	0	WO-20261013-16f1	Cause 2wbaq, part 2: seat.sh seats a ticket's worker as spec-author when every f
+WO-20261013-ee5c	ready	live	1	0	WO-20261013-16f1	Cause s: the patrol counts a line process by its exact argv0 script, not by any 
+WO-20261014-3dae	ready	live	0	0	WO-20261013-16f1	R3 - start-loop.sh with its systemd user unit starts the next ready ticket when 
+WO-20261014-5e4a	ready	live	1	0	WO-20261013-16f1	Cause ai: a gate seat posts its result with main's event.sh (the checkout's writ
+WO-20261014-7f99	ready	live	0	0	WO-20261013-16f1	R2 - Result records down their own seat through the route down key and patrol re
+WO-20261014-9803	ready	live	0	0	WO-20261013-16f1	Cause w, part 2: line/bin/reap-containers.sh removes coq.run containers older th
+WO-20261014-c789	ready	live	1	0	WO-20261013-16f1	Cause ah: the merge hold file names the one exempt fix ticket, line/bin/merge.sh
+WO-20261014-d93a	ready	live	1	0	WO-20261013-16f1	R1 - routes.json run action: review.passed and merged run merge.sh and after-mer
+WO-20261014-eb0d	ready	live	1	0	WO-20261013-16f1	Cause aj: the tickets-only gate (reindex --check or lint) fails a ready ticket w
+WO-20261010-2d04	done	archive	4	4	WO-20261010-329d	bearings.sh serve and wait place their panes in the tool grid, never under the c
+WO-20261010-539f	cancelled	archive	1	0	WO-20261010-329d	NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SP
+WO-20261010-6a3b	cancelled	archive	0	0	WO-20261010-da54	Spike 11: scratch herdr session harness in Podman
+WO-20261010-8777	done	archive	1	1	WO-20261010-329d	herdr seat scripts: bringup, seat, monitors, recover, retire, ported from bearin
+WO-20261010-8fa8	done	archive	5	5	WO-20261010-329d	Guard lease watcher in monitors 1: unfreeze.sh --watch plugged in by bringup, wi
+WO-20261010-a429	done	archive	4	4	WO-20261010-329d	seat.sh leases a treehouse slot for the worker and the worker playbook names the
+WO-20261010-ba08	done	archive	0	0	WO-20261010-98ea	Vendor bearings into tools/bearings with stable, uat and dev tiers
+WO-20261010-c274	done	archive	4	2	WO-20261010-329d	recover.sh --check|--apply per RUN-recover with its Podman case
+WO-20261010-eaa3	cancelled	archive	1	1	WO-20261010-da54	Spike 1: native Linux Qud runs in WSL2 under Xvfb or WSLg
+WO-20261010-fbad	done	archive	0	0	WO-20261010-329d	Land the P0 foundation branch: SPEC-00, 01, 03, 04, 05, graph, lint, events, que
+WO-20261011-23df	cancelled	archive	1	1	WO-20261010-329d	Tester, reviewer and merger seats come up through seat.sh and each writes one re
+WO-20261011-36d7	done	archive	7	7	WO-20261010-329d	The labelled test pane never keeps its cwd inside a treehouse slot, so treehouse
+WO-20261011-38c7	done	archive	3	3	WO-20261010-329d	Route runner: factory/bin/route.sh applies routes.json to every new record and n
+WO-20261011-3d78	done	archive	2	2	WO-20261010-98ea	SITREP page renders from a data file through one script, so every SITREP has the
+WO-20261011-4562	done	archive	1	1	WO-20261010-329d	Break glass: one owner-authorised action at a time flips one seat to bypass perm
+WO-20261011-4c5e	done	archive	6	6	WO-20261010-329d	Worker fence paths resolve against the worktree: render_settings substitutes ${w
+WO-20261011-4db1	done	archive	1	1	WO-20261010-329d	Belt seats the line: route.sh brings a role seat up before a wake, takes a seat 
+WO-20261011-5064	cancelled	archive	1	1	WO-20261010-329d	Merger regenerates generated files on a merge conflict: a 409 whose only conflic
+WO-20261011-616c	done	archive	3	3	WO-20261010-329d	Factory board: report/loop renders the lines from records and bearings stable se
+WO-20261011-6842	done	archive	1	1	WO-20261010-329d	Flow watch: a shell watcher in a monitors pane turns a stalled line into a 500 (
+WO-20261011-7b8f	cancelled	archive	0	0	WO-20261010-329d	PR 12 and the foundation branch go through the line: a reviewer seat passes SPEC
+WO-20261011-8fb3	done	archive	1	1	WO-20261010-329d	seat.sh adopt: a running claude session becomes a seat in place, keeping its con
+WO-20261011-9639	done	archive	1	1	WO-20261010-329d	Worker role closes its own ticket: roles/worker.json allows work-order.sh submit
+WO-20261011-c077	done	archive	7	7	WO-20261010-329d	seat.sh checks out the ticket branch in the slot it leases, so a worker starts o
+WO-20261011-ceea	done	archive	1	1	WO-20261010-329d	Blueprint page: report/loop renders the system design from graph/ and work-order
+WO-20261011-dc0d	done	archive	5	5	WO-20261010-329d	seat.sh nudges a fresh seat past the compaction-guard ack, so a worker never end
+WO-20261011-f896	done	archive	1	1	WO-20261010-329d	Test pane per seat: seat.sh opens a labelled test pane in the seat's own tab and
+WO-20261011-fa78	cancelled	archive	0	0	WO-20261010-329d	First ticket through the line: PR 11 closes with a seat at every station and no 
+WO-20261012-0229	done	archive	1	1	WO-20261012-cf8d	Roadmap A2 - The belt reads the state root: route.sh, flow.sh, gate.sh and polic
+WO-20261012-0677	done	archive	1	1	WO-20261012-187e	No file is ever touched by two open PRs: a ticket declares its files, start refu
+WO-20261012-277d	done	archive	1	1	WO-20261012-187e	Supervisor judges a pane busy by the processes in its foreground, so a live bear
+WO-20261012-3bb0	done	archive	1	1	WO-20261012-187e	Gate rules as code: a test on a head that differs only by records counts, a head
+WO-20261012-3cb1	done	archive	1	1	WO-20261012-187e	Test pane runs in the seat's worktree: testpane.sh wraps every command as a subs
+WO-20261012-48ab	done	archive	1	1	WO-20261012-ea33	Scheduler skeleton: Go module with pinned gRPC and protobuf, Makefile and Contai
+WO-20261012-541a	cancelled	archive	0	0	WO-20261012-cf8d	Roadmap A3 - Seats, reports and bearings read the state root: seat.sh, the watch
+WO-20261012-5826	done	archive	2	0	WO-20261012-ea33	Go scheduler design: one XML spec per domain under specs/scheduler, each at most
+WO-20261012-5d09	done	archive	1	1	WO-20261012-187e	Tester playbook says git is off and the worktree is already at the head, so a te
+WO-20261012-5fa8	done	archive	1	1	WO-20261012-cf8d	Owner law in AGENTS.md: questions go on cards, prose to the owner is short and h
+WO-20261012-668a	done	archive	1	1	WO-20261010-329d	SITREP panel in this project's bearings: a #SITREP/v1# reply renders as the colo
+WO-20261012-6c76	done	archive	1	1	WO-20261012-cf8d	Roadmap H - Backlog lives in GitHub issues: each backlog item becomes an issue w
+WO-20261012-72a0	cancelled	archive	0	0	WO-20261012-187e	Verifier seat: a merged record wakes a verifier that checks the merge on main ag
+WO-20261012-7e13	done	archive	1	1	WO-20261012-cf8d	Roadmap A1 - State root: event.sh writes records under the state root with times
+WO-20261012-8f4f	done	archive	1	1	WO-20261010-329d	SITREP IN FLIGHT counts the work the line is actually doing: open PRs and in-pro
+WO-20261012-8fb2	done	archive	1	1	WO-20261012-265d	Own checkpoint after compaction: a SessionStart compact hook puts the seat's new
+WO-20261012-90ce	cancelled	archive	1	0	WO-20261012-cf8d	Roadmap I - Line scripts live in the repo: the merge watch, digest, route retry,
+WO-20261012-9b2c	done	archive	1	1	WO-20261012-187e	Standing policies: an escalation carries a deadline and a default drawn from the
+WO-20261012-9f5d	done	archive	1	1	WO-20261012-265d	Case 17-resume-checkpoint builds its own CONTEXT_STATE.md in its test world, so 
+WO-20261012-aac3	done	archive	1	1	WO-20261012-cf8d	Roadmap G - make aggregates works in a clean checkout, without the gitignored wo
+WO-20261012-b800	done	archive	1	1	WO-20261012-187e	Supervisor: at boot and every minute a process brings herdr, the belt, the watch
+WO-20261012-da1e	cancelled	archive	0	0	WO-20261012-cf8d	Roadmap D - One consumer per record kind, the owner seat from the ticket, the ar
+WO-20261012-da52	cancelled	archive	0	0	WO-20261012-187e	Record bus: every slot's new records reach the checkout events/ within ten secon
+WO-20261012-df2b	done	archive	1	1	WO-20261012-ea33	Scheduler host files: the pane wrappers for the container and the executor, the 
+WO-20261012-e27e	done	archive	1	1	WO-20261012-ea33	Scheduler config files: scheduler.json and executor.json with their schemas, eve
+WO-20261012-e36e	done	archive	1	1	WO-20261012-265d	Case 17-resume-checkpoint passes in a clean checkout: the test brings its own ch
+WO-20261012-e970	cancelled	archive	0	0	WO-20261012-cf8d	Roadmap C - make line-halt and make line-resume: the halt flag the supervisor ho
+WO-20261012-ee9c	done	archive	1	1	WO-20261012-265d	Scoped guard watch: monitor slot 1.1.2 runs the guard only for live seats, each 
+WO-20261013-0904	done	archive	1	1	WO-20261012-cf8d	Test speed, polls part 4: fixed sleeps become wait_until polls in herdr cases 15
+WO-20261013-0b48	done	archive	3	1	WO-20261013-16f1	Pod fix: herdr case 11-guard-ack-nudge passes in arm64 pods (herdr seen idle twi
+WO-20261013-0bc0	done	archive	1	1	WO-20261012-cf8d	Test speed: one shared case runner, bin/test-cases.sh, runs each suite's cases i
+WO-20261013-0f18	done	archive	1	1	WO-20261012-cf8d	Gate models: the tester and merger roles run on claude-sonnet-5-5 instead of cla
+WO-20261013-0ffe	done	archive	1	1	WO-20261012-cf8d	Roadmap I - digest.sh, the 30-minute architect digest moves from ~/.cache/coq-wa
+WO-20261013-1031	done	archive	2	1	WO-20261012-cf8d	Roadmap K - Design: the orchestrator runs the line and the system checks every a
+WO-20261013-10d8	done	archive	2	1	WO-20261013-16f1	Board watch posts a 500 and exits after 3 failed passes, and the patrol checks t
+WO-20261013-1417	done	archive	1	1	WO-20261012-cf8d	Roadmap A3 - The architect and interface-agent roles read records from the state
+WO-20261013-14f9	cancelled	archive	0	0	WO-20261012-cf8d	Roadmap K3 - Orchestrator seat: the fixed seat runs the line by rule, re-routes 
+WO-20261013-1637	done	archive	1	1	WO-20261012-cf8d	Roadmap I - record-bus.sh, the slot-to-checkout record copier moves from ~/.cach
+WO-20261013-1e9f	cancelled	archive	0	0	WO-20261013-16f1	The patrol saw eight line processes dead 56 times but only queued them for an ar
+WO-20261013-2b64	done	archive	1	1	WO-20261012-cf8d	Test speed, polls part 2: fixed sleeps become wait_until polls in herdr cases 11
+WO-20261013-2d35	done	archive	1	1	WO-20261013-16f1	Cause l: the merger merged onto a red main because the hold lived in prose; merg
+WO-20261013-3abe	done	archive	1	1	WO-20261012-cf8d	Roadmap A3 - The loop board reads records from the state root: events_dir takes 
+WO-20261013-439d	cancelled	archive	0	0	WO-20261013-16f1	Cause i: two testers were seated for one pull request head; route.sh seats at mo
+WO-20261013-43ea	cancelled	archive	1	0	WO-20261013-16f1	Cause ac: merge cleanup is a script that returns a treehouse slot with treehouse
+WO-20261013-44b3	done	archive	1	1	WO-20261012-cf8d	Roadmap A3 - The reviewer and worker roles read records from the state root: one
+WO-20261013-496d	done	archive	1	1	WO-20261012-cf8d	Roadmap A3 - A seat started in a treehouse slot posts its records into the state
+WO-20261013-50a4	done	archive	1	1	WO-20261013-16f1	Cause g: a downed or exited seat leaves its claude running in a background sessi
+WO-20261013-51e8	done	archive	1	1	WO-20261012-cf8d	Roadmap I - aq.sh, the architect queue moves from ~/.cache/coq-watch/aq.sh into 
+WO-20261013-58c9	done	archive	2	1	WO-20261012-cf8d	Roadmap A3 - The player and compliance-officer roles read records from the state
+WO-20261013-5b33	done	archive	1	1	WO-20261012-cf8d	Compliance officer role: a read-only Haiku seat that reads every agent's screen,
+WO-20261013-5c06	done	archive	1	1	WO-20261012-cf8d	Roadmap A3 - Break glass records go to the state root: the grant file stores the
+WO-20261013-69df	done	archive	2	1	WO-20261013-16f1	Cause v: a seat's state root comes from one place (COQ_STATE or the XDG state ro
+WO-20261013-70c4	cancelled	archive	0	0	WO-20261012-cf8d	Roadmap K7 - Routes and lint: one row per record kind and attempt, the owner sea
+WO-20261013-73be	done	archive	1	1	WO-20261012-cf8d	Roadmap A3 - The merger and tester roles read records from the state root: one s
+WO-20261013-7719	done	archive	1	1	WO-20261012-cf8d	Roadmap I - merge-watch.sh, the 1-minute merge watch moves from ~/.cache/coq-wat
+WO-20261013-7a76	done	archive	1	1	WO-20261013-16f1	Cause m, routes: 16 of 25 route 500s were no-route for note 300 and work.started
+WO-20261013-7af7	done	archive	1	1	WO-20261013-16f1	Belt frozen 180s per seat bring-up: seat.sh waits for a compaction-guard ACK lin
+WO-20261013-7fa3	done	archive	1	1	WO-20261012-5826	SPEC-16 overview's graph nodes land first: the two scheduler decisions, the exec
+WO-20261013-8573	done	archive	1	1	WO-20261013-16f1	CI gate 1: a test image in GHCR runs the herdr suite and the suite families in K
+WO-20261013-892f	done	archive	1	1	WO-20261012-cf8d	Test speed, polls part 1: wait_until in the herdr test world, and the fixed slee
+WO-20261013-89c7	done	archive	1	1	WO-20261012-cf8d	Roadmap K8 - The factory board shows the live line: ticket status read from open
+WO-20261013-8c6a	cancelled	archive	1	0	WO-20261013-16f1	Cause p: a gate was seated twice, once by the belt and once by hand; seat.sh ref
+WO-20261013-9b21	done	archive	2	1	WO-20261013-16f1	Cause aa: route.sh derives the ticket from the PR head branch when a record has 
+WO-20261013-9bdd	done	archive	1	1	WO-20261012-cf8d	Verify is code: line/bin/verify-main.sh runs lint and the factory, herdr, events
+WO-20261013-9c50	cancelled	archive	0	0	WO-20261012-cf8d	Capacity and gate models: max_agents 8 to 16 in the herdr config, the tester and
+WO-20261013-9cc9	done	archive	2	1	WO-20261013-16f1	Cause m part 2: the route ignore rows for note and verified match on kind alone,
+WO-20261013-a0e2	done	archive	1	1	WO-20261013-16f1	Cause f: the belt cannot seat the tester and reviewer for a tickets pull request
+WO-20261013-a146	done	archive	2	1	WO-20261013-16f1	Cause aa: herdr case 17-pane-health passes five suite runs in a row, in suite or
+WO-20261013-a18c	done	archive	2	1	WO-20261013-16f1	Cause ag: line/bin/merge.sh does the post-merge cleanup itself without checking 
+WO-20261013-ab25	done	archive	1	1	WO-20261013-16f1	CI gate 2: the shared-library step coqGate() plans the suites from the diff, fan
+WO-20261013-acbf	done	archive	1	1	WO-20261012-cf8d	Roadmap I - route-retry.sh, the failed-route retry moves from ~/.cache/coq-watch
+WO-20261013-af23	done	archive	1	1	WO-20261012-cf8d	Roadmap I - start-roadmap.sh, the ticket starter (renamed start-tickets.sh) move
+WO-20261013-b221	done	archive	1	1	WO-20261012-cf8d	Roadmap K6 - The owner lane on the page: bearings renders owner-lane items as ca
+WO-20261013-b2fe	done	archive	1	1	WO-20261012-cf8d	Test speed, polls part 3: fixed sleeps become wait_until polls in herdr cases 16
+WO-20261013-b6f3	done	archive	2	1	WO-20261013-16f1	Cause z: a belt-seated tester runs the full suites; its playbook runs factory/bi
+WO-20261013-ba44	cancelled	archive	0	0	WO-20261012-cf8d	Roadmap K2 - Health watch: the system checks every agent each tick, alive, stuck
+WO-20261013-bf48	cancelled	archive	0	0	WO-20261012-cf8d	Roadmap K design, part 2: SPEC-17 1.1.0 with the hierarchy and flow diagrams, th
+WO-20261013-c17f	done	archive	2	1	WO-20261012-5826	SPEC-16 overview lands: one binary, the domain map and shared contracts, revised
+WO-20261013-ca12	done	archive	1	1	WO-20261012-cf8d	Roadmap I - seat-queue.sh, the interim worker queue moves from ~/.cache/coq-watc
+WO-20261013-ca2a	done	archive	1	1	WO-20261013-16f1	CI gate 6: a webhook listener turns GitHub status, check_run and pull_request ev
+WO-20261013-ccb8	done	archive	1	1	WO-20261012-cf8d	Roadmap I - flow-table.sh, the per-ticket stage table moves from ~/.cache/coq-wa
+WO-20261013-d127	done	archive	1	1	WO-20261013-16f1	Cause 2wbaq: a SPEC-16 spec ticket's worker is denied specs/ and graph/; a spec-
+WO-20261013-dd11	cancelled	archive	0	0	WO-20261012-cf8d	Test speed: the tester runs suites.sh plan for its pull request instead of whole
+WO-20261013-dd47	cancelled	archive	0	0	WO-20261012-cf8d	Gate capacity: the reviewer role's max_seats goes from 2 to 4, playbook re-rende
+WO-20261013-dec6	done	archive	2	1	WO-20261013-16f1	Main is red: roles/spec-author.json shares the label worker-${ticket} with the w
+WO-20261013-e2f9	done	archive	1	1	WO-20261013-16f1	The blueprint dev page builds again: the factory board entry takes more than 120
+WO-20261013-f06b	cancelled	archive	0	0	WO-20261013-16f1	The dead man's switch counts the patrol's own notes as records, so it never fire
+WO-20261013-f1ff	done	archive	1	1	WO-20261012-cf8d	Test speed: a path-to-suite map in factory config and factory/bin/suites.sh prin
+WO-20261013-f268	done	archive	1	1	WO-20261012-cf8d	Roadmap K1 - Board: one board in the state root is the single intake, with a lan
+WO-20261013-f298	done	archive	3	3	WO-20261012-cf8d	Roadmap K5 - The writer refuses a gate record without its sha and any code outsi
+WO-20261013-f52a	cancelled	archive	0	0	WO-20261012-cf8d	Roadmap K4 - Halt, drain, resume and line-check: make line-halt, line-drain, lin
+WO-20261013-f6ae	done	archive	1	1	WO-20261012-cf8d	Merge is code: line/bin/merge.sh squash-merges a pull request whose newest head 
+WO-20261013-f9f2	done	archive	1	1	WO-20261012-cf8d	Roadmap A3 - recwatch reads the records tree of the state root instead of the ch
+WO-20261013-fc47	done	archive	1	1	WO-20261012-5826	SPEC-16 toolchain lands from pull request 37: the specs/scheduler XSD, check.sh 
+WO-20261013-fe37	done	archive	2	1	WO-20261012-5826	SPEC-16.G config schema lands: every scheduler key, revised for the state root a
+WO-20261014-539a	done	archive	2	1	WO-20261013-16f1	Cause ay: scheduler testkit world copies events/bin/event.sh without bin/state-r
+WO-20261014-af7c	cancelled	archive	2	0	WO-20261013-16f1	Merge cleanup refuses treehouse return while foreign processes remain in the slo

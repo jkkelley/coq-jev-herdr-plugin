@@ -1,0 +1,60 @@
+b7a3c5d	2026-10-14T02:49Z	9	1335	0	code	other-line-change	Factory Rebuild Plan: XSD, XML plan, rail generator, side panels and rebuild-architect role schema (#182)
+ae0140e	2026-10-14T01:59Z	4	50	15	code	cause-or-main-red-fix	WO-20261014-539a - Cause ay: scheduler testkit world copies bin/state-root.sh and config/state.json beside events/bin/event.sh, so make -C scheduler t
+5ad1996	2026-10-14T01:44Z	3	32	17	code	cause-or-main-red-fix	WO-20261013-0b48 - Pod fix: herdr case 11-guard-ack-nudge passes in arm64 pods (herdr seen idle twice in 4s), and guard AC-H1 passes under pod cpu lim
+c9b6f9f	2026-10-14T01:43Z	1	87	87	tickets-only	-	WO-20261014-539a - cut cause ay: scheduler testkit world misses bin/state-root.sh and config/state.json (#180)
+17df7c9	2026-10-14T01:20Z	4	371	16	code	cause-or-main-red-fix	WO-20261013-a18c - Cause ag: merge.sh does the post-merge cleanup itself without checking out main, refuses a slot with foreign processes, reaps idle 
+2247679	2026-10-14T01:18Z	6	716	23	code	ci-gate	WO-20261013-ab25 - CI gate 2: coqGate() plans the suites from the diff, runs them as pods and posts coq/gate on the head sha (#179)
+3419b86	2026-10-14T01:13Z	7	134	27	code	cause-or-main-red-fix	WO-20261013-7af7 - Belt frozen 180s per seat bring-up: seat.sh waits 15s for a compaction-guard ACK no seat prints (cap 30 in the schema) (#163)
+3584b1e	2026-10-14T01:07Z	9	606	20	code	ci-gate	WO-20261013-ca2a - CI gate 6: a webhook listener turns GitHub status, check_run and pull_request events into records, fed by gh webhook forward under 
+5e5d902	2026-10-14T00:48Z	71	694	694	tickets-only	-	Duplicate-work audit rulings applied: cancels, closes, narrowings, depends_on order, splits (tickets only) (#169)
+168eb12	2026-10-14T00:48Z	1	11	11	tickets-only	-	WO-20261014-af7c - cancelled, superseded by WO-20261013-a18c (architect ruling 00:34Z) (#174)
+a347415	2026-10-14T00:43Z	3	272	272	tickets-only	-	WO-20261014-d93a - cut R1, R2, R3 line-ops-are-code tickets (d93a, 7f99, 3dae) under WO-20261013-16f1 (#175)
+f65c7d7	2026-10-14T00:28Z	2	94	94	tickets-only	-	WO-20261014-af7c - Merge cleanup refuses treehouse return while foreign processes remain in the slot (cause aj) (#172)
+b1ee4a4	2026-10-14T00:28Z	3	98	98	tickets-only	-	WO-20261014-eb0d - cut cause aj: the tickets-only gate fails a ready ticket with no files; c789 note adds the order-independent gate criterion (#173)
+a98b677	2026-10-14T00:21Z	7	39	39	tickets-only	-	WO-20261013-0b48 - set the files field on six cut tickets (0b48, a18c, c789, 5e4a, cc5b, 0529) so wo-start can claim them (#171)
+25b7c5c	2026-10-14T00:18Z	4	38	17	code	cause-or-main-red-fix	WO-20261013-a146 - Cause aa: herdr case 17-pane-health passes five suite runs in a row; bringup records 'runs a job', not the live process name in the
+55626f5	2026-10-14T00:17Z	5	191	16	code	cause-or-main-red-fix	WO-20261013-10d8 - Board watch posts a 500 and exits after 3 failed passes, and the patrol checks the board page age (cause ad) (#162)
+46ab5de	2026-10-14T00:17Z	2	92	92	tickets-only	-	WO-20261014-5e4a - cut cause ai: gate seats post with main's event.sh (#170)
+b843095	2026-10-14T00:16Z	2	94	94	tickets-only	-	WO-20261014-c789 - cut cause ah: the merge hold names an exempt fix ticket and every merge goes through merge.sh (#168)
+db1a95c	2026-10-14T00:14Z	12	483	34	code	ci-gate	WO-20261013-8573 - CI gate 1: a test image in GHCR runs the herdr suite and the suite families in Kubernetes pods, without podman on the host (#156)
+bda0eaa	2026-10-14T00:03Z	5	91	18	code	cause-or-main-red-fix	WO-20261013-dec6 - Main is red: spec-author shares the worker label; role_of_seat skips roles the writer cannot address, case 12-policy green (cause a
+105e35c	2026-10-13T23:44Z	1	89	89	tickets-only	-	WO-20261013-dec6 - Main is red: spec-author role label equals worker's, case 12-policy fails (cause ag) (#164)
+acb92c1	2026-10-13T23:41Z	2	92	92	tickets-only	-	WO-20261013-a18c - cut cause ag: merge.sh cleans up after a merge without checking out main (#165)
+90a80c1	2026-10-13T23:29Z	4	86	17	code	cause-or-main-red-fix	WO-20261013-9b21 - Cause aa: route.sh derives the ticket from the PR head branch or title when a record has a pr but no ticket; a PR carrying two tick
+96fc609	2026-10-13T23:26Z	1	89	89	tickets-only	-	WO-20261013-0ad7 - Gate seat dedup: refuse a second live gate seat or a gate whose result exists for the head sha (cause af) (#160)
+538c593	2026-10-13T23:26Z	6	198	198	tickets-only	-	WO-20261013-cc5b and WO-20261013-0529 - Cause z follow-ups: seat.sh passes the worktree to brief.sh, a herdr case runs the tester-plan test; WO-202610
+6e21deb	2026-10-13T23:26Z	9	215	23	code	cause-or-main-red-fix	WO-20261013-b6f3 - Cause z: the tester runs only what suites.sh plan prints, its brief can carry that output (#157)
+2789efa	2026-10-13T23:14Z	2	93	93	tickets-only	-	WO-20261013-0b48 - cut the pod fix ticket: case 11 in arm64 pods and guard AC-H1 cpu requests (#159)
+cf0f883	2026-10-13T23:06Z	4	13	13	tickets-only	-	Sweep: close merged tickets WO-20261013-58c9, WO-20261013-c17f, WO-20261013-fe37, WO-20261012-5826 by the done verb (#155)
+e82fcb2	2026-10-13T23:04Z	10	441	216	code	cause-or-main-red-fix	WO-20261013-d127 - Cause 2wbaq: the spec-author role (the worker on claude-opus-5-5 with specs/, graph/ and roles/ writable, three seats, in the worke
+b87afe2	2026-10-13T22:59Z	6	72	17	code	cause-or-main-red-fix	WO-20261013-9cc9 - Cause m part 2: the route ignore rows for note and verified match on kind alone, any code, with a factory case (#152)
+4a21aa0	2026-10-13T22:56Z	4	194	17	code	cause-or-main-red-fix	WO-20261013-2d35 - Cause l: the merger merged onto a red main because the hold lived in prose; merge.sh refuses while the merge hold file exists (caus
+0435ea5	2026-10-13T22:56Z	1	90	90	tickets-only	-	WO-20261013-d182 - A board line is a ticket with a live seat or an open PR; in-progress with neither shows under stale (cause ae) (#154)
+fa83e14	2026-10-13T22:53Z	1	89	89	tickets-only	-	WO-20261013-10d8 - Board watch posts a 500 and exits after 3 failed passes, patrol checks board age (cause ad) (#153)
+7e114c9	2026-10-13T22:51Z	8	166	33	code	spec	WO-20261013-f298 - Roadmap K5 - The writer refuses a gate record without its sha and any code outside the SPEC-17 status code map, and the schema gain
+bab41da	2026-10-13T22:31Z	6	41	17	code	other-line-change	WO-20261013-58c9 - Roadmap A3 - The player and compliance-officer roles read records from the state root: one step in each role and its playbook re-re
+16059d8	2026-10-13T22:31Z	1	88	88	tickets-only	-	WO-20261013-43ea - Cause ac: merge cleanup returns treehouse slots with treehouse return, never git worktree remove (#151)
+4a40c6a	2026-10-13T22:20Z	2	192	192	tickets-only	-	WO-20261013-249e and WO-20261013-7000 - Cause w: test containers are labelled and reaped; cause x: claims.sh start sees slot-leased tickets (tickets c
+a6f3a25	2026-10-13T22:20Z	3	111	111	tickets-only	-	WO-20261013-e2c3 - cause ab: pr.opened routes for any 1xx or 2xx and is written as 100; a failing route is retried then skipped; a held gate re-routes
+e4bdb95	2026-10-13T22:20Z	2	176	176	tickets-only	-	WO-20261013-9cc9 and WO-20261013-9b21 - route noise: ignore rows by kind (cause m part 2) and route.sh derives the ticket from the PR branch (cause aa
+55af48d	2026-10-13T22:19Z	1	87	87	tickets-only	-	WO-20261013-a146 - Cause aa: herdr case 17-pane-health passes five suite runs in a row (#147)
+26211a4	2026-10-13T22:19Z	1	89	89	tickets-only	-	WO-20261013-b6f3 - Cause z: a belt-seated tester runs only the suites suites.sh plan prints for the PR diff (#146)
+443e91e	2026-10-13T22:16Z	9	398	398	tickets-only	-	WO-20261013-16f1 - Causes t and u: the fence denies Write, gate.sh pr-fence enforced by merge.sh, and seat.sh --model under architect_may_override (#1
+67ca779	2026-10-13T22:06Z	6	260	104	code	cause-or-main-red-fix	WO-20261013-69df - Cause v: a seat's state root comes from one place (COQ_STATE or the XDG state root), never from the checkout it was seated from; se
+fea6f2f	2026-10-13T21:54Z	10	128	21	code	other-line-change	WO-20261013-3abe - Roadmap A3 - The loop board reads records from the state root: events_dir takes the records tree (#141)
+e45dc91	2026-10-13T21:53Z	2	94	94	tickets-only	-	WO-20261013-ee5c - Cause s: the patrol counts a process by exact argv0 script (ticket cut under WO-20261013-16f1) (#133)
+f31bf7d	2026-10-13T21:52Z	4	163	14	code	roadmap-I-script-move	WO-20261013-af23 - Roadmap I - start-roadmap.sh, the ticket starter (renamed start-tickets.sh) moves from the cache directory into line/bin/start-tick
+42041c7	2026-10-13T21:34Z	8	628	628	tickets-only	-	WO-20261013-16f1 - CI gate: five tickets cut from the approved design (runner, gate.yml, merge keys on gate, main gate, routes) (#130)
+85e91d3	2026-10-13T21:26Z	7	63	15	code	test-speed	WO-20261013-b2fe - Test speed, polls part 3: fixed sleeps become wait_until polls in herdr cases 16-test-pane-per-seat, 24-patrolwatch, 02-audit, 04-b
+7573241	2026-10-13T21:16Z	8	58	22	code	test-speed	WO-20261013-0904 - Test speed, polls part 4: fixed sleeps become wait_until polls in herdr cases 15-resume, 01-seat-up-check-down, 03-gate-and-caps, 0
+cbd9fcd	2026-10-13T21:14Z	8	92	22	code	test-speed	WO-20261013-2b64 - Test speed, polls part 2: fixed sleeps become wait_until polls in herdr cases 11-guard-ack-nudge, 06-unfreeze, 17-pane-health, 09-t
+37f57e0	2026-10-13T21:02Z	4	274	18	code	roadmap-I-script-move	WO-20261013-ccb8 - Roadmap I - flow-table.sh moves from the cache into line/bin with its test (#131)
+1ef911b	2026-10-13T21:02Z	4	140	14	code	roadmap-I-script-move	WO-20261013-ca12 - Roadmap I - seat-queue.sh, the interim worker queue moves into line/bin/seat-queue.sh with its test; the live copy runs from the re
+a0b24e4	2026-10-13T21:02Z	1	90	90	tickets-only	-	WO-20261013-69df - Cause v: a seat's state root comes from one place, never the checkout it was seated from (ticket cut under WO-20261013-16f1) (#134)
+137260e	2026-10-13T21:02Z	5	128	15	code	cause-or-main-red-fix	WO-20261013-a0e2 - Cause f: the belt cannot seat the tester and reviewer for a tickets pull request, because the ticket's branch is null; seat.sh take
+134af86	2026-10-13T20:59Z	8	345	22	code	test-speed	WO-20261013-0bc0 - Test speed: one shared case runner, bin/test-cases.sh, runs each suite's cases in parallel, one container per case, output printed 
+e039a0b	2026-10-13T20:40Z	1	92	92	tickets-only	-	WO-20261013-32bd - Cause q: wo-start.sh commits the in-progress frontmatter and leaves the checkout clean (ticket cut) (#122)
+3c1038a	2026-10-13T20:27Z	6	23	17	code	other-line-change	WO-20261013-44b3 - Roadmap A3 - The reviewer and worker roles read records from the state root: one step in each role and its playbook re-rendered (#1
+83ced7b	2026-10-13T20:22Z	4	218	17	code	roadmap-I-script-move	WO-20261013-acbf - Roadmap I - route-retry.sh, the failed-route retry moves from the cache directory into line/bin/route-retry.sh with its test (#128)
+9b3d105	2026-10-13T20:21Z	4	349	17	code	other-line-change	WO-20261013-9bdd - Verify is code: line/bin/verify-main.sh runs lint and the factory, herdr, events and scheduler suites on a clean worktree at the ne
+1b58d05	2026-10-13T20:21Z	4	236	17	code	roadmap-I-script-move	WO-20261013-7719 - Roadmap I - merge-watch.sh moves from the cache into line/bin/merge-watch.sh with its test, finding the repository and state root i

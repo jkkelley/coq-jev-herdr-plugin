@@ -1,0 +1,10 @@
+fetched: 2026-10-14T02:55:38Z
+total PRs: 148  merged: 142  closed unmerged: 5  open: 1
+open: #35 created 2026-10-12T18:28:25Z
+merged cycle minutes (createdAt to mergedAt): n=142 median=47 p90=140 max=1023
+merged by UTC day: 2026-10-10:4 2026-10-11:13 2026-10-12:22 2026-10-13:83 2026-10-14:20
+merged PRs whose changed files are ALL under work-orders/ or changelog/ (tickets-only by diff): 38 of 142
+merged PRs with a closing issue reference: 0
+merged PRs whose body matches (close|fix|resolve)[sd]? #N: 0
+merged files-per-PR median=7 max=100
+merged added-lines-per-PR median=215

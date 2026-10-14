@@ -1,0 +1,34 @@
+45	Event log directory git-tracked	CLOSE-CONFLICT	ROADMAP.md:75-104 (runtime data lives outside git) and ROADMAP.md:190 (item A: events/ leaves git); the issue asks for the opposite
+46	No process under an agent	PARTLY	testpane.sh and a labelled test pane per seat exist (05ef0d2 #20); AGENTS.md:203 "run it in a labeled pane"; the seat-audit-refuses-child-processes half was not found
+47	Mod-based game adapter family	PARK	product backlog, no commit on main touches an adapter
+48	Monitor seat and tab group	PARTLY	monitor panes exist (herdr/config/monitors.json, bringup.sh:109); compliance-officer role landed 02eec23; "monitor comes up before any worker" not found
+49	Owner notifications through herdr	PARTLY	herdr notification show only on repair (herdr/bin/bringup.sh:122); notify_owner routes go to the page (factory/config/routes.json:17,21,28)
+50	System and monitoring before any agent	PARTLY	bringup.sh:6 repairs in order and stops at the first failure; seat start refusing without a bound guard not found; WO-20261013-8ed9 ready, 0 commits
+51	Agents notified on status change	PARTLY	route.sh wakes on records (routes.json); "within one tick, no polling in a seat" belongs to scheduler SPEC-16.B, WO-20261013-e3f6 ready, 0 commits
+52	Local DNS on the Raspberry Pi	PARK	owner infrastructure, no repository change possible
+53	Seats without global MCP servers	OPEN	no mcpServers rendering in herdr/bin/seat.sh; only a comment at herdr/bin/seat-lib.sh:242
+54	work-order start branches from origin/main	PARTLY	line/bin/start-tickets.sh:38 adds the worktree from origin/main; bin/wo-start.sh:14-23 does not
+55	Bearings stable survives absence	PARTLY	supervisor brings bearings back by process (55e799e WO-20261012-b800); bringup --check does not test the server; WO-20261013-8e0c and 30bb ready, 0 commits
+56	Records cannot be hidden from git	CLOSE-CONFLICT	ROADMAP.md:190 moves events/ out of git; a lint that fails on a .gitignore match of events/ contradicts it
+57	Legacy kinds test, review, merge	OPEN	events/schema/event.schema.json:14 still lists test, review and merge in the kind enum
+58	shellcheck segfault in lint container	OPEN	lint/lint.sh:40-41 runs shellcheck once, no retry, no crash message
+59	Architect woken by herdr	SUPERSEDED	owner ruling "driven by system, not agent" (brief section 2); no commit
+60	Seat records never leave the line	FIXED	pr and sha in events/schema/event.schema.json:22-23 (3b5717f); no held-records mention under herdr/, playbooks/, roles/
+61	Guard watch memos to live sessions only	FIXED	d0b8dea WO-20261012-ee9c "Scoped guard watch ... only for live seats" (#31)
+62	Board reads belt from runner config	FIXED	report/loop/loop.sh:174-175 finds the belt file from runner.json (3878c97 WO-20261013-89c7)
+63	bringup judges monitor pane by process	FIXED	herdr/bin/bringup.sh:109-116 reports the foreground process; monitors.sh fg_process (55e799e WO-20261012-b800)
+64	event.sh validates before write	PARTLY	sha and code refused at events/bin/event.sh:95-97 (7e114c9); no observation count check found in the add path although the schema caps it at 5 (event.schema.json:20)
+65	Factory suite flake on 3b5717f	UNVERIFIED	no captured failing run, no commit names it
+66	routes.schema.json unread copy	PARTLY	factory/schema/routes.schema.json and factory/config/routes.schema.json are byte-identical (cmp), two files still exist; done-when says exactly one
+67	Belt seat-ups block the line	PARTLY	3419b86 (#163) cut the ACK wait from 180 s to 15 s; the done-when says no blocking at all (async or skipped)
+68	Verifier follow-ups from PR 29	SUPERSEDED	no verifier role on main (roles/ has no verifier.json); line/bin/verify-main.sh (9b3d105 #112)
+69	Gate records must carry the head	FIXED	events/bin/event.sh:70,97 refuses a gate kind without --sha (7e114c9 #145); --pr stays optional
+70	Merger brief names job before ticket	OPEN	no "not your role" line in roles/bin/brief.sh
+71	(closed)	CLOSED	closed 2026-10-12T22:40:07Z
+72	work.started has no route row	FIXED	factory/config/routes.json:26 ignore row (fba7551 #126)
+73	seat.sh refusal promises a queue	PARTLY	herdr/bin/seat.sh:532 still says "the queue holds the ticket"; line/bin/seat-queue.sh exists but has no unit or caller (section 6)
+74	Test pane opens in main checkout	FIXED	herdr/bin/testpane.sh:3,33-34 runs in COQ_WORKTREE (778e9df WO-20261012-3cb1)
+75	reindex --check passes with duplicate id	OPEN	lint/lint.sh and Makefile do not call reindex
+76	route.sh never retries	PARTLY	line/bin/route-retry.sh exists (83ced7b) as a separate 30-second loop with no unit or caller; route.sh itself still marks failed and never retries (factory/bin/route.sh:281,288); WO-20261013-e2c3 ready, 0 commits
+77	Seats post start notice under gate kind	PARTLY	missing sha is refused (event.sh:97); a gate kind with a wrong code and a sha is not refused (no per-kind code table in event.sh)
+78	Merge wake lost to busy merger	PARTLY	merge.sh exists (PR 94) but nothing calls it; routes.json:12 still seats the single merger agent (roles/merger.json max_seats 1), so the lost-wake path is still the live path
