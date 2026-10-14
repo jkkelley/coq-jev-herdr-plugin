@@ -206,6 +206,7 @@ Write it, and run it in a labeled pane.
 
 Google Drive is the source of truth for design while the system is being built.
 Design is doc-first: the document exists before the code that implements it.
+Every design ships one design .md made from `docs/templates/design.md`, and the owner reads that file instead of the XML volumes.
 Code lives in git and matches the documentation; it never replaces it.
 A repository copy of a document is a fallback, not the original.
 
