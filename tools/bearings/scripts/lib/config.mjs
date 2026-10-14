@@ -102,6 +102,8 @@ export function validate(cfg) {
       t.port_range.length === 2 &&
       t.port_range.every(Number.isInteger) &&
       t.port_range[0] <= t.port_range[1];
+    if (t.idle_minutes !== undefined && (!Number.isInteger(t.idle_minutes) || t.idle_minutes < 0))
+      die(`tiers.${name}.idle_minutes must be an integer >= 0 (0 = never idle-stop)`);
     if (t.front_door_pane_label !== undefined && (typeof t.front_door_pane_label !== "string" || !t.front_door_pane_label))
       die(`tiers.${name}.front_door_pane_label must be a non-empty string`);
     if (hasPort === hasRange)
@@ -164,7 +166,23 @@ export function resolveTier(cfg, tier, ticket) {
     waitPaneLabel: interpolate(t.wait_pane_label, vars),
     frontDoorPaneLabel: t.front_door_pane_label === undefined ? null : interpolate(t.front_door_pane_label, vars),
     checkout: t.checkout,
+    idleMinutes: idleMinutesFor(cfg, tier),
   };
+}
+
+// Idle-stop window for a tier, in minutes; 0 means the tier never idle-stops.
+// BREADCRUMB (2026-10-14, defect: stable page server stopped itself at 2026-10-14T08:43:55Z with reason "idle 240 minutes"):
+//   What broke: the global "idle_minutes": 240 in config/bearings.json was applied to every tier by the idle check in
+//   scripts/server.mjs (the `Date.now() - lastActivity >= IDLE_MS` test in the setInterval near the end of the file), stable included.
+//   Why it mattered: the stable page is the owner's always-on monitor ("a halt never stops it"); it went dark and every wait loop ended.
+//   Fix: an optional per-tier tiers.<tier>.idle_minutes overrides the global value, and 0 means never; stable is set to 0 in
+//   config/bearings.json. dev and uat set no override, so they keep the global idle stop.
+//   Rejected: a cron or supervisor that restarts stable after it idles out. A restart still drops the page and ends the waits, so the
+//   outage happens anyway.
+//   Cost: a forgotten stable server runs forever. That is the owner's intent for the stable tier.
+export function idleMinutesFor(cfg, tier) {
+  const o = cfg.tiers?.[tier]?.idle_minutes;
+  return o === undefined ? cfg.idle_minutes : o;
 }
 
 // Shared argv helper: --flag value, or bare --flag.

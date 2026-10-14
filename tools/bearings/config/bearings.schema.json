@@ -129,6 +129,11 @@
           "checkout"
         ],
         "properties": {
+          "idle_minutes": {
+            "description": "Optional per-tier override of the global idle_minutes. 0 means this tier never idle-stops (stable).",
+            "type": "integer",
+            "minimum": 0
+          },
           "page": {
             "type": "string",
             "minLength": 1

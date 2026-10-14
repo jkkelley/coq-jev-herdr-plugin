@@ -32,6 +32,7 @@
   "tiers": {
     "stable": {
       "page": "${project}-stable",
+      "idle_minutes": 0,
       "port": 44900,
       "pane_label": "bearings-stable",
       "wait_pane_label": "bearings-stable-wait",

@@ -16,6 +16,7 @@ check python3 -c 'import json,jsonschema,sys; jsonschema.validate(json.load(open
 CASE="session-sync unit tests pass (node --test)"; check node --test /skill/tests/session-sync.test.mjs
 CASE="host-header unit tests pass (node --test)"; check node --test /skill/tests/host.test.mjs
 CASE="front-door forwarder unit tests pass (node --test)"; check node --test /skill/tests/front-door.test.mjs
+CASE="per-tier idle window unit tests pass (node --test)"; check node --test /skill/tests/idle.test.mjs
 
 # A test config: state under /work, dev tier on a small port range.
 cat > /work/config.json <<JSON

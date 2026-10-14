@@ -62,7 +62,7 @@ image:
 	bash $(HERE)tests/run-tests.sh --image-only
 # test-sync: only the session sync unit tests, no container (fake transcript, stubbed herdr and git).
 test-sync:
-	node --test $(HERE)tests/session-sync.test.mjs $(HERE)tests/host.test.mjs $(HERE)tests/front-door.test.mjs
+	node --test $(HERE)tests/session-sync.test.mjs $(HERE)tests/host.test.mjs $(HERE)tests/front-door.test.mjs $(HERE)tests/idle.test.mjs
 lint:
 	bash -n $(BIN) && node --check $(HERE)scripts/server.mjs && node --check $(HERE)scripts/wait.mjs && node --check $(HERE)scripts/reply.mjs && node --check $(HERE)scripts/lib/config.mjs && node --check $(HERE)scripts/lib/sitrep.mjs && node --check $(HERE)scripts/sitrep-check.mjs && node --check $(HERE)scripts/sitrep-build.mjs && node --check $(HERE)scripts/lib/session-sync.mjs && node --check $(HERE)scripts/lib/host.mjs && node --check $(HERE)scripts/front-door.mjs
 	bash $(HERE)tests/run-tests.sh --lint-only
