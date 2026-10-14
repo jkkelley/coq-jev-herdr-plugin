@@ -66,7 +66,9 @@ const DIR = T.stateDir;
 const file = (f) => path.join(DIR, f);
 fs.mkdirSync(DIR, { recursive: true });
 
-const IDLE_MS = cfg.idle_minutes * 60_000;
+// Per-tier idle window (T.idleMinutes, lib/config.mjs idleMinutesFor); 0 = this tier never idle-stops (stable, the owner's always-on monitor).
+const IDLE_MINUTES = T.idleMinutes;
+const IDLE_MS = IDLE_MINUTES * 60_000;
 const sessionArg = val("--session");
 const modelArg = val("--model");
 const cwdArg = val("--cwd");
@@ -642,9 +644,10 @@ if (has("--stop")) {
           /* not written yet */
         }
       }
-      if (Date.now() - lastActivity >= IDLE_MS) shutdown(`idle ${cfg.idle_minutes} minutes`);
+      // See the breadcrumb on idleMinutesFor in lib/config.mjs: IDLE_MINUTES 0 skips this stop so stable stays up.
+      if (IDLE_MINUTES > 0 && Date.now() - lastActivity >= IDLE_MS) shutdown(`idle ${IDLE_MINUTES} minutes`);
     },
-    Math.min(60_000, Math.max(1000, IDLE_MS / 4)),
+    IDLE_MINUTES > 0 ? Math.min(60_000, Math.max(1000, IDLE_MS / 4)) : 60_000,
   );
   process.on("SIGTERM", () => shutdown("stopped"));
   process.on("SIGINT", () => shutdown("stopped"));
