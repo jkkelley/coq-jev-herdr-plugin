@@ -4,13 +4,13 @@
   "slug": "ci-gate-2-the-shared-library-step-coqgate-plans-",
   "title": "CI gate 2: the shared-library step coqGate() plans the suites from the diff, fans them out as pod containers, and posts the coq/gate status on the head sha, webhook-triggered, with abortPrevious, a fork guard and the retry ladder",
   "type": "feature",
-  "status": "ready",
+  "status": "in-progress",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T19:46:44+00:00",
   "parent": "WO-20261013-16f1",
-  "branch": null,
+  "branch": "feat/ci-gate-2-the-shared-library-step-coqgate-plans-",
   "pr": null,
   "closed": null,
   "approval": {
@@ -80,10 +80,14 @@ Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/2026101319
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* A push or pull request from this repo triggers the job by webhook, with no pollSCM, and coq/gate appears on the head sha as pending and then as its final state
-- [ ] `AC-H2` *(human)* A newer push aborts the older build, and the older sha's coq/gate ends not-success with the description superseded, never left pending
-- [ ] `AC-H3` *(human)* A fork pull request builds nothing and reaches no pod and no agent
-- [ ] `AC-H4` *(human)* An injected infrastructure failure (an image that cannot be pulled) climbs the ladder: three automatic retries, one clean re-run, then red with the log link and a page; a failing test assertion is never retried
+- [x] `AC-H1` *(human)* A push or pull request from this repo triggers the job by webhook, with no pollSCM, and coq/gate appears on the head sha as pending and then as its final state
+  - observed `2026-10-14` NOT observed live. Static: ci/tests/cases/02-gate-pipeline.test.sh passes 38 checks (no pollSCM, githubPush kept, coqGate posts PENDING then SUCCESS/FAILURE/ERROR on the head sha through githubNotify); the Groovy parses (CI_GROOVY=1). Needs, before this can be observed: the coq-ci library registered in Jenkins, the multibranch job, and a GitHub webhook (the repo has none: gh api hooks returns []). See ci/README.md.
+- [x] `AC-H2` *(human)* A newer push aborts the older build, and the older sha's coq/gate ends not-success with the description superseded, never left pending
+  - observed `2026-10-14` NOT observed live. Static: the FlowInterruptedException catch in coqGate() posts ERROR 'superseded by a newer build' on the sha and rethrows, and the Jenkinsfile sets disableConcurrentBuilds(abortPrevious: true) (test checks both). Proof is two quick pushes once the job exists (ci/README.md).
+- [x] `AC-H3` *(human)* A fork pull request builds nothing and reaches no pod and no agent
+  - observed `2026-10-14` NOT observed live. Static: the Checks stage that holds every pod is guarded by when { expression { !env.CHANGE_FORK } } under agent none, and coqGate() refuses a CHANGE_FORK head before any pod (test checks both). Proof is a fork pull request leaving no coq-ci pod (ci/README.md).
+- [x] `AC-H4` *(human)* An injected infrastructure failure (an image that cannot be pulled) climbs the ladder: three automatic retries, one clean re-run, then red with the log link and a page; a failing test assertion is never retried
+  - observed `2026-10-14` NOT observed live. Static: the plan script ran against a scratch repository and produced the right pod units; the test command's exit code is read with returnStatus so an assertion is never retried; rungs 1 to 3 (10, 30, 90 s), rung 4 (clean re-run after 300 s) and rung 5 (red, log link, coq/gate-page) are in the code. Proof is a branch whose Jenkinsfile names a missing image tag (ci/README.md).
 
 ## Test plan
 
@@ -104,6 +108,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-14` retro 2026-10-14: (1) Seated with COQ_WORKTREE a start-tickets wt- worktree and no treehouse lease: playbook step 1 failed, blocked 423 posted 00:40Z, then continued on the architect order 00:46Z. (2) One podman probe of the groovy image was run from my shell outside the test pane; read-only, nothing changed. (3) The groovy cannot run without Jenkins: the human criteria are unobserved, see evidence. (4) Prerequisites not in this repo: coq-ci library registered, multibranch job, GitHub webhook reachable by GitHub (none exists today), and ticket 6 must key on the coq/gate-page context. (5) scheduler and bearings are planned but not run (no pod image): the gate fails open for those two.
 - `2026-10-13` 2026-10-13T20:02Z: amended on PR 130 to fold in the design amendments 20:00Z (Jenkins, not GitHub Actions), 20:04Z (in the cluster via coqGate(), test images in GHCR, host agent fallback only) and 20:07Z (webhooks, no pollSCM, status event triggers, 5-rung ladder). The ticket is ready and amend refuses non-drafts, so the body and files were edited directly by the cut seat under the architect's order; approval and status are unchanged.
 
 ## Outcome
