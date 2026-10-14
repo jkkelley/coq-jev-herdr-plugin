@@ -1,67 +1,61 @@
-/* report-theme: the owner's reporting theme. Paste whole into the page's <style>. Never edit tokens per page. */
-:root {
-  --ground: #ffffff;
-  --alt: #f5f5f7;
-  --ink: #1d1d1f;
-  --ink-2: #6e6e73;
-  --ink-3: #a1a1a6;
-  --line: #d2d2d7;
-  --accent: #0071e3;
-  --accent-hover: #0077ed;
-  --on-accent: #ffffff;
-  --good: #1d9a4a;
-  --bad: #d0021b;
-  --warn: #b25000;
-  --nav: rgba(255, 255, 255, 0.72);
-  --bubble-in: #e9e9eb;
-  --bubble-in-ink: #1d1d1f;
-  --imsg-blue: #0a84ff;
-  --neon-blue: #0a84ff;
-  --neon-violet: #7a5cff;
-  --neon-cyan: #5ad8ff;
-  --font:
-    "Figtree", -apple-system, "SF Pro Display", "Helvetica Neue", Helvetica,
-    Arial, sans-serif;
-  --mono: "SF Mono", Menlo, Consolas, monospace;
-  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
-  --top-height: 48px;
-  --gutter: 22px;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --ground: #000000;
-    --alt: #161617;
-    --ink: #f5f5f7;
-    --ink-2: #a1a1a6;
-    --ink-3: #6e6e73;
-    --line: #424245;
-    --accent: #2997ff;
-    --accent-hover: #3ba2ff;
-    --on-accent: #000000;
-    --good: #30d158;
-    --bad: #ff453a;
-    --warn: #ff9f0a;
-    --nav: rgba(0, 0, 0, 0.72);
-    --bubble-in: #3a3a3c;
-    --bubble-in-ink: #f5f5f7;
-  }
-}
+/* BREADCRUMB 2026-10-14 UTC - Krastorio 2 / Factorio GUI skin on the bearings page.
+   What changed: the token block below (it was the Apple-style white and black reporting theme) now holds the Factorio dark steel palette,
+   the fonts moved from Figtree to Titillium Web (Factorio's own face), and the "Krastorio skin" section at the end of this file restyles every
+   component: dark steel frames with a 24 px header strip, cream-orange #FFE6C0 captions, bevelled buttons (green confirm, red hold), lamp dots,
+   inset dark fields, a chat-console thread. The older component rules above that section are kept, not deleted, so the skin is one reviewable
+   layer on top; page.html carries the same skin only through classes already there, plus a viewport meta, a font link and a `hold` class on options.
+   Why: owner order 2026-10-14 UTC, "All views shown to me better have that krastorio look to it."
+   Source: /home/luna/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md section 4 (4.3 palette, 4.4 panels and
+   header metrics, 4.5 fonts). Values only: no Wube or Krastorio pixel ships, every shape is CSS (borders, inset shadows, gradients) and every icon is inline SVG.
+   Both colour-scheme preferences render this same dark steel: Krastorio is dark, a light preference does not get a pale page. The three token selectors
+   below are one set on purpose: the [data-theme] hook stays in place for a future light skin, and the prefers-color-scheme branch that used to sit here was removed
+   because it would have restated the same values.
+   Cost: one Google Fonts request for Titillium Web (and IBM Plex Mono for ids). Offline, the stack falls back to Lilittium Web, Noto Sans, DejaVu Sans,
+   then the system sans, and mono falls to Noto Sans Mono, DejaVu Sans Mono, Menlo, Consolas. The layout holds in every fallback, only the letterforms differ.
+   Rejected: shipping the font files in the repo (a binary in every PR, and the Google request is already the page's pattern for Figtree).
+   Original line 1 comment: "report-theme: the owner's reporting theme. Paste whole into the page's <style>. Never edit tokens per page." */
+:root,
+:root[data-theme="light"],
 :root[data-theme="dark"] {
-  --ground: #000000;
-  --alt: #161617;
-  --ink: #f5f5f7;
-  --ink-2: #a1a1a6;
-  --ink-3: #6e6e73;
-  --line: #424245;
-  --accent: #2997ff;
-  --accent-hover: #3ba2ff;
-  --on-accent: #000000;
-  --good: #30d158;
-  --bad: #ff453a;
-  --warn: #ff9f0a;
-  --nav: rgba(0, 0, 0, 0.72);
-  --bubble-in: #3a3a3c;
-  --bubble-in-ink: #f5f5f7;
+  color-scheme: dark;
+  /* Panel steel (art inventory 4.4): frame centre #313031, shallow #403F40, deep #242324, edge #4D4643, darkest ring #231C19. */
+  --ground: #1a191a;
+  --alt: #313031;
+  --alt-hi: #403f40;
+  --deep: #242324;
+  --ink: #ffffff;
+  --ink-2: #d4cdc6;
+  --ink-3: #a39d98;
+  --line: #4d4643;
+  --line-dark: #231c19;
+  /* Orange accent #FAA838, hover #FFBD66, selected #F1BE64, caption #FFE6C0 (4.3 and 4.4). */
+  --accent: #faa838;
+  --accent-hover: #ffbd66;
+  --on-accent: #241505;
+  --caption: #ffe6c0;
+  --good: #2be327;
+  --bad: #ff8e8e;
+  --warn: #ffbd66;
+  --lamp-green: #2be327;
+  --lamp-red: #da4535;
+  --lamp-yellow: #f2d14b;
+  --nav: #242324;
+  --bubble-in: #2a2d30;
+  --bubble-in-ink: #ffffff;
+  --imsg-blue: #3b322a;
+  --neon-blue: #80cef0;
+  --neon-violet: #faa838;
+  --neon-cyan: #ffe6c0;
+  --font:
+    "Titillium Web", "Lilittium Web", "Noto Sans", "DejaVu Sans", -apple-system,
+    "Segoe UI", Helvetica, Arial, sans-serif;
+  --mono:
+    "IBM Plex Mono", "Noto Sans Mono", "DejaVu Sans Mono", "SF Mono", Menlo,
+    Consolas, monospace;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --top-height: 44px;
+  /* Safe-area aware: nav.top bleeds by this same amount, so left and right insets (landscape iPhone) cannot cause a horizontal scroll. */
+  --gutter: max(22px, env(safe-area-inset-left), env(safe-area-inset-right));
 }
 
 /* Ground */
@@ -2017,4 +2011,1077 @@ footer {
 .sr-link:focus-visible {
   background: rgba(52, 211, 153, 0.16);
   border-color: var(--sr-good);
+}
+
+/* ===========================================================================
+   Krastorio skin (owner order 2026-10-14 UTC, source: art inventory section 4).
+   Everything above this line is the older structure; this layer restyles it. Specificity is kept equal or
+   higher than the rule it replaces, so order, not !important, decides. Shapes are CSS only (9-slice feel from
+   borders, inset shadows and gradients), icons are inline SVG in page.html.
+   =========================================================================== */
+html {
+  background: #141314;
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  background:
+    radial-gradient(120% 60% at 50% 0%, rgba(250, 168, 56, 0.05), transparent 60%),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.012) 0 2px, transparent 2px 6px),
+    linear-gradient(#1b1a1b, #121112);
+  background-attachment: fixed;
+  font-size: 16px;
+  line-height: 1.45;
+  letter-spacing: 0;
+  -webkit-tap-highlight-color: rgba(250, 168, 56, 0.25);
+  overflow-x: hidden;
+}
+@media (max-width: 600px) {
+  :root {
+    --gutter: max(12px, env(safe-area-inset-left), env(safe-area-inset-right));
+  }
+}
+a {
+  color: var(--accent);
+  font-weight: 600;
+}
+a:hover {
+  color: var(--accent-hover);
+}
+code,
+.path {
+  color: var(--ink-2);
+}
+
+/* ---- Frame: dark steel panel (4.4 `frame`: centre #313031, edge #4D4643, darkest ring #231C19, shadow 0.35) ---- */
+.bearing,
+.composer,
+.band .inner {
+  position: relative;
+  border: 1px solid var(--line-dark);
+  border-radius: 3px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 38px),
+    var(--alt);
+  box-shadow:
+    inset 0 0 0 1px var(--line),
+    inset 0 2px 0 1px rgba(255, 255, 255, 0.07),
+    0 8px 18px rgba(0, 0, 0, 0.35);
+}
+/* ---- Header strip: 24 px, frame title in #FFE6C0 Titillium bold 18 px (4.4 `header_filler_style`, `frame_title`) ---- */
+.bearing::before,
+.session-strip::before,
+.composer-head {
+  position: absolute;
+  top: 5px;
+  left: 9px;
+  right: 9px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0 4px;
+  font-family: var(--font);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: var(--caption);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+  /* The drag-handle filler: faint ridges across the strip, as the vanilla draggable header. */
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 2px, transparent 2px 4px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.12));
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+  pointer-events: none;
+}
+.bearing::before {
+  content: "Decision";
+}
+.session-strip::before {
+  content: "Session";
+}
+.bearing {
+  padding: 42px 16px 16px;
+  gap: 14px;
+}
+.composer {
+  isolation: isolate;
+  margin: 0 auto 40px;
+  padding: 42px 12px 12px;
+  gap: 10px;
+}
+.composer .composer-head .label {
+  margin: 0;
+  padding: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  color: inherit;
+}
+.composer-head {
+  gap: 12px;
+}
+.attn-link {
+  margin-left: auto;
+  position: relative;
+  pointer-events: auto;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--warn);
+  text-shadow: none;
+}
+.attn-link::after {
+  content: "";
+  position: absolute;
+  inset: -10px -6px;
+}
+.attn-link i {
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle at 35% 30%, #fff9, transparent 28%), var(--lamp-yellow);
+  box-shadow: 0 0 0 1px #0b0b0b, 0 0 8px 2px rgba(242, 209, 75, 0.55);
+}
+.bearings {
+  padding-block: 8px 28px;
+}
+.bearings:has(+ .composer) {
+  padding-bottom: 24px;
+}
+
+/* ---- Page head ---- */
+.lede {
+  padding-block: 28px 14px;
+}
+.lede h1 {
+  font-size: clamp(26px, 6vw, 34px);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--caption);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+.lede p {
+  color: var(--ink-3);
+}
+.label,
+.day h2 {
+  color: var(--ink-3);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+/* ---- Top bar: a slim steel strip with the caption title ---- */
+nav.top {
+  background: linear-gradient(180deg, #3a393a, #242324);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: 1px solid var(--line-dark);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 10px rgba(0, 0, 0, 0.45);
+  padding-top: env(safe-area-inset-top);
+}
+nav.top .bar {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+nav.top .brand {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--caption);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+}
+nav.top .page {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+nav.top .page[aria-current="page"] {
+  color: var(--ink);
+}
+nav.top .clock {
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink-2);
+  min-width: 72px;
+}
+nav.top .live {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+nav.top .live i {
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle at 35% 30%, #fff5, transparent 30%), #5b5654;
+  box-shadow: 0 0 0 1px #0b0b0b;
+}
+nav.top .live.on {
+  color: var(--lamp-green);
+}
+nav.top .live.on i {
+  background: radial-gradient(circle at 35% 30%, #fffb, transparent 28%), var(--lamp-green);
+  box-shadow: 0 0 0 1px #0b0b0b, 0 0 8px 2px rgba(43, 227, 39, 0.55);
+}
+nav.top .live.off {
+  color: #ff8e8e;
+}
+nav.top .live.off i {
+  background: radial-gradient(circle at 35% 30%, #fff8, transparent 28%), var(--lamp-red);
+  box-shadow: 0 0 0 1px #0b0b0b, 0 0 8px 2px rgba(218, 69, 53, 0.6);
+}
+
+/* ---- Decision card ---- */
+.facts {
+  grid-template-columns: 76px 1fr;
+  font-size: 16px;
+  color: var(--ink-2);
+}
+.facts .label {
+  font-size: 13px;
+  color: var(--caption);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.facts .decide {
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.decide.err {
+  color: var(--bad);
+}
+.asked {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+/* Options are list-box items: inset dark steel, hover lighter, selected turns orange (#F1BE64). */
+.option {
+  position: relative;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #14100e;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #3d3c3d, #2b2a2b);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.option:hover {
+  border-color: #14100e;
+  background: linear-gradient(180deg, #4b4a4c, #353436);
+}
+.option:has(input:checked) {
+  border-color: #14100e;
+  background: linear-gradient(180deg, #4a4338, #332e27);
+  box-shadow:
+    inset 0 0 0 2px #f1be64,
+    inset 0 1px 0 2px rgba(255, 255, 255, 0.14),
+    0 0 14px rgba(250, 168, 56, 0.28);
+}
+.option:has(input:focus-visible) {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+/* The recommended option wears the green confirm button. */
+.option:has(.badge:not(.quiet)) {
+  border-color: #0e2a0a;
+  background: linear-gradient(180deg, #3f9a31, #2b7421 50%, #226219 52%, #1d5415);
+  box-shadow:
+    inset 0 1px 0 rgba(180, 255, 150, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45),
+    0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.option:has(.badge:not(.quiet)):hover {
+  background: linear-gradient(180deg, #4cae3d, #348a29 50%, #2b741f 52%, #246218);
+}
+.option:has(.badge:not(.quiet)):has(input:checked) {
+  box-shadow:
+    inset 0 0 0 2px #f1be64,
+    inset 0 1px 0 2px rgba(200, 255, 170, 0.35),
+    0 0 14px rgba(250, 168, 56, 0.35);
+}
+/* Hold, stop and destructive options wear the red button (page.html adds .hold from the option's tone or its opening word). */
+.option.hold {
+  border-color: #2b0d0a;
+  background: linear-gradient(180deg, #a5382d, #82271f 50%, #6e201a 52%, #5c1a15);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 170, 160, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(0, 0, 0, 0.5);
+}
+.option.hold:hover {
+  background: linear-gradient(180deg, #b7443a, #922f26 50%, #7c261f 52%, #692019);
+}
+.option.hold:has(input:checked) {
+  box-shadow:
+    inset 0 0 0 2px #f1be64,
+    inset 0 1px 0 2px rgba(255, 190, 180, 0.3),
+    0 0 14px rgba(250, 168, 56, 0.35);
+}
+.option input {
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  border: 1px solid #0b0b0b;
+  background: radial-gradient(circle at 50% 35%, #2c2b2c, #0f0e0f);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+.option input:checked {
+  border-color: #0b0b0b;
+}
+.option input:checked::after {
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle at 35% 30%, #fff4, transparent 40%), var(--accent);
+  box-shadow: 0 0 8px 1px rgba(250, 168, 56, 0.8);
+}
+.option .text b {
+  font-size: 17px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+.option .text span {
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.option:has(.badge:not(.quiet)) .text span,
+.option.hold .text span {
+  color: rgba(255, 255, 255, 0.86);
+}
+.badge {
+  padding: 3px 9px;
+  border: 1px solid #0e2a0a;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #fff;
+  background: linear-gradient(180deg, #55b845, #2f8023);
+  box-shadow: inset 0 1px 0 rgba(200, 255, 170, 0.5), 0 1px 0 rgba(0, 0, 0, 0.5);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+.badge.quiet {
+  color: var(--ink-2);
+  border-color: #14100e;
+  background: linear-gradient(180deg, #3d3c3d, #2b2a2b);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* ---- Buttons: bevelled dark steel, hover lighter, pressed inverts the bevel. 44 px touch targets. ---- */
+.btn,
+.undo {
+  min-height: 44px;
+  padding: 8px 22px;
+  border: 1px solid #14100e;
+  border-radius: 2px;
+  font-family: var(--font);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+  background: linear-gradient(180deg, #5f5d5e, #484647 48%, #3b393a 52%, #302f30);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    inset 1px 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(0, 0, 0, 0.6);
+}
+.btn:hover,
+.undo:hover {
+  background: linear-gradient(180deg, #747273, #5a5859 48%, #4a4849 52%, #3d3b3c);
+  color: var(--accent-hover);
+}
+.btn:active,
+.undo:active {
+  transform: translateY(1px);
+  background: linear-gradient(180deg, #2b2a2b, #353435);
+  box-shadow:
+    inset 0 2px 4px rgba(0, 0, 0, 0.7),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.08);
+}
+.btn:focus-visible,
+.undo:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+/* Queue answer is the confirm button: green. */
+#queue-btn {
+  border-color: #0e2a0a;
+  background: linear-gradient(180deg, #4cb03d, #34902a 48%, #2a7a21 52%, #226619);
+  box-shadow:
+    inset 0 1px 0 rgba(190, 255, 160, 0.55),
+    inset 1px 0 0 rgba(190, 255, 160, 0.12),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(0, 0, 0, 0.6);
+}
+#queue-btn:hover {
+  background: linear-gradient(180deg, #5cc44b, #3ea232 48%, #328c28 52%, #297621);
+  color: #fff;
+}
+#queue-btn:active {
+  background: linear-gradient(180deg, #1c5214, #25691b);
+}
+/* Undo is the red button. */
+.undo {
+  padding: 6px 16px 6px 12px;
+  border-color: #2b0d0a;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: linear-gradient(180deg, #b9453a, #96322a 48%, #7f2a23 52%, #6a221c);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 180, 170, 0.45),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(0, 0, 0, 0.6);
+}
+.undo:hover {
+  background: linear-gradient(180deg, #cc5246, #a63a31 48%, #8f3028 52%, #78271f);
+  color: #fff;
+}
+.undo:active {
+  background: linear-gradient(180deg, #4d1713, #62201a);
+}
+.undo .ring-bg {
+  stroke: rgba(255, 255, 255, 0.3);
+}
+.undo .ring-fg {
+  stroke: #fff;
+}
+.btn.link {
+  min-height: 44px;
+  padding: 8px 6px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-shadow: none;
+  color: var(--accent);
+}
+.btn.link:hover {
+  background: transparent;
+  color: var(--accent-hover);
+}
+.btn.link:active {
+  transform: none;
+  background: transparent;
+  box-shadow: none;
+}
+.actions {
+  gap: 12px;
+}
+/* Status chip: a lamp and a word. Pending is the yellow lamp, received the green one. */
+.chip {
+  min-height: 32px;
+  padding: 4px 12px 4px 10px;
+  border: 1px solid #14100e;
+  border-radius: 2px;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  color: var(--lamp-green);
+  background: linear-gradient(180deg, #181718, #232223);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7), 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.chip::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fffb, transparent 28%), var(--lamp-green);
+  box-shadow: 0 0 0 1px #0b0b0b, 0 0 8px 2px rgba(43, 227, 39, 0.55);
+}
+.chip.pending {
+  color: var(--lamp-yellow);
+  background: linear-gradient(180deg, #181718, #232223);
+}
+.chip.pending::before {
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle at 35% 30%, #fffb, transparent 28%), var(--lamp-yellow);
+  box-shadow: 0 0 0 1px #0b0b0b, 0 0 8px 2px rgba(242, 209, 75, 0.55);
+}
+.undo-row {
+  margin-top: 8px;
+}
+.sendline {
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.sendline.warn {
+  color: var(--warn);
+}
+
+/* Progress segments: the production-progressbar look, 8 px tall, with a hit area that reaches 44 px. */
+.segments {
+  gap: 4px;
+  margin-top: 16px;
+}
+.segments i {
+  position: relative;
+  height: 8px;
+  border: 1px solid #0b0b0b;
+  border-radius: 1px;
+  background: linear-gradient(180deg, #1a191a, #2a292a);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.segments i::after {
+  content: "";
+  position: absolute;
+  inset: -18px 0;
+}
+.segments i.done {
+  background: linear-gradient(180deg, #6bd85a, #2b9a21);
+  box-shadow: inset 0 1px 0 rgba(220, 255, 200, 0.5), 0 0 6px rgba(43, 227, 39, 0.3);
+}
+.segments i.active {
+  background: linear-gradient(180deg, #ffd08a, #e38f1d);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 210, 0.6), 0 0 8px rgba(250, 168, 56, 0.55);
+}
+
+/* ---- Inputs: inset dark fields (4.4 deep frame #242324 with an inner shadow) ---- */
+textarea,
+input[type="text"] {
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid #0b0b0b;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #1a191a, #242324);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.8),
+    0 1px 0 rgba(255, 255, 255, 0.12);
+  color: #fff;
+  font-size: 17px;
+  letter-spacing: 0;
+  caret-color: var(--accent);
+}
+textarea:focus,
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.8),
+    0 0 0 1px var(--accent),
+    0 0 12px rgba(250, 168, 56, 0.35);
+}
+input::placeholder,
+textarea::placeholder {
+  color: #8a847f;
+}
+.bearing input.own {
+  padding: 11px 14px;
+  background: linear-gradient(180deg, #1a191a, #242324);
+}
+
+/* ---- Message thread: the Factorio chat console ---- */
+.thread {
+  padding: 12px 12px 10px;
+  gap: 3px;
+  border: 1px solid #0b0b0b;
+  border-radius: 2px;
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.75),
+    0 1px 0 rgba(255, 255, 255, 0.1);
+  scrollbar-color: #6a625d #1a191a;
+}
+.glow {
+  border-radius: 2px;
+}
+.glow.night {
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.012) 0 1px, transparent 1px 3px),
+    #1b1a1b;
+}
+.glow.amber {
+  background:
+    radial-gradient(110% 80% at 100% 100%, rgba(250, 168, 56, 0.09), transparent 62%),
+    #1d1b19;
+}
+.composer.attention .thread {
+  box-shadow:
+    inset 0 3px 8px rgba(0, 0, 0, 0.75),
+    inset 0 0 0 1px rgba(250, 168, 56, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.stamp {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+}
+.bubble {
+  max-width: min(520px, 86%);
+}
+.bubble.head {
+  margin-top: 12px;
+}
+.bubble .text {
+  padding: 7px 12px 8px;
+  border-radius: 2px;
+  border: 1px solid #0b0b0b;
+  border-right: 3px solid var(--accent);
+  font-size: 16px;
+  line-height: 1.35;
+  letter-spacing: 0;
+  color: #fff;
+  background: var(--imsg-blue);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+.bubble.tail .text,
+.bubble.claude.tail .text {
+  border-radius: 2px;
+}
+.bubble.tail .text::after {
+  display: none;
+}
+.bubble.claude .text {
+  border-right: 1px solid #0b0b0b;
+  border-left: 3px solid var(--neon-blue);
+  color: var(--bubble-in-ink);
+  background: var(--bubble-in);
+}
+.bubble .meta {
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.bubble .meta.good {
+  color: var(--lamp-green);
+}
+.typing i {
+  background: var(--accent);
+}
+.jump {
+  width: 44px;
+  height: 44px;
+  top: 8px;
+  border: 1px solid #14100e;
+  border-radius: 2px;
+  color: #fff;
+  background: linear-gradient(180deg, #5f5d5e, #3b393a 52%, #302f30);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3), 0 4px 10px rgba(0, 0, 0, 0.6);
+}
+.jump:hover {
+  background: linear-gradient(180deg, #747273, #4a4849 52%, #3d3b3c);
+}
+.jump-badge {
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 0 1px #14100e;
+}
+.bubble-attach.chip-file {
+  border-radius: 2px;
+  background: var(--imsg-blue);
+}
+.bubble-attach-img {
+  border-radius: 2px;
+  border: 1px solid #0b0b0b;
+}
+
+/* ---- Attach chip and composer field ---- */
+.attach-chip {
+  margin: 0;
+  padding: 6px 8px;
+  min-height: 48px;
+  border: 1px solid #14100e;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #3d3c3d, #2b2a2b);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 1px 0 rgba(0, 0, 0, 0.5);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.attach-chip.error {
+  border-color: #6e201a;
+}
+.attach-thumb,
+.attach-icon {
+  border-radius: 2px;
+}
+.attach-icon {
+  color: var(--caption);
+  background: #1a191a;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7);
+}
+.attach-name {
+  font-size: 14px;
+  color: #fff;
+}
+.attach-size {
+  font-family: var(--mono);
+  color: var(--ink-3);
+}
+.attach-x {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #14100e;
+  border-radius: 2px;
+  color: #fff;
+  background: linear-gradient(180deg, #b9453a, #7f2a23);
+  box-shadow: inset 0 1px 0 rgba(255, 180, 170, 0.45);
+}
+.attach-x::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+.attach-x:hover {
+  color: #fff;
+  background: linear-gradient(180deg, #cc5246, #8f3028);
+}
+.compose {
+  gap: 8px;
+  padding: 4px 4px 4px 12px;
+  border: 1px solid #0b0b0b;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #1a191a, #242324);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.12);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.compose:focus-within {
+  border-color: var(--accent);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.8),
+    0 0 0 1px var(--accent),
+    0 0 12px rgba(250, 168, 56, 0.35);
+}
+.composer.attention .compose:focus-within {
+  border-color: var(--accent-hover);
+}
+.compose textarea {
+  min-height: 0;
+  padding: 11px 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  caret-color: var(--accent);
+}
+.compose textarea:focus {
+  border: 0;
+  box-shadow: none;
+}
+.idle-nudge {
+  color: var(--warn);
+}
+/* Send is a small green confirm button. */
+.send {
+  width: 44px;
+  height: 44px;
+  border: 1px solid #0e2a0a;
+  border-radius: 2px;
+  color: #fff;
+  background: linear-gradient(180deg, #4cb03d, #34902a 48%, #2a7a21 52%, #226619);
+  box-shadow:
+    inset 0 1px 0 rgba(190, 255, 160, 0.55),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 1px 0 rgba(0, 0, 0, 0.6);
+}
+.send:hover:not(:disabled) {
+  filter: none;
+  background: linear-gradient(180deg, #5cc44b, #3ea232 48%, #328c28 52%, #297621);
+}
+.send:active:not(:disabled) {
+  transform: translateY(1px);
+  background: linear-gradient(180deg, #1c5214, #25691b);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.7);
+}
+.send:disabled {
+  color: #7a746f;
+  border-color: #14100e;
+  background: linear-gradient(180deg, #3a393a, #2b2a2b);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.send:focus-visible {
+  outline: 2px solid var(--accent-hover);
+  outline-offset: 2px;
+}
+
+/* ---- Session strip: an inside_shallow_frame (#403F40) nested in the composer frame, with its own sub-header ---- */
+.session-strip {
+  gap: 12px 24px;
+  padding: 38px 14px 12px;
+  border: 1px solid var(--line-dark);
+  border-radius: 2px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 34px),
+    var(--alt-hi);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.55),
+    0 1px 0 rgba(255, 255, 255, 0.1);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.session-strip::before {
+  top: 5px;
+  left: 6px;
+  right: 6px;
+  font-size: 15px;
+}
+.sess-fields {
+  gap: 12px 24px;
+}
+.session-strip .label {
+  padding: 0;
+  font-size: 12px;
+  color: var(--caption);
+  letter-spacing: 0.05em;
+  opacity: 0.9;
+}
+.session-strip .value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+}
+.session-strip .value.mono {
+  font-family: var(--mono);
+  font-weight: 500;
+  font-size: 13px;
+}
+.session-strip .sub {
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.session-strip .value.muted {
+  color: var(--ink-3);
+}
+.session-strip .value.bad {
+  color: var(--bad);
+}
+.session-strip .watch {
+  gap: 7px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.session-strip .watch i {
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle at 35% 30%, #fff8, transparent 28%), var(--lamp-red);
+  box-shadow: 0 0 0 1px #0b0b0b, 0 0 8px 2px rgba(218, 69, 53, 0.6);
+}
+.session-strip .watch.on i {
+  background: radial-gradient(circle at 35% 30%, #fffb, transparent 28%), var(--lamp-green);
+  box-shadow: 0 0 0 1px #0b0b0b, 0 0 8px 2px rgba(43, 227, 39, 0.55);
+}
+/* STALE sits in the sub-header strip as a yellow lamp and a word, so it never shifts a field. */
+.session-strip .stale-pill {
+  top: 8px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px;
+  height: 20px;
+  border: 1px solid #14100e;
+  border-radius: 2px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--lamp-yellow);
+  background: linear-gradient(180deg, #181718, #232223);
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.7);
+}
+.session-strip .stale-pill::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fffb, transparent 28%), var(--lamp-yellow);
+  box-shadow: 0 0 0 1px #0b0b0b, 0 0 8px 2px rgba(242, 209, 75, 0.6);
+}
+.session-hint {
+  padding-top: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.45);
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.session-hint kbd {
+  padding: 1px 6px;
+  border: 1px solid #14100e;
+  border-radius: 2px;
+  font-size: 11px;
+  color: #fff;
+  background: linear-gradient(180deg, #5f5d5e, #3b393a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* ---- Status band: a frame titled "Where everything stands." ---- */
+.band {
+  padding-block: 0 24px;
+  background: transparent;
+  box-shadow: none;
+  clip-path: none;
+}
+.band .inner {
+  max-width: 760px;
+  padding: 42px 12px 12px;
+}
+.band h2 {
+  position: absolute;
+  top: 5px;
+  left: 9px;
+  right: 9px;
+  height: 24px;
+  margin: 0;
+  padding: 0 4px;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+  letter-spacing: 0.01em;
+  color: var(--caption);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.7);
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 2px, transparent 2px 4px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.12));
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+}
+#list {
+  border: 1px solid #0b0b0b;
+  border-radius: 2px;
+  background: var(--deep);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+#list:empty {
+  display: none;
+}
+.item {
+  min-height: 44px;
+  padding: 10px 14px;
+  gap: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0;
+  transition: background 140ms ease;
+}
+.item:first-child {
+  border-top: 0;
+  box-shadow: none;
+}
+.item:last-child {
+  border-bottom: 0;
+}
+.item:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.06);
+}
+.item .k {
+  margin-bottom: 2px;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+}
+/* No text-transform here: tests/owner.sh reads this text through innerText, and uppercase would turn "owner halt" into "OWNER HALT" and
+   fail AC-H2 (found 2026-10-14 UTC when this skin first ran). The state words stay bold and spaced instead. */
+.state {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.state.active {
+  color: var(--accent);
+}
+footer {
+  padding-block: 12px calc(40px + env(safe-area-inset-bottom));
+  color: var(--ink-3);
+}
+footer code {
+  padding: 1px 6px;
+  border: 1px solid #14100e;
+  border-radius: 2px;
+  color: #fff;
+  background: linear-gradient(180deg, #5f5d5e, #3b393a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.row,
+.row:last-child {
+  border-color: var(--line-dark);
+}
+.skeleton,
+.sk {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+}
+
+/* ---- SITREP panel: same steel, same caption, square corners; it already committed to a dark look. ---- */
+.sitrep {
+  --sr-ground: #242324;
+  --sr-card: rgba(0, 0, 0, 0.22);
+  --sr-edge: #4d4643;
+  --sr-ink-2: #d4cdc6;
+  --sr-ink-3: #a39d98;
+  --sr-good: #2be327;
+  --sr-warn: #ffbd66;
+  --sr-bad: #ff8e8e;
+  --sr-amber: #faa838;
+  border-radius: 3px;
+  border-color: var(--line-dark);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 38px),
+    var(--sr-ground);
+  box-shadow: inset 0 0 0 1px var(--line), 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+.sr-title {
+  color: var(--caption);
+  font-family: var(--font);
+  font-size: 22px;
+}
+.sr-scope,
+.sr-pill,
+.sr-badge,
+.sr-link {
+  border-radius: 2px;
+}
+.sr-stat,
+.sr-item,
+.sr-q {
+  border-radius: 2px;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 600px) {
+  .bearing {
+    padding: 42px 12px 14px;
+  }
+  .composer {
+    padding: 42px 8px 8px;
+  }
+  .composer-head {
+    left: 7px;
+    right: 7px;
+  }
+  .bearing::before {
+    left: 7px;
+    right: 7px;
+  }
+  .session-strip {
+    padding: 38px 12px 12px;
+  }
+  .facts .decide {
+    font-size: 19px;
+  }
+  .option {
+    padding: 12px;
+    gap: 10px;
+  }
+  .band .inner {
+    padding: 42px 8px 8px;
+  }
+  .band h2 {
+    left: 7px;
+    right: 7px;
+  }
+  .item {
+    grid-template-columns: 1fr auto;
+  }
+  .bubble {
+    max-width: 92%;
+  }
 }
