@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coq.factory/rebuild/design/nodes/N-09/record.schema.json",
+  "$id": "rebuild/design/nodes/N-09/record.schema.json",
   "title": "N-09 Merge: input and output records",
   "description": "Inputs gate.verdict (../N-08/record.schema.json#/$defs/gate_verdict) and review.passed (N-19, repeated here); outputs merge (fix_for_hold_id when merged under a hold), merge.conflict, merge.failed, merge.held, merge.hold.aged. Base shape as in ../N-07/record.schema.json#/$defs/base. Times are UTC. Written 2026-10-14 UTC by the G2 spec-author seat; revised round 3 2026-10-14 UTC.",
   "oneOf": [

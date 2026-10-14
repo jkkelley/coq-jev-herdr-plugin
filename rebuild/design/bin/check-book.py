@@ -39,6 +39,9 @@ Checks (ids match the N-46 spec where one exists):
                       note, 2026-10-14). C06 reads attributes only, so a prose citation was never resolved, and a label in an
                       attribute failed C06 without saying why. Cost: one more pass over every text node.
 
+  C22 examples         bin/check-examples.py: every <example schema="..."> in a volume and every json block of DESIGN.md validates against
+                      its record.schema.json (schemas resolve through their $id); a JSON example with no schema attribute fails
+
 Pointer forms resolved by C06 (relative paths are tried against the volume's directory, the book root, then the repository root):
   href="file#anchor"             on any element
   path="file" anchor="anchor"    on any element except <path> (a state path, not a pointer) and <file> that is not a document
@@ -69,6 +72,7 @@ HELPERS = (  # (check id, script, args): generators and checkers run as subproce
     ("C15", "make-kinds.py", ["--check"]),
     ("C16", "dag-check.py", []),
     ("C17", "make-index.py", ["--check"]),
+    ("C22", "check-examples.py", []),
 )
 
 failures = []

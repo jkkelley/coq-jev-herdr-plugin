@@ -81,6 +81,7 @@
     <check id="C19" name="input-output">Every node-spec volume has an element with id input and an element with id output.</check>
     <check id="C20" name="bindings">Every panel kind of the screen volumes and of N-37's index is a record kind (shared/record-kinds.xml), a view (nodes/N-31/spec.xml#views) or a static kind (nodes/N-37/spec.xml#static-kinds).</check>
     <check id="C21" name="md-labels">A pointer into a Markdown file never uses a list label (V04, T02, K07) as its anchor, in an attribute or in prose, and a Markdown pointer (path, hash, anchor) written in prose resolves like any pointer (R-03 review note: G4 volumes cited 02-MAPPING list labels as if they were anchors).</check>
+    <check id="C22" name="examples">Every JSON example validates against the schema it names: an &lt;example schema="file.json#/pointer"&gt; in a volume, and each json block of DESIGN.md against the record.schema.json link above it; schemas resolve through their $id, so a $ref between nodes that does not line up fails too (bin/check-examples.py; R-03 round 4: the envelope example failed N-02 and N-01, N-02 and N-07 required different envelopes).</check>
     <s>Judged by the review seat, not by the script: the no-cog and many-agents reading of each volume, the brief's source list cited or rejected (shared/rejected-with-reason.xml), Mermaid that renders (the checker image's mermaid CLI runs it in the pod as a lint row of its own).</s>
     <exit>0 all pass; 1 any check failed (one line per failure: FAIL check volume detail); 2 the checker could not run (no XSD validator), which N-24 treats as infrastructure and retries.</exit>
   </checks>
@@ -88,7 +89,7 @@
   <mechanism id="mechanism">
     <where>rebuild/design/check.sh in the repository, run as one pod case by N-24 from a suite.plan row (D22: tests and lint run as pods). The suites.json row is paths rebuild/design/*, suites spec-book; an unmapped path plans the full set, so a missed row never skips the check (V06).</where>
     <step n="1">N-23 plans suite spec-book for the head sha; N-24 starts the pod from the pinned checker image (xmllint, python3 with xmlschema and jsonschema, the mermaid CLI, git), which fetches the repository by sha anonymously (public repo, A02).</step>
-    <step n="2">The pod runs rebuild/design/check.sh; it runs C01 to C21 (#checks), never stopping at the first failure, and prints one line per failure and a final summary line with counts.</step>
+    <step n="2">The pod runs rebuild/design/check.sh; it runs C01 to C22 (#checks), never stopping at the first failure, and prints one line per failure and a final summary line with counts.</step>
     <step n="3">N-24 writes pod.run with the exit code and log path; N-25 maps exit 0 to coq/gate success and exit 1 to failure for that case; the pod writes its check.verdict line to records/spec-book.jsonl and N-24's artifact import puts it in the store for this node (nodes/N-24/spec.xml#m-mirror; the spec-book suite entry lists check.verdict in its records, nodes/N-23/spec.xml#output).</step>
     <step n="4">On the host, the same script runs in make lint (always row) for the fast feedback a worker gets before pushing; the pod result is the verdict, the host run is advice.</step>
     <generated-files>index.xml (bin/make-index.py), shared/record-kinds.xml (bin/make-kinds.py) and shared/cleanup-registry.json (bin/registry.py) are generated; dag.md is checked by bin/dag-check.py; a ticket that changes a source regenerates and commits them in the same PR; the check refuses drift (C14, C15, C16, C17), so a hand edit to a generated file cannot merge.</generated-files>
@@ -106,7 +107,7 @@ flowchart LR
 
   <start id="start">
     <s>A push to a PR branch is seen by the poll (N-04), planned (N-23) and run (N-24); nobody asks for the check and nobody can skip it, because coq/gate is a required status on main (D05).</s>
-    <s>The review seat of brief C runs the no-cog and many-agents judgement; this node runs the mechanical shape check first, so the review seat never reads a volume that fails C01 to C21.</s>
+    <s>The review seat of brief C runs the no-cog and many-agents judgement; this node runs the mechanical shape check first, so the review seat never reads a volume that fails C01 to C22.</s>
   </start>
 
   <waits id="waits">
@@ -149,7 +150,7 @@ flowchart LR
 
   <checklist id="checklist">
     <item><check>check.sh passes on the merged book at main.</check><proof>Exit 0 on main's head sha in a pod, pod.run log saved.</proof></item>
-    <item><check>Each check C01 to C21 has a failing fixture.</check><proof>rebuild/design/bin/test-checks.py copies the book to a temporary directory, applies one mutation per check (a fixture made at run time, so no broken volume is ever committed and none goes stale), runs the checker on the copy and asserts that check fails; exit 0 when every check is proven, one line per check that did not fire.</proof></item>
+    <item><check>Each check C01 to C22 has a failing fixture.</check><proof>rebuild/design/bin/test-checks.py copies the book to a temporary directory, applies one mutation per check (a fixture made at run time, so no broken volume is ever committed and none goes stale), runs the checker on the copy and asserts that check fails; exit 0 when every check is proven, one line per check that did not fire.</proof></item>
     <item><check>A volume of 1001 lines is refused.</check><proof>Fixture C03; exit 1; row names the file and 1001.</proof></item>
     <item><check>A dangling pointer is refused.</check><proof>Fixture C06; row names the href.</proof></item>
     <item><check>Generated drift is refused.</check><proof>test-checks.py mutations C14, C15 and C17 (a stale registry, kinds file and index) and C16 (a dag.md table row with no Mermaid node); exit 1 each.</proof></item>
@@ -203,7 +204,7 @@ flowchart LR
   </rejected>
 
   <shared-needs id="shared-needs">
-    <need kind="script">rebuild/design/check.sh running bin/check-book.py (C01 to C21) with the exit contract; bin/registry.py, bin/make-kinds.py, bin/dag-check.py and bin/make-index.py as its helpers (make-index.py --check is the index check); bin/test-checks.py as the fixture proof.</need>
+    <need kind="script">rebuild/design/check.sh running bin/check-book.py (C01 to C22) with the exit contract; bin/registry.py, bin/make-kinds.py, bin/dag-check.py and bin/make-index.py as its helpers (make-index.py --check is the index check); bin/test-checks.py as the fixture proof.</need>
     <need kind="xsd">One XSD per volume kind in rebuild/design/schema/, with the kind attribute on the root; the elements this group uses: contents, pointers (parent, sibling, shared), purpose, input, output, mechanism, start, waits, retries, many-agents (readers, writers, collision), status-codes (emits), state-paths (path), edges (in, out), checklist (item, check, proof), permissions (may, may-not), monitoring (counter, lamp), runbook (step, cleanup, cold-start), sources (source), rejected (reject), shared-needs (need), effects, registry, safety, checks, diagram with mermaid CDATA.</need>
     <need kind="image">A checker image in images.json with xmllint, python3 xmlschema and jsonschema, mermaid CLI and git, digest pinned.</need>
     <need kind="suite-row">factory/config/suites.json row paths rebuild/design/* suite spec-book; command rebuild/design/check.sh.</need>

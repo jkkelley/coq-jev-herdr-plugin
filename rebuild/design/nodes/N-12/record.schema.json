@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coq.factory/rebuild/design/nodes/N-12/record.schema.json",
+  "$id": "rebuild/design/nodes/N-12/record.schema.json",
   "title": "N-12 Stall timer: input and output records",
   "description": "Inputs lease.granted and lease.expired (../N-02/record.schema.json), seat.heartbeat (../N-15/record.schema.json#/$defs/seat.heartbeat) and the tick:stall entity (../N-06/record.schema.json#/$defs/tick), none repeated here; outputs stall and stall.kill.failed. Base shape as in ../N-07/record.schema.json#/$defs/base. Times are UTC. Written 2026-10-14 UTC by the G2 spec-author seat.",
   "oneOf": [

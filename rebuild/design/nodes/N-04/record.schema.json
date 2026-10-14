@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "coq/rebuild/design/nodes/N-04/record.schema.json",
+  "$id": "rebuild/design/nodes/N-04/record.schema.json",
   "title": "N-04 GitHub poll records",
   "description": "Input poll tick (defined in ../N-06/record.schema.json) and forge.poll_now; output forge.snapshot, forge.unreachable, forge.recovered, forge.throttled, forge.auth, forge.overflow, forge.slow, forge.started of node N-04. Parent volume: spec.xml#N-04. UTC everywhere.",
   "$defs": {

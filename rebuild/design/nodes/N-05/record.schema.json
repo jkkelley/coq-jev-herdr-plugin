@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "coq/rebuild/design/nodes/N-05/record.schema.json",
+  "$id": "rebuild/design/nodes/N-05/record.schema.json",
   "title": "N-05 Backups records",
   "description": "Input backup tick (defined in ../N-06/record.schema.json) and backup.now; output backup, backup.failed, backup.busy, backup.mirror_failed, backup.rotten, backup.disk, backup.started of node N-05. Parent volume: spec.xml#N-05. UTC everywhere.",
   "$defs": {

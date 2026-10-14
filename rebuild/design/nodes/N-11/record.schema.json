@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coq.factory/rebuild/design/nodes/N-11/record.schema.json",
+  "$id": "rebuild/design/nodes/N-11/record.schema.json",
   "title": "N-11 Retry and backoff: input and output records",
   "description": "Input: any failure record (the common shape below; the kinds are owned by N-15, N-19, N-09, N-12, N-18, N-08 and N-07). Outputs: attempt and dead. Base shape as in ../N-07/record.schema.json#/$defs/base. Times are UTC. Written 2026-10-14 UTC by the G2 spec-author seat.",
   "oneOf": [

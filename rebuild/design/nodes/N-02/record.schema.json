@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "coq/rebuild/design/nodes/N-02/record.schema.json",
+  "$id": "rebuild/design/nodes/N-02/record.schema.json",
   "title": "N-02 Lease service records",
   "description": "Input ticket.ready (defined in ../N-03/record.schema.json), lease.renew and lease.release; output lease.granted, lease.refused, lease.expired, lease.renewed, lease.released, lease.stale, lease.recovered, lease.failed of node N-02. Parent volume: spec.xml#N-02. UTC everywhere.",
   "$defs": {

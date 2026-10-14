@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "coq/rebuild/design/nodes/N-03/record.schema.json",
+  "$id": "rebuild/design/nodes/N-03/record.schema.json",
   "title": "N-03 Ticket intake and readiness records",
   "description": "Input ticket; output ticket.ready, ticket.waiting, ticket.refused, ticket.admitted, ticket.done, ticket.cancelled, ticket.transition_refused, ticket.stale, intake.recovered, intake.failed, intake.orphan, intake.slow of node N-03. Parent volume: spec.xml#N-03. UTC everywhere.",
   "$defs": {

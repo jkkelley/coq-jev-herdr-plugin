@@ -43,7 +43,7 @@
   </purpose>
 
   <screens id="screens">
-    <s>Map (N-38): DAG nodes as machines with status and heartbeat, queues as belts with depth, seats in flight as inserters (one per live lease row), the HOLD or GOFACTORY lamp; panels at nodes/N-38/spec.xml#panels; frame budget map.frame_budget_ms 16.</s>
+    <s>Map (N-38): DAG nodes as machines with status and heartbeat, queues as belts with depth, seats in flight as inserters (one per live lease row), the HOLD or USERGO lamp; panels at nodes/N-38/spec.xml#panels; frame budget map.frame_budget_ms 16.</s>
     <s>Machine (N-39): one node's input, output, attempt, lease with its fencing token, heartbeat age and last records; panels at nodes/N-39/spec.xml#panels.</s>
     <s>Stats (N-40): the counters view (state-store.xml#view-counters) as a production statistics panel; panels at nodes/N-40/spec.xml#panels.</s>
     <s>Alerts (N-41): every record whose code acts is owner (status-codes.xml#acts), stalls, dead, rejected main, unhealthy, with ack and the escalation bound; panels at nodes/N-41/spec.xml#panels.</s>

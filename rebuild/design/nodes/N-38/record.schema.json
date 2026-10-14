@@ -72,7 +72,7 @@
           "type": "object",
           "required": ["signal", "merge_hold"],
           "properties": {
-            "signal": { "enum": ["HOLD", "GOFACTORY"] },
+            "signal": { "enum": ["HOLD", "USERGO"] },
             "merge_hold": { "type": "boolean" },
             "since": { "$ref": "#/$defs/utc" },
             "ruling_id": { "type": "string" }

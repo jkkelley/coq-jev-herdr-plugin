@@ -93,13 +93,13 @@
   </shared-needs>
 
   <purpose id="purpose">
-    <s>The reactor panel: the signal lamp HOLD or GOFACTORY, the halt lever with its two-step confirm, the watcher lamp per tier, build mode with its expiry, the system's health, the owner's open decision cards, and the last owner action with its UTC time (wireframe-brief.json screen Controls; C32 approved). Primary action: pull the halt lever.</s>
+    <s>The reactor panel: the signal lamp HOLD or USERGO, the halt lever with its two-step confirm, the watcher lamp per tier, build mode with its expiry, the system's health, the owner's open decision cards, and the last owner action with its UTC time (wireframe-brief.json screen Controls; C32 approved). Primary action: pull the halt lever.</s>
     <s>The owner is the only operator and the only break glass (no-cog); every action here is a record that enters the DAG at N-29 as a ruling, so a gate reads a record and never a chat line (memory rulings-gates-check-are-records).</s>
     <s>The C32 defect fix lives here: a card cannot be posted unless a watcher for that tier is alive, and the Controls screen shows the watcher as a lamp (HANDOFF.md, defect found 2026-10-14 ~04:10Z).</s>
   </purpose>
 
   <input id="input" record="controls.frame" schema="record.schema.json#/$defs/controls.frame">
-    <s>N-31 pushes the controls frame: the hold flag (signal HOLD or GOFACTORY with its ruling id and since; merge.hold from N-10 with the red main sha), the build-mode state (N-44: on or off, expiry, ruling id), the watcher.alive lamps per tier (N-27: tier, pid, last heartbeat, lock path), the health record (N-06: gRPC Health status, counters, tick age), the open cards (N-28: id, about, decide, options, recommendation, posted at), the last ruling (N-29: card or action id, pick, words, at), and the break-glass token state (minted, consumed, or none).</s>
+    <s>N-31 pushes the controls frame: the hold flag (signal HOLD or USERGO with its ruling id and since; merge.hold from N-10 with the red main sha), the build-mode state (N-44: on or off, expiry, ruling id), the watcher.alive lamps per tier (N-27: tier, pid, last heartbeat, lock path), the health record (N-06: gRPC Health status, counters, tick age), the open cards (N-28: id, about, decide, options, recommendation, posted at), the last ruling (N-29: card or action id, pick, words, at), and the break-glass token state (minted, consumed, or none).</s>
   </input>
 
   <output id="output" record="control.action" schema="record.schema.json#/$defs/control.action">
@@ -109,7 +109,7 @@
 
   <panels id="panels" registry="../N-37/spec.xml#panels">
     <panel id="controls.header" kind="health" staleness="10" frame="wf-map/controls/default">Title Controls, the operator line (the owner is the only operator; read-only while offline with the last known time), the health dot of the Go service.</panel>
-    <panel id="controls.signal-lamp" kind="hold.flag" staleness="10" frame="wf-map/controls/default">CURRENT signal with its big lamp (HOLD red, GOFACTORY green) and since; NEXT on request; merge.hold shown as an amber lamp with the red main sha; the Give GOFACTORY or Hold button (owner key).</panel>
+    <panel id="controls.signal-lamp" kind="hold.flag" staleness="10" frame="wf-map/controls/default">CURRENT signal with its big lamp (HOLD red, USERGO green) and since; NEXT on request; merge.hold shown as an amber lamp with the red main sha; the Give USERGO or Hold button (owner key).</panel>
     <panel id="controls.halt-lever" kind="control.action" staleness="10" frame="wf-map/controls/default">The lever in three positions (rest, armed, pulled) with the two-step confirm: 1 Arm the lever (disarms itself after 10 s), 2 Confirm halt; the result line.</panel>
     <panel id="controls.watcher-lamp" kind="watcher.alive" staleness="10" frame="wf-map/controls/default">One lamp per bearings tier (stable, uat, dev when up): green with the heartbeat age when a wait loop holds the lock, red with "no watcher, cards cannot post" otherwise.</panel>
     <panel id="controls.build-mode" kind="build-mode.state" staleness="10" frame="wf-map/controls/default">Build mode on or off, the expiry countdown in UTC, the ruling that set it; the Turn on with expiry and Turn off buttons (owner key).</panel>
@@ -152,14 +152,14 @@ flowchart LR
 
   <actions id="actions">
     <action name="hold" flag="hold.flag" steps="2">Arm (10 s self-disarm), then Confirm halt with the stop-running choice (finish one-shots, or stop them now); result: hold.flag signal HOLD, N-07 dispatches nothing, monitoring keeps running.</action>
-    <action name="resume" flag="hold.flag" steps="1">Give GOFACTORY; the confirm line names how many machines are stalled ("4 machines are stalled; the line starts anyway if you say so"); result: hold.flag signal GOFACTORY with the ruling id; the first GOFACTORY after the rebuild is the GOFACTORY ruling N-49 and N-50 read.</action>
+    <action name="resume" flag="hold.flag" steps="1">Give USERGO (shared/cut-over.xml#signals: USERGO clears flag:hold; GOFACTORY does not and is given on its own card, N-30 R03); the confirm line names how many machines are stalled ("4 machines are stalled; the line starts anyway if you say so"); result: flag:hold cleared by compare-and-swap with the ruling id, signal USERGO; a USERGO before GOFACTORY is refused with a reply naming the hold (N-30 R02); the GOFACTORY ruling N-49 and N-50 read is a separate card, never this button.</action>
     <action name="build-mode" flag="build-mode.state" steps="1">Turn on with an expiry the owner picks (1 h, 6 h, 24 h, 7 d) or turn off; result: a ruling N-44 applies; the flag clears itself at expiry (N-44), never by a seat.</action>
     <action name="break-glass" flag="break-glass.token" steps="2">One time, owner only: pick the one target (a merge.hold on a named sha, or a dead record on a named ticket) and confirm; the token is minted by a prior ruling on a card (N-29) and consumed by compare-and-swap; result: a ruling N-10 or N-03 reads once; the token is gone; a second use is 409; the action and its target are an alert row so it is never silent.</action>
     <s>No other action exists on the page: no per-ticket retry, kill or merge (D15: the owner holds the line through cards, never the per-PR path).</s>
   </actions>
 
   <states id="states" source="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/plan.md#per-state-content-requirement">
-    <state name="default">Signal HOLD with GOFACTORY next, lever at rest with the three positions drawn, watcher lamps per tier, build mode off, health serving, one open card, the last action with its UTC time.</state>
+    <state name="default">Signal HOLD with USERGO next, lever at rest with the three positions drawn, watcher lamps per tier, build mode off, health serving, one open card, the last action with its UTC time.</state>
     <state name="empty">No cards and no action ever recorded: the empty blocks ("No open decision cards" with Open Getting My Bearings as the real button; "None recorded yet" for the last action); the lever and signal still drawn.</state>
     <state name="loading">Skeleton blocks in the shape of the panel; no centred spinner.</state>
     <state name="error">not-found (the controls view is absent), timeout (no frame within 10 s), validation (frame failed schema); what to do next and Retry.</state>
@@ -223,7 +223,7 @@ flowchart LR
   </state-paths>
 
   <look id="look" requirement="owner 04:45Z all views carry the Krastorio look; command-center-visual-bar: the nuclear reactor command center">
-    <s>The reactor panel: a wide frame #313031 with the caption Controls #FFE6C0, the signal lamp as a 40 px slot in a deep frame #242324 with glow (red #DA4535 HOLD, green #2BE327 GOFACTORY, amber #FAA838 merge.hold), the lever as original pixel art in three positions with hazard stripes, the watcher lamps as original status dots, build mode as a tool button pair with the orange selected state #F1BE64, health as mono figures, cards as inside shallow frames #403F40 with a subheader strip, the break-glass block behind a red-edged frame with the heat red; disabled controls at #B3B3B3 with the reason.</s>
+    <s>The reactor panel: a wide frame #313031 with the caption Controls #FFE6C0, the signal lamp as a 40 px slot in a deep frame #242324 with glow (red #DA4535 HOLD, green #2BE327 USERGO, amber #FAA838 merge.hold), the lever as original pixel art in three positions with hazard stripes, the watcher lamps as original status dots, build mode as a tool button pair with the orange selected state #F1BE64, health as mono figures, cards as inside shallow frames #403F40 with a subheader strip, the break-glass block behind a red-edged frame with the heat red; disabled controls at #B3B3B3 with the reason.</s>
     <s>Check: look-check.mjs samples the signal lamp in both states, the lever art presence, a disabled button and the card frame; binding-check look-token; the screenshot pair read by the architect.</s>
   </look>
 
@@ -257,7 +257,7 @@ flowchart LR
   </runbook>
 
   <sources id="sources">
-    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/wireframe-brief.json">Screen Controls: data (signal state HOLD or GOFACTORY, halt lever state, open cards from bearings, last owner action with time), primary action Pull the halt lever.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/wireframe-brief.json">Screen Controls: data (signal state HOLD or USERGO, halt lever state, open cards from bearings, last owner action with time), primary action Pull the halt lever.</src>
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-plan.json">Frames wf-map/controls/* desktop and mobile; the approved default frame's two-step lever and confirm lines.</src>
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md">Defect 2026-10-14 ~04:10Z: a card posted unwatched for 40 minutes; make ask refuses unless a wait is alive; the Controls screen shows the watcher as a lamp.</src>
     <src href="../../dag.md#4-re-entries">N-42 control.action enters N-29 as an owner action; break glass is one time; one ruling per card id.</src>
@@ -276,7 +276,7 @@ flowchart LR
   <rejected id="rejected">
     <item reason="D15 and no-cog: the owner holds the line through cards and the panel, never per PR; a per-ticket lever would recreate the hand merges (43 of 92) the investigation measured">Per-ticket retry, kill or merge controls.</item>
     <item reason="a message to each seat can be missed (391 wake failures, L01); a flag every tick reads cannot">Halt as a prompt typed to seats.</item>
-    <item reason="rulings a gate checks must be records; a chat line is not a record (rulings-gates-check-are-records)">Accepting HOLD or GOFACTORY from a chat message as the flag.</item>
+    <item reason="rulings a gate checks must be records; a chat line is not a record (rulings-gates-check-are-records)">Accepting HOLD or USERGO from a chat message as the flag.</item>
     <item reason="break glass is one time and owner-only; a standing override would be a second control path (no-cog)">A persistent force-merge switch.</item>
     <item reason="an action against a stale version would 409 at once; disabling is honest">Allowing actions while offline and queuing them.</item>
     <item reason="the card is answered on the bearings page where its options live (N-29); duplicating the answer UI makes two surfaces disagree">Answering decision cards inside the Controls screen.</item>

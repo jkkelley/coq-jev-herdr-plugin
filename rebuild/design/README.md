@@ -29,7 +29,7 @@ Every time in the book is UTC; diagrams are Mermaid; specs are XML; schemas are 
 - `schema/volume.xsd` is the one XSD family every volume validates against.
 - `check.sh` validates the whole book; `bin/check-book.py` is the checker behind it.
 - `bin/make-index.py`, `bin/make-kinds.py` and `bin/registry.py` generate `index.xml`, `shared/record-kinds.xml` and `shared/cleanup-registry.json`; never edit those three by hand, edit the volumes and regenerate.
-- `bin/dag-check.py` checks that `dag.md` agrees with itself and is acyclic; `bin/test-checks.py` proves every check fires on a mutated copy of the book.
+- `bin/dag-check.py` checks that `dag.md` agrees with itself and is acyclic; `bin/check-examples.py` (C22) validates every JSON example in the volumes and in `DESIGN.md` against the schema it names; `bin/test-checks.py` proves every check fires on a mutated copy of the book.
 
 ## 3. How to read one volume
 
@@ -53,7 +53,7 @@ rebuild/design/check.sh
 Exit 0 means every check passed, 1 means at least one failed (one `FAIL <check> <file> <detail>` line each), 2 means the checker could not run.
 The XSD validator is the python `xmlschema` module when importable, else `uv run --with xmlschema`, else `xmllint`.
 Set `COQ_CHECK_NOTES=1` to print the NOTE lines (external sources, other-branch citations, planned files).
-The checks are C01 to C21, listed at the top of `bin/check-book.py` with the same ids as `nodes/N-46/spec.xml#checks`.
+The checks are C01 to C22, listed at the top of `bin/check-book.py` with the same ids as `nodes/N-46/spec.xml#checks`.
 To prove every check still fires, run `uv run --with xmlschema --with jsonschema python3 -I rebuild/design/bin/test-checks.py`.
 
 ## 5. The review proof

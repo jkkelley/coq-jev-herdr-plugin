@@ -60,7 +60,7 @@
     <principle href="../../dag.md#8-many-agents-at-once" role="principle">Per-client stream state; one inserter per lease row; selection and frame.report idempotent by client id plus counter</principle>
     <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
     <dag href="../../dag.md#2-the-dag">
-      <in node="N-31" href="../N-31/spec.xml#N-31" record="pushed.frame (DAG nodes with status and heartbeat, queues with depth, seats in flight, HOLD or GOFACTORY lamp)"/>
+      <in node="N-31" href="../N-31/spec.xml#N-31" record="pushed.frame (DAG nodes with status and heartbeat, queues with depth, seats in flight, HOLD or USERGO lamp)"/>
       <in node="N-35" href="../N-35/spec.xml#N-35" record="deploy record (the public name serves the bundle)"/>
       <in node="N-36" href="../N-36/spec.xml#N-36" record="sprite.sheet (pinned atlas)"/>
       <in node="N-37" href="../N-37/spec.xml#N-37" record="binding record (panels bound, machines registered)"/>
@@ -89,13 +89,13 @@
   </shared-needs>
 
   <purpose id="purpose">
-    <s>See the whole factory at a glance as a Factorio base: every DAG node is a machine, every queue a belt, every seat an inserter, every idle worktree a crate, every state a lamp, and the HOLD or GOFACTORY signal lamp over it all (wireframe-brief.json screen Map; C32 approved).</s>
+    <s>See the whole factory at a glance as a Factorio base: every DAG node is a machine, every queue a belt, every seat an inserter, every idle worktree a crate, every state a lamp, and the HOLD or USERGO signal lamp over it all (wireframe-brief.json screen Map; C32 approved).</s>
     <s>It replaces the factory board at /board on every bearings tier (owner: "yah replace it"; memory factorio-map-replaces-board) and is served from the cluster at map.gatehouse.click (N-35) so the owner has the factory in his pocket.</s>
     <s>The bar: visually stunning, 1 to 1 Factorio style and format down to the images, smooth as in 60 fps with pushed state and no polling, Krastorio 2 look on web and mobile alike (command-center-visual-bar; build-notes notes 1, 2, 3, 6).</s>
   </purpose>
 
   <input id="input" record="pushed.frame" schema="record.schema.json#/$defs/pushed.frame">
-    <s>The push transport (N-31) delivers a pushed.frame per client: a full state on connect and on every reconnect, then deltas keyed by store seq. The map reads from it the map.state view: nodes (id, latest status code, heartbeat age, attempt, lease holder), queues (ticket.waiting, ticket.ready, review, merge, with depth), seats in flight (lease records with holder and node), crates (workspace records idle), the hold flag (HOLD or GOFACTORY, merge.hold), and the newest open alert count.</s>
+    <s>The push transport (N-31) delivers a pushed.frame per client: a full state on connect and on every reconnect, then deltas keyed by store seq. The map reads from it the map.state view: nodes (id, latest status code, heartbeat age, attempt, lease holder), queues (ticket.waiting, ticket.ready, review, merge, with depth), seats in flight (lease records with holder and node), crates (workspace records idle), the hold flag (HOLD or USERGO, merge.hold), and the newest open alert count.</s>
     <s>Also read at build time: the pinned atlas (N-36) and the registry (N-37) that places each node on the grid.</s>
   </input>
 
@@ -114,7 +114,7 @@
     <panel id="map.tally" kind="map.state" staleness="10" frame="wf-map/map/default">Counts of running, waiting, stalled, never ran; machines, crates, ghosts; the signal state in one sentence.</panel>
     <panel id="map.legend" kind="code.table" staleness="86400" frame="wf-map/map/default">Lamp legend from the code table's lamp attribute; belt equals queue with depth, inserter equals seat, crate equals idle worktree, ore equals source.</panel>
     <panel id="map.selection" kind="selection" staleness="86400" frame="wf-map/map/default">What is selected and the hint text; click a machine to open its panel.</panel>
-    <panel id="map.signal-lamp" kind="hold.flag" staleness="10" frame="wf-map/map/default">HOLD (red) or GOFACTORY (green), plus merge.hold (amber) when main is red; click opens Controls.</panel>
+    <panel id="map.signal-lamp" kind="hold.flag" staleness="10" frame="wf-map/map/default">HOLD (red) or USERGO (green), plus merge.hold (amber) when main is red; click opens Controls.</panel>
     <panel id="map.alert-chip" kind="alert" staleness="10" frame="wf-map/map/default">Open alert count by colour; click opens Alerts.</panel>
     <panel id="map.frame-report" kind="frame.report" staleness="30" frame="wf-map/map/default">A small fps and degrade readout in the corner, hidden unless the owner taps the stamp; the same numbers the client posts.</panel>
   </panels>
@@ -159,7 +159,7 @@ flowchart LR
 
   <states id="states" source="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/plan.md#per-state-content-requirement">
     <state name="default">Populated base at realistic volume, including one longest-plausible machine name to expose truncation; the tally, legend and selection panels filled.</state>
-    <state name="empty">No node has ever written a record (a fresh store): the base shows every machine as a grey ghost with the one-line explanation and the primary recovery action as a real button, Open Controls, where the GOFACTORY signal is given.</state>
+    <state name="empty">No node has ever written a record (a fresh store): the base shows every machine as a grey ghost with the one-line explanation and the primary recovery action as a real button, Open Controls, where the USERGO signal is given.</state>
     <state name="loading">Skeleton blocks in the shape of the default content (region outlines, grey machine blocks, empty belts), no centred spinner; shown until the first full state arrives or the first-frame timeout fires.</state>
     <state name="error">Named failure class: not-found (the tier has no dist, 503 board not built), timeout (first frame did not arrive), validation (a frame failed its schema); what the owner can do next and a Retry button that reconnects.</state>
     <state name="offline">The last delivered frame stays drawn with the as-of stamp and an offline banner; a queued-action indicator shows selections and acks waiting to send; reconnect runs on its own.</state>

@@ -76,6 +76,7 @@ MUTATIONS = [
     ("C19", lambda b: sub(os.path.join(b, "nodes/N-01/spec.xml"), '<output id="output">', '<output id="outputs">'), False),
     ("C20", lambda b: sub(os.path.join(b, "nodes/N-38/spec.xml"), '<panel id="map.canvas" kind="map.state"', '<panel id="map.canvas" kind="no.such.kind"'), False),
     ("C21", lambda b: sub(os.path.join(b, "nodes/N-24/spec.xml"), 'rebuild/investigation/02-MAPPING.md#2-validated-keep">V04 pod', 'rebuild/investigation/02-MAPPING.md#v04">V04 pod'), False),
+    ("C22", lambda b: sub(os.path.join(b, "shared/state-store.xml"), '"token":184', '"token":"t-000184"'), False),
     ("C21-prose", lambda b: sub(os.path.join(b, "nodes/N-19/spec.xml"), '02-MAPPING.md#2-validated-keep V15', '02-MAPPING.md#no-such-heading V15'), False),
 ]
 

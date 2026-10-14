@@ -70,7 +70,7 @@
     <s>Retention never with acts owner is the class for a path kept on purpose: long-lived secrets (STATE/config/service.env, $COQ_STATE/secrets/*), the owner's data (the art reference copy, the unlanded backups), records another system keeps (GitHub statuses), the owner's browser storage and tracked sources; cleanup.sh lists such an entry in every plan and refuses to apply it, and only the owner removes it, by break glass or a disposition (registry.py rule R2 and R3; brief C rule 6).</s>
     <s>A volume that names a state path with no cleanup and no declared retention never fails N-46 (check.sh C14: every state path the design names has a cleanup script or is declared kept on purpose, brief rule 6).</s>
     <s>Git objects are entries too: remote branches (glob refs/remotes/origin/feat/*, trigger merge, retention P0D), local worktrees (the treehouse pool and $COQ_CACHE/worktrees, trigger merge), stale remotes (trigger disposition).</s>
-    <example><![CDATA[
+    <example schema="../../shared/cleanup-registry.schema.json#/$defs/entry"><![CDATA[
 { "id": "N-14.workspace", "node": "N-14", "glob": "$COQ_CACHE/ws/<slot>/ and $COQ_CACHE/ws/<slot>.json", "class": "host",
   "retention": "removed on merge, dead or cancel (N-45 trigger), or 24 h after", "trigger": "timer", "acts": "system",
   "run": "scheduler/host/bin/cleanup-workspaces.sh", "verb": "line/bin/cleanup.sh --entry N-14.workspace",

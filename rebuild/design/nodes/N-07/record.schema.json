@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coq.factory/rebuild/design/nodes/N-07/record.schema.json",
+  "$id": "rebuild/design/nodes/N-07/record.schema.json",
   "title": "N-07 Scheduler tick and dispatch: input and output records",
-  "description": "Inputs: the tick:scheduler entity (../N-06/record.schema.json#/$defs/tick) and lease.granted (../N-02/record.schema.json#/$defs/lease_granted); outputs dispatch, dispatch.refused and the sched:tick entity (tick_done). Every record extends base. Times are UTC strings 2006-01-02T15:04:05Z. Written 2026-10-14 UTC by the G2 spec-author seat; the shared store volume (../../shared/state-store.xml#table-records) owns the base shape and this file repeats it so the volume is whole on its own. The local tick and lease defs below are the fields this node reads, kept as a projection of the owners' schemas.",
+  "description": "Inputs: the tick:scheduler entity (../N-06/record.schema.json#/$defs/tick) and lease.granted (../N-02/record.schema.json#/$defs/lease_granted); outputs dispatch, dispatch.refused and the sched:tick entity (tick_done). Every record extends base. Times are UTC strings 2006-01-02T15:04:05Z. Written 2026-10-14 UTC by the G2 spec-author seat; the shared store volume (../../shared/state-store.xml#envelope) owns the base shape and this file refers to it (shared/state-store.schema.json#/$defs/committed_envelope). The local tick and lease defs below are the fields this node reads, kept as a projection of the owners' schemas.",
   "oneOf": [
     { "$ref": "../N-06/record.schema.json#/$defs/tick" },
     { "$ref": "../N-02/record.schema.json#/$defs/lease_granted" },
@@ -12,26 +12,24 @@
   ],
   "$defs": {
     "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$", "description": "UTC to the second with a Z suffix" },
-    "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
+    "ticket": { "$ref": "../../shared/state-store.schema.json#/$defs/ticket" },
     "phase": { "type": "string", "enum": ["worker", "reviewer", "spec", "gate"] },
     "role": { "type": "string", "enum": ["worker", "reviewer", "spec-author", "gate"] },
     "lane": { "type": "string", "enum": ["build", "verify", "system"] },
     "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
     "base": {
-      "type": "object",
-      "required": ["id", "at", "code", "kind", "node", "seq"],
-      "properties": {
-        "id": { "type": "string", "description": "UTC stamp, code and a five character suffix, minted by N-01", "pattern": "^[0-9]{8}T[0-9]{6}Z-[1-5][0-9]{2}-[a-z0-9]{5}$" },
-        "at": { "$ref": "#/$defs/at" },
-        "code": { "type": "integer", "minimum": 100, "maximum": 599 },
-        "kind": { "type": "string" },
-        "node": { "type": "string", "pattern": "^N-[0-9]{2}$", "description": "the node that wrote it" },
-        "seq": { "type": "integer", "minimum": 1, "description": "store sequence from record.committed" },
-        "ticket": { "$ref": "#/$defs/ticket" },
-        "attempt": { "$ref": "#/$defs/attempt" },
-        "idempotency_key": { "type": "string" },
-        "note": { "type": "string", "maxLength": 240, "description": "prose for humans; no node branches on it" }
-      }
+      "description": "The shared committed envelope (shared/state-store.schema.json#/$defs/committed_envelope: id, at, kind, code, node and seq) plus the idempotency key this node's records carry. N-07 reads and writes committed records, so seq is required; the shared envelope owns every other field (shared/state-store.xml#envelope).",
+      "allOf": [
+        { "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" },
+        {
+          "type": "object",
+          "properties": {
+            "idempotency_key": { "type": "string" },
+            "ticket": { "$ref": "#/$defs/ticket" },
+            "attempt": { "$ref": "#/$defs/attempt" }
+          }
+        }
+      ]
     },
     "tick": {
       "description": "Projection of ../N-06/record.schema.json#/$defs/tick: the fields this node reads from the tick:scheduler entity.",

@@ -39,7 +39,7 @@ What exists today on main (`4f7f44c`, 2026-10-14):
 What this branch adds (PR 189, branch `rebuild/design`):
 
 - 52 DAG nodes (N-01 to N-52) in seven groups, written as 62 XML volumes (52 node volumes, 9 shared volumes, the index) and 55 JSON schemas.
-- `check.sh` with 21 checks (C01 to C21), proven to fire by `bin/test-checks.py` (22 cases, 0 missed); it exits 0 today.
+- `check.sh` with 22 checks (C01 to C22), proven to fire by `bin/test-checks.py` (23 cases, 0 missed); it exits 0 today.
 - The no-cog review: 52 of 52 nodes pass (no cog, many agents at once, pointers resolve, 1000-line cap), proof at `~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md`.
 - This file, the owner's read of the whole design.
 

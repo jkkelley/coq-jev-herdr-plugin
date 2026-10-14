@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coq.factory/rebuild/design/nodes/N-08/record.schema.json",
+  "$id": "rebuild/design/nodes/N-08/record.schema.json",
   "title": "N-08 Gate check: input and output records",
   "description": "Input forge.snapshot (../N-04/record.schema.json#/$defs/forge_snapshot, not repeated); output gate.verdict. Base shape as in ../N-07/record.schema.json#/$defs/base and ../../shared/state-store.xml#table-records. Times are UTC strings 2006-01-02T15:04:05Z. Written 2026-10-14 UTC by the G2 spec-author seat.",
   "oneOf": [

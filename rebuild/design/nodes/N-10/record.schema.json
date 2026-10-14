@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://coq.factory/rebuild/design/nodes/N-10/record.schema.json",
+  "$id": "rebuild/design/nodes/N-10/record.schema.json",
   "title": "N-10 Main verdict and hold: input and output records",
   "description": "Input main.gate.status (N-26, repeated here); outputs verified, rejected, merge.hold, merge.hold.lifted, main.verify.missing. Base shape as in ../N-07/record.schema.json#/$defs/base. Times are UTC. Written 2026-10-14 UTC by the G2 spec-author seat.",
   "oneOf": [

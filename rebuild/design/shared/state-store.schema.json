@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/shared/state-store.schema.json",
   "title": "State store shared definitions",
-  "description": "The record envelope every kind carries (shared/state-store.xml#envelope). Node schemas $ref #/$defs/envelope and add their body fields. The id form is the UTC-stamp form N-01 owns; see rejected-with-reason.xml#envelope-id-form for the r-prefixed form that was rejected.",
+  "description": "The ONE record envelope every kind carries (shared/state-store.xml#envelope): identity, time, kind, code and writing node, plus seq and hash that N-01 adds at commit. A record on input has no seq; a committed record has it (committed_envelope). The idempotency key, the fencing token and the expected entity version are not envelope fields: they ride on the put request (nodes/N-01/record.schema.json#/$defs/record_put). Node schemas $ref #/$defs/envelope (or committed_envelope) and add their body fields. The id form is the UTC-stamp form N-01 owns; see rejected-with-reason.xml#envelope-id-form for the r-prefixed form that was rejected.",
   "$defs": {
     "id": {
       "type": "string",
@@ -16,8 +16,8 @@
     },
     "kind": {
       "type": "string",
-      "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)+$",
-      "description": "dotted lowercase; registered in state-store.xml#record-kinds-registry"
+      "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)*$",
+      "description": "lowercase, dotted where it has parts (lease.granted); a line-op kind such as dispatch or merge is one segment; registered in state-store.xml#record-kinds-registry"
     },
     "code": {
       "type": "integer",
@@ -40,17 +40,29 @@
     },
     "ticket": {
       "type": "string",
-      "pattern": "^WO-[0-9]{8}-[a-z0-9]{4}$"
+      "pattern": "^(WO-[0-9]{8}-[0-9a-f]{4}|CR-[a-z0-9._-]+)$",
+      "description": "A work order id, or CR-<request id> for a cut request that N-03 admitted from a ticket.request (nodes/N-03/spec.xml#input)"
     },
     "lease_token": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "fencing token from entity counter:lease_token; only grows; the put request carries it, a lease body names it token (nodes/N-02/record.schema.json#/$defs/lease_body)"
+    },
+    "idempotency_key": {
       "type": "string",
-      "pattern": "^t-[0-9]{6,}$",
-      "description": "fencing token from entity counter:lease_token; only grows"
+      "minLength": 8,
+      "maxLength": 200,
+      "description": "caller-chosen, unique per intended effect: node id, colon, input record id, colon, step name; same key same payload replays 200, a different payload is 409 record.conflict"
+    },
+    "schema_version": {
+      "const": "2.0.0",
+      "description": "optional marker of the envelope generation; when present it is 2.0.0"
     },
     "envelope": {
       "type": "object",
       "required": ["id", "at", "kind", "code", "node"],
       "properties": {
+        "schema_version": { "$ref": "#/$defs/schema_version" },
         "id": { "$ref": "#/$defs/id" },
         "at": { "$ref": "#/$defs/at" },
         "kind": { "$ref": "#/$defs/kind" },
@@ -58,14 +70,18 @@
         "node": { "$ref": "#/$defs/node" },
         "by": { "type": "string", "description": "node id or seat id that wrote the record" },
         "attempt": { "$ref": "#/$defs/attempt" },
-        "key": { "type": "string", "minLength": 3, "maxLength": 200, "description": "idempotency key; same key same payload replays 200; different payload is 409" },
-        "version": { "type": "integer", "minimum": 0, "description": "expected version for a compare-and-swap put; 0 inserts" },
-        "seq": { "type": "integer", "minimum": 1, "description": "assigned by N-01 at commit; never on input" },
-        "lease_token": { "$ref": "#/$defs/lease_token" },
         "ticket": { "$ref": "#/$defs/ticket" },
+        "seq": { "type": "integer", "minimum": 1, "description": "assigned by N-01 at commit; never on input" },
         "note": { "type": "string", "maxLength": 240 },
         "hash": { "$ref": "#/$defs/sha256" }
       }
+    },
+    "committed_envelope": {
+      "description": "The envelope as stored and read back: seq is present (N-01 assigns seq and hash at commit; hash is required on record.committed, nodes/N-01/record.schema.json#/$defs/record_committed)",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "type": "object", "required": ["seq"] }
+      ]
     }
   }
 }

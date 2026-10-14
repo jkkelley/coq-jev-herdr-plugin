@@ -5,7 +5,7 @@
 # resolve to a file or a declared anchor; any volume without a contents element, a parent pointer or a
 # many-agents section; and the companion checks listed at the top of bin/check-book.py (dashes, unique ids,
 # JSON schemas, index completeness and line counts, waits with timeout and fallback, the generated cleanup registry
-# and record kinds, the DAG, index freshness, codes, input and output, panel bindings: C01 to C20, the same ids as
+# and record kinds, the DAG, index freshness, codes, input and output, panel bindings, examples against their schemas: C01 to C22, the same ids as
 # nodes/N-46/spec.xml#checks). bin/test-checks.py proves every check fires on a mutated copy of the book.
 #
 # The XSD validator: the python module xmlschema when importable, else `uv run --with xmlschema` (uv is on the

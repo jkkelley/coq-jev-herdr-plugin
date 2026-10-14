@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "coq/rebuild/design/nodes/N-06/record.schema.json",
+  "$id": "rebuild/design/nodes/N-06/record.schema.json",
   "title": "N-06 Service unit, clock and health records",
   "description": "Input unit.start; output tick (entity tick:SUBKIND and the in-process broadcast), health (entity health:service), and the log records unit.started, tick.daily, tick.missed, health.unhealthy, health.recovered, unit.crashloop, unit.duplicate, reload.applied, reload.failed of node N-06. Parent volume: spec.xml#N-06. UTC everywhere.",
   "$defs": {
