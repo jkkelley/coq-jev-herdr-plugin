@@ -139,6 +139,12 @@
           "name": "patrolwatch",
           "what": "compliance patrol tick",
           "command": "${repo}/herdr/bin/patrolwatch.sh"
+        },
+        {
+          "pos": "4.2.2",
+          "name": "boardage",
+          "what": "board page age check",
+          "command": "while :; do ${repo}/report/loop/loop.sh age; sleep 60; done"
         }
       ]
     }
