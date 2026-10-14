@@ -1,8 +1,20 @@
 <title>Bearings</title>
+<!-- BREADCRUMB 2026-10-14 UTC. What broke: this page had no viewport meta, so an iPhone laid it out at 980 px and scaled it down; the safe-area
+     insets in theme.css also read as 0 without viewport-fit=cover. Why it matters: the owner reads this page on an iPhone 16 Pro Max (430 CSS px).
+     The skin (owner order 2026-10-14, theme.css breadcrumb) needs a 430 px layout to mean anything. color-scheme dark keeps form controls and
+     scrollbars dark for both colour-scheme preferences. The font link swaps Figtree for Titillium Web (Factorio's face) plus IBM Plex Mono for ids;
+     cost is one Google Fonts request, offline falls back along the stacks in theme.css. -->
+<meta
+  name="viewport"
+  content="width=device-width, initial-scale=1, viewport-fit=cover"
+/>
+<meta name="color-scheme" content="dark" />
+<meta name="theme-color" content="#242324" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
   rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap"
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Titillium+Web:wght@400;600;700&display=swap"
 />
 <style>
   @@THEME@@;
@@ -277,6 +289,15 @@
     const askedLabel = (b) =>
       `Asked ${askedIso(b).slice(11, 16)}Z · ${relAge(Date.parse(askedIso(b)))}`;
 
+    // BREADCRUMB 2026-10-14 UTC (Krastorio skin). What: an option gets the red "hold" button look in theme.css (.option.hold) when its card
+    // says so (`tone: "hold"` or "destructive" on the option) or its label opens with a stop word. Why: the owner wants hold and destructive
+    // choices red and the recommended one green at a glance, and an option carries no other signal. Rejected: matching the whole label or the
+    // "then" text (too many false reds); the opening word only keeps it predictable. Cost: purely visual, the answer posted is unchanged.
+    const HOLD_WORD =
+      /^\s*(hold|stop|halt|pause|reject|decline|cancel|abort|revert|discard|delete|kill|drop|no)\b/i;
+    const isHold = (o) =>
+      o.tone === "hold" || o.tone === "destructive" || HOLD_WORD.test(o.label || "");
+
     const drawCard = () => {
       const card = $("bearing");
       if (state.error) {
@@ -306,7 +327,7 @@
           ${b.options
             .map(
               (o, i) => `
-            <label class="option" for="opt-${i}">
+            <label class="option${isHold(o) ? " hold" : ""}" for="opt-${i}">
               <input type="radio" name="opt" id="opt-${i}" value="${i}" ${i === pick ? "checked" : ""} />
               <span class="text"><b>${esc(o.label)}</b><span>${esc(o.then)}</span></span>
               ${i === b.rec ? '<span class="badge">Rec</span>' : ""}
