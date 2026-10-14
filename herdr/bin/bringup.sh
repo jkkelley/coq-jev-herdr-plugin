@@ -107,7 +107,14 @@ while IFS=$'\t' read -r name what cmd; do
   [ -n "$hline" ] || why="monitors.sh health said nothing about slot $name"
   if [ "$mode" = check ] || [[ "$why" == *"left alone"* ]]; then
     printf 'FAILED pane-%s (%s)\n' "$name" "$why"; pane_bad=1
-    [ "$mode" = check ] || sl_report_500 "pane-$name" "bringup: pane-$name failed: $why"
+    # BREADCRUMB 2026-10-13 - WO-20261013-a146 (cause aa). What broke: $why ends "pane P runs <first foreground process>; left alone"
+    #   (monitors.sh health, fg_process), and for the events pane that name is bash, clear, jq or sleep depending on the instant it is
+    #   read, so two runs seconds apart gave two texts, and sl_report_500 (seat-lib.sh), which dedups on the exact text, wrote a second
+    #   500 inside its 15 minutes (herdr case 17-pane-health, main 85e91d3, under load only). Why this fix: the recorded text says
+    #   "runs a job" and the FAILED line above keeps the process name for the person reading the screen. Rejected: keying the dedup on
+    #   the pane alone (a new failure on the same pane must still be heard) and a settle delay (the supervisor repeats every 30 s on a
+    #   live host, where the loop is never settled). Cost: the 500 note no longer names the process. Test: case 17-pane-health.
+    [ "$mode" = check ] || sl_report_500 "pane-$name" "bringup: pane-$name failed: $(sed -E 's/ runs [^ ;]+; left alone/ runs a job; left alone/' <<<"$why")"
   elif "$MON" take "$name" "$name" -- "$cmd" >/dev/null 2>&1; then fixedln "pane-$name" "$what plugged in: $why"
   else printf 'FAILED pane-%s (monitors.sh take %s failed: %s)\n' "$name" "$name" "$why"; pane_bad=1; sl_report_500 "pane-$name" "bringup: pane-$name take failed: $why"; fi
 done < <(jq -r '.tabs[].reserved[] | select(.command != null) | [.name, .what, .command] | @tsv' "$MC")
