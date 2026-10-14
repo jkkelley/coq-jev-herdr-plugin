@@ -5,6 +5,7 @@
 - What this is
 - Tiers
 - Run it
+- Phone on the tailnet (front door)
 - Ask, wait, reply
 - The factory board
 - The SITREP panel
@@ -56,6 +57,30 @@ Nothing is split inside a seat layout, so the architect column never moves.
 A caller with no seat (`COQ_SEAT` unset) and no OPEN cell in its tab gets its own pane split once; a seat in that position is refused with exit 3 naming the tab.
 `stop` relabels each pane with the label it had before (kept as `open_slots` in `server.json`) and closes nothing.
 Outside herdr (`HERDR_ENV` unset) every verb that starts a process refuses; only the test harness passes `--no-herdr`.
+
+## Phone on the tailnet (front door)
+
+`server.mjs` listens on 127.0.0.1 only.
+`scripts/front-door.mjs` is a dependency-free forwarder that binds the box's Tailscale IPv4 on the tier's own port and pipes every connection to the loopback server, so the owner's phone on the same tailnet opens the page with no root and no `tailscale serve`.
+It does not touch headers: the Host the phone sends passes `scripts/lib/host.mjs` as it is.
+
+```sh
+make front-door TIER=stable        # pane "bearings-stable-front-door" (config tiers.stable.front_door_pane_label); prints the bind and pid
+make front-door-stop TIER=stable   # explicit; the pane becomes an OPEN slot
+```
+
+Phone URLs (the key is on the page's `server.json`, never written down):
+
+```text
+http://whoadudette-1:44900/?key=<key>
+http://100.122.200.108:44900/?key=<key>
+```
+
+- The bind address is `tailscale ip -4`, else `front_door.bind` in `config/bearings.json`, else `--bind` / `BEARINGS_FRONT_DOOR_BIND` overrides both.
+- `~/.bearings/<page>/front-door.json` holds `{pid, bind, port, at}` while it runs; a second start refuses; the bind is retried 3 times 2 s apart, then exit 4.
+- `make stop` never stops it: stable never stops, and the front door only forwards.
+- Cost: plain HTTP inside the encrypted tailnet, one more process, and a restart when the Tailscale IP changes.
+- Later alternative with root, which also gives port 80 and needs no front door process: `sudo tailscale serve --bg --http=80 http://127.0.0.1:44900`.
 
 ## Ask, wait, reply
 

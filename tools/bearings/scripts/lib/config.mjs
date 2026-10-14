@@ -78,6 +78,10 @@ export function validate(cfg) {
     if (o.caps !== undefined && (!o.caps || typeof o.caps !== "object" || Array.isArray(o.caps))) die("owner_board.caps must be an object");
     resolveOwnerBoard(o);
   }
+  if (cfg.front_door !== undefined) {
+    if (!cfg.front_door || typeof cfg.front_door !== "object" || Array.isArray(cfg.front_door)) die("front_door must be an object");
+    if (cfg.front_door.bind !== undefined && (typeof cfg.front_door.bind !== "string" || !cfg.front_door.bind)) die("front_door.bind must be a non-empty string");
+  }
   if (cfg.idle_minutes < 1) die("idle_minutes must be >= 1");
   if (cfg.stop_tries < 1) die("stop_tries must be >= 1");
   if (!Array.isArray(cfg.allowed_hosts) || !cfg.allowed_hosts.length)
@@ -98,6 +102,8 @@ export function validate(cfg) {
       t.port_range.length === 2 &&
       t.port_range.every(Number.isInteger) &&
       t.port_range[0] <= t.port_range[1];
+    if (t.front_door_pane_label !== undefined && (typeof t.front_door_pane_label !== "string" || !t.front_door_pane_label))
+      die(`tiers.${name}.front_door_pane_label must be a non-empty string`);
     if (hasPort === hasRange)
       die(`tiers.${name} needs exactly one of port or port_range`);
     for (const p of hasPort ? [t.port] : t.port_range)
@@ -156,6 +162,7 @@ export function resolveTier(cfg, tier, ticket) {
     stateDir: path.join(stateRoot, page),
     paneLabel: interpolate(t.pane_label, vars),
     waitPaneLabel: interpolate(t.wait_pane_label, vars),
+    frontDoorPaneLabel: t.front_door_pane_label === undefined ? null : interpolate(t.front_door_pane_label, vars),
     checkout: t.checkout,
   };
 }

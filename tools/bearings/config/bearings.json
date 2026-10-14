@@ -10,6 +10,9 @@
     "whoadudette-1",
     "100.122.200.108"
   ],
+  "front_door": {
+    "bind": "100.122.200.108"
+  },
   "cookie_name": "bearings_key",
   "idle_minutes": 240,
   "settle_ms": 3000,
@@ -32,6 +35,7 @@
       "port": 44900,
       "pane_label": "bearings-stable",
       "wait_pane_label": "bearings-stable-wait",
+      "front_door_pane_label": "bearings-stable-front-door",
       "checkout": "main"
     },
     "uat": {
