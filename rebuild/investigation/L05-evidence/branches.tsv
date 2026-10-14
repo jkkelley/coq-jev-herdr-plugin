@@ -1,0 +1,34 @@
+backup/4562-before-rebuild	ahead=77	behind=131	files_since_merge_base=389	files_vs_main_tip=1274	last=2026-10-11T20:44Z	chore: checkpoint 2026-10-11 20:44 UTC
+chore/seat-deny-from-declared-files-ticket	ahead=1	behind=99	files_since_merge_base=2	files_vs_main_tip=504	last=2026-10-13T02:58Z	WO-20261012-cf8d - Cause ticket cut: WO-20261013-4c0d Seat deny list derives fro
+feat/factory-design-spec-v2-0-every-agent-workflow-ru	ahead=6	behind=114	files_since_merge_base=14	files_vs_main_tip=727	last=2026-10-12T19:50Z	WO-20261012-fd87 - Factory spec v2.0.0 matches main f7a891c: S1, S2 and S8 state
+feat/go-scheduler-design-one-xml-spec-per-domain-unde	ahead=11	behind=111	files_since_merge_base=42	files_vs_main_tip=640	last=2026-10-12T20:43Z	WO-20261012-5826 - merge origin/main 883ea00 (PR 36 and PR 39 landed): aggregate
+feat/herdr-stable-dies-with-a-segv-at-31-8g-and-nothi	ahead=1	behind=78	files_since_merge_base=2	files_vs_main_tip=351	last=2026-10-13T17:51Z	WO-20261013-77c0 started from origin/main
+feat/interface-agent-seat-owns-the-bearings-page-owne	ahead=37	behind=111	files_since_merge_base=119	files_vs_main_tip=718	last=2026-10-12T20:41Z	Merge origin/main (883ea00) into PR 17 (WO-20261011-e618 - Interface agent seat 
+feat/record-bus-every-slot-s-new-records-reach-the-ch	ahead=29	behind=115	files_since_merge_base=142	files_vs_main_tip=688	last=2026-10-12T20:29Z	WO-20261012-da52 - pr.opened record, aggregates only (409 h873y)
+feat/replay-fixtures-one-golden-case-per-routes-row-a	ahead=6	behind=114	files_since_merge_base=48	files_vs_main_tip=755	last=2026-10-12T20:20Z	chore: checkpoint 2026-10-12 20:20 UTC
+feat/spike-1-native-linux-qud-runs-in-wsl2-under-xvfb	ahead=0	behind=140	files_since_merge_base=0	files_vs_main_tip=1089	last=2026-10-11T12:56Z	work-order: start WO-20261010-eaa3 on feat/spike-1-native-linux-qud-runs-in-wsl2
+feat/tester-reviewer-and-merger-seats-come-up-through	ahead=22	behind=126	files_since_merge_base=82	files_vs_main_tip=1042	last=2026-10-11T21:48Z	WO-20261011-23df: review 422 zlhu2 answered: SOP-0001 Verification records what 
+feat/the-patrol-saw-eight-line-processes-dead-56-time	ahead=1	behind=80	files_since_merge_base=2	files_vs_main_tip=361	last=2026-10-13T17:33Z	WO-20261013-1e9f started from origin/main
+feat/threshold-per-role-seat-sh-renders-a-guard-schem	ahead=2	behind=120	files_since_merge_base=11	files_vs_main_tip=880	last=2026-10-12T16:41Z	WO-20261012-c41f started from origin/main
+feat/verifier-seat-a-merged-record-wakes-a-verifier-t	ahead=19	behind=111	files_since_merge_base=59	files_vs_main_tip=659	last=2026-10-12T20:41Z	WO-20261012-72a0 - merge origin/main 883ea00, aggregates only
+tmp-WO-20261012-0677	ahead=1	behind=115	files_since_merge_base=5	files_vs_main_tip=730	last=2026-10-12T18:44Z	epic WO-20261012-187e and its children cut and approved on the records branch, c
+tmp-WO-20261012-277d	ahead=1	behind=119	files_since_merge_base=5	files_vs_main_tip=846	last=2026-10-12T17:26Z	epic WO-20261012-187e and its children cut and approved on the records branch, c
+tmp-WO-20261012-3bb0	ahead=1	behind=121	files_since_merge_base=11	files_vs_main_tip=884	last=2026-10-12T15:20Z	epic WO-20261012-187e and its children cut and approved on the records branch, c
+tmp-WO-20261012-3cb1	ahead=1	behind=114	files_since_merge_base=5	files_vs_main_tip=713	last=2026-10-12T20:00Z	epic WO-20261012-187e and its children cut and approved on the records branch, c
+tmp-WO-20261012-48ab	ahead=1	behind=114	files_since_merge_base=7	files_vs_main_tip=713	last=2026-10-12T19:40Z	epic WO-20261012-ea33 and its children cut and approved on the records branch, c
+tmp-WO-20261012-5826	ahead=1	behind=116	files_since_merge_base=7	files_vs_main_tip=771	last=2026-10-12T18:39Z	epic WO-20261012-ea33 and its children cut and approved on the records branch, c
+tmp-WO-20261012-5d09	ahead=1	behind=114	files_since_merge_base=5	files_vs_main_tip=713	last=2026-10-12T20:04Z	epic WO-20261012-187e and its children cut and approved on the records branch, c
+tmp-WO-20261012-72a0	ahead=1	behind=121	files_since_merge_base=11	files_vs_main_tip=886	last=2026-10-12T15:18Z	epic WO-20261012-187e and its children cut and approved on the records branch, c
+tmp-WO-20261012-8d87	ahead=1	behind=114	files_since_merge_base=7	files_vs_main_tip=715	last=2026-10-12T19:46Z	epic WO-20261012-ea33 and its children cut and approved on the records branch, c
+tmp-WO-20261012-8f4f	ahead=1	behind=119	files_since_merge_base=5	files_vs_main_tip=846	last=2026-10-12T17:26Z	epic WO-20261010-329d and its children cut and approved on the records branch, c
+tmp-WO-20261012-8fb2	ahead=1	behind=120	files_since_merge_base=10	files_vs_main_tip=876	last=2026-10-12T16:37Z	epic WO-20261012-265d and its children cut and approved on the records branch, c
+tmp-WO-20261012-9b2c	ahead=1	behind=121	files_since_merge_base=11	files_vs_main_tip=884	last=2026-10-12T15:23Z	epic WO-20261012-187e and its children cut and approved on the records branch, c
+tmp-WO-20261012-9f5d	ahead=1	behind=104	files_since_merge_base=2	files_vs_main_tip=545	last=2026-10-12T22:31Z	WO-20261012-9f5d cut: case 17 regression after PR 36
+tmp-WO-20261012-c41f	ahead=1	behind=120	files_since_merge_base=10	files_vs_main_tip=878	last=2026-10-12T16:40Z	epic WO-20261012-265d and its children cut and approved on the records branch, c
+tmp-WO-20261012-da52	ahead=1	behind=121	files_since_merge_base=11	files_vs_main_tip=886	last=2026-10-12T15:15Z	epic WO-20261012-187e and its children cut and approved on the records branch, c
+tmp-WO-20261012-df2b	ahead=1	behind=114	files_since_merge_base=7	files_vs_main_tip=713	last=2026-10-12T19:50Z	epic WO-20261012-ea33 and its children cut and approved on the records branch, c
+tmp-WO-20261012-e27e	ahead=1	behind=114	files_since_merge_base=7	files_vs_main_tip=713	last=2026-10-12T19:43Z	epic WO-20261012-ea33 and its children cut and approved on the records branch, c
+tmp-WO-20261012-e36e	ahead=1	behind=114	files_since_merge_base=5	files_vs_main_tip=713	last=2026-10-12T19:50Z	epic WO-20261012-265d and its children cut and approved on the records branch, c
+tmp-WO-20261012-ee9c	ahead=1	behind=120	files_since_merge_base=10	files_vs_main_tip=876	last=2026-10-12T16:34Z	epic WO-20261012-265d and its children cut and approved on the records branch, c
+tmp-WO-20261012-fd87	ahead=1	behind=117	files_since_merge_base=5	files_vs_main_tip=779	last=2026-10-12T18:00Z	epic WO-20261010-329d and its children cut and approved on the records branch, c
+tmp-b800	ahead=1	behind=123	files_since_merge_base=11	files_vs_main_tip=955	last=2026-10-12T14:06Z	epic WO-20261012-187e the line runs without the architect, five children cut and

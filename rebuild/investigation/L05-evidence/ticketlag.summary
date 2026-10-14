@@ -1,0 +1,8 @@
+LAG: not-done status with an implementing commit 4
+not-done, no commit names it 117
+not-done, only cut/housekeeping commits 17
+('status', 'cancelled') 27
+('status', 'done') 98
+('status', 'draft') 23
+('status', 'ready') 115
+tickets parsed: 263
