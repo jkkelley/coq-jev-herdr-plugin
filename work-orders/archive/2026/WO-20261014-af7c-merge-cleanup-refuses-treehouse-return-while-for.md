@@ -4,7 +4,7 @@
   "slug": "merge-cleanup-refuses-treehouse-return-while-for",
   "title": "Merge cleanup refuses treehouse return while foreign processes remain in the slot (cause aj)",
   "type": "bug",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-14",
   "updated": "2026-10-14",
@@ -12,7 +12,7 @@
   "parent": "WO-20261013-16f1",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-14",
   "approval": {
     "via": "override",
     "reason": "architect ruling 00:24Z: slot return with live processes is the defect",
@@ -27,7 +27,8 @@
   "files": [
     "line/bin/merge.sh",
     "line/tests/cases/merge-cleanup-foreign.test.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261013-a18c"
 }
 ---
 
@@ -87,4 +88,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-14` - nothing shipped.
+
+- reason: Architect ruling 00:34Z: the foreign-process criterion rides a note on WO-20261013-a18c; a second ticket for a ruling is not wanted.
+- superseded by: `WO-20261013-a18c`
+
+No branch, no PR and no merge commit exist for this work order.
+
