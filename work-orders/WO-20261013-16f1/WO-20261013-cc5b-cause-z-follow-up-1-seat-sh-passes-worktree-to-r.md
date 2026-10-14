@@ -23,7 +23,11 @@
   "depends_on": [
     "WO-20261013-7af7"
   ],
-  "blocks": []
+  "blocks": [],
+  "files": [
+    "herdr/bin/seat.sh",
+    "herdr/tests/cases/37-brief-gets-worktree.test.sh"
+  ]
 }
 ---
 
