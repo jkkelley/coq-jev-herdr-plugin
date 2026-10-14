@@ -52,5 +52,10 @@
       "checkout": "treehouse slot on the feature branch"
     }
   },
-  "board_dir": "report/loop/out"
+  "board_dir": "report/loop/out",
+  "session_sync": {
+    "interval_seconds": 5,
+    "stale_minutes": 10,
+    "watcher_grace_seconds": 5
+  }
 }

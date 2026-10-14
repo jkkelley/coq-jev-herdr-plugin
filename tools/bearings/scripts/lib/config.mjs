@@ -58,6 +58,14 @@ export function validate(cfg) {
   for (const k of INT_KEYS)
     if (!Number.isInteger(cfg[k]) || cfg[k] < 0) die(`missing or non-integer key ${k}`);
   if (cfg.board_dir !== undefined && (typeof cfg.board_dir !== "string" || !cfg.board_dir)) die("board_dir must be a non-empty string");
+  if (cfg.session_sync !== undefined) {
+    const o = cfg.session_sync;
+    if (!o || typeof o !== "object" || Array.isArray(o)) die("session_sync must be an object");
+    for (const k of ["interval_seconds", "stale_minutes", "watcher_grace_seconds"])
+      if (o[k] !== undefined && (!Number.isInteger(o[k]) || o[k] < 1)) die(`session_sync.${k} must be a positive integer`);
+    if (o.context_windows !== undefined && (!o.context_windows || typeof o.context_windows !== "object" || Array.isArray(o.context_windows)))
+      die("session_sync.context_windows must be an object of model prefix to token count");
+  }
   if (cfg.owner_board !== undefined) {
     const o = cfg.owner_board;
     if (!o || typeof o !== "object" || Array.isArray(o)) die("owner_board must be an object");

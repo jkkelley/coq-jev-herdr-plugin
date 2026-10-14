@@ -18,6 +18,7 @@ import net from "node:net";
 import path from "node:path";
 import { TOOL_ROOT, argv, interpolate, loadConfig, resolveOwnerBoard, resolveTier } from "./lib/config.mjs";
 import { readHealthLine, readOwnerLane } from "./lib/owner.mjs";
+import { resolveSyncConfig, startSessionSync } from "./lib/session-sync.mjs";
 
 const ASSETS = path.join(TOOL_ROOT, "assets");
 const REPO_ROOT = path.resolve(TOOL_ROOT, "..", "..");
@@ -85,7 +86,8 @@ Served by coq/tools/bearings (scripts/server.mjs); stop one with
 | answers.jsonl | page | Every queued answer, one JSON line each, latest per id wins |
 | messages.jsonl | page and agent | The chat: owner messages and the agent's replies |
 | delivered.json | wait.mjs | Which answers and messages already reached the agent |
-| session.json | agent | Model, cwd, session id, started time and a one-line "working on" |
+| session.json | session sync (server.mjs) and agent | Session id, model, cwd, started, last active, ticket, herdr pane and context, rewritten every few seconds from the seat's transcript; "working on" is the one hand-written line |
+| wait.lock.json | wait.mjs | Pid and herdr pane of the wait loop; the page's WATCHER cell reads it |
 | server.json | server.mjs | Link, port, pid and key of the page server; the key opens the page |
 | stopped.json | server.mjs | Why the server last stopped; removed when it starts again |
 
@@ -323,6 +325,24 @@ if (has("--stop")) {
       }
     });
   };
+  // WATCHER (owner layout 2026-10-14, "MONITORING": watcher alive or not, with its pane id). wait.mjs writes wait.lock.json with its
+  // pid and HERDR_PANE_ID; the page reads it through /state. Alive = that pid exists, or it exited within watcher_grace_seconds
+  // while stopped.json is absent: bearings.sh restarts wait.mjs after every delivery with a 1 s sleep between, and without the
+  // grace the strip would flash "no watcher" at every owner message. Rejected: the herdr pane label (a socket call per poll).
+  const watcherNow = () => {
+    const w = readJson("wait.lock.json", null);
+    if (!w?.pid) return { alive: false, pid: null, pane_id: null, since: null };
+    let ageMs = Infinity;
+    try {
+      ageMs = Date.now() - fs.statSync(file("wait.lock.json")).mtimeMs;
+    } catch {
+      /* gone between the two reads */
+    }
+    const grace = (cfg.session_sync?.watcher_grace_seconds ?? 5) * 1000;
+    const up = alive(w.pid) || (ageMs < grace && !fs.existsSync(file("stopped.json")));
+    return { alive: up, pid: w.pid, pane_id: w.pane_id ?? null, since: w.at ?? null };
+  };
+  const syncStatus = { at: null, ok: null, stale_minutes: cfg.session_sync?.stale_minutes ?? 10 };
   const send = (res, code, body, type = "application/json") => {
     res.writeHead(code, { "content-type": type, "cache-control": "no-store" });
     res.end(typeof body === "string" ? body : JSON.stringify(body));
@@ -387,6 +407,8 @@ if (has("--stop")) {
         owner_problems: lane.problems,
         health: readHealthLine(OWNER_BOARD),
         session: readJson("session.json", null),
+        watcher: watcherNow(),
+        sync: syncStatus,
         answers: answersNow(),
         delivered: readJson("delivered.json", {}),
         messages: readJsonl("messages.jsonl").slice(-cfg.messages_window),
@@ -554,6 +576,8 @@ if (has("--stop")) {
             2,
           )}\n`,
         );
+      // The sync starts after session.json is written above, so its first pass sees the --session this start was given.
+      stopSync = startSessionSync({ file: file("session.json"), cfg: resolveSyncConfig(cfg.session_sync), status: syncStatus });
       console.log(JSON.stringify(out));
     });
   server.on("error", (err) => {
@@ -564,6 +588,7 @@ if (has("--stop")) {
     throw err;
   });
 
+  let stopSync = () => {};
   let lastActivity = Date.now();
   function touch() {
     lastActivity = Date.now();
@@ -589,6 +614,7 @@ if (has("--stop")) {
   async function shutdown(reason) {
     if (stopping) return;
     stopping = true;
+    stopSync();
     for (let t = 1; t <= cfg.stop_tries; t++) {
       if (await tryClose()) {
         record(reason, false);

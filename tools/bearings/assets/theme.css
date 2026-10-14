@@ -1358,6 +1358,62 @@ code {
   backdrop-filter: blur(20px) saturate(160%);
   -webkit-backdrop-filter: blur(20px) saturate(160%);
 }
+/* The fields sit in .sess-fields so the strip's own grid stays the container of the fields plus the hint line. Four columns as
+   before; Ticket takes one and Working on spans the rest of its row. The STALE pill is absolutely placed in the strip's corner
+   so it never shifts a field (BREADCRUMB 2026-10-14 UTC, page.html SESSION_FIELDS). */
+.session-strip {
+  position: relative;
+}
+.sess-fields {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 28px;
+}
+.sess-fields .field {
+  align-content: start;
+}
+.session-strip .sess-fields .field.wide {
+  grid-column: span 3;
+}
+.session-strip .sub {
+  font-size: 12px;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+.session-strip .value.bad {
+  color: var(--bad);
+}
+.session-strip .watch {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-self: start;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+.session-strip .watch i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--bad);
+}
+.session-strip .watch.on i {
+  background: var(--good);
+}
+.session-strip .stale-pill {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--on-accent);
+  background: var(--warn);
+}
 .session-strip .label {
   margin: 0;
   font-size: 12px;
@@ -1469,6 +1525,12 @@ footer {
   .session-strip {
     grid-template-columns: 1fr;
     padding: 16px 18px;
+  }
+  .sess-fields {
+    grid-template-columns: 1fr;
+  }
+  .session-strip .sess-fields .field.wide {
+    grid-column: auto;
   }
   .item {
     grid-template-columns: 1fr;
