@@ -139,9 +139,15 @@ func TestClockAdvances(t *testing.T) {
 
 // builderSpecs cover every optional field the writer knows, including the kinds
 // that alone may carry action, answer and policy.
+//
+// BREADCRUMB 2026-10-14 - WO-20261014-539a. What broke: the test.failed spec carried no SHA, and the writer refuses a gate kind
+// without --sha since WO-20261013-f298 (event.sh line 97), so TestRecordBuilderMatchesWriterShape stopped at spec 1 once the
+// world could run the writer at all. Why this fix: the spec gets a SHA like the pr.opened spec, which is what a real gate record
+// carries. Rejected: dropping the kind from the specs (the builder must stay proven against every kind the writer knows).
+// Cost: none.
 var builderSpecs = []RecordSpec{
 	{Kind: "pr.opened", Code: 100, Seat: "worker-wo-20300102-0001", Ticket: "WO-20300102-0001", SHA: "abc1234", PR: 7, Note: "pr opened"},
-	{Kind: "test.failed", Code: 422, Seat: "tester-wo-20300102-0001", Ticket: "WO-20300102-0001", Attempt: 2, To: "worker", Evidence: []string{"a/b.txt"}},
+	{Kind: "test.failed", Code: 422, Seat: "tester-wo-20300102-0001", Ticket: "WO-20300102-0001", SHA: "abc1234", Attempt: 2, To: "worker", Evidence: []string{"a/b.txt"}},
 	{Kind: "record.routed", Code: 300, Seat: "scheduler", To: "tester", Note: `routed "pr.opened" <100> & more`},
 	{Kind: "break.glass", Code: 300, Seat: "worker-wo-20300102-0001", Ticket: "WO-20300102-0001", Action: "git push", Answer: "20300102T030405Z-300-k0001"},
 	{Kind: "policy.applied", Code: 204, Seat: "scheduler", Ticket: "WO-20300102-0001", Policy: "POL-default-retry", Answer: "20300102T030406Z-423-k0002"},
@@ -202,17 +208,24 @@ func TestRecordBuilderMatchesWriterShape(t *testing.T) {
 			args = append(args, "--evidence", e)
 		}
 		cmd := exec.Command("bash", args...)
-		cmd.Env = append(os.Environ(), "TZ=UTC")
+		// BREADCRUMB 2026-10-14 - WO-20261014-539a. What broke: the writer (WO-20261012-7e13, Roadmap A1) puts a record under the
+		// state root and prints that file's path, not its id, so this test looked for <id>.json in w.Events and never found the
+		// file the writer wrote under HOME. Why this fix: COQ_STATE points the writer at the world's own state directory, so the
+		// test never writes into, or reads, the developer's real state root, and the printed path is the file to compare.
+		// Rejected: leaving HOME to decide (a host run would write into the real state root). Cost: none.
+		cmd.Env = append(os.Environ(), "TZ=UTC", "COQ_STATE="+w.StateDir)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			t.Fatalf("spec %d: the writer refused it: %v: %s", i, err, out)
 		}
-		id := strings.TrimSpace(string(out))
-		matches, _ := filepath.Glob(filepath.Join(w.Events, "*", "*", id+".json"))
-		if len(matches) != 1 {
-			t.Fatalf("spec %d: writer file for %s not found", i, id)
+		written := strings.TrimSpace(string(out))
+		if !strings.HasPrefix(written, w.StateDir+string(filepath.Separator)) {
+			t.Fatalf("spec %d: writer file %q is not under the world's state directory %s", i, written, w.StateDir)
 		}
-		fromWriter, _ := os.ReadFile(matches[0])
+		fromWriter, err := os.ReadFile(written)
+		if err != nil {
+			t.Fatalf("spec %d: writer file not readable: %v", i, err)
+		}
 		r, err := w.Records.Write(s)
 		if err != nil {
 			t.Fatal(err)

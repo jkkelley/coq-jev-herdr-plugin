@@ -4,15 +4,15 @@
   "slug": "cause-ay-scheduler-testkit-world-copies-events-b",
   "title": "Cause ay: scheduler testkit world copies events/bin/event.sh without bin/state-root.sh and config/state.json, so make -C scheduler test fails on main",
   "type": "bug",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-14",
   "updated": "2026-10-14",
   "created_at": "2026-10-14T01:43:20+00:00",
   "parent": "WO-20261013-16f1",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/cause-ay-scheduler-testkit-world-copies-events-b",
+  "pr": 181,
+  "closed": "2026-10-14",
   "approval": {
     "via": "override",
     "reason": "Architect ruling 20261014014251",
@@ -62,7 +62,8 @@ scheduler/internal/testkit/world.go worldFiles (line 22) copies events/bin/event
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* worldFiles carries bin/state-root.sh and config/state.json with a breadcrumb; make -C scheduler test passes in the pod
+- [x] `AC-H1` *(human)* worldFiles carries bin/state-root.sh and config/state.json with a breadcrumb; make -C scheduler test passes in the pod
+  - observed `2026-10-14` make -C scheduler test green in pod from pane wD3:p1VW: ok cmd/scheduler, internal/core, internal/testkit (before: 2 testkit cases failed, exit 4 bin/state-root.sh missing); make -C scheduler lint and make lint green; worldFiles carries bin/state-root.sh and config/state.json with a breadcrumb (scheduler/internal/testkit/world.go:18-35)
 
 ## Test plan
 
@@ -81,6 +82,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Retro: the ticket named world.go only, but once the writer could run, two more drifts in testkit_test.go surfaced: the writer prints the state-root file path (not an id) and writes under HOME, and gate kind test.failed needs --sha since WO-20261013-f298. Fixed in the same PR: test sets COQ_STATE to the world state dir and reads the printed path, builderSpecs test.failed gets SHA abc1234, World.CheckRecords sets COQ_STATE. Files touched beyond the ticket list: scheduler/internal/testkit/testkit_test.go. Cause class: a testkit copy of a script drifts when the script gains a dependency; world.go errors name a missing file but not a missing sourced file.
 
 ## Outcome
 

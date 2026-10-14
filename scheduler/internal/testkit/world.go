@@ -18,11 +18,22 @@ var Epoch = time.Date(2030, 1, 2, 3, 4, 5, 0, time.UTC)
 // worldFiles are the repository files a World copies, repository-relative: the
 // tables the scheduler loads and the event writer with its schema, so records the
 // builder writes into the world can be checked by the real writer.
+//
+// BREADCRUMB 2026-10-14 - WO-20261014-539a (system epic WO-20261013-16f1, cause ay). What broke: events/bin/event.sh line 40
+// sources ../bin/state-root.sh and that resolver reads config/state.json (WO-20261012-7e13, Roadmap A1), but this list
+// copied event.sh alone, so the world's writer exited 4 ("bin/state-root.sh is missing beside this events/ tree") and
+// TestRecordBuilderPassesWriterCheck and TestRecordBuilderMatchesWriterShape failed; main was red on make -C scheduler
+// test. Why this fix: copy the two files the writer needs, at their repository paths, so the copy runs the real writer
+// exactly as the repository does. Rejected: stubbing a resolver inside the world (a second answer to "where does runtime
+// data go", the thing A1 made single) and skipping the two cases (a test that passes by not running). Cost: a new file
+// event.sh sources must be added here too; the glob-or-fail loop in NewWorld names the missing one at once.
 var worldFiles = []string{
 	"factory/config/*.json",
 	"roles/*.json",
 	"events/bin/event.sh",
 	"events/schema/*.json",
+	"bin/state-root.sh",
+	"config/state.json",
 }
 
 // World is a scheduler's surroundings on a temporary directory (SPEC-16.K
@@ -113,7 +124,10 @@ func (w *World) Render(repoRel string) (string, error) {
 // of events/bin/event.sh against the copy of its schema. It returns the check's
 // output and an error when the check fails or cannot run.
 func (w *World) CheckRecords() (string, error) {
-	out, err := exec.Command("bash", filepath.Join(w.Events, "bin", "event.sh"), "check").CombinedOutput()
+	cmd := exec.Command("bash", filepath.Join(w.Events, "bin", "event.sh"), "check")
+	// COQ_STATE keeps the check on the world's own state directory, never the developer's real state root (WO-20261014-539a).
+	cmd.Env = append(os.Environ(), "COQ_STATE="+w.StateDir)
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return string(out), fmt.Errorf("event.sh check: %v: %s", err, out)
 	}
