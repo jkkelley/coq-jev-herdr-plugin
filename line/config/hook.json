@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0.0",
+  "repo": "jkkelley/coq-jev-herdr-plugin",
+  "host": "127.0.0.1",
+  "port": 9371,
+  "events": [
+    "status",
+    "check_run",
+    "pull_request"
+  ],
+  "gate_context": "coq/gate",
+  "check_run_actions": [
+    "completed"
+  ],
+  "pull_request_actions": [
+    "opened",
+    "synchronize"
+  ],
+  "seat": "hook-listener",
+  "page_to": "orchestrator",
+  "retries": 3,
+  "retry_seconds": 1,
+  "restart_limit": 3,
+  "max_body_bytes": 26214400,
+  "handler_timeout_seconds": 300,
+  "handlers": [
+    {
+      "event": "status",
+      "context": "coq/gate",
+      "run": "${repo}/ci/bin/pr-gate-hook.sh"
+    },
+    {
+      "event": "status",
+      "context": "coq/gate",
+      "run": "${repo}/ci/bin/main-gate.sh"
+    }
+  ]
+}

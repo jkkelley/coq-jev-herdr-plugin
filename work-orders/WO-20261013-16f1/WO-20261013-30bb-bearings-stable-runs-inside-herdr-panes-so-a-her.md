@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T13:20:36+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -88,6 +88,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F16): this ticket adds a supervised unit and wins over the 'exactly two' wording of WO-20261013-b296 and WO-20261013-bd4e, which now read 'every unit in the supervisor's unit list'. It is kept as written.
 
 ## Outcome
 

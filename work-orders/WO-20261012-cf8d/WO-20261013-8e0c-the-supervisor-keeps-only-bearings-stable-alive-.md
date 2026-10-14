@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T03:29:26+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -23,7 +23,9 @@
   "depends_on": [
     "WO-20261013-fd7d"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-77c0"
+  ],
   "files": [
     "herdr/bin/supervisor.sh",
     "herdr/tests/cases/*supervisor*",
@@ -87,6 +89,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F16): first on herdr/bin/supervisor.sh; WO-20261013-77c0 depends on this ticket.
 
 ## Outcome
 

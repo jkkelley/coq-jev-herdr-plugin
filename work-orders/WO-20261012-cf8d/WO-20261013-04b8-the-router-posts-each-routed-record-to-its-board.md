@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T03:29:36+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -23,9 +23,11 @@
   "depends_on": [
     "WO-20261012-0229",
     "WO-20261013-f268",
-    "WO-20261013-439d"
+    "WO-20261013-0ad7"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-612d"
+  ],
   "files": [
     "factory/bin/route.sh",
     "factory/tests/cases/*route-board*"

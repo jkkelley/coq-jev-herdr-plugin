@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T17:54:44+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -33,7 +33,8 @@
     "WO-20261013-ca12",
     "WO-20261013-af23",
     "WO-20261013-2fc5",
-    "WO-20261013-9bdd"
+    "WO-20261013-9bdd",
+    "WO-20261014-8814"
   ],
   "blocks": [],
   "files": [

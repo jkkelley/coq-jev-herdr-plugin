@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T20:19:47+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -21,9 +21,15 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261013-0bc0"
+    "WO-20261013-0bc0",
+    "WO-20261012-41a3"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-fd7d",
+    "WO-20261013-74b6",
+    "WO-20261013-7757",
+    "WO-20261014-9803"
+  ],
   "files": [
     "bin/test-cases.sh",
     "events/tests/run.sh",
@@ -33,9 +39,7 @@
     "report/loop/tests/run.sh",
     "scheduler/host/tests/run.sh",
     "tools/bearings/tests/run-tests.sh",
-    "Makefile",
-    "line/bin/reap-containers.sh",
-    "line/tests/cases/reap-containers.test.sh"
+    "Makefile"
   ]
 }
 ---
@@ -96,6 +100,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F13): split. This ticket keeps only the labels and --rm change: podman run with --rm and --label coq.run=<suite>:<epoch> at the run sites in bin/test-cases.sh, the seven suite runners and the lint run in Makefile; AC-H1 only. The reaper line/bin/reap-containers.sh and line/tests/cases/reap-containers.test.sh with AC-H2 move to a ticket of their own that depends on this one. Order on the shared runner files and Makefile: WO-20261013-9040, WO-20261012-41a3, this ticket, then WO-20261013-74b6, WO-20261013-7757 and WO-20261013-fd7d.
 
 ## Outcome
 

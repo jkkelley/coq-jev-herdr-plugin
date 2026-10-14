@@ -20,12 +20,13 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [
-    "WO-20261013-0bda"
-  ],
+  "depends_on": [],
   "blocks": [
     "WO-20261013-d127",
-    "WO-20261013-cc5b"
+    "WO-20261013-cc5b",
+    "WO-20261013-0bda",
+    "WO-20261013-a1c6",
+    "WO-20261013-0b48"
   ],
   "files": [
     "herdr/bin/seat.sh",

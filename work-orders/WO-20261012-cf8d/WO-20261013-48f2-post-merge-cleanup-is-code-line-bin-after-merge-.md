@@ -89,6 +89,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Duplicate audit ruling 2026-10-13T23:55Z (F2): WO-20261013-43ea is cancelled as superseded by this ticket, and its safety criterion is added here. AC-H2 of this ticket: line/bin/after-merge.sh never passes a path under ~/.treehouse to git worktree remove; for such a path it checks for a seat process and returns the slot with treehouse return --if-lease-holder TICKET, proved by a case with a fake treehouse that records every call and shows no git worktree remove on a slot path. Worktrees under the cache worktrees root (gate, start, pr) are removed with git worktree remove. AC-H3: make lint and make -C line test exit 0.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._

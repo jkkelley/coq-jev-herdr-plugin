@@ -1,0 +1,12 @@
+# coq-hook-page.service - the page: runs when coq-hook-listener.service or coq-hook-forward.service exhausts its restarts.
+# It posts one blocked 423 record to the orchestrator (events/bin/event.sh add --kind blocked --code 423 --seat hook-listener
+# --to orchestrator --note "<unit> failed 3 restarts"), which factory/config/routes.json already escalates to the architect and then
+# the owner page. systemd gives an OnFailure= unit MONITOR_UNIT, the failed unit's name, and hook-listener.sh page reads it.
+# It is a record and not a message to a pane: nothing here needs a pane to be alive.
+# Install once, as the owner or orchestrator: systemctl --user link <checkout>/line/units/coq-hook-page.service
+[Unit]
+Description=Coq hook page: tell the orchestrator a hook unit is down
+
+[Service]
+Type=oneshot
+ExecStart=%h/projects/coq-jev-herdr-plugin/line/bin/hook-listener.sh page

@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T23:11:14+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -20,8 +20,15 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [],
-  "blocks": []
+  "depends_on": [
+    "WO-20261013-8573",
+    "WO-20261013-7af7"
+  ],
+  "blocks": [],
+  "files": [
+    "herdr/tests/cases/11-guard-ack-nudge.test.sh",
+    "ci/pod/herdr-suite.pod.yaml"
+  ]
 }
 ---
 

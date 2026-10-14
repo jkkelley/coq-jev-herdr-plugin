@@ -1,0 +1,20 @@
+# coq-hook-listener.service - the localhost end of the webhook feed (WO-20261013-ca2a, CI gate 6).
+# Install once, as the owner or orchestrator: systemctl --user link <checkout>/line/units/coq-hook-listener.service
+# The ladder: Restart=always brings it back, and when it starts more than StartLimitBurst times inside StartLimitIntervalSec the unit
+# fails for good and OnFailure= runs coq-hook-page.service, which posts a blocked 423 to the orchestrator. StartLimitBurst must equal
+# restart_limit in line/config/hook.json (the suite checks it); the page note quotes that number.
+# The path assumes the checkout lives at ~/projects/coq-jev-herdr-plugin; link the file from the real checkout otherwise and edit ExecStart.
+[Unit]
+Description=Coq hook listener: GitHub events to records
+StartLimitIntervalSec=300
+StartLimitBurst=3
+OnFailure=coq-hook-page.service
+
+[Service]
+Type=simple
+ExecStart=%h/projects/coq-jev-herdr-plugin/line/bin/hook-listener.sh serve
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

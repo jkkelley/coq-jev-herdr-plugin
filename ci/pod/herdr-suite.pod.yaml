@@ -1,0 +1,68 @@
+# One suite case as one pod, no podman anywhere (WO-20261013-8573). The pod is the isolation the host runner got from `podman run` per case
+# (bin/test-cases.sh breadcrumb): its own /proc, HOME, /tmp and herdr sessions. Ticket 2's shared-library step (coqGate) fills the placeholders
+# and fans pods out; the proof in ci/tests/cases/01-test-image.test.sh does the same with kubectl. Placeholders (envsubst, this list only):
+#   ${COQ_IMAGE}     image ref from ci/config/images.json, e.g. ghcr.io/jkkelley/coq-test:1
+#   ${COQ_REPO_URL}  the public repository URL;  ${COQ_SHA} the commit under test (fetched by sha, so a PR head needs no branch checkout)
+#   ${COQ_SUITE}     label value, e.g. herdr;   ${COQ_CASE}  the case name, e.g. 05-recover;   ${COQ_WORKDIR}  cwd under /repo
+#   ${COQ_CMD}       the command; for herdr: bash /repo/herdr/tests/run.sh --case ${COQ_CASE}
+#
+# BREADCRUMB 2026-10-13 - WO-20261013-8573. Why each odd line is here:
+#   imagePullPolicy Always: build 2 of the lint job reused a node's cached amd64 image under the same tag after the multi-arch push and died
+#     with exec format error (Jenkinsfile). Cost: one registry round trip per pod.
+#   automountServiceAccountToken false, enableServiceLinks false, no env from secrets or configmaps: AC-H3, a suite pod holds no cluster
+#     token, no page key and no AWS profile, because the repository is public and a case runs repository code.
+#   /repo is an emptyDir filled by the init container and mounted readOnly in the case container, the same shape as `-v repo:/repo:ro` on the host.
+#     A git fetch of the sha replaces a baked-in copy: the image then does not change with every commit. Rejected: baking the repo into the image.
+#   runAsUser 1000: the host runs `--userns=keep-id` as a normal user; the cases never need root and some (git safe.directory, HOME) behave
+#     differently as root.
+#   restartPolicy Never and activeDeadlineSeconds: a failed case is evidence and must not be retried by the kubelet; a hung herdr server ends at the deadline.
+#   resources: one herdr server per pod (the 31.8G herdr death of 2026-10-13 is why cases are capped); numbers measured on the proof run, see ci/image/README.md.
+apiVersion: v1
+kind: Pod
+metadata:
+  generateName: coq-ci-
+  labels:
+    app.kubernetes.io/part-of: coq-ci
+    coq-ci/suite: "${COQ_SUITE}"
+spec:
+  restartPolicy: Never
+  activeDeadlineSeconds: 900
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  imagePullSecrets:
+    - name: ghcr-pull-secret
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+  volumes:
+    - name: repo
+      emptyDir: {}
+  initContainers:
+    - name: checkout
+      image: ${COQ_IMAGE}
+      imagePullPolicy: Always
+      command: ["bash", "-c", "set -e; git init -q /repo; cd /repo; git remote add origin \"$COQ_REPO_URL\"; git fetch -q --depth 1 origin \"$COQ_SHA\"; git checkout -q FETCH_HEAD"]
+      env:
+        - { name: HOME, value: /tmp/home }
+        - { name: COQ_REPO_URL, value: "${COQ_REPO_URL}" }
+        - { name: COQ_SHA, value: "${COQ_SHA}" }
+      volumeMounts:
+        - { name: repo, mountPath: /repo }
+  containers:
+    - name: case
+      image: ${COQ_IMAGE}
+      imagePullPolicy: Always
+      workingDir: ${COQ_WORKDIR}
+      command: ["bash", "-c", "${COQ_CMD}"]
+      env:
+        - { name: HOME, value: /tmp/home }
+        - { name: REPO_ROOT, value: /repo }
+        - { name: SHELL, value: /bin/bash }
+        - { name: COQ_TEST_IN_CONTAINER, value: "1" }
+        - { name: COQ_CASE, value: "${COQ_CASE}" }
+      resources:
+        requests: { cpu: 1000m, memory: 256Mi }
+        limits: { memory: 1Gi }
+      volumeMounts:
+        - { name: repo, mountPath: /repo, readOnly: true }
