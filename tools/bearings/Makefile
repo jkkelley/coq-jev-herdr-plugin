@@ -23,7 +23,7 @@ CONFIG ?= $(HERE)config/bearings.json
 TICKET_FLAG := $(if $(filter stable,$(TIER)),,--ticket $(TICKET))
 ARGS := $(TICKET_FLAG) --config $(CONFIG)
 
-.PHONY: help serve wait stop status url ask migrate test lint image upgrade sitrep sitrep-build sitrep-check
+.PHONY: test-sync help serve wait stop status url ask migrate test lint image upgrade sitrep sitrep-build sitrep-check
 help:
 	@sed -n '1,15p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
 serve:
@@ -54,8 +54,11 @@ test:
 	bash $(HERE)tests/run-tests.sh
 image:
 	bash $(HERE)tests/run-tests.sh --image-only
+# test-sync: only the session sync unit tests, no container (fake transcript, stubbed herdr and git).
+test-sync:
+	node --test $(HERE)tests/session-sync.test.mjs
 lint:
-	bash -n $(BIN) && node --check $(HERE)scripts/server.mjs && node --check $(HERE)scripts/wait.mjs && node --check $(HERE)scripts/reply.mjs && node --check $(HERE)scripts/lib/config.mjs && node --check $(HERE)scripts/lib/sitrep.mjs && node --check $(HERE)scripts/sitrep-check.mjs && node --check $(HERE)scripts/sitrep-build.mjs
+	bash -n $(BIN) && node --check $(HERE)scripts/server.mjs && node --check $(HERE)scripts/wait.mjs && node --check $(HERE)scripts/reply.mjs && node --check $(HERE)scripts/lib/config.mjs && node --check $(HERE)scripts/lib/sitrep.mjs && node --check $(HERE)scripts/sitrep-check.mjs && node --check $(HERE)scripts/sitrep-build.mjs && node --check $(HERE)scripts/lib/session-sync.mjs
 	bash $(HERE)tests/run-tests.sh --lint-only
 # upgrade: the stable tier always runs the main checkout. Pull main, then restart
 # stable so server.mjs changes take effect (page.html is re-read per request anyway).

@@ -20,6 +20,20 @@ const T = resolveTier(cfg, tier, val("--ticket"));
 const file = (f) => path.join(T.stateDir, f);
 const SETTLE_MS = cfg.settle_ms;
 
+// BREADCRUMB 2026-10-14 UTC - WATCHER cell of the session strip (owner layout: "MONITORING", watcher alive or not with its pane id).
+// What was missing: nothing a reader could check said a wait loop for this tier was alive, so the strip could not say so.
+// Why this fix: each wait.mjs run records its pid and HERDR_PANE_ID in <page dir>/wait.lock.json; server.mjs checks the pid on
+// every /state poll. The file is left in place when a delivery ends the run (bearings.sh starts the next run 1 s later, and the
+// server's watcher_grace_seconds bridges that gap) and removed only on STOPPED, where no further run is coming.
+// Rejected: a heartbeat file touched every second (a write per second per tier for no extra truth), and polling herdr for
+// the pane label (a socket call per page poll). Cost: a wait killed with SIGKILL leaves a lock whose dead pid reads as not alive.
+const LOCK = file("wait.lock.json");
+try {
+  fs.writeFileSync(LOCK, `${JSON.stringify({ pid: process.pid, pane_id: process.env.HERDR_PANE_ID ?? null, at: new Date().toISOString() })}\n`);
+} catch {
+  /* page dir not there yet: the watcher shows as absent, which is true until the server creates it */
+}
+
 const readJsonl = (f) => {
   let text = "";
   try {
@@ -65,6 +79,7 @@ const tick = () => {
 
   if (!fresh.length && fs.existsSync(file("stopped.json"))) {
     const s = JSON.parse(fs.readFileSync(file("stopped.json"), "utf8"));
+    fs.rmSync(LOCK, { force: true });
     console.log(`STOPPED ${s.reason}${s.forced ? " (forced)" : ""} at ${s.at} - restart the server if the page is still needed`);
     process.exit(0);
   }

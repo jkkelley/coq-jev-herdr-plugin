@@ -166,6 +166,7 @@ No absolute path, hostname or port lives in a script: the file is meant to be li
 | `config/sitrep.template.json`| the shape and sentences of a briefing                                   |
 | `standards/`                 | STD-owner-sitrep-001, STD-owner-comms-001 and the payload format        |
 | `RUNBOOK.md`                 | build, check, send and port the SITREP panel                            |
+| `scripts/lib/session-sync.mjs` | server-side timer that rewrites `session.json` from the seat's transcript (model, started, last active, ticket, herdr pane, context); `working_on` stays hand-written |
 | `scripts/lib/config.mjs`     | loads, validates and interpolates the config; resolves a tier           |
 | `assets/page.html`           | the owner's page (vendored, one null-guard breadcrumb at the list handler) |
 | `assets/theme.css`           | the owner's theme                                                       |

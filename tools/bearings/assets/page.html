@@ -142,26 +142,8 @@
       </button>
     </div>
     <div class="session-strip" id="session-strip" hidden>
-      <div class="field">
-        <span class="label">Model</span
-        ><span class="value" id="sess-model"></span>
-      </div>
-      <div class="field">
-        <span class="label">From</span
-        ><span class="value mono" id="sess-cwd"></span>
-      </div>
-      <div class="field">
-        <span class="label">Session</span
-        ><span class="value mono" id="sess-id"></span>
-      </div>
-      <div class="field">
-        <span class="label">Since</span
-        ><span class="value" id="sess-since"></span>
-      </div>
-      <div class="field wide">
-        <span class="label">Working on</span
-        ><span class="value" id="sess-working"></span>
-      </div>
+      <!-- The fields are drawn from the SESSION_FIELDS array in the script (drawSession): one place to reorder or add. -->
+      <div class="sess-fields" id="sess-fields"></div>
       <p class="session-hint" id="session-hint">
         <span
           >Busy? It waits in line and lands when the current step ends.</span
@@ -836,7 +818,18 @@
       renderTitle();
     };
 
-    // Session strip: whatever the agent last wrote to session.json, or hidden entirely.
+    // Session strip: session.json as the server's session sync keeps it (scripts/lib/session-sync.mjs), redrawn on every state
+    // change from the 2 second poll and by a 10 second ticker so the relative times move.
+    //
+    // BREADCRUMB 2026-10-14 UTC (owner: "none of this shit gets updated automatically").
+    // What broke: the strip itself already redrew on the poll; the data under it was written once at server start, so it
+    // looked live and showed a four-day-old model, ticket and start time, with FROM empty. The fix is the sync (data layer);
+    // this block makes the stale case visible instead of trusting the file: a STALE pill when session.json says stale, when
+    // last_active is older than sync.stale_minutes (default 10).
+    // Layout: unchanged from the vendored strip (Model, From, Session, Since, Working on) plus Ticket beside Working on and a
+    // watcher dot beside Since, per the architect's correction. SESSION_FIELDS is the one array to edit to reorder or add:
+    // each entry is { label, wide?, mono?, cells(ctx) -> { text, title?, tone?, sub?, dot? } }. Rejected: hardcoded markup
+    // per field (the original), where adding one meant HTML, an id and a line in drawSession.
     const shortCwd = (p) =>
       String(p || "").replace(
         /^(\/home\/[^/]+|\/Users\/[^/]+|\/root)(?=\/|$)/,
@@ -844,6 +837,75 @@
       );
     const sinceLabel = (startedIso) =>
       `${startedIso.slice(11, 16)}Z · ${relAge(Date.parse(startedIso))}`;
+    const tokLabel = (n) => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(n));
+    const SESSION_FIELDS = [
+      {
+        label: "Model",
+        f: ({ s }) => ({
+          text: s.model || "–",
+          sub:
+            s.context_pct != null
+              ? `context ${s.context_pct}%`
+              : s.context_tokens != null
+                ? `context ${tokLabel(s.context_tokens)} tokens, window n/a`
+                : "context n/a",
+        }),
+      },
+      {
+        label: "From",
+        mono: true,
+        f: ({ s }) => {
+          const p = s.from;
+          if (!p && !s.cwd) return { text: "–" };
+          return {
+            text: p ? `${p.label || "pane"} · ${p.pane_id}` : shortCwd(s.cwd),
+            title: s.cwd || "",
+            sub: p ? shortCwd(s.cwd) : "herdr pane n/a",
+          };
+        },
+      },
+      {
+        label: "Session",
+        mono: true,
+        f: ({ s }) => ({ text: (s.session || "").slice(0, 8), title: s.session || "" }),
+      },
+      {
+        label: "Since",
+        f: ({ s, w, stale }) => ({
+          text: s.started ? sinceLabel(s.started) : "–",
+          sub: s.last_active ? `active ${relAge(Date.parse(s.last_active))}` : "",
+          tone: stale ? "bad" : "",
+          dot: w
+            ? {
+                on: !!w.alive,
+                text: w.alive ? `watcher ${w.pane_id || "up"}` : "no watcher",
+                title: w.alive
+                  ? `wait loop alive, pid ${w.pid}, pane ${w.pane_id || "unknown"}`
+                  : "no wait loop is running for this page",
+              }
+            : null,
+        }),
+      },
+      {
+        label: "Ticket",
+        mono: true,
+        f: ({ s }) => ({ text: s.ticket || "–", title: s.branch || "", sub: s.ticket_title || "" }),
+      },
+      {
+        label: "Working on",
+        wide: true,
+        // Empty is shown as a muted "not set", never as a branch name (BREADCRUMB 2026-10-14 UTC, session-sync.mjs: a branch is
+        // a place, not a task; TICKET already carries it).
+        f: ({ s }) => (s.working_on ? { text: s.working_on } : { text: "not set", tone: "muted" }),
+      },
+    ];
+    const staleReason = (s) => {
+      const lim = (state.sync?.stale_minutes ?? 10) * 60_000;
+      if (s.stale) return "the seat's transcript could not be read";
+      if (s.last_active && Date.now() - Date.parse(s.last_active) > lim)
+        return `no activity for ${Math.round((Date.now() - Date.parse(s.last_active)) / 60_000)} min`;
+      return "";
+    };
     const drawSession = () => {
       const s = state.session;
       const strip = $("session-strip");
@@ -852,13 +914,33 @@
         return;
       }
       strip.hidden = false;
-      $("sess-model").textContent = s.model || "–";
-      $("sess-cwd").textContent = shortCwd(s.cwd);
-      $("sess-cwd").title = s.cwd || "";
-      $("sess-id").textContent = (s.session || "").slice(0, 8);
-      $("sess-id").title = s.session || "";
-      $("sess-since").textContent = s.started ? sinceLabel(s.started) : "–";
-      $("sess-working").textContent = s.working_on || "–";
+      const why = staleReason(s);
+      const box = $("sess-fields");
+      box.textContent = "";
+      const ctx = { s, w: state.watcher, stale: !!why };
+      for (const fd of SESSION_FIELDS) {
+        const c = fd.f(ctx);
+        const el = mk("div", "field" + (fd.wide ? " wide" : ""));
+        el.append(mk("span", "label", fd.label));
+        const v = mk("span", "value" + (fd.mono ? " mono" : "") + (c.tone ? " " + c.tone : ""), c.text);
+        if (c.title) v.title = c.title;
+        let dot = null;
+        if (c.dot) {
+          const d = mk("span", "watch " + (c.dot.on ? "on" : "off"));
+          d.append(mk("i", ""), document.createTextNode(c.dot.text));
+          d.title = c.dot.title;
+          dot = d;
+        }
+        el.append(v);
+        if (c.sub) el.append(mk("span", "sub", c.sub));
+        if (dot) el.append(dot);
+        box.append(el);
+      }
+      if (why) {
+        const pill = mk("span", "stale-pill", "STALE");
+        pill.title = why;
+        box.append(pill);
+      }
     };
 
     // Attention glow: the first time an unanswered card's id is seen, the composer warms from
@@ -1351,6 +1433,7 @@
     // Only the small label text is touched, never the card itself, so an open pick or a draft
     // in progress is never disturbed.
     setInterval(drawUndo, 250);
+    setInterval(drawSession, 10_000);
     setInterval(() => {
       const b = items()[at];
       const askedEl = b && $("bearing").querySelector(".asked");

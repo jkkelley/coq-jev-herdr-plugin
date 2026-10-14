@@ -179,6 +179,21 @@
       "minimum": 1024,
       "description": "Cap on one uploaded attachment in bytes (POST /file); the JSON body cap max_body_bytes does not apply to uploads."
     },
+    "session_sync": {
+      "type": "object",
+      "description": "The session strip's live data (scripts/lib/session-sync.mjs). Every key is optional; the module carries the defaults.",
+      "additionalProperties": false,
+      "properties": {
+        "interval_seconds": { "type": "integer", "minimum": 1, "description": "How often the server re-derives session.json from the seat's transcript." },
+        "stale_minutes": { "type": "integer", "minimum": 1, "description": "The page marks the strip stale when last_active is older than this." },
+        "watcher_grace_seconds": { "type": "integer", "minimum": 1, "description": "A wait.lock.json whose pid just exited still counts as a live watcher for this long (the loop restarts wait.mjs after each delivery)." },
+        "projects_dir": { "type": "string", "minLength": 1, "description": "Where Claude Code keeps <slug>/<session>.jsonl transcripts. May use ${HOME}." },
+        "herdr_bin": { "type": "string", "minLength": 1 },
+        "git_bin": { "type": "string", "minLength": 1 },
+        "work_orders_dir": { "type": "string", "minLength": 1, "description": "Relative to the seat's git toplevel; the ticket title is read from the work-order file there." },
+        "context_windows": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 }, "description": "Model-id prefix to context window in tokens. A model with no entry shows CONTEXT n/a, never a guess." }
+      }
+    },
     "board_dir": {
       "type": "string",
       "minLength": 1,
