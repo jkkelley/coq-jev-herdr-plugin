@@ -1,0 +1,21 @@
+# coq-hook-forward.service - the outbound feed: gh webhook forward opens the connection to GitHub and posts each event to the listener.
+# No public ingress and no third-party relay (design, Amendment 2026-10-13T20:20Z). Needs the extension once: gh extension install cli/gh-webhook
+# Install once, as the owner or orchestrator: systemctl --user link <checkout>/line/units/coq-hook-forward.service
+# Same ladder as coq-hook-listener.service: Restart=always, then OnFailure= pages. Past the ladder merge-watch reads the PR's coq/gate
+# status on its 1-minute tick, so a dropped event delays a merge by a minute and never loses it.
+[Unit]
+Description=Coq hook forward: gh webhook forward to the listener
+After=coq-hook-listener.service
+Wants=coq-hook-listener.service
+StartLimitIntervalSec=300
+StartLimitBurst=3
+OnFailure=coq-hook-page.service
+
+[Service]
+Type=simple
+ExecStart=%h/projects/coq-jev-herdr-plugin/line/bin/hook-listener.sh forward
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
