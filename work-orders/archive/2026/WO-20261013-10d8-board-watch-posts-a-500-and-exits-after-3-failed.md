@@ -4,15 +4,15 @@
   "slug": "board-watch-posts-a-500-and-exits-after-3-failed",
   "title": "Board watch posts a 500 and exits after 3 failed passes, and the patrol checks the board page age (cause ad)",
   "type": "bug",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-14",
   "created_at": "2026-10-13T22:49:18+00:00",
   "parent": "WO-20261013-16f1",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/board-watch-posts-a-500-and-exits-after-3-failed",
+  "pr": 162,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "owner P0 22:50Z via architect: board froze 6h, watch failed silently",
@@ -66,7 +66,8 @@ report/loop/loop.sh cmd_watch (line 316) logs 'pass N failed' and loops forever.
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* A watch whose collect fails 3 passes in a row posts one 500 record and exits non-zero. One failed pass followed by a pass posts nothing. The patrol flags data.json older than 2 minutes within one tick. Tests cover both.
+- [x] `AC-H1` *(human)* A watch whose collect fails 3 passes in a row posts one 500 record and exits non-zero. One failed pass followed by a pass posts nothing. The patrol flags data.json older than 2 minutes within one tick. Tests cover both.
+  - observed `2026-10-13` report/loop/tests/cases/18-watch-ladder.test.sh: 30 assertions pass from the test pane; the same case fails 16 assertions against the old loop.sh (exit 124 wanted 4). 3 failed passes in a row post one 500 to the architect and exit 4 (also under --iterations 0); fail,pass,fail,fail posts nothing; fail,fail,pass,fail,fail,fail posts one on pass 6. loop.sh age flags data.json 200s old (limit 120s, 119s is fresh), pages the orchestrator once per stale spell, re-arms when fresh; monitors.json slot 4.2.2 boardage runs it every 60s. make lint ok, report/loop suite 20 passed, herdr case 24-patrolwatch passes with the new slot.
 
 ## Test plan
 
@@ -85,6 +86,9 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Correction to the AC-H1 evidence: the new case fails 22 assertions against the old loop.sh, not 16 (counted from the red run output); the 16 is a miscount, everything else in the evidence stands.
+- `2026-10-13` Retro: the AC says flag data.json older than 2 minutes; kept literal. Known cost: data.json only moves when the floor moves, so a line idle over 2 minutes pages too (the live line moves it every few seconds in practice). The patrol check lives as loop.sh age plus monitors.json slot 4.2.2 boardage rather than in patrolwatch.sh (not in the ticket files, and that tick is a prompt skipped while the officer is busy). The test uses a stub sleep on PATH to change the world between passes, so loop.sh gained no test seam.
 
 ## Outcome
 

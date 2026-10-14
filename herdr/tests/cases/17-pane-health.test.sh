@@ -64,6 +64,19 @@ assert_match "the stuck pane is FAILED, not taken" "$out" "FAILED pane-events \\
 assert_match "the queue pane after it is still repaired" "$out" "fixed pane-queue"
 assert_eq "the open slot's job was not interrupted" "$(h pane process-info --pane "$ep" | jq -r '.result.process_info | .foreground_process_group_id != .shell_pid')" true
 n1="$(event_count note 500)"; assert_eq "one 500 record for the stuck pane" "$n1" 1
+# BREADCRUMB 2026-10-13 - WO-20261013-a146 (cause aa). What broke: main 85e91d3 failed the "repeat writes no second 500" assert below
+#   once in suite order (got 2, want 1) and passed alone and on the f31bf7d rerun; five idle-host suite runs did not reproduce it, so
+#   the signature is load. The 500 text came from monitors.sh health, whose "runs $(fg_process)" names the first foreground process
+#   of the pane, and the events pane runs `while :; do clear; event.sh tail; sleep 15; done`: that name is bash, clear, jq or sleep
+#   depending on the instant it is read, and the pane has just been restarted when this section runs, so under load the first
+#   bringup read "event.sh" and the repeat read "sleep". sl_report_500 (seat-lib.sh) dedups on the exact text, so the changed
+#   text was a new failure and wrote a second 500. Why this fix: bringup.sh now leaves the process name out of the 500 text (the
+#   FAILED line on screen keeps it), and this assert pins that the recorded text is the same on every run. The assert is
+#   deterministic, where the second-500 count only fails when the loop happens to be mid-iteration. Rejected: a longer settle
+#   before the repeat (it hides a text that is unstable on a live host too, where the supervisor repeats every 30 s) and keying
+#   sl_report_500 on the pane alone (a different failure on the same pane must still be heard). Cost: the 500 note no longer says
+#   which process held the slot.
+assert_match "the 500 note carries no process name, so a repeat has the same text" "$(jq -r 'select(.kind == "note" and .code == 500) | .note' "$EVENTS"/2*/*/*.json)" "pane-events failed: slot 2\\.1\\.1 is labelled open but pane $ep runs a job; left alone\$"
 "$BU" --worktree "$REPO" > /dev/null 2>&1
 assert_eq "a repeat inside 15 minutes writes no second 500" "$(event_count note 500)" "$n1"
 h pane rename "$ep" "2.1.1 event log tail - events" >/dev/null

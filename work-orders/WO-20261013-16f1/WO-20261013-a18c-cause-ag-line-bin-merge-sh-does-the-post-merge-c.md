@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T23:38:20+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -21,7 +21,13 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [
+    "WO-20261014-af7c"
+  ],
+  "files": [
+    "line/bin/merge.sh",
+    "line/tests/cases/merge-cleanup.test.sh"
+  ]
 }
 ---
 

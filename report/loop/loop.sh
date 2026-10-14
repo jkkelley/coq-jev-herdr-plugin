@@ -9,14 +9,18 @@
 #                                             (--in default: DIR/data.json; --out default: out_dir from config/board.json)
 #   loop.sh watch [--out DIR] [--iterations N] [--sleep S] [collect's --root --now --panes --no-panes]
 #                                             collect every watch_seconds and rewrite DIR only when the entry changed apart from
-#                                             `at` and `number`; run it in a labelled herdr pane (monitors.sh take), never detached
+#                                             `at` and `number`; run it in a labelled herdr pane (monitors.sh take), never detached;
+#                                             3 failed passes in a row post one 500 to the architect and end the watch (non-zero)
+#   loop.sh age [--out DIR] [--max S] [--now UTC]
+#                                             the page's age: DIR/data.json older than S seconds (default 120) or absent posts one 500 to
+#                                             the orchestrator per stale spell and exits 1; fresh exits 0 and re-arms the page
 # Views: loop.sh --view NAME VERB ... reads config/NAME.json instead of config/board.json. The config's `view` key names how collect
 #   derives the entry: absent is the factory board above, `blueprint` is the system design from graph/ and work-orders/
 #   (WO-20261011-ceea, lib/blueprint). Validate, render and watch are the same for every view, so a view is a config and a collect,
 #   never a second renderer.
 # Env: LOOP_CONFIG overrides the config file (and --view), LOOP_ROOT the tree collect reads, LOOP_PANES_FILE a saved herdr pane list,
 #   LOOP_LIVE_FILE a saved {prs, branches} (the tests; the board otherwise asks gh and git).
-# Exit: 0 ok, 2 usage, 3 validation, 4 io.
+# Exit: 0 ok, 1 age: the page is stale, 2 usage, 3 validation, 4 io.
 set -euo pipefail
 HERE=$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
@@ -27,7 +31,7 @@ TEMPLATE=$HERE/assets/template.html
 die() { local c=$1; shift; printf 'loop: %s\n' "$*" >&2; exit "$c"; }
 command -v jq >/dev/null || die 4 "jq is required"
 command -v python3 >/dev/null || die 4 "python3 with jsonschema is required"
-usage() { sed -n '2,19p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; exit 2; }
+usage() { sed -n '2,22p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' >&2; exit 2; }
 
 # schema_check INSTANCE SCHEMA: exit 3 with the first violation on stderr.
 schema_check() {
@@ -266,6 +270,58 @@ cmd_collect() {
   if [ -n "$out" ]; then mkdir -p "$(dirname "$out")" && mv "$t/entry.json" "$out" || die 4 "cannot write $out"; else cat "$t/entry.json"; fi
 }
 
+# --- the ladder's last rung: a 500 record, and the page's age ---
+
+# post_500 SEAT TO NOTE: one 500 note through events/bin/event.sh (the one writer, which resolves the state root), tried up to 3 times;
+# a post that fails 3 times says so on stderr and returns 4, the caller still ends its own way (never a silent drop, never a loop).
+post_500() {
+  local seat=$1 to=$2 note=$3
+  note=$(printf '%s' "$note" | tr -s ' ' | cut -c1-240)
+  for _ in 1 2 3; do
+    "$ROOT/events/bin/event.sh" add --code 500 --seat "$seat" --kind note --to "$to" --note "$note" >/dev/null 2>&1 && return 0
+  done
+  printf 'loop: could not post the 500 record to %s after 3 tries: %s\n' "$to" "$note" >&2
+  return 4
+}
+
+# cmd_age [--out DIR] [--max S] [--now UTC]
+# The one-minute check that the watch is alive: DIR/data.json (default out_dir) is older than S seconds (default 120), or absent.
+# BREADCRUMB 2026-10-13 - WO-20261013-10d8 (cause ad). What broke: the watch died quietly and the page froze for 6 hours with no
+#   one paged; the owner noticed the page, not a monitor. Why this fix: stale pages the orchestrator with one 500 record and exits 1,
+#   per stale spell (DIR/.age.json holds the latch until a fresh check clears it, so a 6 hour freeze is one record, not 360).
+#   Run it from the monitors.json slot `boardage` every 60 s. Rejected: a heartbeat file the watch touches each pass (the watch
+#   promises to leave DIR alone when nothing changed) and adding the check to patrolwatch.sh (a prompt to an agent that is skipped
+#   while the agent is busy; this is a plain check that cannot be). Cost: data.json only moves when the floor does, so a line idle for
+#   more than 2 minutes pages too; the live line moves it every few seconds, and a false page is cheaper than a frozen board.
+cmd_age() {
+  local out="" max=120 now="" now_epoch mtime age latch note
+  while [ $# -gt 0 ]; do case $1 in
+    --out) out=${2:-}; shift 2 ;;
+    --max) max=${2:-}; shift 2 ;;
+    --now) now=${2:-}; shift 2 ;;
+    *) usage ;;
+  esac; done
+  [[ $max =~ ^[0-9]+$ ]] || die 2 "--max must be whole seconds"
+  config_check || exit 3
+  [ -n "$out" ] || out=$ROOT/$(jq -er .out_dir "$CONFIG")
+  [ -n "$now" ] || now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  now_epoch=$(date -u -d "$now" +%s) || die 2 "--now must be a UTC time like 2026-10-11T14:21:00Z"
+  latch=$out/.age.json
+  mtime=$(stat -c %Y "$out/data.json" 2>/dev/null || true)
+  if [ -n "$mtime" ]; then
+    age=$((now_epoch - mtime))
+    if [ "$age" -le "$max" ]; then rm -f "$latch"; return 0; fi
+    note="the board page is stale: $out/data.json is ${age}s old (limit ${max}s), the board watch (monitors.json slot board) may be dead"
+  else
+    note="the board page is missing: $out/data.json does not exist, the board watch (monitors.json slot board) may be dead"
+  fi
+  # Already paged for this spell: say nothing more, still exit 1 so a reader of the exit code sees the page is stale.
+  [ ! -f "$latch" ] || return 1
+  post_500 board-age orchestrator "$note" || exit 4
+  mkdir -p "$out" && printf '{"paged_at":"%s"}\n' "$now" > "$latch" || die 4 "cannot write $latch"
+  return 1
+}
+
 # --- watch: keep the page current, and touch nothing when nothing changed ---
 
 # cmd_watch [--out DIR] [--iterations N] [--sleep S] [--root DIR] [--now UTC] [--panes FILE | --no-panes]
@@ -278,7 +334,7 @@ cmd_collect() {
 # half-written, herdr slow) says so on stderr, keeps the last good page, and the loop goes on; a finite run exits with the
 # last pass's status.
 cmd_watch() {
-  local out="" iterations=0 sleep_s="" pass=0 rc=0 last=0 passthrough=() cur_number t cand a b state
+  local out="" iterations=0 sleep_s="" pass=0 rc=0 last=0 fails=0 passthrough=() cur_number t cand a b state
   while [ $# -gt 0 ]; do case $1 in
     --out) out=${2:-}; shift 2 ;;
     --iterations) iterations=${2:-}; shift 2 ;;
@@ -315,6 +371,22 @@ cmd_watch() {
     else rc=$?; fi
     if [ "$rc" != 0 ]; then printf 'watch: %s pass %s failed (%s), keeping the last page\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$pass" "$rc" >&2; sed 's/^/watch:   /' "$t/err" >&2; fi
     last=$rc
+    # BREADCRUMB 2026-10-13 - WO-20261013-10d8 (cause ad). What broke: this loop logged "pass N failed" and went round again for ever;
+    #   on 2026-10-13 the board froze at 16:24Z, 3200+ passes failed with "cannot read the event records" (cmd_collect, the find | jq
+    #   pipeline) and nobody was told for 6 hours until the owner saw the page. Why this fix: the ladder every automated step climbs
+    #   (retry 3 times, then report, never fail silently): fails counts passes in a row, a good pass resets it, the third posts one 500
+    #   to the architect naming the last error and the watch ends non-zero, so the monitor pane shows a dead watch rather than a
+    #   scrolling log. Rejected: keep looping and post a 500 every N passes (3200 passes is 3200 records, or a page nobody reads) and
+    #   exit 0 after posting (a dead watch must not look like a clean stop). Cost: a transient fault that lasts 3 passes (about 90 s)
+    #   ends the watch; the supervisor restarts the slot and the page keeps its last good build meanwhile. Record: WO-20261013-10d8.
+    if [ "$rc" = 0 ]; then fails=0; else
+      fails=$((fails + 1))
+      if [ "$fails" -ge 3 ]; then
+        post_500 board-watch architect "board watch: $fails failed passes in a row (last exit $rc), the page is frozen at its last good build. Last error: $(tr '\n' ' ' < "$t/err")" || true
+        printf 'watch: %s %s failed passes in a row, 500 posted to the architect, stopping\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$fails" >&2
+        return "$rc"
+      fi
+    fi
     [ "$iterations" = 0 ] || [ "$pass" -lt "$iterations" ] || break
     sleep "${sleep_s:-$(jq -r .watch_seconds "$CONFIG")}"
   done
@@ -333,5 +405,6 @@ case $verb in
   render) cmd_render "$@" ;;
   collect) cmd_collect "$@" ;;
   watch) cmd_watch "$@" ;;
+  age) cmd_age "$@" ;;
   *) usage ;;
 esac

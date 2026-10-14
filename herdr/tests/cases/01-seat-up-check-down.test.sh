@@ -34,6 +34,14 @@ check "it is not the architect tab's fixture pane" "$([ "$tp" != "$WORLD_TEST_PA
 assert_eq "COQ_TEST_PANE rode the environment line into the agent pane" "$(h pane read "$agent" --source recent-unwrapped --lines 200 | grep -cF "COQ_TEST_PANE=$tp")" 1
 assert_eq "the tab carries the seat name" "$(h tab list --workspace "$ws" | jq -r --arg t "$tab" '.result.tabs[] | select(.tab_id == $t) | .label')" "$N"
 assert_eq "seat-1x2 builds 3 panes with SPEC-04 labels" "$(pane_labels "$ws" "$tab")" "MONITOR - $N|claude-sonnet-5-5 - high - $T worker|test - herdr - $N"
+# BREADCRUMB 2026-10-13 - WO-20261013-8573. What broke: this line read agent_status once, the instant seat.sh returned, at herdr/tests/cases/01-seat-up-check-down.test.sh:37.
+#   In a Kubernetes pod on an arm64 Raspberry Pi node (ghcr.io/jkkelley/coq-test:1) it read 'unknown' in 2 of 3 runs, because herdr had not yet
+#   classified the stub's OSC title as idle; on the amd64 host it read 'idle' in time. Why this fix: wait_until on the status for at most 15 s,
+#   the same poll the polls tickets (WO-20261013-0904) put on the brief two lines up; the assertion is unchanged, so an agent that never goes
+#   idle still fails it. Rejected: a fixed sleep (a guess, paid on every run) and skipping the line on arm64 (it is the line that proves herdr
+#   sees the agent). Cost: none when idle comes at once.
+agent_is_idle() { [ "$(h agent get "$1" | jq -r .result.agent.agent_status)" = idle ]; }
+wait_until 15 agent_is_idle "$N" || true
 assert_eq "herdr answers for the agent, idle" "$(h agent get "$N" | jq -r .result.agent.agent_status)" idle
 argv="$(h pane process-info --pane "$agent" | jq -r '[.result.process_info.foreground_processes[].argv | join(" ")] | join("; ")')"
 assert_match "the agent was started with the role's model, effort, permission mode and the rendered settings" "$argv" \

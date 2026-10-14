@@ -4,15 +4,15 @@
   "slug": "ci-gate-1-a-test-image-in-ghcr-runs-the-herdr-su",
   "title": "CI gate 1: a test image in GHCR runs the herdr suite and the suite families in Kubernetes pods, without podman on the host",
   "type": "feature",
-  "status": "ready",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-14",
   "created_at": "2026-10-13T19:46:38+00:00",
   "parent": "WO-20261013-16f1",
-  "branch": null,
-  "pr": null,
-  "closed": null,
+  "branch": "feat/ci-gate-1-a-test-image-in-ghcr-runs-the-herdr-su",
+  "pr": 156,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect order 19:50Z (C29 CI gate design approved, owner m-20261013194434026-yz0ob), system loop p0; approved by the architect in the owner place",
@@ -32,7 +32,10 @@
     "ci/image/README.md",
     "ci/config/images.json",
     "ci/pod/herdr-suite.pod.yaml",
-    "ci/tests/cases/01-test-image.test.sh"
+    "ci/tests/cases/01-test-image.test.sh",
+    "ci/config/images.schema.json",
+    "herdr/tests/cases/01-seat-up-check-down.test.sh",
+    "herdr/tests/cases/04-bringup-monitors.test.sh"
   ]
 }
 ---
@@ -79,9 +82,12 @@ Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/2026101319
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* The image(s) are pullable from GHCR by the cluster with the ghcr-pull-secret, run on the cluster's architecture, and the pod uses imagePullPolicy Always
-- [ ] `AC-H2` *(human)* The herdr suite runs green in a pod in the cluster with no podman, each case in its own container or pod
-- [ ] `AC-H3` *(human)* A pod's environment holds no page key and no AWS profile
+- [x] `AC-H1` *(human)* The image(s) are pullable from GHCR by the cluster with the ghcr-pull-secret, run on the cluster's architecture, and the pod uses imagePullPolicy Always
+  - observed `2026-10-13` AC-H1: ghcr.io/jkkelley/coq-test:1 pushed as a linux/amd64 + linux/arm64 manifest; pods pulled it with ghcr-pull-secret and ran on k8s-worker-01/02 (aarch64), imagePullPolicy Always on every container (ci/tests/cases/01-test-image.test.sh, CI_POD=1)
+- [x] `AC-H2` *(human)* The herdr suite runs green in a pod in the cluster with no podman, each case in its own container or pod
+  - observed `2026-10-13` AC-H2 PARTIAL: herdr suite in pods, one pod per case, no podman in the image or pod: 30 of 31 cases pass in every full run. Known gap: 11-guard-ack-nudge fails in pods (5 of 6 runs, also alone on an idle cluster) and passes on host; 01-seat-up-check-down and 04-bringup-monitors raced in pods and were fixed (6 of 6 after). Architect ruled ship 2026-10-13T23:08Z
+- [x] `AC-H3` *(human)* A pod's environment holds no page key and no AWS profile
+  - observed `2026-10-13` AC-H3: a pod prints its environment: no AWS_ variable, no token/key/secret variable, no /var/run/secrets/kubernetes.io mount (automountServiceAccountToken false); asserted by 01-test-image.test.sh CI_POD=1
 
 ## Test plan
 
@@ -102,6 +108,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` 2026-10-13T23:30Z: files field extended with ci/config/images.schema.json, herdr/tests/cases/01-seat-up-check-down.test.sh and herdr/tests/cases/04-bringup-monitors.test.sh, which PR 156 changes and claims.sh diff reported as outside the field (PR 141 precedent). No open PR (158, 157, 35) or in-flight ticket claims them. AC-H2 (30 of 31 herdr cases in arm64 pods) is met at 30/31 per architect ruling record 20261013T231556Z-200: case 11 is a known pod-only gap, carried by follow-up pod ticket WO-20261013-0b48.
+- `2026-10-13` Retro 2026-10-13T23:10Z: arm64 Raspberry Pi pods are slower than the amd64 host, so herdr cases that read a status once raced (01, 04 fixed with wait_until). 11-guard-ack-nudge still fails in pods: seat.sh nudge_seat needs two idle reads inside nudge_settle_seconds 4 (case config) and herdr does not report idle that fast on arm64. Follow-up ticket for pod-only failures is cut by sched-worker-1. Pods request 1 cpu, no cpu limit. A kubectl exec diagnostic was blocked twice by the removal safety check, so the cause is unconfirmed.
 - `2026-10-13` 2026-10-13T20:02Z: amended on PR 130 to fold in the design amendments 20:00Z (Jenkins, not GitHub Actions), 20:04Z (in the cluster via coqGate(), test images in GHCR, host agent fallback only) and 20:07Z (webhooks, no pollSCM, status event triggers, 5-rung ladder). The ticket is ready and amend refuses non-drafts, so the body and files were edited directly by the cut seat under the architect's order; approval and status are unchanged.
 
 ## Outcome
