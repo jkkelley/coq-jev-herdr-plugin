@@ -156,6 +156,11 @@
             "type": "string",
             "minLength": 1
           },
+          "front_door_pane_label": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Pane label for scripts/front-door.mjs (make front-door). Optional: a tier without it has no front door."
+          },
           "checkout": {
             "type": "string"
           }
@@ -172,6 +177,17 @@
             ]
           }
         ]
+      }
+    },
+    "front_door": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "bind": {
+          "type": "string",
+          "pattern": "^[0-9]{1,3}(\\.[0-9]{1,3}){3}$",
+          "description": "Fallback IPv4 for scripts/front-door.mjs when `tailscale ip -4` gives none (the box's tailnet address)."
+        }
       }
     },
     "file_max_bytes": {

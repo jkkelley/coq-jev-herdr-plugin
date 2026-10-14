@@ -4,6 +4,8 @@
 #   make serve TIER=dev TICKET=WO-...    start a tier's page in a labelled herdr pane
 #   make wait  TIER=dev TICKET=WO-...    start the wait loop pane for that tier
 #   make stop  TIER=dev TICKET=WO-...    stop the server and hand its panes back as OPEN slots
+#   make front-door TIER=stable          forward the tailnet IP to the tier's loopback port in a labelled pane, no root (stop never touches it)
+#   make front-door-stop TIER=stable     explicit stop of that forwarder; the pane becomes an OPEN slot
 #   make status / url / ask Q=file.json / migrate FROM=dir
 #   make sitrep-build TIER=stable [OUT=file]   build a SITREP payload from this repo's records (SAVE=1 keeps the queue counts for the next delta)
 #   make sitrep-check PAYLOAD=file             measure a payload against STD-owner-sitrep-001, exit 1 on a violation
@@ -23,15 +25,19 @@ CONFIG ?= $(HERE)config/bearings.json
 TICKET_FLAG := $(if $(filter stable,$(TIER)),,--ticket $(TICKET))
 ARGS := $(TICKET_FLAG) --config $(CONFIG)
 
-.PHONY: test-sync help serve wait stop status url ask migrate test lint image upgrade sitrep sitrep-build sitrep-check
+.PHONY: test-sync help serve wait stop front-door front-door-stop status url ask migrate test lint image upgrade sitrep sitrep-build sitrep-check
 help:
-	@sed -n '1,15p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
+	@sed -n '1,17p' $(firstword $(MAKEFILE_LIST)) | sed 's/^# \{0,1\}//'
 serve:
 	$(BIN) $(TIER) serve $(ARGS) $(if $(SESSION),--session $(SESSION)) $(if $(MODEL),--model $(MODEL)) $(if $(WORKING_ON),--working-on "$(WORKING_ON)")
 wait:
 	$(BIN) $(TIER) wait $(ARGS)
 stop:
 	$(BIN) $(TIER) stop $(ARGS)
+front-door:
+	$(BIN) $(TIER) front-door $(ARGS)
+front-door-stop:
+	$(BIN) $(TIER) front-door-stop $(ARGS)
 status:
 	$(BIN) $(TIER) status $(ARGS)
 url:
@@ -56,9 +62,9 @@ image:
 	bash $(HERE)tests/run-tests.sh --image-only
 # test-sync: only the session sync unit tests, no container (fake transcript, stubbed herdr and git).
 test-sync:
-	node --test $(HERE)tests/session-sync.test.mjs $(HERE)tests/host.test.mjs
+	node --test $(HERE)tests/session-sync.test.mjs $(HERE)tests/host.test.mjs $(HERE)tests/front-door.test.mjs
 lint:
-	bash -n $(BIN) && node --check $(HERE)scripts/server.mjs && node --check $(HERE)scripts/wait.mjs && node --check $(HERE)scripts/reply.mjs && node --check $(HERE)scripts/lib/config.mjs && node --check $(HERE)scripts/lib/sitrep.mjs && node --check $(HERE)scripts/sitrep-check.mjs && node --check $(HERE)scripts/sitrep-build.mjs && node --check $(HERE)scripts/lib/session-sync.mjs && node --check $(HERE)scripts/lib/host.mjs
+	bash -n $(BIN) && node --check $(HERE)scripts/server.mjs && node --check $(HERE)scripts/wait.mjs && node --check $(HERE)scripts/reply.mjs && node --check $(HERE)scripts/lib/config.mjs && node --check $(HERE)scripts/lib/sitrep.mjs && node --check $(HERE)scripts/sitrep-check.mjs && node --check $(HERE)scripts/sitrep-build.mjs && node --check $(HERE)scripts/lib/session-sync.mjs && node --check $(HERE)scripts/lib/host.mjs && node --check $(HERE)scripts/front-door.mjs
 	bash $(HERE)tests/run-tests.sh --lint-only
 # upgrade: the stable tier always runs the main checkout. Pull main, then restart
 # stable so server.mjs changes take effect (page.html is re-read per request anyway).

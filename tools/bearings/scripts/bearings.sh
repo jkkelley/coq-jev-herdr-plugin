@@ -14,6 +14,8 @@
 #   bearings.sh <tier> wait     [--ticket ID] [--config P] [--to PANE] [--no-herdr]   each wake is prompted into PANE (default COQ_SEAT_PANE, else the calling pane)
 #   bearings.sh <tier> reply    [--ticket ID] [--config P] --to <message-id> "text"
 #   bearings.sh <tier> sitrep   [--ticket ID] [--config P] --payload FILE [--to <message-id>]   check, then send as a reply; refuses on a violation
+#   bearings.sh <tier> front-door      [--ticket ID] [--config P] [--no-herdr]   TCP forwarder tailnet-IP:port -> 127.0.0.1:port in a labelled pane, no root (scripts/front-door.mjs)
+#   bearings.sh <tier> front-door-stop  [--ticket ID] [--config P]   explicit only; stop never touches it
 #   bearings.sh <tier> status   [--ticket ID] [--config P] [--json]
 #   bearings.sh <tier> url      [--ticket ID] [--config P]
 #   bearings.sh <tier> ask      [--ticket ID] [--config P] <questions.json>
@@ -30,7 +32,7 @@ die() { local code=$1; shift; printf 'bearings: %s\n' "$*" >&2; exit "$code"; }
 note() { printf 'bearings: %s\n' "$*" >&2; }
 need() { command -v "$1" >/dev/null 2>&1 || die "$EX_IO" "$1 is required and not on PATH"; }
 
-[ $# -ge 2 ] || { sed -n '2,23p' "$0" >&2; exit "$EX_USAGE"; }
+[ $# -ge 2 ] || { sed -n '2,25p' "$0" >&2; exit "$EX_USAGE"; }
 TIER=$1; VERB=$2; shift 2
 TICKET=""; CONFIG="${BEARINGS_CONFIG:-$TOOL/config/bearings.json}"; NO_HERDR=0; JSON=0; FORCE=0
 SESSION=""; MODEL=""; CWD=""; WORKING_ON=""; TO=""; JOIN=0; PAYLOAD=""
@@ -49,7 +51,7 @@ while [ $# -gt 0 ]; do
     --json) JSON=1; shift ;;
     --force) FORCE=1; shift ;;
     --join) JOIN=1; shift ;;
-    --help|-h) sed -n '2,23p' "$0" >&2; exit "$EX_OK" ;;
+    --help|-h) sed -n '2,25p' "$0" >&2; exit "$EX_OK" ;;
     --*) die "$EX_USAGE" "unknown flag $1" ;;
     *) POS+=("$1"); shift ;;
   esac
@@ -68,6 +70,7 @@ RESOLVED=$(node --input-type=module -e '
 PAGE=$(jq -r .page <<<"$RESOLVED"); DIR=$(jq -r .stateDir <<<"$RESOLVED")
 PANE_LABEL=$(jq -r .paneLabel <<<"$RESOLVED"); WAIT_LABEL=$(jq -r .waitPaneLabel <<<"$RESOLVED")
 SPLIT_DIR=$(jq -r .split.direction <<<"$RESOLVED"); SPLIT_RATIO=$(jq -r .split.ratio <<<"$RESOLVED")
+FD_LABEL=$(jq -r '.frontDoorPaneLabel // empty' <<<"$RESOLVED")
 OPEN_PREFIX=$(jq -r .openPrefix <<<"$RESOLVED")
 TICKET_ARGS=(); [ -n "$TICKET" ] && TICKET_ARGS=(--ticket "$TICKET")
 COMMON=(--tier "$TIER" "${TICKET_ARGS[@]}" --config "$CONFIG")
@@ -219,6 +222,53 @@ case $VERB in
       exec node "$HERE/wait.mjs" "${COMMON[@]}"
     else
       die "$EX_VALIDATION" "not inside herdr (HERDR_ENV unset); pass --no-herdr to run one wait in the foreground"
+    fi
+    ;;
+  front-door)
+    # BREADCRUMB 2026-10-14 UTC (PR 186 follow-up). What broke: the server listens on 127.0.0.1 only and `tailscale serve`
+    #   needs root, so the owner's phone on the tailnet could not open the stable page. Why this fix: scripts/front-door.mjs
+    #   (its header has the full reasoning) is started the way the server and wait are: in a labelled OPEN-slot pane via
+    #   pane_for, never backgrounded under a seat. Rejected: folding it into `serve`, which would restart the live stable
+    #   server (owner: stable never stops) and bind a second listener inside the page process. Cost: a third pane per tier
+    #   that uses it, and `stop` deliberately leaves it running; front-door-stop is the explicit way down.
+    [ -n "$FD_LABEL" ] || die "$EX_VALIDATION" "tier $TIER has no front_door_pane_label in $CONFIG; it has no front door"
+    FD_PID=$(jq -r '.pid // empty' "$DIR/front-door.json" 2>/dev/null || true)
+    if [ -n "$FD_PID" ] && kill -0 "$FD_PID" 2>/dev/null; then
+      die "$EX_VALIDATION" "front door already running for $PAGE: pid $FD_PID $(jq -r '"\(.bind):\(.port)"' "$DIR/front-door.json")"
+    fi
+    FD_CMD="node $HERE/front-door.mjs $(printf '%q ' "${COMMON[@]}")"
+    if in_herdr && [ "$NO_HERDR" = 0 ]; then
+      need herdr
+      pane_for "$FD_LABEL"
+      herdr pane run "$P" "$FD_CMD" >/dev/null
+      note "front door starting in pane $P ($FD_LABEL)"
+    elif [ "$NO_HERDR" = 1 ]; then
+      mkdir -p "$DIR"
+      # shellcheck disable=SC2086
+      nohup $FD_CMD >"$DIR/front-door.log" 2>&1 &
+    else
+      die "$EX_VALIDATION" "not inside herdr (HERDR_ENV unset): every bearings process needs a labelled pane; run this from a herdr pane or pass --no-herdr in a test harness"
+    fi
+    # front-door.mjs retries the bind 3 times 2 s apart, so allow it 10 s before calling it failed.
+    for _ in $(seq 1 40); do
+      FD_PID=$(jq -r '.pid // empty' "$DIR/front-door.json" 2>/dev/null || true)
+      [ -n "$FD_PID" ] && kill -0 "$FD_PID" 2>/dev/null && { jq -r '"front door up: \(.bind):\(.port) pid \(.pid)"' "$DIR/front-door.json"; exit "$EX_OK"; }
+      sleep 0.25
+    done
+    if [ -n "${P:-}" ]; then die "$EX_IO" "front door did not come up in pane $P; read it with: herdr pane read $P"; fi
+    die "$EX_IO" "front door did not come up; see $DIR/front-door.log"
+    ;;
+  front-door-stop)
+    FD_PID=$(jq -r '.pid // empty' "$DIR/front-door.json" 2>/dev/null || true)
+    [ -n "$FD_PID" ] && kill -0 "$FD_PID" 2>/dev/null || die "$EX_NOTFOUND" "no running front door for $PAGE"
+    kill -TERM "$FD_PID"
+    for _ in $(seq 1 40); do kill -0 "$FD_PID" 2>/dev/null || break; sleep 0.25; done
+    kill -0 "$FD_PID" 2>/dev/null && die "$EX_IO" "front door pid $FD_PID did not stop"
+    note "front door pid $FD_PID stopped"
+    # Hand the pane back as an OPEN slot, the way stop does for the server and wait panes; nothing is closed.
+    if [ -n "$FD_LABEL" ] && in_herdr && [ "$NO_HERDR" = 0 ] && command -v herdr >/dev/null 2>&1; then
+      p=$(pane_by_label "$FD_LABEL")
+      [ -z "$p" ] || { herdr pane rename "$p" "$OPEN_PREFIX" >/dev/null 2>&1 && note "pane $p ($FD_LABEL) is an open slot again: $OPEN_PREFIX"; }
     fi
     ;;
   rotate-key)
