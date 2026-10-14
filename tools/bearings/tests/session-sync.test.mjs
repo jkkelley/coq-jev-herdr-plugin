@@ -77,7 +77,8 @@ test("working_on written by a human is never touched; one the sync wrote follows
   const branch2 = async (bin, args) => (args?.includes("--abbrev-ref") ? "other-branch\n" : w.runner(bin, args));
   await syncOnce({ file: w.file, cfg: w.cfg, runner: branch2 });
   assert.equal(read(w.file).working_on, "hand written line");
-  assert.equal(read(w.file).ticket, "other-branch");
+  assert.equal(read(w.file).ticket, null); // other-branch carries no WO id
+  assert.equal(read(w.file).branch, "other-branch");
   fs.writeFileSync(w.file, JSON.stringify({ ...s })); // back to the auto-written value
   await syncOnce({ file: w.file, cfg: w.cfg, runner: branch2 });
   assert.equal(read(w.file).working_on, ""); // other-branch is not a WO: empty, never the branch
@@ -109,6 +110,18 @@ test("no herdr: from is null; detached HEAD: ticket falls back to the recorded b
   const s = read(w.file);
   assert.equal(s.from, null);
   assert.equal(s.ticket, "WO-20261014-abcd"); // transcript gitBranch feat/WO-20261014-abcd-thing
+});
+
+test("ticket is null on main, master and any branch without a WO id, and the branch is kept", async () => {
+  for (const b of ["main", "master", "hotfix/login", "WO-bad"]) {
+    const w = mkWorld();
+    const onBranch = async (bin, args) => (args?.includes("--abbrev-ref") ? `${b}\n` : w.runner(bin, args));
+    await syncOnce({ file: w.file, cfg: w.cfg, runner: onBranch });
+    const s = read(w.file);
+    assert.equal(s.ticket, null, b);
+    assert.equal(s.ticket_title, null, b);
+    assert.equal(s.branch, b);
+  }
 });
 
 test("missing transcript keeps old values and sets stale with checked_at once", async () => {
