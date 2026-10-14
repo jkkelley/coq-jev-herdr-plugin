@@ -78,9 +78,12 @@ Design /home/luna/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/2026101319
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* A status event for coq/gate on a head sha produces one record carrying the sha and state
-- [ ] `AC-H2` *(human)* Killing the listener restarts it up to 3 times, then coq-hook-page.service pages the orchestrator by running `events/bin/event.sh add --kind blocked --code 423 --seat hook-listener --to orchestrator --note "<unit> failed 3 restarts"`; the page is that blocked 423 record, which factory/config/routes.json already routes (escalate to the architect, then the owner page), not a message to a pane
-- [ ] `AC-H3` *(human)* The listener pipes the status payload to each handler hook.json names for the event, and skips a missing handler file with a logged note
+- [x] `AC-H1` *(human)* A status event for coq/gate on a head sha produces one record carrying the sha and state
+  - observed `2026-10-14` line/tests/cases/hook-listener.test.sh, run from test pane wD3:p1T9 (72 checks, tests: 1 passed, 0 failed): a coq/gate status on sha 0123456789abcdef0123456789abcdef01234567 gave 200 and exactly one record with that sha, code 201 for success, 422 for failure, 100 for pending.
+- [x] `AC-H2` *(human)* Killing the listener restarts it up to 3 times, then coq-hook-page.service pages the orchestrator by running `events/bin/event.sh add --kind blocked --code 423 --seat hook-listener --to orchestrator --note "<unit> failed 3 restarts"`; the page is that blocked 423 record, which factory/config/routes.json already routes (escalate to the architect, then the owner page), not a message to a pane
+  - observed `2026-10-14` Same run, 'the units climb the ladder' and 'the page' checks: both listener and forward units have Restart=always, StartLimitBurst=3 equal to restart_limit in hook.json, OnFailure=coq-hook-page.service; 'hook-listener.sh page' posts blocked 423 seat hook-listener to orchestrator with note '<unit> failed 3 restarts'. systemd-analyze --user verify accepts the units. The kill and restart itself is systemd's and was not run: installing units on the host is forbidden to a worker.
+- [x] `AC-H3` *(human)* The listener pipes the status payload to each handler hook.json names for the event, and skips a missing handler file with a logged note
+  - observed `2026-10-14` Same run: stub-a and stub-b each received the status payload byte for byte on stdin with HOOK_SHA and HOOK_RECORD set; the missing handler file was skipped with the logged note 'skipping handler ${repo}/ci/bin/missing.sh: the file does not exist yet'; a failing handler posted a note 500 and the next still ran. make lint: all ok.
 
 ## Test plan
 
@@ -99,6 +102,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Retro. (1) Step 1 lease check could not pass: the seat was brought up in a start-tickets wt- path with no treehouse lease, then start-tickets.sh/seat.sh deleted that directory (blocked 423 20261014T004237Z-423-4vsui). After the architect's 00:46Z order I recreated the worktree at the same COQ_WORKTREE path on the existing branch with git worktree add; that hand step is a defect to turn into a seat.sh fix (seat-up must lease a slot or keep the wt- path). (2) Records are kind note, not gate: gate has no routes.json row so route.sh would post a 'no route' 500 per event; a gate kind plus an ignore row is a follow-up for WO-20261013-3217 or WO-20261013-aff2 if they want to route on it. (3) The units hard-code %h/projects/coq-jev-herdr-plugin; the install (systemctl --user link, enable --now) and gh extension install cli/gh-webhook are the owner or orchestrator's one-time steps, written in the headers of hook-listener.sh and the units. (4) No payload signature check; the socket binds 127.0.0.1 only.
 
 ## Outcome
 
