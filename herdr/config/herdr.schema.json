@@ -92,7 +92,8 @@
     "nudge_wait_seconds": {
       "type": "integer",
       "minimum": 1,
-      "description": "WO-20261011-dc0d: how long seat.sh watches a freshly briefed claude seat for the compaction-guard ack line before it logs no ack and moves on (not an error)"
+      "maximum": 30,
+      "description": "WO-20261011-dc0d: how long seat.sh watches a freshly briefed claude seat for the compaction-guard ack line before it logs no ack and moves on (not an error). WO-20261013-7af7: capped at 30 because route.sh runs seat.sh inside its serial tick and reads stale after 60s, so a longer wait freezes the belt"
     },
     "nudge_settle_seconds": {
       "type": "integer",

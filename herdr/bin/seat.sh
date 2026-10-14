@@ -742,6 +742,19 @@ ensure_trust() {
 #   scrollback by an earlier agent would match, and then the idle poll still decides. The nudge text comes from
 #   roles/bin/nudge.sh (--role, --ticket, --project; one line) so render-playbook's directory owns the wording next to the
 #   brief; that file is outside the worker fence, so until it exists the inline text below is used. Record: WO-20261011-dc0d.
+# BREADCRUMB 2026-10-13 - WO-20261013-7af7, the belt frozen for 180 s per bring-up. What broke: the wait above ran the full
+#   nudge_wait_seconds (180 in herdr/config/herdr.json) because none of the 7 live Claude seats (wD3:pNF pPB pPM pQ1 pQ5 pQ8 pQB)
+#   ever printed "● ACK compaction-guard " - the guard no longer sends the memo to seats started here - and route.sh runs this
+#   script inside its serial tick (factory/bin/route.sh, the seat action). From 01:19:44Z to 01:22:51Z, bringing up
+#   reviewer-wo-20261013-1031, `route.sh status` read "stopped (last touched 173s ago, stale after 60s)" while the reviewer was
+#   already working; routing stalled for every other record, four bring-ups per ticket cost about 12 minutes, and a stale belt
+#   invites a second runner. Why this fix: the wait is a bound, not a rendezvous, so it is cut to 15 s in herdr.json and the
+#   schema now caps it at 30 (herdr.schema.json), so no later edit of the key can bring the freeze back; a seat that does print
+#   the ack does so within seconds of the brief, so it is still nudged once as before (case 11 asserts that, case 31 asserts the
+#   bring-up of a seat that prints nothing is under 60 s with the shipped value). Rejected: a background nudge (AGENTS.md
+#   herdr-first, route.sh rejects a background seat.sh), dropping the wait and nudging blind (it would interrupt a working
+#   seat, the dc0d rejection), and changing the guard (outside this repo). Cost: a guard that acks later than 15 s after the
+#   brief is not nudged here; the monitor's idle re-prompt is the backstop for that seat. Record: WO-20261013-7af7.
 nudged_set() { jq --arg at "$1" '.nudged_at = (if $at == "" then null else $at end)' "$seat_file" > "$seat_file.tmp" && mv "$seat_file.tmp" "$seat_file"; }
 agent_status() {
   sl_h pane list ${ws:+--workspace "$ws"} 2>/dev/null | jq -r --arg p "$a" 'first((.result.panes // [])[] | select(.pane_id == $p) | .agent_status) // empty'
