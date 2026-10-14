@@ -4,7 +4,7 @@
   "slug": "cause-i-two-testers-were-seated-for-one-pull-req",
   "title": "Cause i: two testers were seated for one pull request head; route.sh seats at most one gate seat per pull request and sha",
   "type": "bug",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p1",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261013-16f1",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect P0 order 2026-10-13 (owner m-20261013162710557-e4nos: always a system loop), approved by the architect in the owner place (card C29); lavish prohibited for Claude seats",
@@ -21,15 +21,12 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [
-    "WO-20261013-b839",
-    "WO-20261013-04b8",
-    "WO-20261013-e2c3"
-  ],
+  "blocks": [],
   "files": [
     "factory/bin/route.sh",
     "factory/tests/cases/21-one-gate-per-head.test.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261013-0ad7"
 }
 ---
 
@@ -90,4 +87,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: Duplicate audit F1, ruled 2026-10-13T23:55Z: the route.sh half of WO-20261013-0ad7; its case and assertion moved into WO-20261013-0ad7 by note.
+- superseded by: `WO-20261013-0ad7`
+
+No branch, no PR and no merge commit exist for this work order.
+

@@ -4,7 +4,7 @@
   "slug": "cause-p-a-gate-was-seated-twice-once-by-the-belt",
   "title": "Cause p: a gate was seated twice, once by the belt and once by hand; seat.sh refuses a second seat for the same pull request, head sha and role",
   "type": "bug",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-13",
   "updated": "2026-10-13",
@@ -12,7 +12,7 @@
   "parent": "WO-20261013-16f1",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect order 18:39Z: cause p, a gate seated twice (belt and hand); approved by the architect in the owner place",
@@ -25,7 +25,8 @@
   "files": [
     "herdr/bin/seat.sh",
     "herdr/tests/cases/33-seat-refuses-second-gate.test.sh"
-  ]
+  ],
+  "superseded_by": "WO-20261013-0ad7"
 }
 ---
 
@@ -87,4 +88,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: Duplicate audit F1, ruled 2026-10-13T23:55Z: the seat.sh half of WO-20261013-0ad7; its two criteria moved into WO-20261013-0ad7 by note, and its case name 33-seat-refuses-second-gate collided with 33-down-leaves-no-process on main.
+- superseded by: `WO-20261013-0ad7`
+
+No branch, no PR and no merge commit exist for this work order.
+

@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T16:37:41+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -22,7 +22,7 @@
   "surfaces": [],
   "depends_on": [
     "WO-20261013-7a76",
-    "WO-20261013-439d"
+    "WO-20261013-0ad7"
   ],
   "blocks": [
     "WO-20261013-bed2"
@@ -87,6 +87,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F4, F1): first in the routes.json order (WO-20261013-b839, WO-20261013-bed2, WO-20261013-612d, WO-20261013-3eac). Its dependency on the cancelled WO-20261013-439d now points at WO-20261013-0ad7.
 
 ## Outcome
 

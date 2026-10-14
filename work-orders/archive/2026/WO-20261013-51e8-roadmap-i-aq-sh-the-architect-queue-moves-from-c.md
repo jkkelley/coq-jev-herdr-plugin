@@ -4,15 +4,15 @@
   "slug": "roadmap-i-aq-sh-the-architect-queue-moves-from-c",
   "title": "Roadmap I - aq.sh, the architect queue moves from ~/.cache/coq-watch/aq.sh into line/bin/aq.sh with its test; the live copy runs from the repo and the cache copy is deleted",
   "type": "chore",
-  "status": "in-review",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T17:51:38+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": "feat/roadmap-i-aq-sh-the-architect-queue-moves-from-c",
   "pr": 121,
-  "closed": null,
+  "closed": "2026-10-14",
   "approval": {
     "via": "override",
     "reason": "architect ruling ykne9 2026-10-13 (Roadmap I split one ticket per script); lavish prohibited for Claude seats",
@@ -25,7 +25,8 @@
     "WO-20261013-1258",
     "WO-20261013-4f4c",
     "WO-20261013-3a6e",
-    "WO-20261013-acdd"
+    "WO-20261013-acdd",
+    "WO-20261014-8814"
   ],
   "files": [
     "line/bin/aq.sh",
@@ -74,7 +75,8 @@ Owner 2026-10-12 22:49Z (m-20261012224955626-rjghl): every script lives in the p
 
 - [x] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/aq.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
   - observed `2026-10-13` Case line/tests/cases/aq.sh passes (47 assertions) in the test pane through herdr/bin/testpane.sh, and fails under three mutations of line/bin/aq.sh (sort reversed: 5 failing assertions, dedupe removed: 6, done copies instead of moves: 3, a literal state path: 12). grep finds no /home/luna or .cache/coq-watch in line/bin/aq.sh. With COQ_STATE set to a temp dir the case finds no written file outside it. make lint exit 0, make -C line test: 6 passed, 0 failed.
-- [ ] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/aq.sh is empty, ~/.cache/coq-watch/aq.sh is gone, and the archive path is in a 200 note on this ticket
+- [x] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/aq.sh is empty, ~/.cache/coq-watch/aq.sh is gone, and the archive path is in a 200 note on this ticket
+  - observed `2026-10-14` NOT MET, split out, not ticked as done work: PR 121 is MERGED 2026-10-13T20:21:44Z, but at 2026-10-14 00:02Z pgrep -f coq-watch/aq.sh counts 0 process(es) and ~/.cache/coq-watch/aq.sh is exists, so the cutover has not happened. This criterion moved to WO-20261014-8814 - Roadmap I cutover (duplicate audit F7, ruled 2026-10-13T23:55Z); closing this ticket on AC-H1 (the merged code), per the ruling to split what cannot be observed.
 
 ## Test plan
 

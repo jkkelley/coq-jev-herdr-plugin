@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T14:47:00+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -21,7 +21,9 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261013-e713"
+    "WO-20261013-e713",
+    "WO-20261013-dd17",
+    "WO-20261013-e3f6"
   ],
   "blocks": [
     "WO-20261013-bd4e"
@@ -88,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F12): added acceptance criterion. AC-H2: the s-delivery section cites the SPEC-16 anchors of tickets WO-20261013-dd17 (SPEC-16.I, the board view in one pane) and WO-20261013-e3f6 (SPEC-16.B, one prompt per status change) and does not restate their rules, so one change cannot leave SPEC-16 and SPEC-17 disagreeing. Order: those SPEC-16 land tickets first, this SPEC-17 part second; the depends_on edges say so.
 
 ## Outcome
 

@@ -10,7 +10,7 @@
   "down_kill_tries": 3,
   "down_kill_wait_seconds": 2,
   "retire_poll_seconds": 10,
-  "nudge_wait_seconds": 180,
+  "nudge_wait_seconds": 15,
   "nudge_settle_seconds": 10,
   "session_wait_seconds": 10,
   "claude_sessions_dir": "~/.claude/sessions",

@@ -4,25 +4,23 @@
   "slug": "first-ticket-through-the-line-pr-11-closes-with-",
   "title": "First ticket through the line: PR 11 closes with a seat at every station and no by-hand record",
   "type": "feature",
-  "status": "draft",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-11",
-  "updated": "2026-10-11",
+  "updated": "2026-10-13",
   "created_at": "2026-10-11T14:39:42+00:00",
   "parent": "WO-20261010-329d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": null,
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261011-9639",
-    "WO-20261011-23df"
+    "WO-20261011-9639"
   ],
-  "blocks": [
-    "WO-20261011-7b8f"
-  ]
+  "blocks": [],
+  "superseded_by": null
 }
 ---
 
@@ -89,4 +87,9 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: Duplicate audit F8, ruled 2026-10-13T23:55Z: PR 11 merged on 2026-10-11T17:50:58Z and the line has since run well over a hundred pull requests; the first-ticket proof is overtaken.
+
+No branch, no PR and no merge commit exist for this work order.
+

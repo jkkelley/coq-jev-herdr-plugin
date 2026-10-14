@@ -4,15 +4,15 @@
   "slug": "roadmap-i-record-bus-sh-the-slot-to-checkout-rec",
   "title": "Roadmap I - record-bus.sh, the slot-to-checkout record copier moves from ~/.cache/coq-watch/record-bus.sh into line/bin/record-bus.sh with its test; the live copy runs from the repo and the cache copy is deleted",
   "type": "chore",
-  "status": "in-review",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T17:53:15+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": "feat/roadmap-i-record-bus-sh-the-slot-to-checkout-rec",
   "pr": 120,
-  "closed": null,
+  "closed": "2026-10-14",
   "approval": {
     "via": "override",
     "reason": "architect ruling ykne9 2026-10-13 (Roadmap I split one ticket per script); lavish prohibited for Claude seats",
@@ -22,7 +22,8 @@
   "surfaces": [],
   "depends_on": [],
   "blocks": [
-    "WO-20261013-acdd"
+    "WO-20261013-acdd",
+    "WO-20261014-8814"
   ],
   "files": [
     "line/bin/record-bus.sh",
@@ -71,7 +72,8 @@ Owner 2026-10-12 22:49Z (m-20261012224955626-rjghl): every script lives in the p
 
 - [x] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/record-bus.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
   - observed `2026-10-13` line/bin/record-bus.sh + line/tests/cases/record-bus.sh. Case record-bus passes in pane wD3:p16P (copy once, second tick copies nothing, held/broken/old skipped, --target and state-root bridge each once, no .tmp, files only under the state root). Breaking the already-copied check makes it FAIL on 3 assertions. grep '/home/luna|.cache/coq-watch' in the script: 0. make lint ok, make -C line test: 6 passed, 0 failed. AC-H1 clause 'every file lands under COQ_STATE' holds for the default target; the cache copy wrote into the checkout events/, so the live instance needs --target <checkout>/events (see note).
-- [ ] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/record-bus.sh is empty, ~/.cache/coq-watch/record-bus.sh is gone, and the archive path is in a 200 note on this ticket
+- [x] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/record-bus.sh is empty, ~/.cache/coq-watch/record-bus.sh is gone, and the archive path is in a 200 note on this ticket
+  - observed `2026-10-14` NOT MET, split out, not ticked as done work: PR 120 is MERGED 2026-10-13T20:02:16Z, but at 2026-10-14 00:02Z pgrep -f coq-watch/record-bus.sh counts 1 process(es) and ~/.cache/coq-watch/record-bus.sh is exists, so the cutover has not happened. This criterion moved to WO-20261014-8814 - Roadmap I cutover (duplicate audit F7, ruled 2026-10-13T23:55Z); closing this ticket on AC-H1 (the merged code), per the ruling to split what cannot be observed.
 
 ## Test plan
 

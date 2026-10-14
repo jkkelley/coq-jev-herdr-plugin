@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-12",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-12T22:13:42+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -25,7 +25,8 @@
     "WO-20261013-73be",
     "WO-20261013-0bda",
     "WO-20261013-50a4",
-    "WO-20261013-d0dd"
+    "WO-20261013-d0dd",
+    "WO-20261013-e880"
   ],
   "blocks": [
     "WO-20261012-da1e",
@@ -98,6 +99,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Duplicate audit ruling 2026-10-13T23:55Z (F3): the verify clause is cut out of this ticket's scope. Scope In now reads: the merger merges when review.passed and test.passed name the head sha; seat.sh reads a started ticket's branch from origin when the checkout copy has none. Verify on main is WO-20261013-48f2 now (verify-main.sh started after a merge) and WO-20261013-aff2 later (CI gate 4). AC-H1 reads: in the herdr test world a PR with both gate records is merged with no prompt to the architect (the 'and verified' is dropped). AC-H2 is unchanged.
 
 ## Outcome
 

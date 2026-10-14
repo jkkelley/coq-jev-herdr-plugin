@@ -4,15 +4,15 @@
   "slug": "nats-jetstream-is-the-producer-consumer-bus-and-",
   "title": "NATS JetStream is the producer-consumer bus and gRPC the control plane: amend SPEC-03, stand up the bus, port the queue",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-10",
-  "updated": "2026-10-10",
+  "updated": "2026-10-13",
   "created_at": "2026-10-10T19:44:33+00:00",
   "parent": "WO-20261010-329d",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "architect: sure of it; owner 2026-10-10 UTC: approval is the architect's job, Lavish is prohibited for this project",
@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [],
+  "superseded_by": "WO-20261012-be64"
 }
 ---
 
@@ -93,4 +94,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: Duplicate audit F6, ruled 2026-10-13T23:55Z: ROADMAP.md row C15 drops NATS JetStream for now (the bus is files in the state root, owned by the Go scheduler, SPEC-16 l-bus), and ROADMAP item L says this ticket is re-scoped or cancelled; WO-20261012-be64 already marks the NATS decision deferred. A cancel that follows an existing roadmap row, not a new decision.
+- superseded by: `WO-20261012-be64`
+
+No branch, no PR and no merge commit exist for this work order.
+

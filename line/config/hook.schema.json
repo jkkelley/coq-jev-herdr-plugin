@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "coq/line/config/hook.schema.json",
+  "title": "The hook listener config (WO-20261013-ca2a). Every key is required except a handler's context: a missing key is exit 3 naming the key. A handler's run holds a path and must begin with ${repo}, never a literal path.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "repo",
+    "host",
+    "port",
+    "events",
+    "gate_context",
+    "check_run_actions",
+    "pull_request_actions",
+    "seat",
+    "page_to",
+    "retries",
+    "retry_seconds",
+    "restart_limit",
+    "max_body_bytes",
+    "handler_timeout_seconds",
+    "handlers"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "repo": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9._-]+$"
+    },
+    "host": {
+      "const": "127.0.0.1"
+    },
+    "port": {
+      "type": "integer",
+      "minimum": 1024,
+      "maximum": 65535
+    },
+    "events": {
+      "type": "array",
+      "uniqueItems": true,
+      "minItems": 1,
+      "items": {
+        "enum": [
+          "status",
+          "check_run",
+          "pull_request"
+        ]
+      }
+    },
+    "gate_context": {
+      "type": "string",
+      "minLength": 1
+    },
+    "check_run_actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "pull_request_actions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "seat": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "page_to": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "retries": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3
+    },
+    "retry_seconds": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 60
+    },
+    "restart_limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10,
+      "description": "The restarts the units allow before the page; it must equal StartLimitBurst in line/units (the suite checks it) and is the number in the page note."
+    },
+    "max_body_bytes": {
+      "type": "integer",
+      "minimum": 1024,
+      "maximum": 26214400
+    },
+    "handler_timeout_seconds": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3600
+    },
+    "handlers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "event",
+          "run"
+        ],
+        "properties": {
+          "event": {
+            "enum": [
+              "status",
+              "check_run",
+              "pull_request"
+            ]
+          },
+          "context": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A status event's context or a check_run's name; absent means any."
+          },
+          "run": {
+            "type": "string",
+            "x-path": true,
+            "pattern": "^\\$\\{repo\\}/.+$"
+          }
+        }
+      }
+    }
+  }
+}

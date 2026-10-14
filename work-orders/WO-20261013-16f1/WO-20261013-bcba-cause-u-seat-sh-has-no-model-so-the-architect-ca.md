@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T20:01:46+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261013-d127"
+    "WO-20261013-d127",
+    "WO-20261013-0ad7"
   ],
   "blocks": [
     "WO-20261013-d0dd"
@@ -89,6 +90,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F15): this ticket is interim. It fixes the live tester-era line and retires with WO-20261013-3eac (CI gate 5), which retires the tester role; nobody extends it past that.
 - `2026-10-13` Overlap with WO-20261013-69df (PR 143): both change herdr/bin/seat.sh, and 69df also changes seat-lib.sh and adds herdr/tests/cases/36-seat-canonical-state-root.test.sh. Do not start this ticket until PR 143 is merged; start it from the merged main, so no two in-flight tickets share seat.sh. Case 37 here follows 69df's case 36.
 
 ## Outcome

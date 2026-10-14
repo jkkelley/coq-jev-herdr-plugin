@@ -4,15 +4,15 @@
   "slug": "verifier-seat-a-merged-record-wakes-a-verifier-t",
   "title": "Verifier seat: a merged record wakes a verifier that checks the merge on main against the ticket's criteria and posts verified or rejected, so no merge waits on the architect",
   "type": "feature",
-  "status": "ready",
+  "status": "cancelled",
   "priority": "p0",
   "created": "2026-10-12",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "created_at": "2026-10-12T14:04:48+00:00",
   "parent": "WO-20261012-187e",
   "branch": null,
   "pr": null,
-  "closed": null,
+  "closed": "2026-10-13",
   "approval": {
     "via": "override",
     "reason": "lavish is prohibited for Claude seats; owner order 2026-10-12: get the factory working without the architect or owner as a gate",
@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": []
+  "blocks": [],
+  "superseded_by": "WO-20261013-aff2"
 }
 ---
 
@@ -83,4 +84,10 @@ _Newest first. Appended only by `work-order note` - never by hand._
 
 ## Outcome
 
-_Written by `work-order done`. Empty until then._
+Cancelled `2026-10-13` - nothing shipped.
+
+- reason: Duplicate audit F3, ruled 2026-10-13T23:55Z: verify after a merge has one owner, CI gate 4 (WO-20261013-aff2). A verifier seat is the wrong shape under the owner rule that no agent is a gate; no roles/verifier.json exists. verify-main.sh stays the interim path until WO-20261013-aff2 lands.
+- superseded by: `WO-20261013-aff2`
+
+No branch, no PR and no merge commit exist for this work order.
+

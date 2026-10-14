@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T19:14:48+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -85,6 +85,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F15): this ticket is interim. It fixes the live tester-era line and retires with WO-20261013-3eac (CI gate 5), which retires the tester role; nobody extends it past that. Build it only if WO-20261013-ab25 (CI gate 2) is still unmerged after ten more tickets-only pull requests; CI gate 2 plans suites from the diff, and a tickets-only diff is the simplest plan.
 - `2026-10-13` Scope added by architect ruling 19:20Z: gate-tickets.sh runs work-order.sh reindex BEFORE reindex --check, because work-orders/INDEX.md is gitignored (.gitignore:114) and a fresh checkout is always stale until reindexed.
 
 ## Outcome

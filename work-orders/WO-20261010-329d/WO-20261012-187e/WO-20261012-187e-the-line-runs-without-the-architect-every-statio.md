@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-12",
-  "updated": "2026-10-12",
+  "updated": "2026-10-13",
   "created_at": "2026-10-12T14:04:45+00:00",
   "parent": "WO-20261010-329d",
   "branch": null,
@@ -78,6 +78,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Duplicate audit ruling 2026-10-13T23:55Z (F3): children WO-20261012-72a0 (superseded by WO-20261013-aff2) and WO-20261012-da52 (superseded by WO-20261013-1637) are cancelled, and WO-20261012-9b2c and WO-20261012-b800 are done in the archive, so this epic keeps no open child. The epic stays open because neither of its acceptance criteria has been observed (a ticket through pr.opened to verified with the architect pane closed; no routes.json row naming the architect or the owner). Its closure follows WO-20261013-aff2 and the routes rows WO-20261013-bed2 and WO-20261013-612d, and is not claimed here.
 
 ## Outcome
 

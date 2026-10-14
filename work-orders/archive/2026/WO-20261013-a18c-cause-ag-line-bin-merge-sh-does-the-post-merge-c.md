@@ -21,7 +21,9 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [],
-  "blocks": [],
+  "blocks": [
+    "WO-20261014-af7c"
+  ],
   "files": [
     "line/bin/merge.sh",
     "line/tests/cases/merge-cleanup.test.sh"
