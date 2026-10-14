@@ -5,7 +5,10 @@
   "listen_host": "127.0.0.1",
   "allowed_hosts": [
     "127.0.0.1",
-    "localhost"
+    "localhost",
+    "whoadudette-1.tailef6830.ts.net",
+    "whoadudette-1",
+    "100.122.200.108"
   ],
   "cookie_name": "bearings_key",
   "idle_minutes": 240,

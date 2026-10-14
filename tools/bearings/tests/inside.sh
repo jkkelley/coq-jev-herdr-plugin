@@ -14,6 +14,7 @@ check python3 -c 'import json,jsonschema,sys; jsonschema.validate(json.load(open
 
 # T0b session sync unit tests (tests/session-sync.test.mjs): fake transcript in, derived session.json out, atomic rewrite.
 CASE="session-sync unit tests pass (node --test)"; check node --test /skill/tests/session-sync.test.mjs
+CASE="host-header unit tests pass (node --test)"; check node --test /skill/tests/host.test.mjs
 
 # A test config: state under /work, dev tier on a small port range.
 cat > /work/config.json <<JSON
