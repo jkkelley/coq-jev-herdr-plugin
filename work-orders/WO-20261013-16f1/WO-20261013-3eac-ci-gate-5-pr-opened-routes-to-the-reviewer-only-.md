@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T19:47:04+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -22,7 +22,8 @@
   "surfaces": [],
   "depends_on": [
     "WO-20261013-3217",
-    "WO-20261013-aff2"
+    "WO-20261013-aff2",
+    "WO-20261013-612d"
   ],
   "blocks": [],
   "files": [
@@ -91,6 +92,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F4, F15): last in the routes.json order (WO-20261013-b839, WO-20261013-bed2, WO-20261013-612d, WO-20261013-3eac), so it now depends on WO-20261013-612d. Retiring the tester role also retires the interim tickets WO-20261013-4dc2, WO-20261013-0529, WO-20261013-6463 and WO-20261013-bcba; this ticket's pull request lists what it removed of them.
 - `2026-10-13` 2026-10-13T20:02Z: amended on PR 130 to fold in the design amendments 20:00Z (Jenkins, not GitHub Actions), 20:04Z (in the cluster via coqGate(), test images in GHCR, host agent fallback only) and 20:07Z (webhooks, no pollSCM, status event triggers, 5-rung ladder). The ticket is ready and amend refuses non-drafts, so the body and files were edited directly by the cut seat under the architect's order; approval and status are unchanged.
 
 ## Outcome

@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T14:46:57+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": null,
@@ -21,7 +21,8 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261013-3f2e"
+    "WO-20261013-3f2e",
+    "WO-20261013-3aea"
   ],
   "blocks": [
     "WO-20261013-7951"
@@ -89,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F12): added acceptance criterion. AC-H2: every section this ticket writes cites the SPEC-16 anchor of ticket WO-20261013-3aea (SPEC-16.C) and does not restate its rule, so one change cannot leave SPEC-16 and SPEC-17 disagreeing. Order: the SPEC-16 land ticket WO-20261013-3aea first, this SPEC-17 part second; the depends_on edge says so.
 
 ## Outcome
 

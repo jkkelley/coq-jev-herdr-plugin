@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T01:24:13+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -20,12 +20,13 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [
-    "WO-20261013-0bda"
-  ],
+  "depends_on": [],
   "blocks": [
     "WO-20261013-d127",
-    "WO-20261013-cc5b"
+    "WO-20261013-cc5b",
+    "WO-20261013-0bda",
+    "WO-20261013-a1c6",
+    "WO-20261013-0b48"
   ],
   "files": [
     "herdr/bin/seat.sh",

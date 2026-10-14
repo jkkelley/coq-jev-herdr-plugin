@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T20:02:21+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -24,7 +24,9 @@
     "WO-20261013-2298",
     "WO-20261013-6463"
   ],
-  "blocks": [],
+  "blocks": [
+    "WO-20261013-3217"
+  ],
   "files": [
     "line/bin/merge.sh",
     "line/tests/cases/merge-fence.sh"

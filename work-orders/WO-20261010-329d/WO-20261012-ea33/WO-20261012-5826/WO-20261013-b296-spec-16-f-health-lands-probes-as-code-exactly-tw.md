@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T03:25:05+00:00",
   "parent": "WO-20261012-5826",
   "branch": null,
@@ -24,7 +24,8 @@
     "WO-20261013-fe37"
   ],
   "blocks": [
-    "WO-20261012-be64"
+    "WO-20261012-be64",
+    "WO-20261013-bd4e"
   ],
   "files": [
     "specs/scheduler/SPEC-16.F-health-supervision.xml",
@@ -88,6 +89,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F16): WO-20261013-30bb wins. The wording 'exactly two supervised units' becomes 'every unit in the supervisor's unit list': the scheduler binary, the interim bash belt, and bearings stable as its own systemd user unit (WO-20261013-30bb). Scope In and the f-supervisor text read that way; no count is stated in the spec, so adding a unit never makes the spec wrong.
 - `2026-10-13` Note (ruling zi4u6): specs/scheduler/bin/check.sh in the test plan lands with WO-20261013-fc47, which this ticket follows through its depends_on chain; a tester that finds it missing has a branch older than fc47 on main and posts test.failed naming that, never a pass.
 
 ## Outcome

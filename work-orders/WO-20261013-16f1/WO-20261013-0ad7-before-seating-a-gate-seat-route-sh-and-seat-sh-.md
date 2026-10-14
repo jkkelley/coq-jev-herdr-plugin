@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T23:22:59+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -20,8 +20,15 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [],
-  "blocks": [],
+  "depends_on": [
+    "WO-20261013-e2c3",
+    "WO-20261013-0bda"
+  ],
+  "blocks": [
+    "WO-20261013-04b8",
+    "WO-20261013-b839",
+    "WO-20261013-bcba"
+  ],
   "files": [
     "factory/bin/route.sh",
     "herdr/bin/seat.sh",
@@ -83,6 +90,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-13` Duplicate audit ruling 2026-10-13T23:55Z (F1): WO-20261013-439d and WO-20261013-8c6a are cancelled as superseded by this ticket; their cases move here. Case 1, factory/tests/cases/21-one-gate-per-head.test.sh (route.sh half): a second pr.opened for the same head seats no second gate seat, the drop writes one note naming the live seat, and a new head seats one. Case 2, the seat.sh half in herdr/tests/cases (number past 36, because 33 on main is 33-down-leaves-no-process; the old name 33-seat-refuses-second-gate collides): a second seat for the same pr, sha and role exits 3 naming the first; a tester for a new sha and a reviewer for the same sha are still seated. Both cases are required, so AC-H1 is proved by the route.sh case and the seat.sh case together. Order: this ticket depends on WO-20261013-e2c3 (in flight on route.sh), not the reverse.
 
 ## Outcome
 

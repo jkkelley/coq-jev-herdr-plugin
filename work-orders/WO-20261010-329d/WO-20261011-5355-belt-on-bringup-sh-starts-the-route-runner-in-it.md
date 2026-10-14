@@ -7,7 +7,7 @@
   "status": "draft",
   "priority": "p0",
   "created": "2026-10-11",
-  "updated": "2026-10-11",
+  "updated": "2026-10-13",
   "created_at": "2026-10-11T14:39:40+00:00",
   "parent": "WO-20261010-329d",
   "branch": null,
@@ -17,8 +17,7 @@
   "evidence": null,
   "surfaces": [],
   "depends_on": [
-    "WO-20261011-38c7",
-    "WO-20261011-23df"
+    "WO-20261011-38c7"
   ],
   "blocks": []
 }
@@ -40,20 +39,20 @@
 
 ## Problem
 
-Until the runner is part of bring-up the belt depends on someone starting it, and seats come up into a factory where records do not move (WFL-bringup is proposed, not real)
+Narrowed by the duplicate audit (F8), 2026-10-13T23:55Z. The first half is built: herdr/bin/bringup.sh slots 2.2.2 and 2.2.3 start the route runner and the flow watch (breadcrumb at bringup.sh:80-85 names this ticket). What remains is the second half: herdr/bin/seat.sh has no check of the belt state file, so a seat comes up into a factory where records do not move.
 
 ## Scope
 
 **In**
 
-- herdr/bin/bringup.sh starts factory/bin/route.sh in a labelled pane (TOOL - route runner) in the monitors grid after the monitor seat and before worker seats
 - herdr/bin/seat.sh --check and bring-up refuse when the belt state file is stale, naming the pane to start
-- WFL-bringup node to locked; RUN-bringup runbook updated; the board shows the belt running
 
 **Out - non-goals**
 
+- bringup.sh starting the route runner (built)
 - an orchestrator agent seat (the orchestrator is the runner applying the table; roles/orchestrator.json stays for the day a model is needed in that position)
 - NATS
+- the scheduler's belt-held rule (SPEC-16); if that rule covers a stale belt, cancel this ticket instead
 
 ## Degrees of freedom
 
@@ -61,10 +60,7 @@ Until the runner is part of bring-up the belt depends on someone starting it, an
 
 ## Acceptance criteria
 
-- [ ] `AC-H1` *(human)* bringup.sh brings the runner pane up and records seat.up for it; the board's belt turns green
-- [ ] `AC-H2` *(human)* with the runner pane killed, seat.sh --check fails naming the belt and bring-up of a worker refuses
-- [ ] `AC-H3` *(human)* a record written by event.sh on main wakes a real seat end to end with no human command between
-- [ ] `AC-H4` *(human)* RUN-bringup names the runner step and WFL-bringup is locked with defined_in RUN-bringup
+- [ ] `AC-H1` *(human)* with the runner pane killed, seat.sh --check fails naming the belt and bring-up of a worker refuses
 
 ## Test plan
 

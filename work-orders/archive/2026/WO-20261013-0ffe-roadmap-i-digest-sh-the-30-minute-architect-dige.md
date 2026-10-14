@@ -4,15 +4,15 @@
   "slug": "roadmap-i-digest-sh-the-30-minute-architect-dige",
   "title": "Roadmap I - digest.sh, the 30-minute architect digest moves from ~/.cache/coq-watch/digest.sh into line/bin/digest.sh with its test; the live copy runs from the repo and the cache copy is deleted",
   "type": "chore",
-  "status": "in-review",
+  "status": "done",
   "priority": "p0",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T17:52:41+00:00",
   "parent": "WO-20261012-cf8d",
   "branch": "feat/roadmap-i-digest-sh-the-30-minute-architect-dige",
   "pr": 119,
-  "closed": null,
+  "closed": "2026-10-14",
   "approval": {
     "via": "override",
     "reason": "architect ruling ykne9 2026-10-13 (Roadmap I split one ticket per script); lavish prohibited for Claude seats",
@@ -22,7 +22,8 @@
   "surfaces": [],
   "depends_on": [],
   "blocks": [
-    "WO-20261013-acdd"
+    "WO-20261013-acdd",
+    "WO-20261014-8814"
   ],
   "files": [
     "line/bin/digest.sh",
@@ -71,7 +72,8 @@ Owner 2026-10-12 22:49Z (m-20261012224955626-rjghl): every script lives in the p
 
 - [x] `AC-H1` *(human)* the case passes and fails when the behaviour it names is broken; grep finds no /home/luna or .cache/coq-watch in line/bin/digest.sh; with COQ_STATE set to a temp dir every file the script writes lands under it; make lint and make -C line test pass
   - observed `2026-10-13` make lint exit 0; make -C line test: 6 passed, 0 failed from test pane wD3:p16Q, digest case 18 checks ok; with the window filter broken the case fails 5 checks; grep of /home/luna and .cache/coq-watch in line/bin/digest.sh: 0 each; the case asserts the state root holds only records and run/digest.last
-- [ ] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/digest.sh is empty, ~/.cache/coq-watch/digest.sh is gone, and the archive path is in a 200 note on this ticket
+- [x] `AC-H2` *(human)* after the merge: pgrep -f coq-watch/digest.sh is empty, ~/.cache/coq-watch/digest.sh is gone, and the archive path is in a 200 note on this ticket
+  - observed `2026-10-14` NOT MET, split out, not ticked as done work: PR 119 is MERGED 2026-10-13T19:46:38Z, but at 2026-10-14 00:02Z pgrep -f coq-watch/digest.sh counts 1 process(es) and ~/.cache/coq-watch/digest.sh is exists, so the cutover has not happened. This criterion moved to WO-20261014-8814 - Roadmap I cutover (duplicate audit F7, ruled 2026-10-13T23:55Z); closing this ticket on AC-H1 (the merged code), per the ruling to split what cannot be observed.
 
 ## Test plan
 

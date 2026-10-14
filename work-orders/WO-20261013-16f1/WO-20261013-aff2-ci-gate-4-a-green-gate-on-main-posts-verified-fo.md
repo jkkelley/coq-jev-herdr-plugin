@@ -92,6 +92,7 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-13` Duplicate audit ruling 2026-10-13T23:55Z (F3): verify after a merge has one owner, this ticket (CI gate 4), and WO-20261012-72a0 (verifier seat) is cancelled as superseded by it. Until this ticket lands, line/bin/verify-main.sh stays the interim path, started by WO-20261013-48f2; removing verify-main.sh is the follow-up named in Out. The owner rule that no agent is a gate (the title of WO-20261012-cf8d) makes a verifier seat the wrong shape.
 - `2026-10-13` 2026-10-13T20:02Z: amended on PR 130 to fold in the design amendments 20:00Z (Jenkins, not GitHub Actions), 20:04Z (in the cluster via coqGate(), test images in GHCR, host agent fallback only) and 20:07Z (webhooks, no pollSCM, status event triggers, 5-rung ladder). The ticket is ready and amend refuses non-drafts, so the body and files were edited directly by the cut seat under the architect's order; approval and status are unchanged.
 
 ## Outcome

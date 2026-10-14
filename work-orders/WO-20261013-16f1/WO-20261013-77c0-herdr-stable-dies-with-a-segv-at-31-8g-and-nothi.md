@@ -7,7 +7,7 @@
   "status": "ready",
   "priority": "p1",
   "created": "2026-10-13",
-  "updated": "2026-10-13",
+  "updated": "2026-10-14",
   "created_at": "2026-10-13T13:20:30+00:00",
   "parent": "WO-20261013-16f1",
   "branch": null,
@@ -20,7 +20,9 @@
   },
   "evidence": null,
   "surfaces": [],
-  "depends_on": [],
+  "depends_on": [
+    "WO-20261013-8e0c"
+  ],
   "blocks": [],
   "files": [
     "herdr/systemd/herdr-stable.service.in",
@@ -92,6 +94,8 @@ _none_
 ## Notes
 
 _Newest first. Appended only by `work-order note` - never by hand._
+
+- `2026-10-14` Duplicate audit ruling 2026-10-13T23:55Z (F16): narrowed. Scope In is now only: a memory ceiling on herdr-stable (MemoryHigh below the WSL limit) with the crash capture copied to the state root at each restart; herdr agent start --resume by pane session id with the model and permission mode the seat had; the design note that reads the dump. The restart-order bullet (bearings, belt, watches, orchestrator and architect) is dropped, because the supervisor from WO-20261012-b800 already starts those processes in a fixed order through bringup.sh --apply; the order is not re-built here. WO-20261013-30bb owns moving bearings stable out of herdr. Order: this ticket depends on WO-20261013-8e0c, because both edit herdr/bin/supervisor.sh.
 
 ## Outcome
 
