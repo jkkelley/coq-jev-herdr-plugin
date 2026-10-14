@@ -18,7 +18,7 @@ for h in $(git -C "$CLONE" log -60 --format=%h "$REF"); do
     *"Cause "*|*"cause "*|*"Main is red"*|*"Pod fix"*|*"Belt frozen"*) cat=cause-or-main-red-fix;;
     *"Sweep"*|*"Duplicate-work audit"*|*"cancelled, superseded"*) cat=housekeeping;;
     *"SPEC-16"*|*"SPEC-17"*) cat=spec;;
-    *) cat=other-line-change;;
+    *) cat="other-line-change";;
   esac
   [ "$kind" = code ] || cat=-
   printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$h" "$when" "$nf" "$add" "$tadd" "$kind" "$cat" "${subj:0:150}"

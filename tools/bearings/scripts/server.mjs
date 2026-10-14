@@ -17,6 +17,7 @@ import http from "node:http";
 import net from "node:net";
 import path from "node:path";
 import { TOOL_ROOT, argv, interpolate, loadConfig, resolveOwnerBoard, resolveTier } from "./lib/config.mjs";
+import { hostAllowed } from "./lib/host.mjs";
 import { readHealthLine, readOwnerLane } from "./lib/owner.mjs";
 import { resolveSyncConfig, startSessionSync } from "./lib/session-sync.mjs";
 
@@ -353,7 +354,8 @@ if (has("--stop")) {
     const url = new URL(req.url, "http://localhost");
     const port = server.address().port;
     const host = req.headers.host || "";
-    if (!cfg.allowed_hosts.some((h) => host === `${h}:${port}`))
+    // Host match lives in lib/host.mjs (with the breadcrumb): an allowed name, with or without the server port.
+    if (!hostAllowed(host, cfg.allowed_hosts, port))
       return send(res, 403, { error: "bad host" });
     const cookieKey = cookieRe.exec(req.headers.cookie || "")?.[1];
     const keyed = url.searchParams.get("key") === KEY || cookieKey === KEY;
