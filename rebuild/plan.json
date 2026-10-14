@@ -1,0 +1,72 @@
+[
+  {
+    "id": "R-01",
+    "t": "Investigation",
+    "who": "Workflow script, 20 Sonnet investigators, one Opus merge seat at the end",
+    "gate": true,
+    "owner": false
+  },
+  {
+    "id": "R-02",
+    "t": "Close lens",
+    "who": "Owner and architect, one inventory row at a time",
+    "gate": true,
+    "owner": true
+  },
+  {
+    "id": "R-03",
+    "t": "Design",
+    "who": "Spec-author seat writes the design, a separate review seat runs the no-cog test",
+    "gate": true,
+    "owner": false
+  },
+  {
+    "id": "R-04",
+    "t": "Land main",
+    "who": "Landing seats, one per branch group, working from the R-02 decisions",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "R-05",
+    "t": "Control plane",
+    "who": "Build seats cutting from design nodes, the control plane itself runs as code",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "R-06",
+    "t": "Seats as ephemeral workers",
+    "who": "Build seats, with the seat contract written as glue code",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "R-07",
+    "t": "herdr demoted to a window",
+    "who": "Build seats removing every scheduling and storage use of herdr",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "R-08",
+    "t": "Single state store and owner surface",
+    "who": "Build seats moving state into one store and pointing bearings at it",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "R-09",
+    "t": "Line proves itself",
+    "who": "The line itself, with seats only as the workers of the tickets it runs",
+    "gate": false,
+    "owner": false
+  },
+  {
+    "id": "R-10",
+    "t": "Bootstrap",
+    "who": "The same line, run against a second repository",
+    "gate": false,
+    "owner": false
+  }
+]
