@@ -118,8 +118,8 @@
     <node id="N-12" name="Stall timer" group="G2" status="specified">
       <input>lease record plus heartbeat records plus stall tick</input>
       <output>stall record (run killed, lease revoked, reason) when no heartbeat within the stall bound</output>
-      <volume-ref href="nodes/N-12/spec.xml#N-12" kind="node-spec" lines="308"/>
-      <volume-ref href="nodes/N-12/record.schema.json" kind="record-schema" lines="121"/>
+      <volume-ref href="nodes/N-12/spec.xml#N-12" kind="node-spec" lines="309"/>
+      <volume-ref href="nodes/N-12/record.schema.json" kind="record-schema" lines="122"/>
     </node>
     <node id="N-13" name="Seat layer render" group="G3" status="specified">
       <input>dispatch record (role, repo, build-mode state)</input>

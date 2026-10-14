@@ -170,12 +170,12 @@
     </status-code>
     <status-code id="code-423" value="423" name="blocked" lamp="amber" actor="system">
       <meaning>Blocked or held: a lease is held by another, a merge hold stands, a card is held, a run ended blocked with a terminal reason, a promotion or a Drive publish needs set-up; the work waits on a named condition with a bound.</meaning>
-      <acts>system: N-11 by terminal reason (success, error_max_turns, error_max_budget_usd, error_during_execution, error_max_structured_output_retries, killed_deadline, killed_stall, killed_lease_lost, killed_by_record, crashed, no_result, schema_invalid, output_rejected, seat_blocked); owner at a second 423 on the same key, on a prompt.parked long-lived seat (one card), on a stable promotion, on Drive auth and on other-repository rows.</acts>
+      <acts>system: N-11 by terminal reason (success, error_max_turns, error_max_budget_usd, error_during_execution, error_max_structured_output_retries, killed_deadline, killed_stall, killed_lease_lost, killed_by_record, crashed, no_result, schema_invalid, output_rejected, seat_blocked); owner at a second 423 on the same key, on a prompt.parked long-lived seat that no standing answer covers (one card; a model-limit prompt of a role with a ruled model is answered by the system and is no card), on a stable promotion, on Drive auth and on other-repository rows.</acts>
       <emitter node="N-02 N-05">lease.refused held, backup.busy</emitter>
       <emitter node="N-09 N-10 N-15">merge.held, merge.hold, seat.result outcome blocked</emitter>
       <emitter node="N-20 N-21 N-22 N-23 N-26">jenkins.blocked, namespace.blocked, image.blocked, plan.blocked, main.plan.blocked</emitter>
       <emitter node="N-28 N-33 N-42 N-47 N-48 N-49">card.held, ledger.row blocked, controls.held, publish blocked (Drive not authorised), promotion blocked (stable), disposition blocked (other repository)</emitter>
-      <emitter node="N-12">prompt.parked (a long-lived seat parked on an interactive prompt; system card via N-28, re-carded every 900 s)</emitter>
+      <emitter node="N-12">prompt.parked (a long-lived seat parked on an interactive prompt; a model-limit prompt is answered by N-42 with the role model, else system card via N-28, re-carded every 900 s)</emitter>
       <emitter node="N-45 N-47 N-50">cleanup.run failed after 3, drive.copy blocked (Drive not authorised), pr.close and branch.delete failed after 3 or harvest-late</emitter>
     </status-code>
     <status-code id="code-429" value="429" name="no-capacity" lamp="amber" actor="system">

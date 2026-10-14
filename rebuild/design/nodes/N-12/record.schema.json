@@ -55,6 +55,7 @@
         "session_id": { "type": "string" },
         "rule": { "type": "string", "description": "the id of the matching prompt-rules.json rule, or unmatched" },
         "action": { "enum": ["card", "answer", "down"] },
+        "answer_model": { "type": "string", "description": "for rule model-limit with action answer: the model read from roles/ROLE.json key model for the seat's runtime; absent when the action is card" },
         "message": { "type": "string" },
         "blocked_since": { "$ref": "#/$defs/at" },
         "detected_at": { "$ref": "#/$defs/at" },

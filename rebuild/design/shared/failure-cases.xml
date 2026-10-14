@@ -42,12 +42,12 @@
     </failure-case>
 
     <failure-case id="prompt-parked" title="A long-lived seat is parked on an interactive prompt" nodes="N-12 N-28 N-42 N-41">
-      <symptom>The architect or orchestrator sits on a blocking prompt (a model-limit choice, a permission or trust dialog) with herdr reporting its agent status blocked and its transcript not moving; on 2026-10-14 06:46Z to 08:46Z the architect sat two hours on a model-limit choice and nothing noticed.</symptom>
+      <symptom>The architect or orchestrator sits on a blocking prompt (a model-limit choice, a permission or trust dialog) with herdr reporting its agent status blocked and its transcript not moving; on 2026-10-14 06:46Z to 08:46Z the architect sat two hours on a model-limit choice and nothing noticed; it was answered by switching to Opus 5.5, its ruled model, which is the precedent for the standing answer.</symptom>
       <detected-by>N-12 on the stall tick (stall.tick_seconds 15): herdr's agent status event blocked plus a transcript older than stall.prompt_park_seconds 30; never from pane text or a model (principles.xml#probes-not-opinions). Detection is within 45 s and the card within 60 s.</detected-by>
-      <response>N-12 writes prompt.parked 423 with the matching rule of scheduler/config/prompt-rules.json; model-limit and every unmatched prompt route to one card to the owner via N-28, re-carded every 900 s while parked; a prompt class with an owner-ruled standing answer is answered by N-42 control.action, never by N-12.</response>
+      <response>N-12 writes prompt.parked 423 with the matching rule of scheduler/config/prompt-rules.json. A model-limit prompt is auto-answered by the standing rule model-limit (architect ruling 2026-10-14 ~09:10Z): N-42 control.action switches the seat to its role's ruled model (roles/ROLE.json model, architects Opus, workers and the orchestrator Sonnet), never an option that spends extra credits; the owner is not carded. A card goes to the owner via N-28 only when the role has no ruled model, the ruled model is not offered, the only way forward spends extra credits, the prompt class has no standing answer or the message is unmatched; it is re-carded every 900 s while parked. N-12 never sends the answer.</response>
       <records>prompt.parked 423, prompt.cleared 200, then card and card.done.</records>
-      <owner-sees>One card naming the seat, how long it has been parked and the prompt; nothing when the park clears inside the confirm window.</owner-sees>
-      <never>No nudge, no keystroke from N-12, no pane read, no model asked what the prompt says, no model choice taken by the system on the owner's behalf.</never>
+      <owner-sees>Nothing for a model-limit prompt of a role with a ruled model, the line answers it and the seat resumes; one card naming the seat, how long it has been parked and the prompt when no standing answer applies; nothing when the park clears inside the confirm window.</owner-sees>
+      <never>No nudge, no keystroke from N-12, no pane read, no model asked what the prompt says, no model choice outside the role's ruled model, and no option that spends extra credits, taken by the system on the owner's behalf.</never>
       <source>nodes/N-12/spec.xml#prompt-parked; owner rule 2026-10-13 02:01Z (no agent sits idle for more than one minute).</source>
     </failure-case>
 
