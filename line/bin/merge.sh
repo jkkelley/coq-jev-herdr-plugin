@@ -11,7 +11,11 @@
 #
 # Outcomes and exit codes (--all exits 0 unless a gh call failed for good or the merge hold is on when the pass starts; a held or a conflicting
 # pull request is a normal state in a pass):
-#   merged           0  squash-merged; exactly one merged 200 posted, sha = the merge commit, pr, ticket, to merger
+#   merged           0  squash-merged; exactly one merged 200 posted, sha = the merge commit, pr, ticket, to merger. Then the cleanup, in this
+#                       order: git push origin --delete BRANCH, treehouse return of the slot leased to the ticket (only when no live process
+#                       but this script's is in it), git branch -D BRANCH from a detached HEAD. No checkout of main, no work-order.sh cleanup.
+#                       A step that fails after three attempts, or a slot left leased for a foreign process, is named on the line and in ONE
+#                       blocked 423 to the orchestrator; the exit stays 0, the merge stands (see post_merge_clean)
 #   already-merged   0  the pull request is already merged; nothing posted, nothing merged
 #   held             3  nothing is merged or posted: no review.passed 201, or the 201s name an older head, or gate.sh heads_match
 #                       holds, or the pull request is closed, or its title names no ticket
@@ -175,16 +179,16 @@ merge_sha() { # merge_sha PR: the merge commit of a merged pull request (waits f
     nap "$n"; n=$((n + 1))
   done
 }
-post_merged() { # post_merged PR TICKET HEAD MERGE_SHA: merged 200 once
+post_merged() { # post_merged PR TICKET HEAD MERGE_SHA: merged 200 once; MERGED_DETAIL is the words for the outcome line (do_pr says it, after the cleanup)
   if jq -e --arg t "$2" --argjson pr "$1" 'any(.[]; .kind == "merged" and .code == 200 and .ticket == $t and .pr == $pr)' <<<"$(log_all)" >/dev/null 2>&1; then
-    say "$1" "$2" merged "merged 200 already posted; merge commit ${4:0:12}"; return 0
+    MERGED_DETAIL="merged 200 already posted; merge commit ${4:0:12}"; return 0
   fi
   if ! post --code 200 --kind merged --to merger --ticket "$2" --pr "$1" --sha "$4" --note "squash-merged PR $1 at head ${3:0:12}, merge commit ${4:0:12}"; then
     printf 'merge: PR %s IS MERGED (merge commit %s) but merged 200 could not be posted: %s\n  post it again: events/bin/event.sh add --seat %s --code 200 --kind merged --to merger --ticket %s --pr %s --sha %s\n' \
       "$1" "$4" "$GH_ERR" "$SEAT" "$2" "$1" "$4" >&2
     GH_ERR="PR merged as $4 but merged 200 was not posted"; fail_io "$1" "$2" "post"; return 4
   fi
-  say "$1" "$2" merged "merge commit ${4:0:12}, head ${3:0:12}"; return 0
+  MERGED_DETAIL="merge commit ${4:0:12}, head ${3:0:12}"; return 0
 }
 post_conflict() { # post_conflict PR TICKET HEAD
   if jq -e --arg t "$2" --argjson pr "$1" --arg h "$3" 'any(.[]; .kind == "merge.conflict" and .code == 409 and .ticket == $t and .pr == $pr and .sha == $h)' <<<"$(log_all)" >/dev/null 2>&1; then
@@ -195,11 +199,131 @@ post_conflict() { # post_conflict PR TICKET HEAD
   say "$1" "$2" conflict "merge.conflict 409 posted to the worker lane for head ${3:0:12}"; return 5
 }
 
+# ---- the post-merge cleanup (WO-20261013-a18c, cause ag) ----
+# retry_cmd CMD...: up to RETRIES attempts with the same backoff as gh; 0 when one worked, else GH_ERR holds the tail of the last stderr
+retry_cmd() {
+  local n=1 rc
+  while :; do
+    "$@" >/dev/null 2>"$ERRF"; rc=$?; GH_ERR=$(tail -c 300 "$ERRF" | tr '\n' ' ')
+    [ "$rc" -ne 0 ] || return 0
+    [ "$n" -ge "$RETRIES" ] && return "$rc"
+    nap "$n"; n=$((n + 1))
+  done
+}
+# safe_branch BRANCH: 0 when BRANCH may be deleted; never the default branch, main, master, HEAD, or a name git refuses
+safe_branch() {
+  local def; def=$(git -C "$GIT_REPO" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null); def=${def#origin/}
+  case $1 in main|master|HEAD|"$def") return 1;; esac
+  git -C "$GIT_REPO" check-ref-format --branch "$1" >/dev/null 2>&1
+}
+# delete_remote BRANCH: 0 when origin no longer has the branch (a branch already gone counts; ls-remote --exit-code answers 2 for no match)
+delete_remote() {
+  git -C "$GIT_REPO" push origin --delete "$1" && return 0
+  git -C "$GIT_REPO" ls-remote --exit-code --heads origin "refs/heads/$1" >/dev/null 2>&1; [ $? -eq 2 ]
+}
+# delete_local BRANCH: from a detached HEAD; when --repo's own HEAD is the branch it is detached first (the branch is merged), main is never checked out
+delete_local() {
+  git -C "$GIT_REPO" show-ref --verify --quiet "refs/heads/$1" || return 0
+  if [ "$(git -C "$GIT_REPO" symbolic-ref -q HEAD)" = "refs/heads/$1" ]; then git -C "$GIT_REPO" switch -q --detach || return 1; fi
+  git -C "$GIT_REPO" branch -D "$1"
+}
+# own_pids: this script and everything under it, space padded; the processes treehouse lists for a slot are the seat's, never these
+own_pids() { ps -eo pid=,ppid= 2>/dev/null | awk -v root=$$ '{p[$1]=$2} END {for (i in p) {j=i; while (j+0 > 1 && j != root) j=p[j]; if (j == root) printf " %s", i} printf " "}'; }
+th_status() { # TH_OUT = treehouse status --json, retried; 0 when it parsed as a list
+  local n=1
+  while :; do
+    TH_OUT=$(treehouse status --json 2>"$ERRF"); GH_ERR=$(tail -c 300 "$ERRF" | tr '\n' ' ')
+    jq -e 'type == "array"' <<<"$TH_OUT" >/dev/null 2>&1 && return 0
+    [ "$n" -lt "$RETRIES" ] || return 1
+    nap "$n"; n=$((n + 1))
+  done
+}
+# pid_alive PID: 0 when PID is a running process (a zombie is not)
+pid_alive() { kill -0 "$1" 2>/dev/null && [ "$(ps -o stat= -p "$1" 2>/dev/null | cut -c1)" != Z ]; }
+# idle_spare PID SLOTPATH: 0 when PID is a `claude bg-spare` or `claude bg-pty-host` whose cwd is in the slot, an idle Claude spare
+# (architect ruling 2026-10-14 00:34Z): it belongs to no seat, so it is reaped and never counted as a foreign process. Any other claude,
+# or a spare with its cwd elsewhere, is not one.
+idle_spare() {
+  local cmd; cmd=$(tr '\0' ' ' < "/proc/$1/cmdline" 2>/dev/null) || return 1
+  [[ $cmd =~ (^|[\ /])claude\ (bg-spare|bg-pty-host)( |$) ]] || return 1
+  case "$(readlink "/proc/$1/cwd" 2>/dev/null)/" in "$2"/*) return 0;; esac
+  return 1
+}
+# reap PID: SIGTERM, up to two seconds for it to go, then SIGKILL; 0 when it is gone
+reap() {
+  local tries=20; kill "$1" 2>/dev/null
+  while [ "$tries" -gt 0 ]; do pid_alive "$1" || return 0; sleep 0.1; tries=$((tries - 1)); done
+  kill -9 "$1" 2>/dev/null; sleep 0.1; ! pid_alive "$1"
+}
+# return_slot TICKET: gives back the slot leased to TICKET. Sets SLOT_NOTE. Returns 0 when it is back or there was none, 1 when treehouse failed,
+# 3 when it was refused: a live process that is not this script's and is not an idle Claude spare is in the slot, or this script's own
+# directory is (treehouse return --force ends every process there, the ruling of the architect 2026-10-14 00:30Z and the pane lost to it in
+# WO-20261011-36d7). Idle Claude spares in the slot are reaped first and named in SLOT_NOTE.
+return_slot() {
+  local row path name pid nm live="" nlive=0 reaped=0 own cwd_in=0 g
+  command -v treehouse >/dev/null || { GH_ERR="treehouse is not on PATH"; SLOT_NOTE="slot not checked"; return 1; }
+  th_status || { SLOT_NOTE="slot not checked"; return 1; }
+  row=$(jq -c --arg t "$1" '[.[] | select(.lease_holder == $t)] | last // empty' <<<"$TH_OUT")
+  [ -n "$row" ] || { SLOT_NOTE="no slot is leased to $1"; return 0; }
+  path=$(jq -r '.path // empty' <<<"$row"); name=$(jq -r '.name // "?"' <<<"$row")
+  [ -n "$path" ] || { GH_ERR="treehouse lists the slot with no path"; SLOT_NOTE="slot $name not returned"; return 1; }
+  own=$(own_pids)
+  while IFS=$'\t' read -r pid nm; do
+    [[ $pid =~ ^[0-9]+$ ]] && pid_alive "$pid" || continue   # a pid that has exited is not a process
+    case "$own" in *" $pid "*) continue;; esac
+    if idle_spare "$pid" "$path" && reap "$pid"; then reaped=$((reaped + 1)); continue; fi
+    nlive=$((nlive + 1)); [ "$nlive" -gt 6 ] || live="$live $pid $nm;"   # the 423 note holds 240 characters: name the first six
+  done < <(jq -r '(.processes // [])[] | [.pid, .name] | @tsv' <<<"$row")
+  for g in "$PWD" "$GIT_REPO"; do case "$g/" in "$path"/*) cwd_in=1;; esac; done
+  if [ -n "$live" ]; then GH_ERR="processes not belonging to the downed seat:${live%;}$([ "$nlive" -le 6 ] || printf ' and %s more' $((nlive - 6)))"; SLOT_NOTE="slot $name left leased"; return 3; fi
+  if [ "$cwd_in" = 1 ]; then GH_ERR="merge.sh working directory or --repo is inside it"; SLOT_NOTE="slot $name left leased"; return 3; fi
+  retry_cmd treehouse return "$path" --if-lease-holder "$1" --force || { SLOT_NOTE="slot $name not returned"; return 1; }
+  th_status && jq -e --arg t "$1" 'any(.[]; .lease_holder == $t)' <<<"$TH_OUT" >/dev/null 2>&1 \
+    && { GH_ERR="treehouse return exited 0 but slot $name is still leased to $1"; SLOT_NOTE="slot $name not returned"; return 1; }
+  SLOT_NOTE="slot $name returned"; [ "$reaped" = 0 ] || SLOT_NOTE="$SLOT_NOTE after reaping $reaped idle claude spare(s)"; return 0
+}
+# post_merge_clean PR TICKET BRANCH: after the squash merge, in this order: the remote branch, the slot, the local branch. Each step is
+# retried; a step that fails or is refused does not stop the next, and ONE blocked 423 to the orchestrator names every one that did.
+# Sets CLEAN_DETAIL, the words appended to the merged line. The merge stands whatever happens here: exit stays 0.
+#
+# BREADCRUMB 2026-10-14 - WO-20261013-a18c, cause ag. What broke: after PR 136 merged, the merger ran work-order.sh cleanup, which
+#   checks out main, and failed "cannot check out main" because main is checked out in another worktree (record vn435); the branch and
+#   the slot were left for hand cleanup and the treehouse pool filled with leased slots. Why this fix: the merge is code (this file) and
+#   so is its aftermath; git push origin --delete, git branch -D from a detached HEAD and treehouse return need no checkout at all, so
+#   nothing here can hit that refusal, and merge.sh never calls work-order.sh cleanup. The slot is returned only when treehouse lists no
+#   live process in it besides this script's own (architect ruling 2026-10-14 00:30Z): `treehouse return --force` ends every process in
+#   the slot, it killed the architect's test pane twice (WO-20261011-36d7), so a foreign process leaves the slot leased and the 423
+#   names it for the orchestrator, who owns agent health. Order is remote, slot, local: the slot's checkout may hold the branch, and
+#   `git branch -D` refuses a branch checked out in a worktree, so the slot goes first. Rejected: --force without the check (the two
+#   kills), waiting for the process to exit (a merge pass must not block on a seat) and ending it from here (it is somebody's shell).
+#   Never deleted: the default branch, main, master. Cost: a branch whose slot cannot be returned stays local until the slot is; the 423
+#   says so. Tests: line/tests/cases/merge-cleanup.test.sh. Not here: the gate, start and pr worktrees under the cache (WO-20261013-43ea).
+post_merge_clean() {
+  local br=$3 ok=() bad=() note
+  CLEAN_DETAIL=""
+  if [ -z "$br" ]; then CLEAN_DETAIL="; cleanup skipped: gh gave no head branch"; return 0; fi
+  if ! safe_branch "$br"; then CLEAN_DETAIL="; cleanup skipped: refuses to delete branch $br"; return 0; fi
+  if retry_cmd delete_remote "$br"; then ok+=("remote branch deleted"); else bad+=("remote branch $br: ${GH_ERR}"); fi
+  return_slot "$2"; case $? in
+    0) ok+=("$SLOT_NOTE");;
+    *) bad+=("$SLOT_NOTE: ${GH_ERR}");;
+  esac
+  if retry_cmd delete_local "$br"; then ok+=("local branch deleted"); else bad+=("local branch $br: ${GH_ERR}"); fi
+  CLEAN_DETAIL="; cleanup: $(IFS=,; printf '%s' "${ok[*]}" | sed 's/,/, /g')"
+  [ "${#bad[@]}" -gt 0 ] || return 0
+  CLEAN_DETAIL="$CLEAN_DETAIL; NOT DONE: $(printf '%s | ' "${bad[@]}" | sed 's/ | $//')"
+  note="merge.sh merged PR $1 but cleanup is not done: $(printf '%s | ' "${bad[@]}" | sed 's/ | $//')"; note=${note:0:240}
+  post --code 423 --kind blocked --to orchestrator --ticket "$2" --pr "$1" --note "$note" \
+    || printf 'merge: the blocked 423 for the cleanup of PR %s could not be posted: %s\n' "$1" "$GH_ERR" >&2
+  return 0
+}
+
 do_pr() { # do_pr PR
-  local pr=$1 view state title head mergeable ticket review rid rsha rc paths n=1 out mstate
-  gh_retry pr view "$pr" --json number,state,title,headRefOid,mergeable || { fail_io "$pr" "" "gh pr view"; return 4; }
+  local pr=$1 view state title head branch mergeable ticket review rid rsha rc paths n=1 out mstate
+  gh_retry pr view "$pr" --json number,state,title,headRefOid,headRefName,mergeable || { fail_io "$pr" "" "gh pr view"; return 4; }
   view=$GH_OUT
   state=$(jq -r '.state // empty' <<<"$view" 2>/dev/null); title=$(jq -r '.title // empty' <<<"$view"); head=$(jq -r '.headRefOid // empty' <<<"$view")
+  branch=$(jq -r '.headRefName // empty' <<<"$view")
   mergeable=$(jq -r '.mergeable // "UNKNOWN"' <<<"$view")
   [[ $title =~ ^(WO-[0-9]{8}-[0-9a-f]{4}) ]] && ticket=${BASH_REMATCH[1]} || ticket=""
   case $state in
@@ -247,7 +371,9 @@ do_pr() { # do_pr PR
     nap "$n"; n=$((n + 1))
   done
   merge_sha "$pr" || { fail_io "$pr" "$ticket" "gh pr view for the merge commit"; return 4; }
-  post_merged "$pr" "$ticket" "$head" "$MERGE_SHA"
+  post_merged "$pr" "$ticket" "$head" "$MERGE_SHA" || return $?
+  post_merge_clean "$pr" "$ticket" "$branch"
+  say "$pr" "$ticket" merged "$MERGED_DETAIL$CLEAN_DETAIL"; return 0
 }
 
 # a hold on merges: nothing is merged and no gh call is made (--all names no pull request, so its line says PR 0)
