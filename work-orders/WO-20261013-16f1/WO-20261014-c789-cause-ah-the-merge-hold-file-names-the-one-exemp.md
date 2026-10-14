@@ -87,6 +87,8 @@ _none_
 
 _Newest first. Appended only by `work-order note` - never by hand._
 
+- `2026-10-14` Architect 00:24Z (87ca5) adds a criterion: merge.sh matches test.passed and review.passed on the head sha whatever their order; a review posted before the test must not hold the merge.
+
 ## Outcome
 
 _Written by `work-order done`. Empty until then._
