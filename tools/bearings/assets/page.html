@@ -894,7 +894,9 @@
       {
         label: "Working on",
         wide: true,
-        f: ({ s }) => ({ text: s.working_on || "–" }),
+        // Empty is shown as a muted "not set", never as a branch name (BREADCRUMB 2026-10-14 UTC, session-sync.mjs: a branch is
+        // a place, not a task; TICKET already carries it).
+        f: ({ s }) => (s.working_on ? { text: s.working_on } : { text: "not set", tone: "muted" }),
       },
     ];
     const staleReason = (s) => {

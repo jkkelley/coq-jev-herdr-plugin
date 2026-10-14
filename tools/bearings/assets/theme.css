@@ -1381,6 +1381,9 @@ code {
   color: var(--ink-3);
   overflow-wrap: anywhere;
 }
+.session-strip .value.muted {
+  color: var(--ink-3);
+}
 .session-strip .value.bad {
   color: var(--bad);
 }

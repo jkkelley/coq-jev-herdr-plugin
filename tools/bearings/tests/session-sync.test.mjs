@@ -54,7 +54,7 @@ test("derives model, started, last_active, cwd, ticket, pane and context from th
   assert.equal(s.context_tokens, 1502);
   assert.equal(s.context_pct, 15);
   assert.equal(s.stale, false);
-  assert.equal(s.working_on, "rebuild/x-WO-20261014-abcd-thing");
+  assert.equal(s.working_on, ""); // no work-order file found: never the branch name
   assert.equal(s.tier, "dev");
 });
 
@@ -80,7 +80,26 @@ test("working_on written by a human is never touched; one the sync wrote follows
   assert.equal(read(w.file).ticket, "other-branch");
   fs.writeFileSync(w.file, JSON.stringify({ ...s })); // back to the auto-written value
   await syncOnce({ file: w.file, cfg: w.cfg, runner: branch2 });
-  assert.equal(read(w.file).working_on, "other-branch");
+  assert.equal(read(w.file).working_on, ""); // other-branch is not a WO: empty, never the branch
+});
+
+test("working_on follows the work-order title and is never a bare branch", async () => {
+  const w = mkWorld();
+  const wo = path.join(w.root, "repo", "work-orders", "WO-X");
+  fs.mkdirSync(wo, { recursive: true });
+  fs.writeFileSync(path.join(wo, "WO-20261014-abcd-thing.md"), '---\n{\n  "id": "WO-20261014-abcd",\n  "title": "The thing, done"\n}\n---\n');
+  const runner = async (bin, args) => (args?.includes("--show-toplevel") ? `${path.join(w.root, "repo")}\n` : w.runner(bin, args));
+  await syncOnce({ file: w.file, cfg: w.cfg, runner });
+  assert.equal(read(w.file).working_on, "WO-20261014-abcd - The thing, done");
+  assert.equal(read(w.file).ticket_title, "The thing, done");
+});
+
+test("context_windows by model prefix gives a percentage; no prefix gives null", async () => {
+  const w = mkWorld();
+  const cfg = resolveSyncConfig({ projects_dir: w.cfg.projects_dir, context_windows: { "claude-fable": 1000000 } });
+  assert.equal(cfg.context_windows["claude-fable"], 1000000);
+  await syncOnce({ file: w.file, cfg, runner: w.runner }); // new-model: no matching prefix
+  assert.equal(read(w.file).context_pct, null);
 });
 
 test("no herdr: from is null; detached HEAD: ticket falls back to the recorded branch", async () => {

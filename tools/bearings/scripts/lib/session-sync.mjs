@@ -301,10 +301,15 @@ export async function syncOnce({
       });
       delete next.checked_at;
       // working_on is the one hand-written field. Empty, or still equal to what this sync wrote last time, it follows the
-      // ticket title or branch; once a human writes anything else it is theirs and is never touched.
-      const auto = next.ticket_title
-        ? `${next.ticket} - ${next.ticket_title}`
-        : (branch ?? "");
+      // ticket title; once a human writes anything else it is theirs and is never touched.
+      // BREADCRUMB 2026-10-14 UTC (coordinator, owner page review: WORKING ON must never show a bare branch like "main").
+      // What broke: this defaulted to the branch name when no work-order title was found, so a seat on main showed
+      // "main" as what it was working on, which is a place, not a task (this line, first version of PR 184).
+      // Why this fix: only a ticket title is a statement of work; with none, working_on is "" and the page shows a muted
+      // "not set". TICKET keeps the branch, so no information is lost. Rejected: a placeholder string in the file
+      // (it would count as hand-written text and block the auto value later). Cost: a seat on a non-WO branch has an
+      // empty cell until a human writes one.
+      const auto = next.ticket_title ? `${next.ticket} - ${next.ticket_title}` : "";
       if (!cur.working_on || cur.working_on === cur.working_on_auto) {
         next.working_on = auto;
         next.working_on_auto = auto;

@@ -56,6 +56,9 @@
   "session_sync": {
     "interval_seconds": 5,
     "stale_minutes": 10,
-    "watcher_grace_seconds": 5
+    "watcher_grace_seconds": 5,
+    "context_windows": {
+      "claude-fable": 1000000
+    }
   }
 }
