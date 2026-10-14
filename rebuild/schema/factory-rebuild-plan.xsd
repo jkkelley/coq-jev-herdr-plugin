@@ -1,0 +1,369 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Factory Rebuild Plan schema, written 2026-10-14 UTC, first of the build steps in brief A.
+  What this guards: the plan XML at rebuild/factory-rebuild-plan.xml, which is the only source of the rail's plan.json and side panels.
+  Why XSD 1.0 and not a looser check: the owner ordered "Specs are XML", and every file the rail draws from must fail loudly on a missing element.
+  What XSD 1.0 cannot say, plan-validate.sh checks in code: a blocked status carries a reason, the contents list matches the top-level sections, step ids run R-01 upward without gaps.
+  Rejected: free-form markdown for the plan, because a markdown plan cannot be validated and drifts from the rail.
+  Cost: a new section means a schema edit; the change-rule section says only the owner adds steps, so that friction is intended.
+  No literal em dash character may appear in any sentence: the Sentence type forbids it.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+
+  <!-- Shared types. -->
+
+  <xs:simpleType name="Sentence">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="3"/>
+      <xs:pattern value="[^&#x2014;]*"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="StepId">
+    <xs:restriction base="xs:ID">
+      <xs:pattern value="R-[0-9]{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="StepRef">
+    <xs:restriction base="xs:IDREF">
+      <xs:pattern value="R-[0-9]{2}"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Phase">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="investigate"/>
+      <xs:enumeration value="decide"/>
+      <xs:enumeration value="design"/>
+      <xs:enumeration value="land"/>
+      <xs:enumeration value="build"/>
+      <xs:enumeration value="prove"/>
+      <xs:enumeration value="bootstrap"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="ModelClass">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="sonnet"/>
+      <xs:enumeration value="opus"/>
+      <xs:enumeration value="owner"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="StatusValue">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="not-started"/>
+      <xs:enumeration value="running"/>
+      <xs:enumeration value="blocked"/>
+      <xs:enumeration value="done"/>
+      <xs:enumeration value="superseded"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="FailureCaseName">
+    <xs:restriction base="xs:ID">
+      <xs:enumeration value="stall"/>
+      <xs:enumeration value="crash"/>
+      <xs:enumeration value="bad-output"/>
+      <xs:enumeration value="governance-interference"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <xs:simpleType name="Path">
+    <xs:restriction base="xs:string">
+      <xs:minLength value="2"/>
+      <xs:pattern value="[^&#x2014;\s]+"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- Top-level section ids are fixed so a reader can jump by name. -->
+  <xs:simpleType name="SectionId">
+    <xs:restriction base="xs:ID">
+      <xs:enumeration value="contents"/>
+      <xs:enumeration value="purpose"/>
+      <xs:enumeration value="principles"/>
+      <xs:enumeration value="rulings"/>
+      <xs:enumeration value="status-codes"/>
+      <xs:enumeration value="steps"/>
+      <xs:enumeration value="ordering-rule"/>
+      <xs:enumeration value="failure-cases"/>
+      <xs:enumeration value="recovery"/>
+      <xs:enumeration value="change-rule"/>
+      <xs:enumeration value="ledger"/>
+    </xs:restriction>
+  </xs:simpleType>
+
+  <!-- verbatim: the owner's exact words. recorded-intent: the owner's instruction as relayed by the architect, wording not verified as exact. -->
+  <xs:complexType name="Quote">
+    <xs:simpleContent>
+      <xs:extension base="Sentence">
+        <xs:attribute name="kind" use="required">
+          <xs:simpleType>
+            <xs:restriction base="xs:string">
+              <xs:enumeration value="verbatim"/>
+              <xs:enumeration value="recorded-intent"/>
+            </xs:restriction>
+          </xs:simpleType>
+        </xs:attribute>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+
+  <xs:complexType name="SentenceList">
+    <xs:sequence>
+      <xs:element name="s" type="Sentence" minOccurs="1" maxOccurs="unbounded"/>
+    </xs:sequence>
+    <xs:attribute name="id" type="SectionId" use="required"/>
+  </xs:complexType>
+
+  <!-- Root. -->
+
+  <xs:element name="factory-rebuild-plan">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="contents">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="entry" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="Sentence">
+                      <xs:attribute name="ref" type="xs:IDREF" use="required"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="id" type="SectionId" use="required"/>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="purpose">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="is" type="Sentence"/>
+              <xs:element name="is-not" type="Sentence"/>
+              <xs:element name="relation-to-roadmap" type="Sentence"/>
+            </xs:sequence>
+            <xs:attribute name="id" type="SectionId" use="required"/>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="principles">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="principle" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="name" type="Sentence"/>
+                    <xs:element name="quote" type="Quote"/>
+                    <xs:element name="date" type="xs:date"/>
+                    <xs:element name="statement" type="Sentence" maxOccurs="unbounded"/>
+                  </xs:sequence>
+                  <xs:attribute name="id" type="xs:ID" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="id" type="SectionId" use="required"/>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="rulings">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="ruling" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="date" type="xs:date"/>
+                    <xs:element name="quote" type="Quote"/>
+                    <xs:element name="effect" type="Sentence"/>
+                  </xs:sequence>
+                  <xs:attribute name="id" type="xs:ID" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="id" type="SectionId" use="required"/>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="status-codes">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="code" minOccurs="5" maxOccurs="5">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="meaning" type="Sentence"/>
+                    <xs:element name="acts" type="Sentence"/>
+                  </xs:sequence>
+                  <xs:attribute name="value" type="StatusValue" use="required"/>
+                  <xs:attribute name="name" type="Sentence" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="id" type="SectionId" use="required"/>
+          </xs:complexType>
+          <xs:unique name="uniqueStatusCode">
+            <xs:selector xpath="code"/>
+            <xs:field xpath="@value"/>
+          </xs:unique>
+        </xs:element>
+
+        <xs:element name="steps">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="step" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="name" type="Sentence"/>
+                    <xs:element name="phase" type="Phase"/>
+                    <xs:element name="owner-role" type="Sentence"/>
+                    <xs:element name="model-class" type="ModelClass" minOccurs="1" maxOccurs="2"/>
+                    <xs:element name="input" type="Sentence"/>
+                    <xs:element name="output" type="Sentence"/>
+                    <xs:element name="exit-proof">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="artifact" type="Sentence"/>
+                          <xs:element name="path" type="Path" maxOccurs="unbounded"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="checklist">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="item" maxOccurs="unbounded">
+                            <xs:complexType>
+                              <xs:sequence>
+                                <xs:element name="check" type="Sentence"/>
+                                <xs:element name="evidence" type="Sentence"/>
+                              </xs:sequence>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="budget">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="time-bound" type="xs:duration"/>
+                          <xs:element name="agents" type="xs:nonNegativeInteger"/>
+                          <xs:element name="note" type="Sentence"/>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="depends-on">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="on" minOccurs="0" maxOccurs="unbounded">
+                            <xs:complexType>
+                              <xs:attribute name="ref" type="StepRef" use="required"/>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="gate" type="xs:boolean"/>
+                    <xs:element name="failure">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="case" minOccurs="1" maxOccurs="4">
+                            <xs:complexType>
+                              <xs:simpleContent>
+                                <xs:extension base="Sentence">
+                                  <xs:attribute name="ref" type="xs:IDREF" use="required"/>
+                                </xs:extension>
+                              </xs:simpleContent>
+                            </xs:complexType>
+                          </xs:element>
+                        </xs:sequence>
+                      </xs:complexType>
+                    </xs:element>
+                    <xs:element name="status">
+                      <xs:complexType>
+                        <xs:sequence>
+                          <xs:element name="reason" type="Sentence" minOccurs="0"/>
+                        </xs:sequence>
+                        <xs:attribute name="value" type="StatusValue" use="required"/>
+                      </xs:complexType>
+                    </xs:element>
+                  </xs:sequence>
+                  <xs:attribute name="id" type="StepId" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="id" type="SectionId" use="required"/>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="ordering-rule" type="SentenceList"/>
+
+        <xs:element name="failure-cases">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="case" minOccurs="4" maxOccurs="4">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element name="meaning" type="Sentence"/>
+                    <xs:element name="detection" type="Sentence"/>
+                    <xs:element name="recovery" type="Sentence"/>
+                    <xs:element name="acts" type="Sentence"/>
+                    <xs:element name="retries">
+                      <xs:simpleType>
+                        <xs:restriction base="xs:positiveInteger">
+                          <xs:enumeration value="3"/>
+                        </xs:restriction>
+                      </xs:simpleType>
+                    </xs:element>
+                    <xs:element name="then-status" type="StatusValue" fixed="blocked"/>
+                  </xs:sequence>
+                  <xs:attribute name="id" type="FailureCaseName" use="required"/>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+            <xs:attribute name="id" type="SectionId" use="required"/>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="recovery">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="read-first" type="Sentence"/>
+              <xs:element name="file" maxOccurs="unbounded">
+                <xs:complexType>
+                  <xs:simpleContent>
+                    <xs:extension base="Sentence">
+                      <xs:attribute name="order" type="xs:positiveInteger" use="required"/>
+                      <xs:attribute name="path" type="Path" use="required"/>
+                    </xs:extension>
+                  </xs:simpleContent>
+                </xs:complexType>
+              </xs:element>
+              <xs:element name="rebuild-command" type="Sentence"/>
+              <xs:element name="action" type="Sentence" maxOccurs="unbounded"/>
+            </xs:sequence>
+            <xs:attribute name="id" type="SectionId" use="required"/>
+          </xs:complexType>
+        </xs:element>
+
+        <xs:element name="change-rule" type="SentenceList"/>
+
+        <xs:element name="ledger">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element name="path" type="Path"/>
+              <xs:element name="usage" type="Sentence"/>
+              <xs:element name="columns" type="Sentence"/>
+              <xs:element name="first-row" type="Sentence"/>
+            </xs:sequence>
+            <xs:attribute name="id" type="SectionId" use="required"/>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute name="version" type="xs:string" use="required"/>
+      <xs:attribute name="issued" type="xs:date" use="required"/>
+      <xs:attribute name="timezone" type="xs:string" use="required" fixed="UTC"/>
+      <xs:attribute name="author" type="Sentence" use="required"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

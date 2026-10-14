@@ -1,0 +1,613 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Factory Rebuild Plan. Validated by bin/plan-validate.sh against schema/factory-rebuild-plan.xsd. Only the owner adds or removes steps. -->
+<factory-rebuild-plan version="1.0.0" issued="2026-10-14" timezone="UTC" author="spec-author seat, brief A, session architect">
+
+  <contents id="contents">
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="principles">Principles</entry>
+    <entry ref="rulings">Rulings</entry>
+    <entry ref="status-codes">Status codes</entry>
+    <entry ref="steps">Steps R-01 to R-10</entry>
+    <entry ref="ordering-rule">Ordering rule</entry>
+    <entry ref="failure-cases">Failure cases</entry>
+    <entry ref="recovery">Recovery</entry>
+    <entry ref="change-rule">Change rule</entry>
+    <entry ref="ledger">Ledger</entry>
+  </contents>
+
+  <purpose id="purpose">
+    <is>This plan is the ordered path from the factory as it runs today to a factory that runs without any agent or human driving it.</is>
+    <is-not>This plan is not a design, a ticket list or a replacement for any existing record, and it holds no work that a step's own design has not yet cut.</is-not>
+    <relation-to-roadmap>This plan stands beside the binding 2026-10-12 roadmap at ~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261012212500-roadmap.md, never replaces it and never edits it.</relation-to-roadmap>
+  </purpose>
+
+  <principles id="principles">
+    <principle id="no-cog">
+      <name>No cog holds up the system</name>
+      <quote kind="verbatim">no cog should hold up the system, so we need a system, not agents or humans driving it</quote>
+      <date>2026-10-14</date>
+      <statement>Every wait is a timeout with a fallback.</statement>
+      <statement>Every decision that can be a rule is code.</statement>
+      <statement>The owner is the only break-glass.</statement>
+    </principle>
+    <principle id="build-mode">
+      <name>Build mode, the factory's governance never applies to the rebuild</name>
+      <quote kind="recorded-intent">The factory's own governance never applies to the rebuild.</quote>
+      <date>2026-10-14</date>
+      <statement>Old hooks, gates, guards, leases, watches and status rules are off for rebuild tickets.</statement>
+      <statement>Each new node ships dark and goes live by its own ticket with a named proof.</statement>
+      <statement>A rule that blocks a rebuild ticket is a defect in the rule, so the ticket proceeds and the rule gets a fix ticket.</statement>
+      <statement>The ledger records which rule bit.</statement>
+    </principle>
+    <principle id="shelf-first">
+      <name>Shelf first</name>
+      <quote kind="verbatim">these are just ideas and inspiration, take it for face value, if we have better stuff from the internet, by all means we're taking that and not re-inventing the wheel, i need shit that works</quote>
+      <date>2026-10-14</date>
+      <statement>The owner's prior work is inspiration only, and proven open source wins over anything rewritten.</statement>
+      <statement>Own code is reserved for glue, the LLM seat contract and the owner surface.</statement>
+    </principle>
+    <principle id="design-first">
+      <name>Design first</name>
+      <quote kind="verbatim">Write the design document first and get it read before any build ticket is cut.</quote>
+      <date>2026-10-13</date>
+      <statement>Tickets are cut from DAG nodes only.</statement>
+      <statement>Every node carries an XML spec under 1000 lines, a JSON schema, a checklist, agent permissions, monitoring and a runbook.</statement>
+    </principle>
+    <principle id="crew-continuity">
+      <name>Crew continuity</name>
+      <quote kind="recorded-intent">The same lead and investigators carry from investigation through build.</quote>
+      <date>2026-10-14</date>
+      <statement>Context gathered in the investigation is carried forward by the same crew, so the build does not relearn it.</statement>
+      <statement>Under the ruling that a script drives the investigation, the continuity is the investigation files, which every later seat reads first.</statement>
+    </principle>
+    <principle id="north-star">
+      <name>North star</name>
+      <quote kind="recorded-intent">Caves of Qud work resumes only after the factory runs as the owner intends.</quote>
+      <date>2026-10-14</date>
+      <statement>Step R-10 is the last step, and the Caves of Qud work resumes after it and not before.</statement>
+    </principle>
+  </principles>
+
+  <rulings id="rulings">
+    <ruling id="ruling-crew-size">
+      <date>2026-10-14</date>
+      <quote kind="recorded-intent">One Opus lead with up to 20 Sonnet investigators is approved.</quote>
+      <effect>The investigation runs at most 20 Sonnet investigators, one per area.</effect>
+    </ruling>
+    <ruling id="ruling-xml-plan">
+      <date>2026-10-14</date>
+      <quote kind="recorded-intent">The plan is XML, not markdown.</quote>
+      <effect>This file is the plan, its XSD is the contract and markdown views are generated, never hand-edited.</effect>
+    </ruling>
+    <ruling id="ruling-beside-roadmap">
+      <date>2026-10-14</date>
+      <quote kind="recorded-intent">The plan stands beside the roadmap.</quote>
+      <effect>The 2026-10-12 roadmap stays binding and untouched, and this plan neither edits nor replaces it.</effect>
+    </ruling>
+    <ruling id="ruling-script-driven">
+      <date>2026-10-14</date>
+      <quote kind="verbatim">we need it driven by system, not agent</quote>
+      <effect>A deterministic workflow script drives the investigation in place of an Opus lead, and one Opus seat does only the merge at the end.</effect>
+    </ruling>
+  </rulings>
+
+  <status-codes id="status-codes">
+    <code value="not-started" name="Not started">
+      <meaning>The step's input record does not exist yet, or an earlier exit proof is not in the ledger.</meaning>
+      <acts>The system starts the step when the ordering rule is met, and no agent or human does.</acts>
+    </code>
+    <code value="running" name="Running">
+      <meaning>The step has a started row in the ledger and its time bound has not passed.</meaning>
+      <acts>The step's own script and seats act, and the system watches the time bound.</acts>
+    </code>
+    <code value="blocked" name="Blocked">
+      <meaning>The step stopped after three retries or at a gate, and always carries a reason.</meaning>
+      <acts>The system posts exactly one card to the owner with the reason, and the owner acts.</acts>
+    </code>
+    <code value="done" name="Done">
+      <meaning>Every checklist box is ticked with its proof and the exit proof is in the ledger.</meaning>
+      <acts>The system starts the next step, and no one else acts.</acts>
+    </code>
+    <code value="superseded" name="Superseded">
+      <meaning>The owner replaced the step, and the ledger row names what replaced it.</meaning>
+      <acts>Only the owner sets this status.</acts>
+    </code>
+  </status-codes>
+
+  <steps id="steps">
+
+    <step id="R-01">
+      <name>Investigation</name>
+      <phase>investigate</phase>
+      <owner-role>Workflow script, 20 Sonnet investigators, one Opus merge seat at the end</owner-role>
+      <model-class>sonnet</model-class>
+      <model-class>opus</model-class>
+      <input>Brief B at ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-B-investigation.md and the owner signal GOTEAM of 2026-10-14.</input>
+      <output>A merged inventory, root cause list, mapping, decisions-needed, unlanded and forgeo files, put in front of the owner.</output>
+      <exit-proof>
+        <artifact>The six lead deliverables written by the Opus merge seat after all twenty area files exist.</artifact>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/investigation/00-INVENTORY.md</path>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/investigation/01-ROOT-CAUSES.md</path>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/investigation/02-MAPPING.md</path>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/investigation/03-DECISIONS.md</path>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/investigation/04-UNLANDED.md</path>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/investigation/05-FORGEO.md</path>
+      </exit-proof>
+      <checklist>
+        <item>
+          <check>All twenty area files exist, one per area L01 to L13, S01 to S04 and I01 to I03.</check>
+          <evidence>An ls of the investigation directory listing twenty area files, saved in the script log.</evidence>
+        </item>
+        <item>
+          <check>Every area file has every heading of the findings template.</check>
+          <evidence>The per-area critic result recorded by the script, with any rerun noted.</evidence>
+        </item>
+        <item>
+          <check>The Opus merge seat wrote the six lead deliverables, each opening with a contents list.</check>
+          <evidence>The six file paths listed in the exit proof, each non-empty.</evidence>
+        </item>
+        <item>
+          <check>The completeness critic passed over the six deliverables.</check>
+          <evidence>The critic result recorded by the script.</evidence>
+        </item>
+        <item>
+          <check>The inventory is in front of the owner.</check>
+          <evidence>A ledger row with status question whose ref is the path of 00-INVENTORY.md.</evidence>
+        </item>
+      </checklist>
+      <budget>
+        <time-bound>PT6H</time-bound>
+        <agents>21</agents>
+        <note>Twenty Sonnet investigators run under the script, and one Opus seat does only the merge at the end, with no lead agent assigning work.</note>
+      </budget>
+      <depends-on/>
+      <gate>true</gate>
+      <failure>
+        <case ref="stall">An area with no file at the time bound is rerun by a fresh Sonnet investigator, up to three times, then the step is blocked.</case>
+        <case ref="crash">The script resumes from the area files already on disk and reruns only the missing ones.</case>
+        <case ref="bad-output">An area file that fails the critic is rerun once by a fresh investigator with the critic's gaps attached.</case>
+      </failure>
+      <status value="running"/>
+    </step>
+
+    <step id="R-02">
+      <name>Close lens</name>
+      <phase>decide</phase>
+      <owner-role>Owner and architect, one inventory row at a time</owner-role>
+      <model-class>owner</model-class>
+      <input>The R-01 ledger row of status question that puts the inventory in front of the owner.</input>
+      <output>A decision record per inventory row, including the control plane shape as the first record.</output>
+      <exit-proof>
+        <artifact>A decision index listing every inventory row with the path of its decision record.</artifact>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/decisions/00-INDEX.md</path>
+      </exit-proof>
+      <checklist>
+        <item>
+          <check>Every row of 00-INVENTORY.md has a decision record.</check>
+          <evidence>The index row count equals the inventory row count.</evidence>
+        </item>
+        <item>
+          <check>The first record is the control plane shape.</check>
+          <evidence>The first index entry names the control plane decision with the owner's chosen option.</evidence>
+        </item>
+        <item>
+          <check>The owner signed the close.</check>
+          <evidence>A ledger row of status complete for R-02 whose ref is the index path.</evidence>
+        </item>
+      </checklist>
+      <budget>
+        <time-bound>PT48H</time-bound>
+        <agents>0</agents>
+        <note>At the time bound the step becomes blocked with one card to the owner, and nothing proceeds on a guess.</note>
+      </budget>
+      <depends-on>
+        <on ref="R-01"/>
+      </depends-on>
+      <gate>true</gate>
+      <failure>
+        <case ref="stall">No owner answer at the time bound blocks the step with one card, and the card is not repeated.</case>
+        <case ref="bad-output">A row without a record leaves the index short, and the check reopens that row only.</case>
+      </failure>
+      <status value="not-started"/>
+    </step>
+
+    <step id="R-03">
+      <name>Design</name>
+      <phase>design</phase>
+      <owner-role>Spec-author seat writes the design, a separate review seat runs the no-cog test</owner-role>
+      <model-class>sonnet</model-class>
+      <input>The R-02 decision index and the owner's close of the lens.</input>
+      <output>The DAG in Mermaid and the per-node XML specs, JSON schemas, checklists, permissions, monitoring and runbooks, merged to main and read by the owner.</output>
+      <exit-proof>
+        <artifact>The design merged to main, with the no-cog review result for every node.</artifact>
+        <path>rebuild/design/dag.md</path>
+        <path>rebuild/design/nodes/</path>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md</path>
+      </exit-proof>
+      <checklist>
+        <item>
+          <check>The DAG is drawn in Mermaid and every node declares an input record and an output record.</check>
+          <evidence>The Mermaid block in rebuild/design/dag.md, rendered and checked for cycles.</evidence>
+        </item>
+        <item>
+          <check>Every node has an XML spec under 1000 lines, a JSON schema, a checklist, agent permissions, monitoring and a runbook.</check>
+          <evidence>A file listing per node under rebuild/design/nodes/ with line counts.</evidence>
+        </item>
+        <item>
+          <check>The review seat ran the no-cog test on every node and every wait has a timeout and a fallback.</check>
+          <evidence>The R-03-no-cog-review.md file with one verdict per node.</evidence>
+        </item>
+        <item>
+          <check>The design is merged to main and read by the owner.</check>
+          <evidence>The merged pull request URL as the ref of a ledger row, then the owner's complete row.</evidence>
+        </item>
+      </checklist>
+      <budget>
+        <time-bound>PT24H</time-bound>
+        <agents>8</agents>
+        <note>One spec-author seat per node group and one review seat, all Sonnet, each living only between its input and its output.</note>
+      </budget>
+      <depends-on>
+        <on ref="R-02"/>
+      </depends-on>
+      <gate>true</gate>
+      <failure>
+        <case ref="stall">A node group with no spec at the time bound goes to a fresh spec-author seat, up to three times, then blocks.</case>
+        <case ref="bad-output">A node that fails the no-cog test goes back to a fresh seat with the review verdict attached.</case>
+      </failure>
+      <status value="not-started"/>
+    </step>
+
+    <step id="R-04">
+      <name>Land main</name>
+      <phase>land</phase>
+      <owner-role>Landing seats, one per branch group, working from the R-02 decisions</owner-role>
+      <model-class>sonnet</model-class>
+      <input>The R-03 complete row and 04-UNLANDED.md with the owner's decisions on each entry.</input>
+      <output>Every branch and pull request, including PR 35, landed, superseded or closed with a reason, so no branch holds unmerged value.</output>
+      <exit-proof>
+        <artifact>A disposition table with one row per branch and pull request, and the unmerged-branch listing taken after.</artifact>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-04-branch-disposition.tsv</path>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-04-unmerged-after.txt</path>
+      </exit-proof>
+      <checklist>
+        <item>
+          <check>Every entry of 04-UNLANDED.md has a disposition of land, supersede or close with a reason.</check>
+          <evidence>The disposition table row count equals the 04-UNLANDED.md entry count.</evidence>
+        </item>
+        <item>
+          <check>PR 35 is landed, superseded or closed with a reason.</check>
+          <evidence>The PR 35 row in the disposition table and the pull request state from gh.</evidence>
+        </item>
+        <item>
+          <check>No remote branch holds unmerged value.</check>
+          <evidence>The output of git branch -r --no-merged origin/main, where every listed branch has a close reason in the table.</evidence>
+        </item>
+      </checklist>
+      <budget>
+        <time-bound>PT12H</time-bound>
+        <agents>4</agents>
+        <note>Branch groups are landed in parallel only when their files do not overlap.</note>
+      </budget>
+      <depends-on>
+        <on ref="R-03"/>
+      </depends-on>
+      <gate>false</gate>
+      <failure>
+        <case ref="stall">A branch group with no disposition at the time bound goes to a fresh landing seat, up to three times, then blocks.</case>
+        <case ref="bad-output">A landing whose main check fails is retried by a fresh seat with the failing output attached.</case>
+        <case ref="governance-interference">An old rule that blocks a landing is handled by the build-mode principle and the ledger records which rule bit.</case>
+      </failure>
+      <status value="not-started"/>
+    </step>
+
+    <step id="R-05">
+      <name>Control plane</name>
+      <phase>build</phase>
+      <owner-role>Build seats cutting from design nodes, the control plane itself runs as code</owner-role>
+      <model-class>sonnet</model-class>
+      <input>The R-04 complete row and the control plane nodes of the merged design.</input>
+      <output>The first epic is built and live, and a ticket moves from cut to merged with no agent and no human driving it.</output>
+      <exit-proof>
+        <artifact>A run record of one ticket from cut to merged, with a timestamped log that shows no agent or human action between the two.</artifact>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-05-run.md</path>
+      </exit-proof>
+      <checklist>
+        <item>
+          <check>Each control plane node shipped dark and went live by its own ticket with a named proof.</check>
+          <evidence>One merged pull request URL per node in the run record.</evidence>
+        </item>
+        <item>
+          <check>One ticket moved from cut to merged with no agent and no human driving it.</check>
+          <evidence>The timestamped control plane log in R-05-run.md showing system actors only.</evidence>
+        </item>
+        <item>
+          <check>Every wait in the control plane has a timeout and a fallback.</check>
+          <evidence>The no-cog test output for the live nodes, saved beside the run record.</evidence>
+        </item>
+      </checklist>
+      <budget>
+        <time-bound>PT36H</time-bound>
+        <agents>6</agents>
+        <note>Tickets are small, one concern each, and are built by ephemeral seats that leave after posting their result.</note>
+      </budget>
+      <depends-on>
+        <on ref="R-04"/>
+      </depends-on>
+      <gate>false</gate>
+      <failure>
+        <case ref="stall">A ticket with no progress at its time bound is retried by a fresh seat, up to three times, then the step blocks.</case>
+        <case ref="crash">The control plane resumes from the ledger and the state store, which are the only state.</case>
+        <case ref="bad-output">A node whose proof fails is retried by a fresh seat with the failing output attached.</case>
+        <case ref="governance-interference">An old rule that blocks a ticket does not stop it, the rule gets a fix ticket and the ledger records which rule bit.</case>
+      </failure>
+      <status value="not-started"/>
+    </step>
+
+    <step id="R-06">
+      <name>Seats as ephemeral workers</name>
+      <phase>build</phase>
+      <owner-role>Build seats, with the seat contract written as glue code</owner-role>
+      <model-class>sonnet</model-class>
+      <input>The R-05 complete row and the seat nodes of the merged design.</input>
+      <output>A seat spawns from a ticket, posts its result and is gone, with bring-up under a measured bound stated in the design.</output>
+      <exit-proof>
+        <artifact>A seat lifecycle record with the measured bring-up time beside the bound stated in the design.</artifact>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-06-seat-lifecycle.md</path>
+      </exit-proof>
+      <checklist>
+        <item>
+          <check>A seat spawned from a ticket posted its result and exited without an owner or architect action.</check>
+          <evidence>The spawn, result and exit timestamps in R-06-seat-lifecycle.md.</evidence>
+        </item>
+        <item>
+          <check>Bring-up time is measured and sits under the bound stated in the design.</check>
+          <evidence>Ten measured bring-ups and the design bound, recorded side by side.</evidence>
+        </item>
+        <item>
+          <check>A follow-up such as a failed test brings up a fresh seat and never reuses the finished one.</check>
+          <evidence>A recorded failure case where the retry seat has a new id.</evidence>
+        </item>
+      </checklist>
+      <budget>
+        <time-bound>PT24H</time-bound>
+        <agents>4</agents>
+        <note>Seats are cogs, and none is a gate.</note>
+      </budget>
+      <depends-on>
+        <on ref="R-05"/>
+      </depends-on>
+      <gate>false</gate>
+      <failure>
+        <case ref="stall">A bring-up over its bound is killed and retried by a fresh seat, up to three times, then the step blocks.</case>
+        <case ref="bad-output">A seat result that fails its proof check goes to a fresh seat with the failure attached.</case>
+      </failure>
+      <status value="not-started"/>
+    </step>
+
+    <step id="R-07">
+      <name>herdr demoted to a window</name>
+      <phase>build</phase>
+      <owner-role>Build seats removing every scheduling and storage use of herdr</owner-role>
+      <model-class>sonnet</model-class>
+      <input>The R-06 complete row and the herdr demotion node of the merged design.</input>
+      <output>herdr schedules nothing and stores nothing, and the line runs with it closed.</output>
+      <exit-proof>
+        <artifact>A run record of tickets merged while herdr was stopped, with a scan showing no herdr scheduling or storage use.</artifact>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-07-herdr-closed.md</path>
+      </exit-proof>
+      <checklist>
+        <item>
+          <check>No line component calls herdr to schedule, route or store anything.</check>
+          <evidence>A grep of the control plane code for herdr calls, with its output saved in the record.</evidence>
+        </item>
+        <item>
+          <check>The line ran with herdr closed.</check>
+          <evidence>At least one ticket merged between a herdr stop and a herdr start, with timestamps.</evidence>
+        </item>
+      </checklist>
+      <budget>
+        <time-bound>PT12H</time-bound>
+        <agents>3</agents>
+        <note>herdr stays available as a window for the owner to watch, and nothing depends on it.</note>
+      </budget>
+      <depends-on>
+        <on ref="R-06"/>
+      </depends-on>
+      <gate>false</gate>
+      <failure>
+        <case ref="stall">A removal ticket with no progress at its bound goes to a fresh seat, up to three times, then blocks.</case>
+        <case ref="bad-output">A line run that stalls with herdr closed fails the proof, and a fresh seat retries with the stall record attached.</case>
+      </failure>
+      <status value="not-started"/>
+    </step>
+
+    <step id="R-08">
+      <name>Single state store and owner surface</name>
+      <phase>build</phase>
+      <owner-role>Build seats moving state into one store and pointing bearings at it</owner-role>
+      <model-class>sonnet</model-class>
+      <input>The R-07 complete row and the state store and owner surface nodes of the merged design.</input>
+      <output>Bearings reads one store, and no event file is written inside the repository.</output>
+      <exit-proof>
+        <artifact>A record of bearings reading the single store and a repository check after a run that finds no event file inside the repository.</artifact>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-08-state-store.md</path>
+      </exit-proof>
+      <checklist>
+        <item>
+          <check>Bearings reads exactly one store.</check>
+          <evidence>The bearings read trace listing a single store path.</evidence>
+        </item>
+        <item>
+          <check>No event file is written inside the repository by a run.</check>
+          <evidence>The output of git status --porcelain after a run, with no event path in it.</evidence>
+        </item>
+        <item>
+          <check>The old stores are retired with a documented cleanup command.</check>
+          <evidence>The cleanup command in the README and its dry-run output.</evidence>
+        </item>
+      </checklist>
+      <budget>
+        <time-bound>PT24H</time-bound>
+        <agents>4</agents>
+        <note>The owner monitoring surface stays available throughout, and a halt never stops it.</note>
+      </budget>
+      <depends-on>
+        <on ref="R-07"/>
+      </depends-on>
+      <gate>false</gate>
+      <failure>
+        <case ref="stall">A migration ticket with no progress at its bound goes to a fresh seat, up to three times, then blocks.</case>
+        <case ref="bad-output">A repository check that finds an event file fails the proof and goes to a fresh seat with the path attached.</case>
+        <case ref="governance-interference">An old hook that blocks a migration ticket does not stop it, and the ledger records which hook bit.</case>
+      </failure>
+      <status value="not-started"/>
+    </step>
+
+    <step id="R-09">
+      <name>Line proves itself</name>
+      <phase>prove</phase>
+      <owner-role>The line itself, with seats only as the workers of the tickets it runs</owner-role>
+      <model-class>sonnet</model-class>
+      <input>The R-08 complete row.</input>
+      <output>Ten consecutive tickets merged without a stall.</output>
+      <exit-proof>
+        <artifact>A table of ten consecutive tickets from cut to merged with timestamps and no stall record between them.</artifact>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-09-ten-tickets.tsv</path>
+      </exit-proof>
+      <checklist>
+        <item>
+          <check>Ten tickets merged in a row, each moving from cut to merged on the line alone.</check>
+          <evidence>Ten merged pull request URLs in the table, in order.</evidence>
+        </item>
+        <item>
+          <check>No ticket in the run stalled past its time bound.</check>
+          <evidence>The stall record count for the run, which is zero.</evidence>
+        </item>
+      </checklist>
+      <budget>
+        <time-bound>PT72H</time-bound>
+        <agents>10</agents>
+        <note>A stall resets the count to zero, and the step is blocked after three resets.</note>
+      </budget>
+      <depends-on>
+        <on ref="R-08"/>
+      </depends-on>
+      <gate>false</gate>
+      <failure>
+        <case ref="stall">A stalled ticket resets the consecutive count, its cause becomes a fix ticket, and the run restarts, up to three times.</case>
+        <case ref="bad-output">A merged ticket whose proof fails afterward resets the count and goes to a fresh seat with the failure attached.</case>
+      </failure>
+      <status value="not-started"/>
+    </step>
+
+    <step id="R-10">
+      <name>Bootstrap</name>
+      <phase>bootstrap</phase>
+      <owner-role>The same line, run against a second repository</owner-role>
+      <model-class>sonnet</model-class>
+      <input>The R-09 complete row and the owner's choice of the second repository.</input>
+      <output>A ticket in another repository merged by the same line, after which Caves of Qud work resumes.</output>
+      <exit-proof>
+        <artifact>The merged pull request URL in the other repository with the line's run log for that ticket.</artifact>
+        <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-10-other-repo.md</path>
+      </exit-proof>
+      <checklist>
+        <item>
+          <check>The ticket was cut, run and merged by the same line with no change to the line for the new repository.</check>
+          <evidence>The merged pull request URL and a diff of line configuration showing only the repository entry.</evidence>
+        </item>
+        <item>
+          <check>Caves of Qud work is released to resume.</check>
+          <evidence>A ledger row of status complete for R-10 that names the release.</evidence>
+        </item>
+      </checklist>
+      <budget>
+        <time-bound>PT12H</time-bound>
+        <agents>2</agents>
+        <note>Only a repository entry may differ between the first repository and the second.</note>
+      </budget>
+      <depends-on>
+        <on ref="R-09"/>
+      </depends-on>
+      <gate>false</gate>
+      <failure>
+        <case ref="stall">A ticket with no progress at its bound is retried by a fresh seat, up to three times, then the step blocks.</case>
+        <case ref="bad-output">A merge that fails its proof goes to a fresh seat with the failure attached, and the line is not edited for one repository.</case>
+      </failure>
+      <status value="not-started"/>
+    </step>
+
+  </steps>
+
+  <ordering-rule id="ordering-rule">
+    <s>No later step starts before the earlier step's exit proof is in the ledger.</s>
+    <s>The ledger is the only record that a step is done, and a file on disk without a ledger row proves nothing.</s>
+  </ordering-rule>
+
+  <failure-cases id="failure-cases">
+    <case id="stall">
+      <meaning>No progress is made past the step's time bound.</meaning>
+      <detection>The system compares the last ledger row time and the output files with the time bound every minute.</detection>
+      <recovery>The system ends the stalled work and starts a fresh seat or script run with the stall record attached.</recovery>
+      <acts>The system acts and no agent or human does.</acts>
+      <retries>3</retries>
+      <then-status>blocked</then-status>
+    </case>
+    <case id="crash">
+      <meaning>The script, a seat, a pane or the session dies.</meaning>
+      <detection>The system finds a started ledger row with no live worker and no exit proof.</detection>
+      <recovery>The work resumes from the ledger, which is the only state, and reruns only what the exit proof lacks.</recovery>
+      <acts>The system acts, and a cold session resumes by the recovery section if the system itself is down.</acts>
+      <retries>3</retries>
+      <then-status>blocked</then-status>
+    </case>
+    <case id="bad-output">
+      <meaning>The exit proof fails its check.</meaning>
+      <detection>The step's check runs on the exit proof and returns a failure.</detection>
+      <recovery>A fresh seat retries with the failure attached, and never the seat that failed.</recovery>
+      <acts>The system spawns the fresh seat and no agent or human does.</acts>
+      <retries>3</retries>
+      <then-status>blocked</then-status>
+    </case>
+    <case id="governance-interference">
+      <meaning>An old hook, gate, guard, lease, watch or status rule blocks a rebuild ticket.</meaning>
+      <detection>The ticket's seat or the system reports a refusal that names the old rule.</detection>
+      <recovery>The build-mode principle applies, so the ticket proceeds, the rule gets a fix ticket and the ledger row records which rule bit.</recovery>
+      <acts>The system proceeds and cuts the fix ticket, and the owner is told only through the ledger.</acts>
+      <retries>3</retries>
+      <then-status>blocked</then-status>
+    </case>
+  </failure-cases>
+
+  <recovery id="recovery">
+    <read-first>A cold session needs nothing but this XML, the ledger and main, and it reads them in the order below.</read-first>
+    <file order="1" path="rebuild/factory-rebuild-plan.xml">The plan on main, which names every step, proof and rule.</file>
+    <file order="2" path="rebuild/schema/factory-rebuild-plan.xsd">The contract the plan is validated against.</file>
+    <file order="3" path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/ledger.tsv">The only record of what is started, done or blocked.</file>
+    <file order="4" path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/">The exit proofs written so far.</file>
+    <file order="5" path="rebuild/README.md">Where every output lives and the cleanup command.</file>
+    <rebuild-command>Run rebuild/bin/plan-validate.sh, then rebuild/bin/plan-to-rail.sh, then rebuild/rail.sh from a fresh worktree of main, and publish the built page to the URL in the latest checkpoint row.</rebuild-command>
+    <action>Create a fresh worktree from origin/main and run the plan-validate.sh script, and stop if it fails.</action>
+    <action>Show the ledger with the ledger.sh --show option and find the first step with no complete row, which is the current step.</action>
+    <action>If the current step has a started row, check whether its exit proof paths exist and pass the step checklist.</action>
+    <action>If the proof exists and passes, append a complete row, otherwise start a fresh seat or script run with the failure attached.</action>
+    <action>If the last row for the step is blocked, read its ref and do nothing more, because the owner has one card waiting.</action>
+    <action>After every ledger row, rebuild the page with rail.sh and republish it to the same URL with the Artifact tool.</action>
+    <action>After the first publish, append a checkpoint row whose ref is the artifact URL, so a cold session republishes to the same URL.</action>
+  </recovery>
+
+  <change-rule id="change-rule">
+    <s>Only the owner adds or removes steps.</s>
+    <s>Agents append ledger rows and nothing else.</s>
+    <s>The status in this file is the status at issue, and the ledger is the live state.</s>
+  </change-rule>
+
+  <ledger id="ledger">
+    <path>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/ledger.tsv</path>
+    <usage>RIME_LEDGER=ledger-path RIME_SEAT=seat-name ~/.claude/skills/execution-rail/bin/ledger.sh step status "text of fifteen words or fewer" [ref]</usage>
+    <columns>The columns are at_utc, step, status, text, by and ref, and the status is started, complete, blocked, issue, question or checkpoint.</columns>
+    <first-row>R-01 started: Investigation launched: script-driven, 20 Sonnet investigators, three tracks.</first-row>
+  </ledger>
+
+</factory-rebuild-plan>
