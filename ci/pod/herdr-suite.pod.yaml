@@ -16,6 +16,20 @@
 #   runAsUser 1000: the host runs `--userns=keep-id` as a normal user; the cases never need root and some (git safe.directory, HOME) behave
 #     differently as root.
 #   restartPolicy Never and activeDeadlineSeconds: a failed case is evidence and must not be retried by the kubelet; a hung herdr server ends at the deadline.
+#   HERDR_AGENT_DETECTION_MANIFEST_CATALOG_URL points at a closed local port - WO-20261013-0b48. What broke: herdr case 11-guard-ack-nudge
+#     failed in 4 of 6 arm64 pods (baseline run 2026-10-14 00:27Z) and passed on the host. seat.sh nudge_seat (herdr/bin/seat.sh, the
+#     loop after "pane wait-output ... ACK compaction-guard") needs two idle reads in nudge_settle_seconds (4 in the case). In a pod herdr
+#     read the seat as `unknown` for ~3.5 s after the brief arrived, so the second idle read came after the window closed. Measured with
+#     herdr-server.log: the pod's herdr (0.9.0, network up, curl in the image) fetches the remote agent-detection manifest at start-up
+#     (herdr::detect::manifest_update, https://herdr.dev/agent-detection/index.toml), and when the brief is delivered it logs a second
+#     `agent changed previous_agent=None agent=Claude`, after which the status stays unknown ~3.5 s. The host never does this: its test
+#     image has no curl and runs --network=none, so the fetch fails ("curl failed: No such file or directory") and the status stays idle.
+#     With a failing curl in the pod, 3 of 3 runs matched the host. It is not CPU speed: 2 pods alone on a node flapped the same.
+#     Why this fix: the pod becomes as hermetic as the host's --network=none, with no change to the case, seat.sh or nudge_settle_seconds.
+#     Rejected: raising nudge_settle_seconds (hides the flap, and cases then pass by luck of timing), removing curl from the image (the
+#     image build needs it) and a NetworkPolicy (cluster-wide, a different ticket). Cost: the pod's herdr never refreshes detection
+#     manifests; it uses the ones compiled into the binary, the same as the host. The pod already requests cpu 1000m (below), so the
+#     "pod cpu requests" half of the ticket needed no change. Record: WO-20261013-0b48.
 #   resources: one herdr server per pod (the 31.8G herdr death of 2026-10-13 is why cases are capped); numbers measured on the proof run, see ci/image/README.md.
 apiVersion: v1
 kind: Pod
@@ -61,6 +75,7 @@ spec:
         - { name: SHELL, value: /bin/bash }
         - { name: COQ_TEST_IN_CONTAINER, value: "1" }
         - { name: COQ_CASE, value: "${COQ_CASE}" }
+        - { name: HERDR_AGENT_DETECTION_MANIFEST_CATALOG_URL, value: "http://127.0.0.1:9/index.toml" }
       resources:
         requests: { cpu: 1000m, memory: 256Mi }
         limits: { memory: 1Gi }
