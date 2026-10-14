@@ -26,6 +26,8 @@ Everything under `plan.json` and `side.html` is generated from the XML and is ne
 - `plan.json` is the execution rail's plan, an ordered array of `{id, t, who, gate, owner}`, generated and committed.
 - `side.html` holds the rail's folded panels for the status code map, the build mode rule, the failure cases and the recovery section, generated and committed.
 - `rail.sh` calls the execution-rail skill with every path wired, and refuses to build if the generated files have drifted.
+- `roles/rebuild-architect.json` is the compaction-guard role schema for the rebuild architect session, with compaction threshold 35, bound at session start with the guard's bind verb.
+  The live copy the session binds to is `~/.local/state/coq/coq-jev-herdr-plugin/rebuild/roles/rebuild-architect.json` until a later ticket points the bind at the repo copy.
 
 ## 3. Outputs outside the repository
 

@@ -1,0 +1,19 @@
+{
+  "name": "rebuild-architect",
+  "title": "Factory rebuild architect session",
+  "agent_kind": "claude",
+  "model": "claude-fable-5-1",
+  "thresholds": {
+    "compact": 35,
+    "compact_requires": "task_complete",
+    "context_window": 1000000,
+    "freeze_seconds": 180
+  },
+  "notes": [
+    {
+      "at": "2026-10-14T02:45:00Z",
+      "who": "owner",
+      "why": "Owner order 2026-10-14 UTC: 'i have a bunch of auto compaction systems that worked great, ensure its used here at 35%'. The session had no role schema, so the guard applied the default 30. This schema binds the rebuild architect session to compaction-guard at 35. Per the guard SOP the threshold lives only here; it is not set by environment or by hand. Lives in the state directory until the rebuild tooling PR moves it into the repo."
+    }
+  ]
+}
