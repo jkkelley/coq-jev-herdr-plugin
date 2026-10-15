@@ -22,7 +22,7 @@
   blocks the book now).
   Cost: a declared need is not a live pointer until shared/ lands.
 -->
-<volume id="N-14" node="N-14" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+<volume id="N-14" node="N-14" kind="node-spec" group="G3" version="1.2.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
@@ -113,7 +113,7 @@
   V --> P[Commit workspace with N-14/workspace.provision/run_id/r1]
   F -- 3 failures --> R500[workspace.failed 500, slots.free]</mermaid>
     <step n="1">Claims verified. In one read transaction, list the live claims rows of the ticket (released_at null) and check each declared pattern of the ticket row has one. A missing row is 412 claim_missing with the missing patterns: N-03 re-acquires at the next ready and N-11 regrants free. A reviewer, spec-author or validator claims nothing and verifies nothing. No row is written here.</step>
-    <step n="2">Slot. Refuse 429 no_slot while a live drain lease (system lease key drain:workspace) is held, so N-45 can empty the pool. Otherwise statement slots.take: one free row of workspace_slots (../../shared/contracts.xml#timing) to holder run_id with expires_at the dispatch deadline_at plus kill.grace_seconds plus 600 s. Slot n is only ever used by pool user coq-seat-n, so the slot number names the seat user N-15 binds.</step>
+    <step n="2">Slot. A slot with a live drain lease (system lease key drain:slot-NN, nodes/N-45/spec.xml#mechanism step 3) is never taken; when every free slot is drained, refuse 429 no_slot, so N-45 can empty the pool. Otherwise statement slots.take: one free, undrained row of workspace_slots (../../shared/contracts.xml#timing) to holder run_id with expires_at the dispatch deadline_at plus kill.grace_seconds plus 600 s. Slot n is only ever used by pool user coq-seat-n, so the slot number names the seat user N-15 binds.</step>
     <step n="3">Mirror. One bare mirror per repository at CACHE/git/SLUG.git, owned by coq-svc. Under a flock (30 s) run git fetch --prune with refspecs for heads and refs/pull/*/head; record mirror_sha.</step>
     <step n="4">Worktree. Remove any leftover at ws/n, then worktree add --detach at base_ref: origin/main for a worker on attempt 1, a spec-author and the validator; origin/wo/TICKET for a worker on a later attempt whose branch exists; refs/pull/PR/head for a reviewer, which must equal target.head_sha or the result is 412 head_moved. A worker switches to wo/TICKET.</step>
     <step n="5">ACL. ws/n stays owned by coq-svc; setfacl gives coq-seat-n rwX plus a matching default ACL for a worker, r-X for every other role (../../shared/authority.xml#seat-isolation). A reviewer or spec-author therefore cannot change a file whatever its settings say; the deny rules of N-13 are a second fence, not the first.</step>
@@ -169,7 +169,7 @@
   <section id="checklist" title="Checklist with proof">
     <item proof="go test ./internal/workspace -run TestClaimMissingRefused: a worker ticket whose claim row was released returns workspace.refused 412 claim_missing naming the pattern; no claims row is written by this node">Claims are verified, never acquired here.</item>
     <item proof="go test TestConcurrentProvisionOneSlot: 20 concurrent Provision calls against a pool of 16 yield 16 workspace records, 4 refused 429, 16 distinct slots, each slot n bound to coq-seat-n">Slots are one per pool user.</item>
-    <item proof="go test TestDrainRefuses: with a live drain:workspace lease every Provision returns 429 no_slot">A drain empties the pool.</item>
+    <item proof="go test TestDrainRefuses: a slot with a live drain:slot-NN lease is skipped, and with every free slot drained Provision returns 429 no_slot">A drain empties the pool.</item>
     <item proof="host probe: as coq-seat-03 in a reviewer slot, touch of any file fails EACCES; as coq-seat-04 in a worker slot it succeeds">Read-only roles are read-only by ACL.</item>
     <item proof="go test TestBaseRefByPhase: attempt 1 worker at origin/main; attempt 2 at origin/wo/WO-x; reviewer at refs/pull/N/head equal to target.head_sha; a moved head returns 412 head_moved">Base ref follows the phase and attempt.</item>
     <item proof="probe: git -C the owner's checkout status --porcelain before and after 50 provisions is byte-identical">The main checkout is never touched.</item>

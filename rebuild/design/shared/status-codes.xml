@@ -56,33 +56,33 @@
       <emitter node="N-04">forge.started</emitter>
       <emitter node="N-05">backup.started</emitter>
       <emitter node="N-06">unit.started, unit.start, tick (subkinds scheduler, poll, backup, stall, health, hourly, daily), reload.request</emitter>
-      <emitter node="N-07">dispatch, pr.opened (source poll), gate.verdict pending or superseded</emitter>
+      <emitter node="N-07 N-08">dispatch, gate.verdict pending or superseded</emitter>
       <emitter node="N-13 N-14 N-15">seat.bundle, workspace, seat.heartbeat</emitter>
-      <emitter node="N-16 N-17">pr.opened (source seat, head_sha, head_repo, pr, ticket), ticket-set.draft</emitter>
+      <emitter node="N-16 N-17">pr.opened (the N-16 close-out opened the PR: head_sha, head_repo, pr, ticket), ticket-set.draft</emitter>
       <emitter node="N-20 N-21 N-22">jenkins.config, namespace.manifest, image.config</emitter>
       <emitter node="N-23 N-25 N-26">suite.plan, main.plan, gate.pending</emitter>
       <emitter node="N-27 N-32 N-34 N-29 N-30 N-31 N-50">page.up, page.state, page.down clean, file.stored, key.rotated, watcher.alive, watcher.down clean, front-door, front-door.rebind, front-door.down clean, push.subscribed, pushed.frame, push.skipped, push.folded, owner.answer, owner.message, ack accepted or routed or consumed, cutover.imported, line.resumed</emitter>
       <emitter node="N-33">plan.step, plan.side, ledger.row started or checkpoint</emitter>
       <emitter node="N-35 N-36 N-44">deploy.building, art.building, build-mode.state planned</emitter>
       <emitter node="N-03 N-10 N-30 N-49 N-50">ticket.request (a cut request: a fix for a held main, a cut: message, a LAND row, the archive of the cancels; N-03 admits it at phase spec)</emitter>
-      <emitter node="N-06 N-07 N-11">tick.daily, sched.tick (the scheduler tick entity), attempt (the next attempt with its backoff)</emitter>
+      <emitter node="N-06 N-07 N-11">tick.daily, sched.tick (the scheduler tick entity), attempt (the next attempt with its backoff), regrant (a free regrant, no attempt charged)</emitter>
+      <emitter node="N-09">branch.update (an update-branch call on a pull request behind strict protection, at most merge.update_branch_per_hour)</emitter>
       <emitter node="N-20 N-28 N-30">job.run (written before every Jenkins build call), card.merged (a second cause folded into an open card), digest.item (an architect-lane message in the digest)</emitter>
       <emitter node="N-45 N-49">cleanup.run plan, disposition planned</emitter>
     </status-code>
     <status-code id="code-200" value="200" name="done" lamp="green" actor="system">
       <meaning>Done or applied: the step finished and its output is the record; a replayed idempotent put also answers 200 with the first response.</meaning>
       <acts>system: the phase post step; nobody waits on it.</acts>
-      <emitter node="N-01">record.committed (replayed)</emitter>
-      <emitter node="N-02">lease.renewed</emitter>
+      <emitter node="N-01">record.committed (replayed), store.restored (the first Commit of a restored epoch, contracts.xml#restore)</emitter>
       <emitter node="N-03">ticket.ready</emitter>
-      <emitter node="N-04">forge.snapshot, forge.recovered</emitter>
+      <emitter node="N-04">forge.snapshot, forge.recovered, forge.pr_closed (a PR left the open list), protection.observed (the protection check passed, authority.xml#github-app; N-04 is its only writer)</emitter>
       <emitter node="N-06">health.recovered, reload.applied</emitter>
       <emitter node="N-09">merge (merge_sha, pr, ticket, parent_main; consumed by N-26 and N-45), merge.hold.lifted</emitter>
       <emitter node="N-12">prompt.cleared (a parked long-lived seat left blocked or its transcript moved)</emitter>
       <emitter node="N-15">seat.result outcome done with validated structured output</emitter>
-      <emitter node="N-25">protection.applied (written through the owner CLI after the owner's setup), protection.observed (the daily protection check passed, authority.xml#github-app)</emitter>
       <emitter node="N-50">bootstrap.advanced (bootstrap:state moved one state, cut-over.xml#bootstrap)</emitter>
-      <emitter node="N-29 N-28 N-30 N-52">ruling, card.done, ack answered, reply, push.receipt</emitter>
+      <emitter node="N-29 N-28 N-30 N-52">ruling, card.done, ack answered, reply, push.receipt (the provider accepted), push.observed (the phone fetched the body)</emitter>
+      <emitter node="N-42 N-44">control.action control.replayed (the same action id returns the first result), hold.state (hold set or cleared)</emitter>
       <emitter node="N-33">ledger.row complete</emitter>
       <emitter node="N-35 N-36 N-38 N-39 N-40 N-41 N-42">deploy.superseded, art.superseded, map.rendered, machine.rendered, stats.rendered, alerts.rendered, controls.rendered</emitter>
       <emitter node="N-44 N-45 N-47 N-48">build-mode.state applied, cleanup.run applied, drive.copy, promotion applied</emitter>
@@ -137,7 +137,8 @@
       <meaning>Authorization: the caller's principal (its peer uid, authority.xml#role-derivation) may not do this; nothing was written. Reasons: unknown_principal, kind_not_permitted, principal_mismatch, capability_expired; for owner-only answers not_relayable; never a lease question (412) and never a race (409).</meaning>
       <acts>system: N-51 counts it by principal and reason; any unknown_principal is an alert row; the caller never retries it.</acts>
       <emitter node="N-01">record.refused (unknown_principal, kind_not_permitted, principal_mismatch, capability_expired)</emitter>
-      <emitter node="N-29 N-42">answer.rejected not_relayable (a relayed or defaulted answer to an owner-only card, or an owner word from a non-owner source), control.refused (a non-owner principal used an owner-only verb)</emitter>
+      <emitter node="N-29 N-42">answer.rejected not_relayable (a relayed or defaulted answer to an owner-only card, or an owner word from a non-owner source), control.action control.forbidden (not an owner session)</emitter>
+      <emitter node="N-44">build-mode.state, hold.state (not an owner principal; nothing changes)</emitter>
     </status-code>
     <status-code id="code-404" value="404" name="not-found" lamp="amber" actor="nobody">
       <meaning>The selection names a node or record that does not exist in the frame; the screen shows the miss.</meaning>
@@ -150,7 +151,7 @@
       <emitter node="N-01">record.conflict (version, idempotency_mismatch)</emitter>
       <emitter node="N-09 N-03">merge.conflict (the forge reports the head conflicts with main), claim race at ticket.ready (the claims row moved under the Commit)</emitter>
       <emitter node="N-29 N-15">answer.refused (second answer: the ruling:CARD entity already exists), seat_users.bind lost (another run took the pool user)</emitter>
-      <emitter node="N-35 N-41 N-42 N-47 N-44">deploy.record-conflict, alert.ack-conflict, control.conflict, publish cursor race, build-mode.state ruling refused (version moved)</emitter>
+      <emitter node="N-35 N-41 N-42 N-47 N-44">deploy.record-conflict, alert.ack-conflict, control.conflict, drive.copy (publish cursor race), build-mode.state ruling refused (version moved)</emitter>
       <emitter node="N-45 N-49">cleanup.run plan changed before apply, disposition plan hash changed (the plan entity's version moved)</emitter>
     </status-code>
     <status-code id="code-410" value="410" name="superseded" lamp="grey" actor="nobody">
@@ -163,12 +164,13 @@
       <meaning>A precondition failed and the step did not run. Reasons with one meaning book-wide: stale_token (the token is not the lease's current token) and lease_not_current (the lease is not reserved or running, or has expired) at every fenced write (contracts.xml#fencing); not-ready (an owner word before its bootstrap state, naming the missing proofs, cut-over.xml#bootstrap); harness_mismatch (the harness differs from its pin, seat-contract.xml#launch-flags-rule); claim_missing (the ticket does not hold the claims its files need, contracts.xml#claims). Also: a missing ruling, frozen intake, head moved, bundle or workspace mismatch, import not recorded, a second instance, a dirty checkout, a cancel-set mismatch, a transition not in the table.</meaning>
       <acts>system: N-11 by reason (contracts.xml#retry-owner); the owner only for a missing ruling, a frozen intake, protection.drift, or a not-ready reply to their own word.</acts>
       <emitter node="N-01 N-02">record.stale (stale_token, lease_not_current), lease.stale</emitter>
-      <emitter node="N-03 N-13 N-14 N-15 N-07">intake.frozen (lane product under freeze.state), seat.bundle.refused, workspace.refused (claim_missing, aggregate, ticket_in_flight, head_moved), seat.result preflight (bundle_mismatch, workspace_mismatch, lease_not_current, claim_missing, harness_mismatch), dispatch.refused, ticket.transition_refused (a transition not in contracts.xml#ticket-transitions)</emitter>
-      <emitter node="N-29 N-25">control.refused not-ready (USERGO before B7 or GOFACTORY outside B1), protection.drift (main's protection differs from authority.xml#github-app; one card)</emitter>
+      <emitter node="N-03 N-13 N-14 N-15 N-07">intake.frozen (lane product under freeze.state), seat.bundle.refused, workspace.refused (claim_missing, aggregate, ticket_in_flight, head_moved), seat.result preflight (bundle_mismatch, workspace_mismatch, lease_not_current, claim_missing, harness_mismatch), dispatch.refused (N-28 posts one card per latch), ticket.transition_refused (a transition not in contracts.xml#ticket-transitions)</emitter>
+      <emitter node="N-29 N-04 N-44">control.refused not-ready (USERGO before B7 or GOFACTORY outside B1), protection.drift (main's protection differs from authority.xml#github-app; N-04 is its only writer; one card), hold.state (USERGO before B7)</emitter>
+      <emitter node="N-45">cleanup.run (lease_not_current: a drain lease ended between plan and apply; plan-changed)</emitter>
       <emitter node="N-27 N-32 N-34">watcher.refused, page.refused, front-door.refused (a second instance found the lock held; exit 4, RestartPreventExitStatus=4)</emitter>
       <emitter node="N-49 N-50">dirty checkout, cancel set not fourteen (cancel-set mismatch)</emitter>
       <emitter node="N-22 N-23 N-25 N-26">image.refused, plan.refused, gate.run refused (a seat tried a status write), main.plan.refused</emitter>
-      <emitter node="N-34 N-42 N-50 N-51">cutover.refused (import not recorded or watcher not alive), control.refused (a seat typed an owner-only break glass verb; counted by N-51), ruling missing</emitter>
+      <emitter node="N-34 N-32 N-50 N-51">cutover.refused (import not recorded or watcher not alive), control.refused (a seat typed an owner-only break glass verb; counted by N-51), ruling missing</emitter>
       <emitter node="N-24 N-50">artifact.refused (a pod artifact line of a kind its suite entry does not list), cancel ruling missing</emitter>
     </status-code>
     <status-code id="code-422" value="422" name="failed-with-evidence" lamp="red" actor="system">
@@ -178,11 +180,12 @@
       <emitter node="N-22 N-24 N-25 N-26 N-46">image.failed, pod.run failed, gate.run failed, main.gate.status red, check.verdict 422</emitter>
       <emitter node="N-36 N-37 N-38 N-39 N-40 N-41">art.rejected, binding.unbound, frame.invalid, view.invalid, counters.invalid, alerts.invalid</emitter>
       <emitter node="N-48 N-51">promotion attempt failed, exit.verdict fail</emitter>
+      <emitter node="N-44">build-mode.state (ruling invalid: bad expiry or scope; N-29 re-asks)</emitter>
     </status-code>
     <status-code id="code-423" value="423" name="blocked" lamp="amber" actor="system">
       <meaning>Blocked or held: a lease is held by another, a merge hold stands, a card is held, a run ended blocked with a terminal reason, a promotion or a Drive publish needs set-up; the work waits on a named condition with a bound.</meaning>
       <acts>system: N-11 by terminal reason (success, error_max_turns, error_max_budget_usd, error_during_execution, error_max_structured_output_retries, killed_deadline, killed_stall, killed_lease_lost, killed_by_record, crashed, no_result, schema_invalid, output_rejected, seat_blocked); owner at a second 423 on the same key, on a prompt.parked long-lived seat that no standing answer covers (one card; a model-limit prompt of a role with a ruled model is answered by the system and is no card), on a stable promotion, on Drive auth and on other-repository rows.</acts>
-      <emitter node="N-02 N-05">lease.refused held, backup.busy</emitter>
+      <emitter node="N-02 N-05">lease.refused (hold, or another holder; contracts.xml#lease-machine), backup.busy (reason drained: a live drain lease covers the snapshot path)</emitter>
       <emitter node="N-09 N-10 N-15">merge.held, merge.hold, seat.result outcome blocked</emitter>
       <emitter node="N-20 N-21 N-22 N-23 N-26">jenkins.blocked, namespace.blocked, image.blocked, plan.blocked, main.plan.blocked</emitter>
       <emitter node="N-28 N-33 N-42 N-47 N-48 N-49">card.held, ledger.row blocked, controls.held, publish blocked (Drive not authorised), promotion blocked (stable), disposition blocked (other repository)</emitter>
@@ -193,6 +196,7 @@
       <meaning>Refused for capacity: a cap on leases, slots, ports or push clients; the request is not queued, the next tick asks again.</meaning>
       <acts>system: N-07 on a later tick, never a waiting loop; nobody is told unless it persists past the stall bound (then N-41).</acts>
       <emitter node="N-02 N-04 N-14">lease.refused cap, forge.throttled, workspace.refused no_slot</emitter>
+      <emitter node="N-07">budget.held (a ticket or daily budget is spent, retry-budget.xml#budgets; one card)</emitter>
       <emitter node="N-31 N-48">push.client.dropped, no free port in the tier range</emitter>
       <emitter node="N-48">promotion: no free port in the tier range</emitter>
     </status-code>
@@ -200,11 +204,11 @@
       <meaning>Failed after 3 attempts, stalled, dead, corrupt or a defect: the system has recovered what it can and reports; the kinds marked system-handled below are counted and watched, the rest become one card.</meaning>
       <acts>owner for dead, pod.run admission-refused, stall.kill.failed, store.corrupt, unit.crashloop, ticket.stale, backup.failed, backup.rotten, forge.overflow, watcher.dead, cutover.failed, hold.ignored, counters.failed after three skipped ticks, merge.hold.aged, main.verify.missing; system-handled with a counter and an N-41 row: tick.missed, lease.expired, lease.failed under three in ten minutes, intake.slow, forge.slow, backup.mirror_failed under a day, gate.write.failed, status.post.failed, verify.write.failed, deploy.build-failed, art.failed, binding.failed, push.stalled, push.failed, reply.failed, delivery.failed, inbox.unroutable, message.stale.</acts>
       <emitter node="N-01 N-02 N-03">store.corrupt, store.wal_large, lease.expired, lease.failed, ticket.stale, intake.failed, intake.orphan, intake.slow</emitter>
-      <emitter node="N-04 N-05 N-06">forge.overflow, forge.slow, backup.failed, backup.mirror_failed, backup.rotten, tick.missed, unit.crashloop, unit.duplicate, reload.failed</emitter>
+      <emitter node="N-04 N-05 N-06">forge.overflow, forge.slow, backup.failed, backup.mirror_failed, backup.rotten, tick.missed, unit.crashloop, unit.duplicate, reload.failed, host.outage (an outage the outside probe saw, imported on recovery, outside-probe.xml#journal)</emitter>
       <emitter node="N-07 N-08 N-09 N-10 N-11 N-12">gate.verdict missing, gate.write.failed, store.unreachable, merge.failed, merge.hold.aged (once per hold id past merge.hold_age_alert_seconds 14400), main.verify.missing, verify.write.failed, dead, stall.kill.failed</emitter>
-      <emitter node="N-13 N-14 N-15 N-18">seat.bundle.failed, workspace.failed, phase.failed, validator.failed, launcher.defect (survivor_after_sigkill, result_put_never_landed, two_launchers_disagree)</emitter>
-      <emitter node="N-24">pod.run admission-refused (Kubernetes refused the pod at create, 403 exceeded quota; a capacity defect, one card, no ladder climb, shared/ci-capacity.xml#admission)</emitter>
-      <emitter node="N-20 N-21 N-22 N-24 N-25 N-26">jenkins.unready, namespace.unready, image.failed infrastructure, pod.run infrastructure after the ladder, gate.run error, protection.failed, status.post.failed, main.gate.status error</emitter>
+      <emitter node="N-13 N-14 N-15 N-18">seat.bundle.failed, workspace.failed, phase.failed, validator.failed (reasons podman, host_unit, pod_arm64, store_unreachable; never routed to N-11), launcher.defect (survivor_after_sigkill, result_put_never_landed, two_launchers_disagree)</emitter>
+      <emitter node="N-24">pod.run admission-refused (Kubernetes refused the pod at create, 403 exceeded quota; no ladder climb, shared/ci-capacity.xml#admission), capacity.defect (the defect record of that refusal; one card per configuration hash)</emitter>
+      <emitter node="N-20 N-21 N-22 N-24 N-25 N-26">jenkins.unready, namespace.unready, image.failed infrastructure, pod.run infrastructure after the ladder, gate.run error, status.post.failed (the status-post layer gave up; one card), main.gate.status error</emitter>
       <emitter node="N-27 N-28 N-29 N-30 N-31 N-32 N-33 N-34 N-50">watcher.down crash, watcher.dead, delivery.failed, card.unwatched, card.post.failed, ruling.effects.unknown, reply.failed, inbox.unroutable, message.stale, ack stale, push.snapshot.failed, push.stalled, push.failed, page.down crash, page.bind.failed, cutover.failed, front-door.failed, front-door.down crash, rail.seed.failed, ledger.row issue</emitter>
       <emitter node="N-35 N-36 N-37 N-40 N-42 N-43 N-45 N-47 N-48 N-49 N-51">deploy.build-failed, art.failed, binding.failed, counters.failed, hold.ignored, code.table load failed, cleanup.run failed (exit 4 listing what remains), publish failed, promotion failed, disposition failed, exit.verdict issue</emitter>
       <emitter node="N-07 N-11 N-12">dispatch.write.failed, retry.write.failed, stall.write.failed (a store write of the node failed after 3; the next tick re-derives it, level-triggered)</emitter>
@@ -255,7 +259,7 @@
     <row code="503 100" kinds="line.halted line.resumed" from="N-29">The halt and the resume, each one card; monitoring keeps running.</row>
     <row code="500 412" kinds="watcher.dead cutover.refused cutover.failed hold.ignored" from="N-27 N-34 N-50 N-42">The owner surface itself or the cut-over needs the owner.</row>
     <row code="410" kinds="alert.aged" from="N-41">An open alert past its escalation bound, once.</row>
-    <row code="412" kinds="protection.drift" from="N-25">Main's protection no longer requires coq/gate from the App; N-09 holds every merge until the owner reapplies it with forge-admin.</row>
+    <row code="412" kinds="protection.drift" from="N-04">Main's protection no longer requires coq/gate from the App; N-09 holds every merge until the owner reapplies it with forge-admin.</row>
     <row code="500" kinds="pod.run" from="N-24">Reason admission-refused only: the quota or LimitRange refused a pod at create; one card per configuration hash.</row>
     <row code="201" kinds="bootstrap.ready" from="N-50">The B7 ready card: owner-only, no default and no deadline (authority.xml#relayable-rulings); it names the proofs and waits for USERGO.</row>
     <row code="400 412 423 503" kinds="code.table cancel ruling-missing drive-auth stable-promotion other-repository drive-not-set-up build-mode-expiry" from="N-43 N-50 N-44 N-47 N-48 N-49">The G7 owner-only cases: a code map that fails to load, a cancel set that does not match, a missing ruling, Drive authorisation, a stable promotion, rows in another repository, Drive not set up, and build mode expiring with open rebuild tickets.</row>
@@ -274,13 +278,13 @@
   <owner-surface id="owner-surface">
     <s>The owner-surface kinds (G5: N-27 to N-34 and N-52) by code, as those volumes declared them; each kind is registered under exactly one code.</s>
     <row code="100">page.up, page.state, page.down clean, file.stored, key.rotated, watcher.alive, unit.start, watcher.down clean, front-door, front-door.rebind, front-door.down clean, push.subscribed, pushed.frame, push.skipped, push.folded, owner.answer, owner.message, ack accepted or routed or consumed, cutover.imported</row>
-    <row code="200">ruling, card.done, ack answered, reply, push.receipt</row>
+    <row code="200">ruling, card.done, ack answered, reply, push.receipt, push.observed</row>
     <row code="201">cutover.swapped: the one-shot cut-over unit replaced the legacy Node server</row>
     <row code="300">card posted, routed.message</row>
     <row code="400">card.refused, answer.rejected, message.rejected, reply.refused, push.refused, plan.invalid, ledger.rejected</row>
-    <row code="403">answer.rejected not_relayable, control.refused (a non-owner principal used an owner-only verb)</row>
+    <row code="403">answer.rejected not_relayable, control.action control.forbidden (not an owner session)</row>
     <row code="409">answer.refused (second answer to one card)</row>
-    <row code="412">watcher.refused, page.refused, front-door.refused (second instance, exit 4, RestartPreventExitStatus=4); cutover.refused (import not recorded or watcher not alive); control.refused not-ready</row>
+    <row code="412">watcher.refused, page.refused, front-door.refused (second instance, exit 4, RestartPreventExitStatus=4); cutover.refused (import not recorded or watcher not alive); control.refused not-ready (N-29) or a seat's owner-only verb (N-32)</row>
     <row code="423">card.held, ledger.row blocked</row>
     <row code="429">push.client.dropped</row>
     <row code="500">watcher.down crash, watcher.dead, delivery.failed, card.unwatched, card.post.failed, ruling.effects.unknown, reply.failed, inbox.unroutable, message.stale, ack stale, push.snapshot.failed, push.stalled, push.failed, page.down crash, page.bind.failed, cutover.failed, front-door.failed, front-door.down crash, rail.seed.failed, ledger.row issue</row>

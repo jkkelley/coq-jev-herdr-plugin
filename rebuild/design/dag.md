@@ -136,7 +136,6 @@ flowchart LR
   N-06 --> N-45
   N-06 --> N-49
   N-06 --> N-51
-  N-07 --> N-11
   N-07 --> N-12
   N-07 --> N-13
   N-07 --> N-14
@@ -265,6 +264,8 @@ The edges their volumes mark `drawn="false"`, and why:
 | N-15 | N-02 | `Lease.Start`, `Lease.Renew` and `Lease.Release` calls | calls on the lease the dispatch already holds, not new records ([lease machine](shared/contracts.xml#lease-machine)) |
 | N-22 | N-26 | image records as a precondition | read through N-23's plan code |
 | N-26 | N-24 | `main.plan` entries run as pods | would close a cycle through N-25, N-04 and N-09 |
+| N-29 | N-12 | a ruling with effect run.kill (the owner's kill) | an owner act read by N-12's tick, like the hold; not a data flow of the line |
+| N-30 | N-29 | an owner word routed to its standing card (R01 to R03) | the owner's own message; the ruling is N-29's |
 
 ## 3. Every node
 
@@ -328,9 +329,9 @@ The edges their volumes mark `drawn="false"`, and why:
 | Source | What re-enters | Enters at | Bound |
 | --- | --- | --- | --- |
 | N-04 | a commit to `shared/status-codes.xml` seen on main in a forge.snapshot | N-43, which loads the new code table by hash | one load per table hash; a table that fails to load keeps the previous one |
-| N-08 | gate.verdict green | N-03, which moves the ticket to the reviewer phase so N-02 leases the reviewer on the gated head (nodes/N-03/spec.xml#mechanism step 6) | one phase change per ticket: worker, then reviewer, then merge |
+| N-08 | gate.verdict green | N-07, which grants the reviewer phase on the gated head (GrantDispatch, pr_open to in_flight, [ticket transitions](shared/contracts.xml#ticket-transitions)) | one phase change per ticket: worker, then reviewer, then merge |
 | N-10 | rejected 422 on main, and merge.hold or merge.hold.lifted | N-03 as a ticket.request (fix-for-hold) admitted as a spec-phase cut request CR-..., leased at N-02 and dispatched to a spec-author by N-07; N-09 reads the hold and merges only the fix | merge.hold stays until a green main; 3 fix attempts then the owner's card |
-| N-11 | attempt record n+1 | N-02 as a fresh claim with attempt n+1; N-07 reads it for not_before | the [retry owner](shared/contracts.xml#retry-owner) charge, then dead and one escalation |
+| N-11 | attempt record n+1, or a free regrant | N-07, which grants attempt n+1 (a new lease key) once not_before passes, or regrants the same key with a new token ([lease machine](shared/contracts.xml#lease-machine)) | the [retry owner](shared/contracts.xml#retry-owner) charge, then dead and one escalation |
 | N-18 | accepted ticket records | N-03 as new tickets | a ticket set is finite and every ticket names its files |
 | N-28 | a card's policy default at its deadline | N-29 as a defaulted answer | only a card that is not owner-only carries a default; one ruling per card id ([owner words](shared/authority.xml#owner-words)) |
 | N-29 | ruling record | N-03 (a ruling that unblocks a dead ticket) or N-44 (a flag) | one ruling per card id; a second answer to the same card is refused |
@@ -363,7 +364,7 @@ The index volume `rebuild/design/index.xml` lists every node id and points to ev
 
 ## 6. Cycle check statement
 
-Nodes: 52. Drawn edges: 130. Re-entries (not edges): 12.
+Nodes: 52. Drawn edges: 129. Re-entries (not edges): 12.
 Result of Kahn's algorithm over the drawn edges: acyclic; every node appears in the topological order, no node is isolated, and no edge points at an unknown node.
 Topological order: N-01 N-06 N-20 N-21 N-27 N-31 N-03 N-05 N-43 N-22 N-29 N-30 N-33 N-02 N-37 N-44 N-49 N-07 N-13 N-14 N-15 N-12 N-16 N-17 N-19 N-23 N-18 N-24 N-36 N-46 N-40 N-42 N-25 N-04 N-08 N-09 N-11 N-26 N-47 N-50 N-10 N-45 N-35 N-41 N-51 N-38 N-48 N-39 N-28 N-32 N-52 N-34.
 The check ran at 2026-10-14T04:28:51Z, again for 1.1.0 at 2026-10-15T06:00:00Z after the declared edges of section 2.1 were drawn, and re-runs on every change to this file through `rebuild/design/bin/dag-check.py` (check.sh C16), which recounts the nodes, the drawn edges (edges into the sink RE are re-entries, not counted) and the re-entry rows, runs Kahn's algorithm and verifies that the order above is a valid topological order.

@@ -24,7 +24,7 @@
      stale state unwritable; the token was said to be read-only here and used to merge in N-09.
      The fix: per-PR detail and files, a conditional status read of every head each poll, a recently-closed read, a
      protection check, one mergeable vocabulary (GitHub's), and the forge-read credential only. -->
-<volume id="N-04" kind="node-spec" node="N-04" group="G1" version="1.1.0" written="2026-10-15T06:00:00Z" timezone="UTC">
+<volume id="N-04" kind="node-spec" node="N-04" group="G1" version="1.2.0" written="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG and principles</entry>
@@ -101,6 +101,7 @@
     <record kind="forge.pr_closed" code="200" schema="record.schema.json#/$defs/forge_pr_closed">A PR that left the open list since the previous poll: number, head_sha, merged, merge_commit_sha and merged_at when merged, closed_at; once per PR. N-09 completes a lost merge from it; N-45 and N-51 read it.</record>
     <record kind="protection.observed" code="200" schema="record.schema.json#/$defs/protection">main's protection equals the expected configuration (strict, required check coq/gate with app_id forge.gate_app_id, no force pushes, linear history; shared/authority.xml#github-app); config_sha256 and observed_at; written at start, every protection.check_seconds and on demand after a merge refusal. N-09 and N-10 read the newest.</record>
     <record kind="protection.drift" code="412" schema="record.schema.json#/$defs/protection">Protection is unreadable or differs, with every difference named; N-09 holds every merge protection-unverified until a newer protection.observed; one card through N-28, because only the owner's forge-admin can repair it.</record>
+    <example schema="record.schema.json#/$defs/protection">{"id":"20261015T060000Z-200-y1z2a","at":"2026-10-15T06:00:00Z","seq":4000,"epoch":1,"kind":"protection.observed","code":200,"node":"N-04","branch":"main","config_sha256":"4444444444444444444444444444444444444444444444444444444444444444","observed_at":"2026-10-15T06:00:00Z","strict":true,"checks":[{"context":"coq/gate","app_id":123456}],"linear_history":true,"force_pushes":false,"expected_app_id":123456,"drift":[]}</example>
     <record kind="forge.unreachable" code="503">Three attempts failed; the entity is marked stale with the first failure time (record.schema.json#/$defs/forge_entity); readers treat a stale snapshot older than forge.stale_after_seconds 180 as unknown: N-08 writes nothing and N-09 holds.</record>
     <record kind="forge.throttled" code="429">GitHub's primary limit, or a secondary limit (403 or 429 with retry-after; field limit secondary), answered; the poll backs off to the reset time or retry-after GitHub reports, at most forge.throttle_max_seconds 900.</record>
     <record kind="forge.auth" code="400">The token is missing, expired or lacks scope; one card through N-28; polling continues and keeps failing until fixed, so the lamp stays red.</record>

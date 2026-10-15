@@ -634,6 +634,8 @@
     <decision id="D4">Bootstrap merge path (F52): the default is that N-09 merges under hold only PRs of the current bootstrap step with a green gate and review.passed; the alternative is an owner break-glass merge for each.</decision>
     <decision id="D5">Accept the Kaniko pin to the osscontainertools fork v1.28.5 by digest, with BuildKit rootless as the fallback (F25).</decision>
     <decision id="D6">GOFACTORY and USERGO remain the owner's words; nothing in this volume grants or implies either.</decision>
+    <decision id="D7">Seat credential under --bare (authority.xml#credential-matrix row anthropic-seat): with --bare the harness reads only ANTHROPIC_API_KEY or apiKeyHelper, so host seats run on an Anthropic API key and the subscription login of D03 cannot be used by them; whether seats are billed by API key is the owner's call, and until it is made the launcher starts no host seat and the B7 ready card names the decision as missing.</decision>
+    <s>Residual risk the owner accepts by running the line, not a decision: the owner uid is the trust root, so an agent session the owner runs under their own uid can reach the owner CLI; the ancestry refusal and the N-51 audit mitigate it, and only running such sessions under another uid removes it (authority.xml#deferred, item owner-uid-trust-root).</s>
   </owner-decisions>
 
   <many-agents id="many-agents">

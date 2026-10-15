@@ -221,8 +221,8 @@
       "type": "object",
       "required": ["code", "epoch", "seqs"],
       "properties": {
-        "code": { "type": "integer", "enum": [200, 201, 403, 409, 412, 422, 423, 429, 503] },
-        "reason": { "type": "string", "enum": ["replayed", "unknown_principal", "kind_not_permitted", "principal_mismatch", "capability_expired", "idempotency_mismatch", "version", "id", "stale_token", "lease_not_current", "precondition", "limits", "hold", "busy"] },
+        "code": { "type": "integer", "enum": [200, 201, 400, 403, 409, 412, 422, 423, 429, 503] },
+        "reason": { "type": "string", "enum": ["replayed", "invalid", "unknown_principal", "kind_not_permitted", "principal_mismatch", "capability_expired", "idempotency_mismatch", "version", "id", "stale_token", "lease_not_current", "precondition", "limits", "hold", "busy"] },
         "epoch": { "type": "integer", "minimum": 1 },
         "seqs": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
         "versions": { "type": "object", "additionalProperties": { "type": "integer" } }
@@ -302,7 +302,7 @@
     },
     "failure_kind": {
       "type": "string",
-      "enum": ["phase.failed", "stall", "crashed", "no_result", "seat.bundle.failed", "workspace.failed", "workspace.refused", "claim_overlap", "files-claimed", "cap", "review.changes", "gate.red", "merge.conflict", "schema_invalid", "output_rejected", "seat_blocked", "error_max_turns", "error_max_budget", "harness_mismatch", "admission-refused"]
+      "enum": ["phase.failed", "stall", "crashed", "no_result", "seat.bundle.failed", "workspace.failed", "workspace.refused", "claim_overlap", "files-claimed", "cap", "review.changes", "gate.red", "merge.conflict", "schema_invalid", "output_rejected", "seat_blocked", "error_max_turns", "error_max_budget", "harness_mismatch", "admission-refused", "head_moved"]
     },
     "retry_layer": {
       "type": "object",

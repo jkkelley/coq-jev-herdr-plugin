@@ -20,7 +20,7 @@
      body wrapper no producer writes; the volume carried a home directory and a home-directory slug.
      The fix: stable promotes on N-10's verified (paths from N-09's merge record by merge_sha); inputs by reference to their
      producers' schemas under the shared envelope; placeholders for personal paths. -->
-<volume id="N-48" kind="node-spec" node="N-48" group="G7" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+<volume id="N-48" kind="node-spec" node="N-48" group="G7" version="1.2.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, shared</entry>
@@ -100,7 +100,7 @@
 <where>Go package promote in the service decides; tools/bearings/scripts/promote.sh does the tier work as an Executor.Run verb; tools/bearings/scripts/screenshot.sh takes the pictures in a pinned playwright container on the host (podman, --network=host, so loopback and the tailnet address are reachable; the cluster cannot reach the host, D23).</where>
     <step n="1" tier="dev">On pr.opened: take lease tier:dev-&lt;ticket&gt;; provision the workspace at the head sha (git worktree from the mirror) and build the page binary into it (make -C tools/bearings build in the pinned coq-go image under podman); point current at it (write a temporary symlink, rename it over current); start or restart unit coq-bearings@&lt;project&gt;-dev-&lt;ticket&gt;, whose ExecStart runs the binary and assets of current; probe GET /health until 200 or timeout; screenshot; look check; promotion 201 dev.</step>
     <step n="2" tier="uat">On gate.verdict green for the same sha: the same on the uat range; the reviewer brief (N-19) gets the uat URL and the screenshot paths; when the paths touch the owner-locked assets, N-28 posts the confirm card (#owner-confirm).</step>
-    <step n="3" tier="stable">On verified for a merge touching promotion.paths: take lease tier:stable; provision src@&lt;merge sha&gt; and build its binary; rename current to point at it, keeping the previous target as previous; systemctl --user restart coq-bearings@&lt;project&gt;-stable, which drains for up to 5 s and starts on the same port 44900 from the new workspace (nodes/N-32/spec.xml#tiers); probe /health 200 and GET / with the page key 200 within promotion.probe_timeout; screenshot the stable URL; promotion 201 stable with previous_sha.</step>
+    <step n="3" tier="stable">On verified for a merge touching promotion.paths: take lease tier:stable in a Commit whose precondition is that no live drain:tier-stable lease covers the tier directory (a drained tier is refused 423 and retried on the next trigger, nodes/N-45/spec.xml#mechanism step 3); provision src@&lt;merge sha&gt; and build its binary; rename current to point at it, keeping the previous target as previous; systemctl restart coq-bearings@&lt;project&gt;-stable, which drains for up to 5 s and starts on the same port 44900 from the new workspace (nodes/N-32/spec.xml#tiers); probe /health 200 and GET / with the page key 200 within promotion.probe_timeout; screenshot the stable URL; promotion 201 stable with previous_sha.</step>
     <step n="4" waits="never stopped">The watcher (coq-watcher@&lt;page&gt;, N-27) is its own unit holding a store lease and tailing the store; it reads no page file and no page process, so the restart is invisible to it; the owner's answers and messages are store records and the browser queues an act made during the 2 s gap and resends it by id (nodes/N-32/spec.xml#mechanism step 5); browsers show DISCONNECTED and resume by Last-Event-ID with no seq lost. The front door (coq-front-door@&lt;page&gt;, N-34) is bound to the page unit and restarts with it, reading the port once at its start; the phone's EventSource reconnects through it. Nothing in this step calls make stop or make upgrade, and nothing repoints a port.</step>
     <step n="5" screenshot="both sizes">screenshot.sh opens the tier URL with the viewer key, waits for the page's ready marker (a data-ready attribute the page sets after its first state render), takes 1280x800 and 430x932 (iPhone 16 Pro Max CSS px) PNGs, and reads getComputedStyle of the look tokens (the CSS custom properties of shared/principles.xml#krastorio-look) into JSON.</step>
     <step n="6" look="check">The look check compares each token with the value in shared/principles.xml#krastorio-look (values only, original art); a missing token is a hard fail (422); a differing value is a row with code 422 on that row and the promotion proceeds for dev and uat (the reviewer sees the row) but not for stable (a stable restart with a failing look row is rolled back and refused 422 so the owner never sees a wrong page; the merge is already on main, so the fix is a fix ticket request from N-11).</step>
@@ -116,7 +116,7 @@ sequenceDiagram
   participant P as screenshot.sh
   M->>S: verified merge sha touching promotion.paths
   S->>W: provision, build binary, rename current (previous kept)
-  S->>U: systemctl --user restart (drain 5 s, same port)
+  S->>U: systemctl restart (drain 5 s, same port)
   U-->>F: front door restarts with the unit
   S->>U: GET /health, GET / (key) until 200 (timeout 60 s)
   alt probe or look fails
@@ -177,7 +177,7 @@ sequenceDiagram
     <path acts="system" id="N-48.screenshots" glob="$COQ_STATE/screenshots/&lt;tier&gt;/&lt;sha&gt;/*.png" retention="P90D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-48.screenshots">The pictures; the record names them; stable's are kept 365 days (a second entry N-48.screenshots-stable).</path>
     <path acts="system" id="N-48.screenshots-stable" glob="$COQ_STATE/screenshots/stable/*/*.png" retention="P365D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-48.screenshots-stable">Stable pictures, the owner's history of the page.</path>
     <path acts="system" id="N-48.log" glob="$COQ_STATE/logs/promote/*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-48.log">promote.sh and screenshot.sh output.</path>
-    <path acts="system" id="N-48.units" glob="systemd user instances coq-bearings@&lt;project&gt;-dev-*.service and coq-bearings@&lt;project&gt;-uat-*.service (instances of the one template)" retention="P0D" trigger="merge" cleanup="line/bin/cleanup.sh --entry N-48.units (systemctl --user stop the instance and reset-failed it)" holds="the stable instance">Dev and uat unit instances; the template is installed by N-32's install-units.sh and lives in the repository under tools/bearings/units/.</path>
+    <path acts="system" id="N-48.units" glob="systemd system unit instances coq-bearings@&lt;project&gt;-dev-*.service and coq-bearings@&lt;project&gt;-uat-*.service (instances of the one template)" retention="P0D" trigger="merge" cleanup="line/bin/cleanup.sh --entry N-48.units (systemctl stop the instance and reset-failed it)" holds="the stable instance">Dev and uat unit instances; the template is installed by N-32's install-units.sh and lives in the repository under tools/bearings/units/.</path>
   </state-paths>
 
   <edges id="edges">
@@ -256,7 +256,7 @@ sequenceDiagram
 
   <shared-needs id="shared-needs">
     <need kind="principle">principles.xml#owner-surface (bearings never stops, one surface) and principles.xml#krastorio-look with the token table: CSS custom property names and values from the art inventory section 4 (values only).</need>
-    <need kind="seat-contract">The seat deny list covers make serve, wait, stop, upgrade, front-door and any systemctl --user call; a seat never starts a tier.</need>
+    <need kind="seat-contract">The seat deny list covers make serve, wait, stop, upgrade, front-door and any systemctl call; a seat never starts a tier.</need>
     <need kind="store-table">promotions: tier, sha, attempt, state, pid, port, screenshot_id, previous_sha; leases tier:&lt;name&gt;.</need>
     <need kind="record-kinds">promotion, screenshot, pr.opened (changed paths), gate.verdict, verified, merge (changed paths, read only), control.action (revert stable).</need>
     <need kind="status-codes">201, 422, 423, 429 for promotion; 200 for screenshot.</need>

@@ -163,7 +163,7 @@
   </many-agents-at-once>
 
   <status-codes id="status-codes">
-    <emits kind="pushed.frame" code="100" acts="N-06 reads">entity-only per-client cursor; a record only on connect, resync and drop</emits>
+    <emits kind="pushed.frame" code="100" storage="entity-only" coalesce-key="client" acts="N-06 reads">entity-only per-client cursor; a record only on connect, resync and drop</emits>
     <emits kind="push.client.dropped" code="429" acts="the client reconnects; N-06 counts">backpressure or ack timeout</emits>
     <emits kind="push.snapshot.failed" code="500" acts="N-06; three in a row is unhealthy">snapshot build failed 3 times</emits>
     <emits kind="push.stalled" code="500" acts="N-41 alert, written after the store recovers; every screen showed STALE meanwhile">no store tick for 10 s</emits>

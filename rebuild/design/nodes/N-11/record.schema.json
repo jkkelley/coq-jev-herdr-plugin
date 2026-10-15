@@ -35,7 +35,7 @@
         "entity": { "type": "string", "pattern": "^failure\\.handled:[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$" },
         "failure_id": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$" },
         "failure_kind": { "$ref": "#/$defs/failure_kind" },
-        "action": { "enum": ["attempt", "regrant", "dead", "echo", "not_mine"], "description": "echo: a fenced report; not_mine: a kind whose retry owner is another node (phase.failed before exhaust, admission-refused)" },
+        "action": { "enum": ["attempt", "regrant", "dead", "echo", "not_mine", "wait"], "description": "echo: a fenced report; wait: harness_mismatch (ticket to waiting) or head_moved (nothing charged, a new head gets a new grant); not_mine: a kind whose retry owner is another node (phase.failed before exhaust, admission-refused)" },
         "by_record": { "type": ["string", "null"], "description": "the attempt, regrant or dead record id; null for echo and not_mine" },
         "at": { "$ref": "#/$defs/at" },
         "version": { "const": 1 }

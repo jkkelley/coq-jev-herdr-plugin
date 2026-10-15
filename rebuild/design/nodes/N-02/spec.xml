@@ -13,7 +13,7 @@
      The fix: one lease state machine (shared/contracts.xml#lease-machine) implemented here as registered statements on
      the leases table; N-07 grants inside its GrantDispatch transaction; N-15 starts, renews and releases; N-12 revokes; the
      fence is the lease key plus the token; hold gates only seat grants and work-class acquires. -->
-<volume id="N-02" kind="node-spec" node="N-02" group="G1" version="1.1.0" written="2026-10-15T06:00:00Z" timezone="UTC">
+<volume id="N-02" kind="node-spec" node="N-02" group="G1" version="1.2.0" written="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG, principles and the shared contracts</entry>

@@ -156,7 +156,7 @@
             "head_sha": { "$ref": "#/$defs/sha" },
             "reason": {
               "type": "string",
-              "enum": ["merge-hold", "owner-hold", "halt", "stale-review", "draft", "not-mergeable-unknown", "awaiting-owner-confirm", "awaiting-verify", "protection-unverified", "protection-mismatch", "files-unknown", "update-branch-limit", "dark"]
+              "enum": ["merge-hold", "owner-hold", "stale-review", "draft", "not-mergeable-unknown", "awaiting-owner-confirm", "awaiting-verify", "protection-unverified", "protection-mismatch", "files-unknown", "update-branch-limit", "dark"]
             },
             "hold_record_id": { "$ref": "#/$defs/record_id" },
             "unverified_merge_seq": { "type": "integer", "minimum": 1, "description": "awaiting-verify: the merge on main that has neither verified nor rejected" },

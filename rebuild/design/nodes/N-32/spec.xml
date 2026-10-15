@@ -5,7 +5,7 @@
   (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
   No em dash appears in this file. Every time is UTC.
 -->
-<volume id="N-32" kind="node-spec" node="N-32" group="G5" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC"
+<volume id="N-32" kind="node-spec" node="N-32" group="G5" version="1.2.0" issued="2026-10-15T06:00:00Z" timezone="UTC"
         author="spec-author seat, group G5 Owner surface, round 2; book 1.1.0 (F23, F17, NF-D3, NF-D6)">
 
   <contents id="contents">
@@ -150,7 +150,7 @@
     <tier name="stable" port="44900 fixed" checkout="the merge sha's workspace ${COQ_STATE}/tiers/&lt;project&gt;-stable/current (N-48)" idle="never">the owner's page; never stopped on a halt; never idle-stopped; upgraded in place by a restart</tier>
     <tier name="uat" port="first free in 44910 to 44919" checkout="the gate-green head's workspace (N-48)" idle="idle_minutes then stop">the reviewer reads it; the owner confirms here a change to the owner-locked assets (nodes/N-48/spec.xml#owner-confirm)</tier>
     <tier name="dev" port="first free in 44920 to 44939" checkout="the head sha's workspace (N-48)" idle="idle_minutes then stop">the builder and the suite</tier>
-    <upgrade>Stable upgrade is the one swap mechanism of nodes/N-48/spec.xml#mechanism step 3: N-48 renames the tier's current workspace pointer to the merge sha and runs systemctl --user restart coq-bearings@coq-stable: a 2 s gap in which browsers show DISCONNECTED and reconnect by themselves with Last-Event-ID; the watcher (N-27) keeps running as its own unit and the front door (N-34) restarts with the page by BindsTo, so nothing the owner typed is lost and the watch never stops; a failed probe renames the pointer back and restarts again (N-48 rollback). This closes the defect recorded at the 03:51Z checkpoint (make upgrade stopped stable and its waits; the server was replaced by hand).</upgrade>
+    <upgrade>Stable upgrade is the one swap mechanism of nodes/N-48/spec.xml#mechanism step 3: N-48 renames the tier's current workspace pointer to the merge sha and runs systemctl restart coq-bearings@coq-stable: a 2 s gap in which browsers show DISCONNECTED and reconnect by themselves with Last-Event-ID; the watcher (N-27) keeps running as its own unit and the front door (N-34) restarts with the page by BindsTo, so nothing the owner typed is lost and the watch never stops; a failed probe renames the pointer back and restarts again (N-48 rollback). This closes the defect recorded at the 03:51Z checkpoint (make upgrade stopped stable and its waits; the server was replaced by hand).</upgrade>
     <key>The keys are minted once per page and survive restarts in their one location (#web-security); rotate-key is a CLI verb that writes a new key, drops its sessions and writes a key.rotated 100 record without the key in it.</key>
   </tiers>
 
@@ -160,12 +160,12 @@
   </tier-rules>
 
   <start id="start">
-    <unit name="coq-bearings@.service" rendered-from="tools/bearings/units/coq-bearings@.service" installed-by="tools/bearings/bin/install-units.sh">
-      <line>[Unit] Description=coq bearings page %i; Wants=coq.service; After=coq.service network-online.target; StartLimitIntervalSec=0</line>
-      <line>[Service] Type=simple; ExecStart=%h/.local/state/coq/coq-jev-herdr-plugin/tiers/%i/current/bin/coq-bearings serve --page %i (the binary and assets of the tier's current workspace, built by N-48 at provision); Restart=always; RestartSec=2; RestartPreventExitStatus=3 4; MemoryMax=256M; Environment=COQ_STATE=%h/.local/state/coq/coq-jev-herdr-plugin (%h is the home of the unit's user, coq-svc)</line>
-      <line>[Install] WantedBy=default.target</line>
+    <unit name="coq-bearings@.service" rendered-from="tools/bearings/units/coq-bearings@.service" installed-by="tools/bearings/bin/install-units.sh" scope="system unit in /etc/systemd/system, run as coq-svc (shared/authority.xml#principals)">
+      <line>[Unit] Description=coq bearings page %i; Wants=coq-svc.service; After=coq-svc.service network-online.target; StartLimitIntervalSec=0</line>
+      <line>[Service] Type=simple; User=coq-svc; Group=coq-svc; ExecStart=/var/lib/coq-svc/state/coq-jev-herdr-plugin/tiers/%i/current/bin/coq-bearings serve --page %i (the binary and assets of the tier's current workspace, built by N-48 at provision); Restart=always; RestartSec=2; RestartPreventExitStatus=3 4; MemoryMax=256M; Environment=COQ_STATE=/var/lib/coq-svc/state/coq-jev-herdr-plugin</line>
+      <line>[Install] WantedBy=multi-user.target</line>
     </unit>
-    <text>Stable is enabled once with linger; dev and uat instances are started and stopped by N-48 with the ticket in the page name; a seat never runs serve by hand, and the Makefile's serve verb calls systemctl so an agent that types it still gets a unit, never a process under itself (tools/bearings/AGENTS.md NEVER example 1, kept).</text>
+    <text>Stable is enabled once (a system unit, up at boot); dev and uat instances are started and stopped by N-48 with the ticket in the page name; a seat never runs serve by hand, and the Makefile's serve verb calls systemctl so an agent that types it still gets a unit, never a process under itself (tools/bearings/AGENTS.md NEVER example 1, kept).</text>
   </start>
 
   <waits id="waits">
@@ -198,7 +198,7 @@
 
   <status-codes id="status-codes">
     <emits kind="page.up" code="100" acts="N-34 binds the front door; N-48 reads assets_hash">listening</emits>
-    <emits kind="page.state" code="100" acts="N-42 draws; N-48 reads; the page itself draws">entity-only heartbeat; a record only on a state change</emits>
+    <emits kind="page.state" code="100" storage="entity-only" coalesce-key="page" acts="N-42 draws; N-48 reads; the page itself draws">entity-only heartbeat; a record only on a state change</emits>
     <emits kind="page.down" code="100" acts="N-34 waits for the next page.up">clean stop</emits>
     <emits kind="page.down" code="500" acts="N-06 unhealthy after 3 in 5 min">unclean exit (written by N-06)</emits>
     <emits kind="page.refused" code="412" acts="nobody; countable">second instance, exit 4</emits>
@@ -219,8 +219,8 @@
     <path trigger="owner" acts="owner" p="STATE/secrets/bearings/&lt;page&gt;/" what="owner_key, viewer_key and sessions (hashes only), mode 0600; the one location of #web-security" cleanup="tools/bearings/bin/cleanup-tier.sh &lt;page&gt; --secrets [--dry-run] when the tier is retired; rotate-key replaces a key"/>
     <path trigger="timer" acts="system" p="${COQ_STATE}/bearings/&lt;page&gt;/files/" what="attachments, capped per file and per directory (config files_max_bytes_total)" cleanup="tools/bearings/bin/cleanup-files.sh &lt;page&gt; --older-than 90d [--dry-run]"/>
     <path trigger="timer" acts="system" p="${COQ_STATE}/bearings/&lt;page&gt;/screenshots/" what="N-48 writes promotion screenshots here" cleanup="tools/bearings/bin/cleanup-files.sh &lt;page&gt; --screenshots --older-than 30d [--dry-run]"/>
-    <path trigger="owner" acts="owner" p="~/.config/systemd/user/coq-bearings@.service" what="the installed unit template" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
-    <path trigger="owner" acts="owner" p="~/.config/systemd/user/coq-cutover@.service" what="the one-shot cut-over unit; inert after cutover.swapped; removed by the retire ticket" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
+    <path trigger="owner" acts="owner" p="/etc/systemd/system/coq-bearings@.service" what="the installed unit template" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
+    <path trigger="owner" acts="owner" p="/etc/systemd/system/coq-cutover@.service" what="the one-shot cut-over unit; inert after cutover.swapped; removed by the retire ticket" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
     <path trigger="timer" acts="system" p="${COQ_STATE}/logs/cutover/&lt;page&gt;.jsonl" what="every step, try and pid of cutover.sh; never a key" cleanup="line/bin/cleanup.sh --entry N-32.cutover [--dry-run]"/>
     <path trigger="timer" acts="system" p="journal of coq-bearings@&lt;page&gt;" what="one line per start, stop, refusal, bind failure; never a key" cleanup="tools/bearings/bin/cleanup-journal.sh --unit 'coq-bearings@*' --older-than 30d [--dry-run]"/>
     <path trigger="timer" acts="system" p="store rows page.up, page.state, page.down, file.stored" what="in N-01; page.state is an entity overwritten in place with a record only on a state change (7 days); others 90 days" cleanup="registered with N-45 as store retention class owner-surface"/>
@@ -255,11 +255,11 @@
   </cut-over>
 
   <checklist id="checklist">
-    <item proof="systemctl --user is-active coq-bearings@coq-stable; curl 127.0.0.1:44900/health returns page.state with state live">The page runs as a unit, no agent started it</item>
+    <item proof="systemctl is-active coq-bearings@coq-stable; curl 127.0.0.1:44900/health returns page.state with state live">The page runs as a unit, no agent started it</item>
     <item proof="Playwright: a card committed to the store appears on the page within 300 ms with the poll removed">Push, not poll</item>
     <item proof="Playwright: an answer tap yields a ruling receipt; a second tap shows already answered; a message walks the receipt ladder">Owner acts leave as records and come back as receipts</item>
     <item proof="test: stop coq.service; within 3 s the page shows STALE with the age, then DISCONNECTED; an answer typed meanwhile is queued and lands after restart">The page reports its own staleness and loses nothing</item>
-    <item proof="test: systemctl --user restart coq-bearings@coq-stable; the watcher and front door stay active; browsers reconnect with no gap in seq">Upgrade without stopping the watch</item>
+    <item proof="test: systemctl restart coq-bearings@coq-stable; the watcher and front door stay active; browsers reconnect with no gap in seq">Upgrade without stopping the watch</item>
     <item proof="test: a second serve for the tier exits 4 with page.refused 412">One instance per tier</item>
     <item proof="the #web-security proof (not-run)">Keys in one place, owner-only mutations, CSRF, CSP, no key in history</item>
     <item proof="Playwright colour assertions pass on 1280 and 430 widths; screenshots sent to the owner; uat card confirmed">The Krastorio look, checked</item>
@@ -274,7 +274,7 @@
     <runs-as>the service user coq-svc (shared/authority.xml#principals), no sudo, MemoryMax 256M, listens on 127.0.0.1 only; the store authenticates it by SO_PEERCRED as node N-32 and it passes the session role, never its own, as principal_role</runs-as>
     <may>subscribe to its tier's frames; call Intake.Answer with source page or controls and Inbox.Message for owner sessions only; write page.* and file.stored; read and write its own state directory; read the repository assets of its checkout</may>
     <may-not>write a ruling, a card, a reply or any other tier's records; expose the key; listen on a non-loopback address (N-34 does the tailnet); call herdr</may-not>
-    <owner-only>rotate-key; cleanup-tier on stable; the stable promotion break glass tools/bearings/scripts/promote.sh --tier stable --sha &lt;sha&gt; (N-48 runbook step 3); the cut-over break glass systemctl --user start coq-cutover@coq-stable (one time, counted by N-51). A seat that types either is refused: the scripts check the caller's uid against the owner principal (shared/authority.xml#role-derivation), exit 4 with control.refused 412; COQ_SEAT is diagnostic only and never decides.</owner-only>
+    <owner-only>rotate-key; cleanup-tier on stable; the stable promotion break glass tools/bearings/scripts/promote.sh --tier stable --sha &lt;sha&gt; (N-48 runbook step 3); the cut-over break glass systemctl start coq-cutover@coq-stable (one time, counted by N-51). A seat that types either is refused: the scripts check the caller's uid against the owner principal (shared/authority.xml#role-derivation), exit 4 with control.refused 412; COQ_SEAT is diagnostic only and never decides.</owner-only>
   </permissions>
 
   <monitoring id="monitoring">
@@ -290,9 +290,9 @@
 
   <runbook id="runbook">
     <op name="url for the owner">coq owner url --page coq-stable (prints the loopback and tailnet URLs with the key in the fragment, to the owner's terminal only; owner uid only)</op>
-    <op name="status">systemctl --user status coq-bearings@coq-stable; curl -s 127.0.0.1:44900/health</op>
+    <op name="status">systemctl status coq-bearings@coq-stable; curl -s 127.0.0.1:44900/health</op>
     <op name="upgrade stable">done by N-48 after a merge touching tools/bearings or the map; never by a seat. The owner's one-time break glass is tools/bearings/scripts/promote.sh --tier stable --sha &lt;sha&gt; (N-48 runbook step 3, owner-only per the permissions section), which writes the same promotion records and is counted by N-51 as a hand line operation</op>
-    <op name="cut-over swap did not happen">read the cutover.failed 500 card: the legacy server is back on its old pid; fix the step the record names through a ticket; the next merge of that ticket runs the one-shot unit again. The owner's one-time break glass is systemctl --user start coq-cutover@coq-stable (owner-only per the permissions section)</op>
+    <op name="cut-over swap did not happen">read the cutover.failed 500 card: the legacy server is back on its old pid; fix the step the record names through a ticket; the next merge of that ticket runs the one-shot unit again. The owner's one-time break glass is systemctl start coq-cutover@coq-stable (owner-only per the permissions section)</op>
     <op name="rotate the key">coq owner rotate-key --page coq-stable; then send the owner the new link as a reply on the old page (the reply carries no key: the page shows the link only to the cookie holder)</op>
     <op name="the page says DISCONNECTED">check coq.service (N-06 runbook); the page is fine, the store is not; never restart the page for this</op>
     <op name="cleanup">tools/bearings/bin/cleanup-tier.sh, cleanup-files.sh, cleanup-journal.sh, install-units.sh --remove; all list first</op>

@@ -24,8 +24,8 @@ Book 1.1.0 (review NF-E4, NF-E6, 2026-10-15): nothing defaults to a timer job an
 unmarked path into trigger timer, acts system, which scheduled owner break glass (removing main's branch protection),
 namespace deletes, unit uninstalls, tokens and the store database itself as system timer jobs. Now every path declares
 trigger and acts (R8); an entry whose glob or command is owner-acted (OWNER_GLOB_RE, OWNER_CMD_RE: break glass, retire, uninstall,
-disable, branch protection, namespace or PVC delete, a token, secret or credential, the store database, a unit file or
-a binary under ~/.local/bin) renders as trigger owner, acts owner when unmarked and fails R7 when marked otherwise,
+disable, branch protection, namespace or PVC delete, a token, secret or credential, the store database, a unit file (systemd user or system) or
+a binary under ~/.local/bin or /usr/local/bin) renders as trigger owner, acts owner when unmarked and fails R7 when marked otherwise,
 because the service never runs it (nodes/N-45/spec.xml#registry). R2 needs a real script path (a/b.sh, not any text
 containing .sh). R6 fails when jsonschema is not importable instead of skipping silently.
 
@@ -63,7 +63,7 @@ ACTS = ("system", "owner")
 # R7: cleanups only the owner performs. Matched on the glob (what is deleted) and on the command (how), never on the note.
 OWNER_GLOB_RE = re.compile(
     r"(branch[- ]protection|whole namespace|\bpvc\b|persistentvolumeclaim|\btokens?\b|secrets?/|credential|keyring|"
-    r"service\.env\b|coq\.db\s*$|store database|systemd/user/|\.local/bin/)", re.I)
+    r"service\.env\b|coq\.db\s*$|store database|systemd/(?:user|system)/|\.local/bin/|/usr/local/bin/)", re.I)
 OWNER_CMD_RE = re.compile(
     r"(break[- ]?glass|owner[- ]only|\bretire\b(?!-)|\buninstall|\bdisable\b|install-units\.sh\s+--remove|"
     r"branch[- ]protection|delete[- ]namespace|namespace\s+delete|-namespace\b)", re.I)

@@ -304,6 +304,10 @@
         </xs:restriction></xs:simpleType>
       </xs:attribute>
       <xs:attribute name="status-names" type="xs:string"/>
+      <xs:attribute name="storage">
+        <xs:simpleType><xs:restriction base="xs:string"><xs:enumeration value="entity-only"/></xs:restriction></xs:simpleType>
+      </xs:attribute>
+      <xs:attribute name="coalesce-key" type="xs:string"/>
       <xs:attribute name="schema" type="xs:string" use="required"/>
     </xs:complexType>
   </xs:element>

@@ -48,7 +48,7 @@
 
   <records id="records">
     <store-rule id="envelope" title="The record envelope every kind carries">
-      <statement>Fields (the one envelope, shared/state-store.schema.json#/$defs/envelope): required id (string, form YYYYMMDDTHHMMSSZ-CODE-xxxxx: UTC stamp, the code, five lowercase alphanumerics; unique per writer), kind (dotted lowercase), code (an integer in the live code table) and node (N-xx that wrote it; checked against the caller, shared/authority.xml#role-derivation); optional on input at (UTC 2006-01-02T15:04:05Z, assigned by N-01 at commit when absent), by (set by N-01 from the authenticated caller), attempt (0..3 where one applies; 0 means none), ticket (WO-id or CR-id), note (max 240) and schema_version (when present, 2.0.0); set by N-01 at commit, never trusted on input: seq, epoch (contracts.xml#epoch-cursor) and hash (canonical JSON by RFC 8785 of the body). A committed record carries seq, at and epoch (committed_envelope), which is what N-07 and every reader requires.</statement>
+      <statement>Fields (the one envelope, shared/state-store.schema.json#/$defs/envelope): required id (string, form YYYYMMDDTHHMMSSZ-CODE-xxxxx: UTC stamp, the code, five lowercase alphanumerics; unique per writer), kind (dotted lowercase), code (an integer in the live code table) and node (N-xx that wrote it; checked against the caller, shared/authority.xml#role-derivation); optional on input at (UTC 2006-01-02T15:04:05Z, assigned by N-01 at commit when absent), by (set by N-01 from the authenticated caller), attempt (0..3 where one applies; 0 means none), ticket (WO-id or CR-id), recovery_of (on a 2xx record, the id of the alerting record it resolves; nodes/N-41/spec.xml), note (max 240) and schema_version (when present, 2.0.0); set by N-01 at commit, never trusted on input: seq, epoch (contracts.xml#epoch-cursor) and hash (canonical JSON by RFC 8785 of the body). A committed record carries seq, at and epoch (committed_envelope), which is what N-07 and every reader requires.</statement>
       <statement>Not envelope fields: the commit request (contracts.xml#batch, contracts.schema.json#/$defs/commit_request) carries the operation_key (contracts.xml#operation-keys; required on every Commit), the lease it acts under as {key, token} (contracts.xml#fencing), preconditions, entity writes, owner-registered statements and outbox effects. Lease state lives only in the leases table (contracts.xml#lease-machine); there is no lease:KEY entity. A lease body names its fencing token token and its key key (ticket:phase:attempt or a system key, contracts.schema.json#/$defs/lease_key). The token is an integer from counter:lease_token: the string form t-000184 and a lease: prefix on a record field were rejected because N-01 (fencing), N-02 (lease_body) and N-07 (dispatch) carry an integer token and an unprefixed key.</statement>
       <statement>Ruling on the id form: N-01 owns the records table and today's event writers already mint the UTC-stamp form (events/schema/event.schema.json), so the book keeps it; the r-prefixed form some G4 and G7 schemas repeat is rejected with reason (rejected-with-reason.xml#envelope-id-form) and those schemas $ref state-store.schema.json#/$defs/envelope by their own ticket.</statement>
       <example schema="../nodes/N-02/record.schema.json#/$defs/lease_granted">{"schema_version":"2.0.0","id":"20261014T063000Z-201-k3v9q","at":"2026-10-14T06:30:00Z","kind":"lease.granted","code":201,"node":"N-02","by":"N-07","seq":5101,"epoch":1,"ticket":"WO-20261014-ab12","attempt":1,"key":"WO-20261014-ab12:worker:1","class":"seat","state":"reserved","phase":"worker","role":"worker","holder":"d-20261014063000-p2m7dq","token":184,"generation":1,"version":1,"granted_at":"2026-10-14T06:30:00Z","expires_at":"2026-10-14T06:32:00Z","heartbeat_seconds":30}</example>
@@ -414,7 +414,7 @@
     <config-key name="budget.daily_seat_usd" default="300" unit="USD" owner="N-07">owner-tunable; meaning in shared/retry-budget.xml#budgets</config-key>
     <config-key name="budget.daily_pod_minutes" default="4320" unit="min" owner="N-07">owner-tunable; meaning in shared/retry-budget.xml#budgets</config-key>
     <config-key name="merge.lock_seconds" default="300" unit="s" owner="N-09">covers a merge call, its read-back and the acquire (contracts.xml#outbox)</config-key>
-    <config-key name="gate.error_seconds" default="900" unit="s" owner="N-08">age at which an unchanged error status on the current head escalates</config-key>
+    <config-key name="gate.error_seconds" default="25800" unit="s" owner="N-08">age at which an unchanged error status on the current head escalates; derived (shared/retry-budget.xml#deadlines d-gate-error)</config-key>
     <config-key name="store.reserve_mib" default="256" unit="MiB" owner="N-01">kept below store.min_free_mib for health, restore and outage records</config-key>
     <config-key name="store.commit_ms" default="250" unit="ms" owner="N-01">the in-transaction bound of one Commit (contracts.xml#batch)</config-key>
     <config-key name="backup.interval_seconds" default="21600" unit="s" owner="N-05"/>
@@ -435,6 +435,15 @@
     <config-key name="forge.prs_max" default="200" owner="N-04"/>
     <config-key name="forge.keep_days" default="30" unit="d" owner="N-04"/>
     <config-key name="forge.ticket_pattern" default="WO-[0-9]{8}-[a-z0-9]{4}" owner="N-04"/>
+    <config-key name="forge.files_max" default="3000" owner="N-04">GitHub lists at most 3000 files of a PR; past it the PR's files are unknown and N-09 holds it (merge.held files-unknown)</config-key>
+    <config-key name="forge.closed_lookback" default="P2D" owner="N-04">how far back the poll looks for closed and merged PRs (forge.pr_closed)</config-key>
+    <config-key name="forge.gate_app_id" default="unset" owner="N-04">the coq-gate GitHub App id (shared/authority.xml#github-app); the owner supplies it once; N-04 checks protection against it, N-08 maps only its statuses, N-25 posts as it</config-key>
+    <config-key name="protection.check_seconds" default="86400" unit="s" owner="N-04">the protection check interval, besides service start (shared/authority.xml#github-app)</config-key>
+    <config-key name="merge.update_branch_per_hour" default="3" owner="N-09">update-branch calls per PR per hour; past it merge.held update-branch-limit</config-key>
+    <config-key name="seat.egress_allow" default="api.anthropic.com" owner="N-15">the only TCP 443 hosts a seat uid reaches (shared/authority.xml#seat-isolation network)</config-key>
+    <config-key name="owner.agent_harnesses" default="claude codex kimi" owner="N-29">process names whose presence among the owner CLI's ancestors refuses an owner word (shared/authority.xml#owner-words)</config-key>
+    <config-key name="push.resync_threshold" default="1000" unit="records" owner="N-52">a phone push consumer further behind than this resnapshots instead of replaying</config-key>
+    <config-key name="phone_push.base_url" default="unset" owner="N-52">the ntfy topic URL the phone subscribes to (nodes/N-52/spec.xml#push-delivery); the owner supplies it once</config-key>
     <config-key name="forge.delete_branch_on_merge" default="true" owner="N-04">needs repo admin on the service token</config-key>
     <config-key name="backup.min_free_mib" default="2048" unit="MiB" owner="N-05"/>
     <config-key name="store.min_free_mib" default="512" unit="MiB" owner="N-01"/>
@@ -442,12 +451,12 @@
     <config-key name="stall.tick_seconds" default="15" unit="s" owner="N-12"/>
     <config-key name="stall.prompt_park_seconds" default="30" unit="s" owner="N-12"/>
     <config-key name="stall.prompt_recard_seconds" default="900" unit="s" owner="N-12"/>
-    <config-key name="gate.absent_seconds" default="1800" unit="s" owner="N-08"/>
-    <config-key name="gate.pending_seconds" default="3600" unit="s" owner="N-08"/>
+    <config-key name="gate.absent_seconds" default="4200" unit="s" owner="N-08">derived (shared/retry-budget.xml#deadlines d-gate-absent)</config-key>
+    <config-key name="gate.pending_seconds" default="25800" unit="s" owner="N-08">derived (shared/retry-budget.xml#deadlines d-gate-pending)</config-key>
     <config-key name="gate.enabled" default="false" owner="N-08">ships dark; live at cut-over step 3 (cut-over.xml#step-ci)</config-key>
     <config-key name="merge.enabled" default="false" owner="N-09">ships dark; live at cut-over step 6 under the hold (cut-over.xml#step-scheduler)</config-key>
     <config-key name="merge.hold_age_alert_seconds" default="14400" unit="s" owner="N-09"/>
-    <config-key name="verify.expected_seconds" default="3600" unit="s" owner="N-10"/>
+    <config-key name="verify.expected_seconds" default="29700" unit="s" owner="N-10">derived (shared/retry-budget.xml#deadlines d-verify)</config-key>
     <config-key name="retry.enabled" default="false" owner="N-11">ships dark; live at cut-over step 5 (cut-over.xml#step-stall-retry)</config-key>
     <config-key name="sched.enabled" default="false" owner="N-07">ships dark; live at cut-over step 6 under the hold (cut-over.xml#step-scheduler)</config-key>
     <config-key name="verify.enabled" default="false" owner="N-10">ships dark; live at cut-over step 4 (cut-over.xml#step-verify)</config-key>
@@ -494,8 +503,8 @@
     <config-key name="map.stale_after_s" default="90" unit="s" owner="N-38"/>
     <config-key name="hold.effect_timeout_s" default="60" unit="s" owner="N-42"/>
     <config-key name="watcher.heartbeat_timeout_s" default="30" unit="s" owner="N-27"/>
-    <config-key name="owner_key" default="secret, STATE/secrets" owner="N-32">the only copy (nodes/N-32/spec.xml#web-security): directory 0700 owned by coq-svc, files 0600; a seat user cannot read STATE at all (shared/authority.xml#seat-isolation)</config-key>
-    <config-key name="viewer_key" default="secret, STATE/secrets" owner="N-32"/>
+    <config-key name="owner_key" default="secret, STATE/secrets/bearings/PAGE/owner_key" owner="N-32">the only copy (nodes/N-32/spec.xml#web-security): directory 0700 owned by coq-svc, files 0600; a seat user cannot read STATE at all (shared/authority.xml#seat-isolation)</config-key>
+    <config-key name="viewer_key" default="secret, STATE/secrets/bearings/PAGE/viewer_key" owner="N-32"/>
     <config-key name="executor.verbs" default="cleanup plan PT2M apply PT10M; publish-drive PT10M; promote PT5M; screenshot PT90S; unlanded plan PT5M apply PT1H per step" owner="N-07">the verb table of Executor.Run, the one RPC of scheduler.proto this book keeps as is</config-key>
   </config-keys>
 

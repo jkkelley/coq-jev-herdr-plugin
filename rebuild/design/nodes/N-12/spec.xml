@@ -84,7 +84,10 @@
     <record kind="agent.status" from="herdr" schema="record.schema.json#/$defs/agent_status">
       <field name="pane_id, seat, session_id, status, message, at">Consumed only by section prompt-parked.</field>
     </record>
-    <reads>The run:RUN_ID entity (role, unit); owner kill rulings from N-42 (reason ruling); flag:hold, which changes nothing here.</reads>
+    <record kind="ruling" effect="run.kill" from="N-29" schema="../N-29/record.schema.json#/$defs/effect_run_kill">
+      <field name="scope, run_id, card_id">An owner kill (the N-42 Kill lever or an answered card) as the N-29 ruling effect run.kill: scope all-running writes kill:RUN_ID for every running seat run, scope run for the named run; each with Revoke end_reason revoked-ruling, one Commit per run under N-12/kill/RUN_ID@LEASE_VERSION/r1 (../../shared/contracts.xml#kill-authority).</field>
+    </record>
+    <reads>The run:RUN_ID entity (role, unit); flag:hold, which changes nothing here (USERHALT is a hold, not a kill).</reads>
     <starts-when>The tick:stall entity is broadcast.</starts-when>
   </input>
 
@@ -209,6 +212,7 @@
     <in from="N-02" record="lease.expired" path="../N-02/spec.xml" anchor="output"/>
     <in from="N-15" record="seat.heartbeat" path="../N-15/spec.xml" anchor="output"/>
     <in from="N-06" record="tick:stall entity" path="../N-06/spec.xml" anchor="output"/>
+    <in from="N-29" record="ruling with effect run.kill" path="../N-29/spec.xml" anchor="output" drawn="false"/>
     <out to="N-11" record="stall" path="../N-11/spec.xml" anchor="input"/>
     <out to="N-41" record="stall, stall.kill.failed" path="../N-41/spec.xml" anchor="input"/>
     <out to="N-28" record="stall.kill.failed, stall.write.failed" path="../N-28/spec.xml" anchor="input" note="not drawn in dag.md; owner-acts kinds reach N-28 by the status code map"/>

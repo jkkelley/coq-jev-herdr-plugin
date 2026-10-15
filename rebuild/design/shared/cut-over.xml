@@ -81,7 +81,7 @@
 
   <bootstrap-merge id="bootstrap-merge">
     <s>Under the hold N-09 merges nothing by default, which would leave steps 2 to 7 unmergeable (their tickets are built before USERGO). The owner's pick is pending (review-dispositions.xml#D4); the default below is the book's until the owner rules.</s>
-    <path name="default" status="default">From the proof of step 3 (coq/gate required with the App, authority.xml#github-app), merge.enabled runs in bootstrap mode: under the hold N-09 merges only a pull request whose ticket has build-mode scope rebuild and belongs to a step the current bootstrap state allows, with a green coq/gate and review.passed on the same head sha, and at most one unverified merge on main; every other candidate is merge.held reason halt. Bootstrap mode ends at B8.</path>
+    <path name="default" status="default">From the proof of step 3 (coq/gate required with the App, authority.xml#github-app), merge.enabled runs in bootstrap mode: under the hold N-09 merges only a pull request whose ticket has build-mode scope rebuild and belongs to a step the current bootstrap state allows, with a green coq/gate and review.passed on the same head sha, and at most one unverified merge on main; every other candidate is merge.held reason owner-hold. Bootstrap mode ends at B8.</path>
     <path name="pre-gate" status="default">Before step 3's proof no machine verdict exists, so the CI-as-code pull requests that bring up the first coq/gate (and any step 2 pull request merged before it) are merged by the owner's break glass, one card each carrying the review record and the local proofs; N-51 counts each as an owner act.</path>
     <path name="owner-break-glass" status="alternative">Every bootstrap pull request is merged by the owner's break glass (seat-contract.xml#break-glass), one card each; N-09 merges nothing until B8.</path>
   </bootstrap-merge>
@@ -125,10 +125,10 @@
       <proof>a stall no-progress record for a SIGSTOPped test run (nodes/N-12/spec.xml#runbook bring-up) and the attempt record N-11 cut for a failure record (nodes/N-11/spec.xml#runbook bring-up).</proof>
     </step>
     <step n="6" id="step-scheduler" trigger="step 5 proof" hold="set">
-      <does>sched.enabled (N-07) while flag:hold is still set: the tick runs, dispatches nothing and counts the backlog, which proves the scheduler without moving the line; N-09, live in bootstrap mode since step 3, holds every candidate outside the current bootstrap step with merge.held reason halt.</does>
+      <does>sched.enabled (N-07) while flag:hold is still set: the tick runs, dispatches nothing and counts the backlog, which proves the scheduler without moving the line; N-09, live in bootstrap mode since step 3, holds every candidate outside the current bootstrap step with merge.held reason owner-hold.</does>
       <flags>sched (under the hold)</flags>
       <stops>factory/bin/route.sh, flow.sh, policy.sh and the five watch scripts are started by nothing once coq-service is enabled (nodes/N-06/spec.xml#start step 4); their units and cache copies are N-49 step 7 dispositions; this step's proof is that none ran for a day.</stops>
-      <proof>sched:tick with leader true and held_by_hold equal to desired; merge.held records with reason halt; no route.sh process for a day in the N-51 line-ops audit.</proof>
+      <proof>sched:tick with leader true and held_by_hold equal to desired; merge.held records with reason owner-hold; no route.sh process for a day in the N-51 line-ops audit.</proof>
     </step>
     <step n="7" id="step-unlanded-done" trigger="N-49 step 2 done (the records cut-over merged)" hold="set">
       <does>The records live in the state root only; events/ and factory/state leave git (WO-20261012-99d6, run by the rebuild seats under the hold its title asks for, merged by #bootstrap-merge).</does>
@@ -137,7 +137,7 @@
       <proof>disposition 200 for N-49 step 2 and git status clean of events/ on main.</proof>
     </step>
     <step n="8" id="step-usergo" trigger="bootstrap state B7 (bootstrap.ready 201), then the owner's USERGO ruling" hold="cleared by USERGO">
-      <does>The owner gives USERGO on the owner page (typed alone, or the Controls lever) or the owner CLI; N-29 clears flag:hold and N-50 moves bootstrap:state to B8; N-07 dispatches from the next tick; N-09 merges on a green gate plus review.passed (D15).</does>
+      <does>The owner gives USERGO on the owner page (typed alone, or the Controls lever) or the owner CLI; N-29 records the ruling, N-44 clears flag:hold (the only flag writer, contracts.xml#statements flags.set) and N-50 moves bootstrap:state to B8; N-07 dispatches from the next tick; N-09 merges on a green gate plus review.passed (D15).</does>
       <flags>none new; the hold clears</flags>
       <stops>At the first merge record written by N-09: line/bin/merge.sh, merge-watch.sh and the tester, merger and verifier rows of factory/config/routes.json are retired by an N-49 step 7 disposition (rejected-with-reason.xml#tester-merger-verifier-seats).</stops>
       <proof>a dispatch record after the resume ruling, then a merge 200 and a verified 201 for the same ticket with no hand step in the N-51 audit.</proof>

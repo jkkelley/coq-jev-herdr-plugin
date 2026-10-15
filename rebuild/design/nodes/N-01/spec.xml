@@ -14,7 +14,7 @@
      owner-registered statements, records, outbox effects, COMMIT, notify), seq is AUTOINCREMENT inside an epoch,
      Snapshot runs on a reader connection, restore starts a new held epoch, and store-down is seen from outside the host.
      Every shared number is cited by anchor (shared/contracts.xml, shared/authority.xml, shared/outside-probe.xml), never restated. -->
-<volume id="N-01" kind="node-spec" node="N-01" group="G1" version="1.1.0" written="2026-10-15T06:00:00Z" timezone="UTC">
+<volume id="N-01" kind="node-spec" node="N-01" group="G1" version="1.2.0" written="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG, principles and the shared contracts</entry>

@@ -16,7 +16,7 @@
      Rejected: writing shared/ from this seat (one shared author owns it; two authors on one file is the collision the book forbids)
      and leaving the hrefs to resolve later (a failing volume blocks the book now).
      Cost: a need is not a live pointer until shared/ lands; check.sh matches each need against the shared volumes then. -->
-<volume id="N-42" kind="node-spec" node="N-42" group="G6" version="1.1.0" issued="2026-10-15T06:00:00Z" written="2026-10-14T05:09:51Z" timezone="UTC">
+<volume id="N-42" kind="node-spec" node="N-42" group="G6" version="1.2.0" issued="2026-10-15T06:00:00Z" written="2026-10-14T05:09:51Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG edges</entry>
@@ -211,6 +211,8 @@ flowchart LR
   <status-codes id="status-codes" map="spec.xml#shared-needs">
     <code value="200" name="controls.rendered" kind="frame.report" lamp="green">Frame drawn and current; actions enabled on the owner key.</code>
     <code value="201" name="control.recorded" kind="control.action" lamp="green">A control.action landed and became a ruling; new flag version returned.</code>
+    <code value="200" name="control.replayed" kind="control.action" lamp="green">The same action id again: the first result is returned; nothing new is written.</code>
+    <code value="403" name="control.forbidden" kind="control.action" lamp="red">Not an owner session (shared/authority.xml#peer-credentials); nothing changes; N-51 counts it.</code>
     <code value="409" name="control.conflict" kind="control.action" lamp="amber">Flag version changed or token consumed; current state shown; nobody acts. A replayed action id is not a conflict: it returns the first result with 200.</code>
     <code value="423" name="controls.held" kind="control.action" lamp="amber">An action was refused because the page is stale or offline, or a card was refused by N-28 because no watcher is alive for the tier.</code>
     <code value="500" name="hold.ignored" kind="hold.ignored" lamp="red">A dispatch landed after a hold ruling; alert and one card.</code>

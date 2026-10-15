@@ -23,7 +23,7 @@
   blocks the book now).
   Cost: a declared need is not a live pointer until shared/ lands.
 -->
-<volume id="N-19" node="N-19" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+<volume id="N-19" node="N-19" kind="node-spec" group="G3" version="1.2.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
@@ -117,7 +117,7 @@
   A --> M[effect review.mirror to GitHub]
   C --> M</mermaid>
     <step n="1">The run: the reviewer reads the brief, the diff and the changed files in the workspace; it runs no test, suite, lint, make target or podman command (denied by the fence: the gate already proved them); it returns review.result. N-15 commits seat.result done and the run reaches result_committed.</step>
-    <step n="2" id="m-closeout">Close-out, function closeout(run) in scheduler/internal/closeout/reviewer.go, in the service as principal coq-svc acting as N-19, level-triggered on run entities in result_committed with a done reviewer seat.result. Head check: review.result.head_sha equals dispatch target head_sha, and the forge (credential forge-read) still reports that head for the pull request. Output rules: a changes verdict has at least one observation; a passed verdict has every criterion evidenced. A failure of either is phase.failed step head.check with failure_kind output_rejected and the reason (head_moved, no_observations or open_criterion_on_pass); the same Commit releases the lease and moves the run to closed_out.</step>
+    <step n="2" id="m-closeout">Close-out, function closeout(run) in scheduler/internal/closeout/reviewer.go, in the service as principal coq-svc acting as N-19, level-triggered on run entities in result_committed with a done reviewer seat.result. Head check: review.result.head_sha equals dispatch target head_sha, and the forge (credential forge-read) still reports that head for the pull request. Output rules: a changes verdict has at least one observation; a passed verdict has every criterion evidenced. A moved head is phase.failed step head.check with failure_kind head_moved (free, nothing charged, shared/contracts.xml#retry-owner); a failure of either output rule is phase.failed step head.check with failure_kind output_rejected and the reason (no_observations or open_criterion_on_pass); the same Commit releases the lease and moves the run to closed_out.</step>
     <step n="3" id="m-verdict">The verdict Commit, one Store.Do under operation key N-19/review.verdict/{pr}@{head_sha}@{run_id}/r1, fenced by the reviewer lease (shared/contracts.xml#fencing): the review.passed or review.changes record; Lease.Release of TICKET:reviewer:N; run:RUN_ID to closed_out with phase_record_ref the record id; an effects row in state intent for the mirror (provider github, action review.mirror). On review.passed the same Commit moves the ticket in_flight to pr_open so N-09 can merge it (a row shared/contracts.xml#ticket-transitions must add, owner N-19, trigger review.passed). On review.changes the ticket stays in_flight and N-11's attempt Commit moves it (row in_flight to retry_wait). A replay of the key returns the first reply; a stale token is 412 and nothing is written.</step>
     <step n="4">Mirror: after the Commit the outbox worker posts gh pr review --approve or --request-changes with the summary and observations, and advances the effect to done. A mirror that fails after its retries is phase.failed step review.mirror; it never undoes the record and never blocks the merge.</step>
     <text>Model: roles/reviewer.json model.claude; argv only from ../../shared/seat-contract.xml#launch-flags; stall and wall clock by keys stall.seconds.reviewer and run.deadline_seconds.reviewer (../../shared/contracts.xml#timing); max turns and budget from seats.json reviewer.</text>
@@ -167,7 +167,7 @@
   <section id="codes" title="Status codes this node emits">
     <code value="201" kind="review.passed">Every criterion evidenced, on the head sha. Acts: N-09 merges when the gate is green on the same head.</code>
     <code value="422" kind="review.changes">At least one observation, on the head sha. Acts: N-11 charges the worker phase, attempt n+1.</code>
-    <code value="500" kind="phase.failed">step head.check (output_rejected: head_moved, no_observations, open_criterion_on_pass), verdict.put or review.mirror. Acts: N-11; a mirror-only failure never blocks the merge.</code>
+    <code value="500" kind="phase.failed">step head.check (head_moved, free; output_rejected: no_observations, open_criterion_on_pass), verdict.put or review.mirror. Acts: N-11; a mirror-only failure never blocks the merge.</code>
     <text>A blocked review run is N-15's seat.result 423, not this node's record.</text>
   </section>
 

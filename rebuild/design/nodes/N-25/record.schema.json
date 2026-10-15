@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "rebuild/design/nodes/N-25/record.schema.json",
  "title": "N-25 Gate status post: input result set for one head sha and output gate.run (the coq/gate status as posted)",
- "description": "Book 1.1.0 (F08, F16, F19, F26, review C new 10 to 12). Envelope: shared/state-store.schema.json#/$defs/envelope (UTC-stamp ids). The status is posted only by the coq-gate GitHub App (shared/authority.xml#github-app) through the outbox (operation N-25/status.post/<sha>@<context>@<plan_attempt>/r1). The read-only protection check writes protection.observed 200 or protection.drift 412 (shared/authority.xml#github-app). UTC everywhere.",
+ "description": "Book 1.1.0 (F08, F16, F19, F26, review C new 10 to 12). Envelope: shared/state-store.schema.json#/$defs/envelope (UTC-stamp ids). The status is posted only by the coq-gate GitHub App (shared/authority.xml#github-app) through the outbox (operation N-25/status.post/<sha>@<context>@<plan_attempt>/r1). The protection check and its records protection.observed and protection.drift are N-04's (shared/authority.xml#github-app); this node reads them. UTC everywhere.",
  "oneOf": [
   {
    "$ref": "#/$defs/input"
@@ -15,9 +15,6 @@
   },
   {
    "$ref": "#/$defs/expected_red_row"
-  },
-  {
-   "$ref": "#/$defs/protection"
   }
  ],
  "$defs": {
@@ -531,152 +528,6 @@
        "const": 3
       }
      }
-    }
-   ]
-  },
-  "protection": {
-   "description": "protection.observed 200 when main's protection requires coq/gate with app_id forge.gate_app_id, strict, linear history and no force pushes; protection.drift 412 naming every difference; read with forge-read (shared/authority.xml#github-app)",
-   "allOf": [
-    {
-     "$ref": "#/$defs/envelope"
-    },
-    {
-     "type": "object",
-     "required": [
-      "branch",
-      "config_sha256",
-      "observed_at",
-      "strict",
-      "checks",
-      "linear_history",
-      "expected_app_id"
-     ],
-     "properties": {
-      "kind": {
-       "enum": [
-        "protection.observed",
-        "protection.drift"
-       ]
-      },
-      "code": {
-       "enum": [
-        200,
-        412
-       ]
-      },
-      "node": {
-       "const": "N-25"
-      },
-      "branch": {
-       "const": "main"
-      },
-      "config_sha256": {
-       "type": "string",
-       "pattern": "^[0-9a-f]{64}$"
-      },
-      "observed_at": {
-       "$ref": "#/$defs/utc"
-      },
-      "strict": {
-       "type": "boolean"
-      },
-      "checks": {
-       "type": "array",
-       "maxItems": 32,
-       "items": {
-        "type": "object",
-        "required": [
-         "context",
-         "app_id"
-        ],
-        "properties": {
-         "context": {
-          "type": "string"
-         },
-         "app_id": {
-          "type": [
-           "integer",
-           "null"
-          ]
-         }
-        }
-       }
-      },
-      "linear_history": {
-       "type": "boolean"
-      },
-      "allow_force_pushes": {
-       "type": "boolean"
-      },
-      "expected_app_id": {
-       "type": "integer",
-       "minimum": 1
-      },
-      "drift": {
-       "type": "array",
-       "uniqueItems": true,
-       "items": {
-        "enum": [
-         "unreadable",
-         "not-strict",
-         "gate-check-missing",
-         "gate-app-mismatch",
-         "linear-history-off",
-         "force-push-allowed",
-         "unprotected"
-        ]
-       }
-      }
-     },
-     "allOf": [
-      {
-       "if": {
-        "properties": {
-         "kind": {
-          "const": "protection.observed"
-         }
-        }
-       },
-       "then": {
-        "properties": {
-         "code": {
-          "const": 200
-         },
-         "strict": {
-          "const": true
-         },
-         "linear_history": {
-          "const": true
-         },
-         "drift": {
-          "maxItems": 0
-         }
-        }
-       }
-      },
-      {
-       "if": {
-        "properties": {
-         "kind": {
-          "const": "protection.drift"
-         }
-        }
-       },
-       "then": {
-        "required": [
-         "drift"
-        ],
-        "properties": {
-         "code": {
-          "const": 412
-         },
-         "drift": {
-          "minItems": 1
-         }
-        }
-       }
-      }
-     ]
     }
    ]
   }

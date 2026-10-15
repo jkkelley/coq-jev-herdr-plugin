@@ -26,7 +26,7 @@
      outside both service cgroups, so a restart of either unit kills no seat and the launcher adopts runs by unit name;
      store-down is seen by the outside probe (shared/outside-probe.xml); ticks and health are entity-only kinds
      (shared/contracts.xml#entity-only); a duplicate instance is exit 4 with RestartPreventExitStatus=4. -->
-<volume id="N-06" kind="node-spec" node="N-06" group="G1" version="1.1.0" written="2026-10-15T06:00:00Z" timezone="UTC">
+<volume id="N-06" kind="node-spec" node="N-06" group="G1" version="1.2.0" written="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG and principles</entry>
@@ -219,7 +219,7 @@
     <path p="/usr/local/bin/coq-service, /usr/local/bin/coq-launcher" writer="sudo make -C scheduler install-units" cleanup="scheduler/host/bin/cleanup-unit.sh (owner)" registry="N-45" trigger="owner" acts="owner"/>
     <path p="STATE/run/service.lock, STATE/run/launcher.lock, STATE/run/service.pid" writer="N-06 at start" cleanup="scheduler/host/bin/cleanup-run.sh removes them when no live pid holds the lock; refuses otherwise" registry="N-45" trigger="unit-stop" acts="system"/>
     <path p="STATE/run/emergency.jsonl" writer="any node whose Commit failed (shared/outside-probe.xml#journal)" cleanup="truncated by N-06's replay only after every line committed; scheduler/host/bin/cleanup-run.sh never touches it" registry="N-45" trigger="timer" acts="system"/>
-    <path p="STATE/config/service.env" writer="the owner, once (secrets: forge tokens)" retention="never" cleanup="kept on purpose; listed in the README so cleanup-run.sh skips it by name; only the owner removes it, by break glass" registry="N-45" trigger="owner" acts="owner"/>
+    <path p="STATE/config/service.env" writer="the owner, once (config only; credentials live in STATE/secrets/, shared/authority.xml#credential-matrix)" retention="never" cleanup="kept on purpose; listed in the README so cleanup-run.sh skips it by name; only the owner removes it, by break glass" registry="N-45" trigger="owner" acts="owner"/>
     <path p="STATE/logs/service/unit.jsonl" writer="N-06 structured log (starts, ticks missed, health transitions, reloads)" cleanup="scheduler/host/bin/cleanup-logs.sh (logs.keep_days 14)" registry="N-45" trigger="timer" acts="system"/>
     <path p="/run/coq/control.sock" writer="N-06 at start (RuntimeDirectory of coq-svc.service)" cleanup="systemd removes /run/coq at stop; scheduler/host/bin/cleanup-run.sh removes a stale one" registry="N-45" trigger="unit-stop" acts="system"/>
     <path p="STATE/store/coq.db (entities tick:*, health:service, table health_history)" writer="N-06 through N-01" cleanup="the file is the owner's (N-01 owns it); health_history rows older than health.keep_days 30 are pruned on the daily tick by scheduler/host/bin/cleanup-logs.sh --health through a Commit" registry="N-45" trigger="owner" acts="owner"/>

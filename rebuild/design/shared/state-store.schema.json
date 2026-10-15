@@ -76,6 +76,7 @@
         "ticket": { "$ref": "#/$defs/ticket" },
         "seq": { "type": "integer", "minimum": 1, "description": "assigned by N-01 at commit; never on input; strictly increasing, not gapless" },
         "epoch": { "$ref": "#/$defs/epoch" },
+        "recovery_of": { "$ref": "#/$defs/id", "description": "optional; on a 2xx record, the id of the alerting record it resolves (nodes/N-41/spec.xml)" },
         "note": { "type": "string", "maxLength": 240 },
         "hash": { "$ref": "#/$defs/sha256" }
       }

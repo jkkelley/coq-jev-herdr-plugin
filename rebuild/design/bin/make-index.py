@@ -183,7 +183,7 @@ def main():
     if "--check" in sys.argv:
         current = open(target, encoding="utf-8").read() if os.path.exists(target) else ""
         if current != text:
-            print("FAIL C11 index.xml is stale; run rebuild/design/bin/make-index.py")
+            print("FAIL C17 index.xml is stale; run rebuild/design/bin/make-index.py")
             return 1
         return 0
     with open(target, "w", encoding="utf-8") as fh:

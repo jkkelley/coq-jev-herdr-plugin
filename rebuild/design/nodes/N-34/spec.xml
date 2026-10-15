@@ -91,9 +91,9 @@
   </mechanism>
 
   <start id="start">
-    <unit name="coq-front-door@.service" rendered-from="tools/bearings/units/coq-front-door@.service" installed-by="tools/bearings/bin/install-units.sh">
+    <unit name="coq-front-door@.service" rendered-from="tools/bearings/units/coq-front-door@.service" installed-by="tools/bearings/bin/install-units.sh" scope="system unit in /etc/systemd/system, run as coq-svc (shared/authority.xml#principals)">
       <line>[Unit] Description=coq bearings tailnet front door for %i; BindsTo=coq-bearings@%i.service; After=coq-bearings@%i.service tailscaled.service network-online.target; StartLimitIntervalSec=0</line>
-      <line>[Service] Type=simple; ExecStart=%h/.local/bin/coq-bearings front-door --page %i; Restart=always; RestartSec=10; RestartPreventExitStatus=3 4; MemoryMax=64M; Environment=COQ_STATE=%h/.local/state/coq/coq-jev-herdr-plugin</line>
+      <line>[Service] Type=simple; User=coq-svc; Group=coq-svc; ExecStart=/usr/local/bin/coq-bearings front-door --page %i; Restart=always; RestartSec=10; RestartPreventExitStatus=3 4; MemoryMax=64M; Environment=COQ_STATE=/var/lib/coq-svc/state/coq-jev-herdr-plugin</line>
       <line>[Install] WantedBy=coq-bearings@%i.service</line>
     </unit>
     <text>Enabled for stable once by the install script; BindsTo and WantedBy tie it to the page unit, so a tier that comes up gets its door and a tier that goes down loses it, with no verb to type. uat and dev tiers get a door only when tools/bearings/config/bearings.json tiers.&lt;tier&gt;.front_door is true (stable true, others false by default: the owner confirms uat pages from the desktop or by explicit config).</text>
@@ -134,7 +134,7 @@
 
   <state-paths id="state-paths">
     <path trigger="unit-stop" acts="system" p="${COQ_STATE}/bearings/&lt;page&gt;/front-door.json" what="pid lock {pid, bind, port, at}; removed on clean exit" cleanup="tools/bearings/bin/cleanup-tier.sh &lt;page&gt; [--dry-run] (removes a lock whose pid is dead)"/>
-    <path trigger="owner" acts="owner" p="~/.config/systemd/user/coq-front-door@.service" what="installed unit template" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
+    <path trigger="owner" acts="owner" p="/etc/systemd/system/coq-front-door@.service" what="installed unit template" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
     <path trigger="timer" acts="system" p="journal of coq-front-door@&lt;page&gt;" what="one line per start, stop, rebind, failure; never a key, never a URL with a key" cleanup="tools/bearings/bin/cleanup-journal.sh --unit 'coq-front-door@*' --older-than 30d [--dry-run]"/>
     <path trigger="timer" acts="system" p="store rows front-door.*" what="in N-01; 90 days" cleanup="registered with N-45 as store retention class owner-surface"/>
   </state-paths>
@@ -156,11 +156,11 @@
   </security>
 
   <checklist id="checklist">
-    <item proof="systemctl --user is-active coq-front-door@coq-stable; store holds front-door 100 with bind ${SITE_TAILNET_ADDR} and port 44900">The door runs as a unit tied to the page</item>
+    <item proof="systemctl is-active coq-front-door@coq-stable; store holds front-door 100 with bind ${SITE_TAILNET_ADDR} and port 44900">The door runs as a unit tied to the page</item>
     <item proof="from the owner's phone on the tailnet, http://${SITE_TAILNET_HOST}:44900/ opens the page with the session cookie; a screenshot from the phone sent to the owner">The phone reaches the page</item>
     <item proof="test: a second door for the page exits 4 with front-door.refused 412">One door per tier</item>
     <item proof="test: fake tailscale returns a new IP; front-door.rebind within 60 s and a new front-door record with the new bind">IP change needs no human</item>
-    <item proof="test: systemctl --user stop coq-bearings@coq-dev-x stops the door (BindsTo); start brings it back">Door follows the page</item>
+    <item proof="test: systemctl stop coq-bearings@coq-dev-x stops the door (BindsTo); start brings it back">Door follows the page</item>
     <item proof="test: config bind ${SITE_CI_LAN_ADDR} (a LAN address) is refused with exit 3">Never the LAN</item>
     <item proof="test: 3 bind failures write front-door.failed 500 and N-06 counts an unhealthy after 3 in 5 min">Failure is reported</item>
     <item proof="cleanup-tier.sh --dry-run lists a dead lock; --yes removes it">Cleanup exists</item>
@@ -181,7 +181,7 @@
 
   <runbook id="runbook">
     <op name="phone url">coq owner url --page coq-stable --tailnet (prints the URL with the key in the fragment to the owner's terminal; owner uid only; never paste it into a record or a reply)</op>
-    <op name="status">systemctl --user status coq-front-door@coq-stable; coq owner door --page coq-stable (last front-door record)</op>
+    <op name="status">systemctl status coq-front-door@coq-stable; coq owner door --page coq-stable (last front-door record)</op>
     <op name="the phone cannot connect">read the last front-door.* record: failed names the cause; rebind means wait a minute; if the page is fine and the door is up, the phone is off the tailnet, which the Tailscale app shows</op>
     <op name="give a uat tier a door">set tiers.uat.front_door true in tools/bearings/config/bearings.json by pull request; N-48 starts the door with the tier</op>
     <op name="cleanup">tools/bearings/bin/cleanup-tier.sh, cleanup-journal.sh, install-units.sh --remove</op>

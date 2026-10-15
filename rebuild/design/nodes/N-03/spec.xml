@@ -13,7 +13,7 @@
      The fix: statuses and transitions live only in shared/contracts.xml#ticket-transitions and this volume cites them;
      one claims table owned here with two-way prefix containment checked inside the Commit, own claims excluded; a merged
      status (written by N-09) between merge and verified main, done only on verified main; the input ticket is N-18's def; ticket.ready accepts the gate phase. -->
-<volume id="N-03" kind="node-spec" node="N-03" group="G1" version="1.1.0" written="2026-10-15T06:00:00Z" timezone="UTC">
+<volume id="N-03" kind="node-spec" node="N-03" group="G1" version="1.2.0" written="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG, principles and the shared contracts</entry>

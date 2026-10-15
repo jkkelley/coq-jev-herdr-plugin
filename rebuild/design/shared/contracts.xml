@@ -82,8 +82,11 @@
     <op-key node="N-07" operation="dispatch" subject="{lease_key}@{token}" example="N-07/dispatch/WO-20261014-ab12:worker:1@184/r1"/>
     <op-key node="N-13" operation="seat.bundle" subject="{dispatch_id}" example="N-13/seat.bundle/d-20261014063000-p2m7dq/r1"/>
     <op-key node="N-14" operation="workspace.provision" subject="{dispatch_id}" example="N-14/workspace.provision/d-20261014063000-p2m7dq/r1"/>
+    <op-key node="N-15" operation="run.spawn" subject="{run_id}" example="N-15/run.spawn/d-20261014063000-p2m7dq/r1"/>
     <op-key node="N-15" operation="run.start" subject="{run_id}" example="N-15/run.start/d-20261014063000-p2m7dq/r1"/>
     <op-key node="N-15" operation="lease.renew" subject="{run_id}@{beat}" example="N-15/lease.renew/d-20261014063000-p2m7dq@12/r1"/>
+    <op-key node="N-15" operation="run.exited" subject="{run_id}" example="N-15/run.exited/d-20261014063000-p2m7dq/r1"/>
+    <op-key node="N-15" operation="run.failed-spawn" subject="{run_id}" example="N-15/run.failed-spawn/d-20261014063000-p2m7dq/r1"/>
     <op-key node="N-15" operation="seat.result" subject="{run_id}" example="N-15/seat.result/d-20261014063000-p2m7dq/r1"/>
     <op-key node="N-16" operation="branch.push" subject="{ticket}@{head_sha}" example="N-16/branch.push/WO-20261014-ab12@89abcdef0123456789abcdef0123456789abcdef/r1"/>
     <op-key node="N-16" operation="pr.open" subject="{ticket}@{attempt}" example="N-16/pr.open/WO-20261014-ab12@1/r1"/>
@@ -95,13 +98,24 @@
     <op-key node="N-11" operation="attempt" subject="{ticket}:{phase}:{n}" example="N-11/attempt/WO-20261014-ab12:worker:2/r1"/>
     <op-key node="N-11" operation="regrant" subject="{lease_key}@{token}" example="N-11/regrant/WO-20261014-ab12:worker:1@184/r1"/>
     <op-key node="N-12" operation="kill" subject="{run_id}@{lease_version}" example="N-12/kill/d-20261014063000-p2m7dq@7/r1"/>
+    <op-key node="N-12" operation="prompt.parked" subject="{episode}" example="N-12/prompt.parked/d-20261014063000-p2m7dq@3/r1"/>
     <op-key node="N-02" operation="lease.sweep" subject="{lease_key}@{token}" example="N-02/lease.sweep/WO-20261014-ab12:worker:1@184/r1"/>
     <op-key node="N-02" operation="lease.acquire" subject="{lease_key}@{token}" example="N-02/lease.acquire/merge.lock@200/r1"/>
     <op-key node="N-03" operation="ticket.transition" subject="{ticket}@{version}" example="N-03/ticket.transition/WO-20261014-ab12@5/r1"/>
-    <op-key node="N-18" operation="ticket-set.accept" subject="{set_id}" example="N-18/ticket-set.accept/set-20261014-0007/r1"/>
+    <op-key node="N-18" operation="ticket-set.accept" subject="{set_id}" example="N-18/ticket-set.accept/d-20261014071500-s3c9vb/r1"/>
+    <op-key node="N-18" operation="validator.failed" subject="{set_id}@{attempt}" example="N-18/validator.failed/d-20261014071500-s3c9vb@1/r1"/>
     <op-key node="N-23" operation="gate.run" subject="{pr}@{head_sha}@{plan_attempt}" example="N-23/gate.run/57@89abcdef0123456789abcdef0123456789abcdef@1/r1"/>
     <op-key node="N-25" operation="status.post" subject="{sha}@{context}@{plan_attempt}" example="N-25/status.post/89abcdef0123456789abcdef0123456789abcdef@coq/gate@1/r1"/>
+    <op-key node="N-28" operation="card.post" subject="{cause_id}" example="N-28/card.post/20261014T081655Z-500-d9d8d/r1"/>
+    <op-key node="N-28" operation="card.merged" subject="merged:{cause_id}" example="N-28/card.merged/merged:20261015T081655Z-500-d9d8d/r1"/>
+    <op-key node="N-28" operation="card.standing" subject="{lever}" example="N-28/card.standing/halt/r1"/>
+    <op-key node="N-29" operation="owner.answer" subject="{answer_id}" example="N-29/owner.answer/20261014T080000Z-100-a1b2c/r1"/>
     <op-key node="N-29" operation="ruling" subject="{card_id}" example="N-29/ruling/C-1234/r1"/>
+    <op-key node="N-29" operation="ruling" subject="{card_id}@{action_id}" example="N-29/ruling/C-4@0b6f3c1e-2a4d-4e8f-9c71-5d2e8a7b4f10/r1"/>
+    <op-key node="N-30" operation="owner.message" subject="{message_id}" example="N-30/owner.message/20261014T080100Z-100-m1n2p/r1"/>
+    <op-key node="N-30" operation="route" subject="{message_id}" example="N-30/route/20261014T080100Z-100-m1n2p/r1"/>
+    <op-key node="N-06" operation="host.outage" subject="{outage_id}" example="N-06/host.outage/o-20261014T020000Z/r1"/>
+    <op-key node="N-06" operation="emergency.replay" subject="{sha256}" example="N-06/emergency.replay/9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08/r1"/>
     <op-key node="N-44" operation="flag.set" subject="{flag}@{ruling_id}" example="N-44/flag.set/hold@20261014T080000Z-200-h7j8k/r1"/>
     <op-key node="N-05" operation="backup" subject="{class}@{tick_n}" example="N-05/backup/daily@412/r1"/>
     <op-key node="N-45" operation="retention" subject="{class}@{day}" example="N-45/retention/record@20261014/r1"/>
@@ -131,7 +145,7 @@
     <statement-def name="leases.sweep" owner="N-02" table="leases" callers="N-02" emits="lease.expired"/>
     <statement-def name="leases.revoke" owner="N-02" table="leases" callers="N-12" emits="none">N-12 appends stall in the same Commit</statement-def>
     <statement-def name="tickets.insert" owner="N-03" table="tickets" callers="N-03" emits="ticket.admitted"/>
-    <statement-def name="tickets.transition" owner="N-03" table="tickets" callers="N-03 N-07 N-09 N-11 N-16" emits="per #ticket-transitions trigger">Refuses a (from, to) pair not in #ticket-transitions or a caller other than the row's owner, 412 precondition</statement-def>
+    <statement-def name="tickets.transition" owner="N-03" table="tickets" callers="N-03 N-07 N-09 N-11 N-16 N-18 N-19" emits="per #ticket-transitions trigger">Refuses a (from, to) pair not in #ticket-transitions or a caller other than the row's owner, 412 precondition</statement-def>
     <statement-def name="claims.acquire" owner="N-03" table="claims" callers="N-03" emits="none">#claims</statement-def>
     <statement-def name="claims.release" owner="N-03" table="claims" callers="N-03 N-09 N-11" emits="none">#claims</statement-def>
     <statement-def name="attempts.append" owner="N-11" table="attempts" callers="N-11" emits="attempt"/>
@@ -157,7 +171,7 @@
     <lease-transition from="absent" to="reserved" call="GrantDispatch" caller="N-07" guard="class seat; ticket ready (or pr_open for reviewer and gate) at the read version; no reserved or running lease for the ticket and phase; seats reserved or running below caps.max_seats; ticket budget left (shared/retry-budget.xml#budgets); flag:hold absent [423 hold, 429 cap, 412 precondition]" effect="new token; generation 1; holder the dispatch id; expires_at now plus start.grace_seconds; same Commit as the dispatch record and tickets.transition to in_flight"/>
     <lease-transition from="released expired" to="reserved" call="GrantDispatch" caller="N-07" guard="as above, and the row's last end was a free regrant recorded by N-11 (N-11/regrant key) [412 precondition]" effect="new token; generation plus 1; new holder; expires_at now plus start.grace_seconds"/>
     <lease-transition from="absent released expired revoked" to="running" call="Acquire" caller="the job's node" guard="class maintenance [423 when another holder is reserved or running]" effect="new token; generation plus 1; holder node and job; expires_at now plus lease.ttl_seconds (leader: lease.leader_ttl_seconds)"/>
-    <lease-transition from="absent released expired revoked" to="running" call="Acquire" caller="the job's node" guard="class work; flag:hold absent [423 hold]; no other holder [423]" effect="new token; generation plus 1; holder node and job; expires_at now plus lease.ttl_seconds (merge.lock: merge.lock_seconds)"/>
+    <lease-transition from="absent released expired revoked" to="running" call="Acquire" caller="the job's node" guard="class work; flag:hold absent [423 hold], except merge.lock while bootstrap mode is on (cut-over.xml#bootstrap-merge); no other holder [423]" effect="new token; generation plus 1; holder node and job; expires_at now plus lease.ttl_seconds (merge.lock: merge.lock_seconds)"/>
     <lease-transition from="reserved" to="running" call="Start" caller="N-15" guard="token matches; now before expires_at [412 stale_token, 412 lease_not_current]" effect="run_id set; heartbeat_at now; expires_at now plus lease.ttl_seconds; same Commit as run:RUN_ID spawning to running"/>
     <lease-transition from="reserved" to="reserved" call="Renew" caller="the holder" guard="token matches; now before expires_at [412]" effect="heartbeat_at only; expires_at keeps the start grace"/>
     <lease-transition from="running" to="running" call="Renew" caller="the holder" guard="token matches; now before expires_at [412]" effect="heartbeat_at, progress_at; expires_at now plus lease.ttl_seconds"/>
@@ -182,9 +196,9 @@
   </terminal-report>
 
   <kill-authority id="kill-authority">
-    <s>N-12 decides: it writes entity kill:RUN_ID {reason, lease_version, at} in the same Commit as Revoke (key N-12/kill/RUN_ID@LEASE_VERSION/r1). N-42 owner kill actions and USERHALT reach N-12 as rulings; nobody else writes a kill.</s>
-    <s>The launcher (N-15) executes: it watches kill:* for its runs and stops the per-run unit coq-seat-RUN_ID (systemctl --user stop; TimeoutStopSec is kill.grace_seconds, then systemd sends SIGKILL to the unit's control group). The deadline is the unit's RuntimeMaxSec, so no second timer kills.</s>
-    <s>N-12 signals directly (systemctl --user stop on the same unit) only when the launcher is gone: its heartbeat entity older than 3 x lease.heartbeat_seconds. kill.grace_seconds is the one grace everywhere (#timing).</s>
+    <s>N-12 decides: it writes entity kill:RUN_ID {reason, lease_version, at} in the same Commit as Revoke (key N-12/kill/RUN_ID@LEASE_VERSION/r1). An owner kill (an N-42 Kill action or an answered card) reaches N-12 as the N-29 ruling effect run.kill with scope all-running or run; USERHALT is a hold (flag:hold through N-44), not a kill, and running seats finish or stall out under it. Nobody else writes a kill.</s>
+    <s>The launcher (N-15) executes: it watches kill:* for its runs and stops the per-run unit coq-seat-RUN_ID; the unit's ExecStop is coq-seat-exec kill RUN_ID (shared/authority.xml#principals), which writes 1 to the unit's cgroup.kill, because a user manager running as coq-launch cannot signal processes of a seat uid. TimeoutStopSec is kill.grace_seconds. The deadline is the unit's RuntimeMaxSec, so no second timer kills.</s>
+    <s>When the launcher is gone (its heartbeat entity older than 3 x lease.heartbeat_seconds), N-12 (principal coq-svc) runs coq-seat-exec kill RUN_ID itself, the same cross-user verb. kill.grace_seconds is the one grace everywhere (#timing).</s>
   </kill-authority>
 
   <run-states id="run-states">
@@ -211,6 +225,10 @@
     <transition from="ready" to="waiting" trigger="ticket.waiting" owner="N-03" claims="release"/>
     <transition from="ready" to="cancelled" trigger="ticket.cancelled" owner="N-03" claims="release"/>
     <transition from="in_flight" to="pr_open" trigger="pr.opened" owner="N-16" claims="keep"/>
+    <transition from="in_flight" to="pr_open" trigger="review.passed" owner="N-19" claims="keep"/>
+    <transition from="in_flight" to="pr_open" trigger="head_moved" owner="N-11" claims="keep"/>
+    <transition from="in_flight" to="done" trigger="ticket-set.accepted" owner="N-18" claims="release"/>
+    <transition from="in_flight" to="waiting" trigger="harness_mismatch" owner="N-11" claims="release"/>
     <transition from="in_flight" to="retry_wait" trigger="attempt" owner="N-11" claims="keep"/>
     <transition from="in_flight" to="ready" trigger="regrant" owner="N-11" claims="keep"/>
     <transition from="in_flight" to="dead" trigger="dead" owner="N-11" claims="release"/>
@@ -224,7 +242,7 @@
     <transition from="pr_open" to="cancelled" trigger="ticket.cancelled" owner="N-03" claims="release"/>
     <transition from="merged" to="done" trigger="ticket.done" owner="N-03" claims="release"/>
     <transition from="dead" to="waiting" trigger="ticket.waiting" owner="N-03" claims="none"/>
-    <s>Notes. in_flight to ready is the free regrant (no attempt charged). retry_wait to ready fires when the attempt's not_before passes. pr_open to in_flight dispatches the reviewer or gate phase on the open PR. dead to waiting needs an owner ruling (ticket.unblock, N-29) and resets the attempt counter; claims are taken again at the next ready. A main red after merged holds merges (N-10) and cuts a fix ticket; the merged ticket stays merged until a verified main contains it.</s>
+    <s>Notes. in_flight to ready is the free regrant (no attempt charged). retry_wait to ready fires when the attempt's not_before passes. pr_open to in_flight dispatches the reviewer or gate phase on the open PR; in_flight to pr_open on review.passed returns it (N-19 close-out). in_flight to done closes a CR ticket: the ticket-set.accepted Commit (N-18) whose source_request names the CR. in_flight to waiting is harness_mismatch (#retry-owner), with one card. dead to waiting needs an owner ruling (ticket.unblock, N-29) and resets the attempt counter; claims are taken again at the next ready. A main red after merged holds merges (N-10) and cuts a fix ticket; the merged ticket stays merged until a verified main contains it.</s>
   </ticket-transitions>
 
   <claims id="claims">
@@ -249,6 +267,7 @@
     <retry-row failure="review.changes" owner="N-11" charges="yes" session="resume-if-done">worker phase attempt n+1</retry-row>
     <retry-row failure="gate.red" owner="N-11" charges="yes" session="resume-if-done">worker phase attempt n+1; the gate phase is never re-dispatched after N-25 has given up</retry-row>
     <retry-row failure="merge.conflict" owner="N-11" charges="yes" session="resume-if-done">worker phase attempt n+1</retry-row>
+    <retry-row failure="head_moved" owner="N-11" charges="no" session="none">a reviewer whose PR head moved (N-19 head check): nothing charged; the ticket returns in_flight to pr_open and the new head's green gate leads to a new reviewer grant</retry-row>
     <retry-row failure="schema_invalid" owner="N-11" charges="yes" session="new"/>
     <retry-row failure="output_rejected" owner="N-11" charges="yes" session="new"/>
     <retry-row failure="seat_blocked" owner="N-11" charges="yes" session="new"/>
@@ -277,7 +296,7 @@
   <restore id="restore">
     <s>Restore of the store from a verified backup (STATE/backup/store/, nodes/N-05/spec.xml), bound restore.rto_minutes; the data loss is bounded by backup.rpo_offhost_hours for a host loss and by backup.interval_seconds otherwise.</s>
     <step n="1">Stop coq-service; copy the backup to STATE/store/coq.db; integrity_check; start the service in restore mode, which accepts no socket caller but the owner until step 6.</step>
-    <step n="2">First Commit (N-01/store.restored/EPOCH/r1): store:epoch to epoch plus 1, cause restored; flag:hold set with reason restore; flag:build_mode off; counter:lease_token raised by 1000000000 so no token issued after the backup is ever reissued; every reserved or running lease to expired.</step>
+    <step n="2">First Commit (N-01/store.restored/EPOCH/r1): store:epoch to epoch plus 1, cause restored; flag:hold set with reason restore and flag:build_mode off, both through the N-44 flags package (statement flags.set run in restore mode, the one flag writer); counter:lease_token raised by 1000000000 so no token issued after the backup is ever reissued; every reserved or running lease to expired.</step>
     <step n="3">Reconcile before any effect: N-04 polls the forge fresh; N-09 records merges found on main after the backup's main sha; N-23 looks up Jenkins builds by COQ_OP_ID; every effects row in intent, sent or unknown becomes unknown and is looked up (#outbox); tickets in_flight move to retry_wait uncharged and pr_open tickets are matched to their PRs.</step>
     <step n="4">store.restored 200 names the new epoch, the backup id, its high-water seq and what reconciliation found; every Tail client gets cursor.expired and resnapshots.</step>
     <step n="5">The line stays held; only an owner ruling (N-29, applied by N-44) clears the hold. A restore never releases its own hold.</step>
@@ -309,8 +328,8 @@
   </timing>
 
   <entity-only id="entity-only">
-    <s>Kinds registered entity-only write their entity by compare-and-swap and append no record unless the state changes: tick:SUBKIND (a record only for tick.missed), health:service (a record on a status transition), heartbeats (a record only for adopted or a token change), page.state (a record never; N-32), watcher.alive (a record when the lamp changes). This closes NF-A7 and NF-D6: book 1.0.0 made every entity write a record, about 29 million rows a year.</s>
-    <s>The kind registry (shared/record-kinds.xml, generated) carries the entity-only class mark from the owning node's volume; a record of an entity-only kind outside a state change is 400. Tail streams entity-only changes as coalesced entity frames (#epoch-cursor).</s>
+    <s>Kinds registered entity-only write their entity by compare-and-swap and append no record unless the state changes: tick:SUBKIND (a record only for tick.missed), health:service (a record on a status transition), heartbeats (a record only for adopted or a token change), page.state (a record only on a state change; N-32), watcher.alive (a record when the lamp changes; N-27), pushed.frame (a record only on connect, resync and drop; N-31). This closes NF-A7 and NF-D6: book 1.0.0 made every entity write a record, about 29 million rows a year.</s>
+    <s>The kind registry (shared/record-kinds.xml, generated) carries storage="entity-only" and the coalesce-key from the owning node's emits row; a record of an entity-only kind outside a state change is 400. Tail streams entity-only changes as coalesced entity frames (#epoch-cursor).</s>
   </entity-only>
 
   <many-agents id="many-agents">

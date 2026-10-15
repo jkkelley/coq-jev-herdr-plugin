@@ -108,12 +108,12 @@
   </mechanism>
 
   <start id="start">
-    <unit name="coq-watcher@.service" rendered-from="tools/bearings/units/coq-watcher@.service" installed-by="tools/bearings/bin/install-units.sh">
-      <line>[Unit] Description=coq bearings watcher for %i; Wants=coq.service; After=coq.service network-online.target; StartLimitIntervalSec=0</line>
-      <line>[Service] Type=simple; ExecStart=%h/.local/bin/coq-watcher --page %i; Restart=always; RestartSec=2; RestartPreventExitStatus=4; MemoryMax=128M; Environment=COQ_STATE=%h/.local/state/coq/coq-jev-herdr-plugin</line>
-      <line>[Install] WantedBy=default.target</line>
+    <unit name="coq-watcher@.service" rendered-from="tools/bearings/units/coq-watcher@.service" installed-by="tools/bearings/bin/install-units.sh" scope="system unit in /etc/systemd/system, run as coq-svc (shared/authority.xml#principals)">
+      <line>[Unit] Description=coq bearings watcher for %i; Wants=coq-svc.service; After=coq-svc.service network-online.target; StartLimitIntervalSec=0</line>
+      <line>[Service] Type=simple; User=coq-svc; Group=coq-svc; ExecStart=/usr/local/bin/coq-watcher --page %i; Restart=always; RestartSec=2; RestartPreventExitStatus=4; MemoryMax=128M; Environment=COQ_STATE=/var/lib/coq-svc/state/coq-jev-herdr-plugin</line>
+      <line>[Install] WantedBy=multi-user.target</line>
     </unit>
-    <text>The stable instance is enabled once by the install script (systemctl --user enable --now coq-watcher@coq-stable) and loginctl enable-linger makes it start at boot with no login and no agent. uat and dev instances are started by the tier promotion node (N-48) when it brings a tier up and stopped when it tears the tier down; a seat never starts one.</text>
+    <text>The stable instance is enabled once by the install script (sudo systemctl enable --now coq-watcher@coq-stable), a system unit that starts at boot with no login and no agent. uat and dev instances are started by the tier promotion node (N-48) when it brings a tier up and stopped when it tears the tier down; a seat never starts one.</text>
     <text>Assumption, recorded: systemd runs in this WSL distribution (wsl.conf [boot] systemd=true). The check in the checklist proves it; if it is false, the fallback is a supervisor unit in Podman, and that is a ticket, not a hand start.</text>
   </start>
 
@@ -146,7 +146,7 @@
 
   <status-codes id="status-codes">
     <emits kind="unit.start" code="100" acts="nobody">the unit started</emits>
-    <emits kind="watcher.alive" code="100" acts="N-28 reads, N-42 draws">entity-only heartbeat; a record only on a state change (alive, grace, page_ok, store_ok, parked)</emits>
+    <emits kind="watcher.alive" code="100" storage="entity-only" coalesce-key="page" acts="N-28 reads, N-42 draws">entity-only heartbeat; a record only on a state change (alive, grace, page_ok, store_ok, parked)</emits>
     <emits kind="watcher.down" code="100" acts="N-42 draws grey">clean stop (SIGTERM)</emits>
     <emits kind="watcher.down" code="500" acts="N-06 counts; N-28 holds cards">unclean exit: fenced or store unreachable</emits>
     <emits kind="watcher.refused" code="412" acts="nobody; countable">a second live instance holds the tier's lease, exit 4</emits>
@@ -157,7 +157,7 @@
 
   <state-paths id="state-paths">
     <path trigger="owner" acts="owner" p="${COQ_STATE}/bearings/&lt;page&gt;/" what="the tier's state directory (shared with N-32 and N-34); the watcher writes nothing here, it reads server.json for the page port" cleanup="tools/bearings/bin/cleanup-tier.sh &lt;page&gt; [--dry-run]"/>
-    <path trigger="owner" acts="owner" p="~/.config/systemd/user/coq-watcher@.service" what="the installed unit template" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
+    <path trigger="owner" acts="owner" p="/etc/systemd/system/coq-watcher@.service" what="the installed unit template" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
     <path trigger="timer" acts="system" p="journal (systemd user journal, unit coq-watcher@&lt;page&gt;)" what="the only log; one line per start, stop, refusal and delivery failure" cleanup="tools/bearings/bin/cleanup-journal.sh --unit 'coq-watcher@*' --older-than 30d [--dry-run]"/>
     <path trigger="timer" acts="system" p="store entities watcher:&lt;page&gt; and parked:&lt;record id&gt;, watcher.* records and the lease row watcher/&lt;page&gt;" what="in N-01; the entities are overwritten, parked entities deleted on delivery; records by the store's own policy" cleanup="registered with N-45 as store retention class owner-surface"/>
     <text>Every path is registered with the cleanup registry (N-45) and listed in rebuild/README.md; every cleanup script lists first and deletes only with --yes (dry-run first, owner C35).</text>
@@ -180,14 +180,14 @@
   </look>
 
   <checklist id="checklist">
-    <item proof="systemctl --user is-active coq-watcher@coq-stable prints active; journal shows unit.start">The stable watcher runs as a systemd user unit with linger, no agent started it</item>
+    <item proof="systemctl is-active coq-watcher@coq-stable prints active; journal shows unit.start">The stable watcher runs as a systemd user unit with linger, no agent started it</item>
     <item proof="store query: watcher.alive for coq-stable has beat within 10 s and state alive">The lamp heartbeats every 5 s</item>
     <item proof="integration test two-watchers: second exits 4 with watcher.refused 412">One watcher per tier</item>
     <item proof="test: with flag:hold set the watcher acquires its lease and delivers a USERGO message">A halt never stops the watch</item>
     <item proof="test: Intake fails 3 times on one answer; delivery.failed 500 and parked entity written; the next answers are delivered; the cursor passes the parked seq; the parked answer is delivered on a later beat and its entity deleted">Parked failures never freeze the channel and are never lost</item>
     <item proof="test: a cursor of an older epoch yields a scan of answers without ruling and messages without ack, then a tail from the head; no record is handed on twice with a different effect">A restored store never replays reused seqs</item>
     <item proof="integration test kill-watcher with fake clock: watcher.dead 500 within 15 s, new generation within 3 s">Death is reported without the dead process</item>
-    <item proof="integration test page-restart: systemctl --user restart coq-bearings@coq-stable leaves the watcher active and its cursor unchanged">A page restart never stops the watch</item>
+    <item proof="integration test page-restart: systemctl restart coq-bearings@coq-stable leaves the watcher active and its cursor unchanged">A page restart never stops the watch</item>
     <item proof="test owner-answer-with-page-call-failing: the answer still gets a ruling through the watcher within one beat">The watcher is the second consumer that proves the path</item>
     <item proof="N-28 test: a card post with no alive lamp returns card.held 423">A card cannot post without the lamp</item>
     <item proof="screenshots of the four lamp states on dev, sent to the owner">The lamp looks right</item>
@@ -212,9 +212,9 @@
   </monitoring>
 
   <runbook id="runbook">
-    <op name="install">tools/bearings/bin/install-units.sh (idempotent): copies unit templates, systemctl --user daemon-reload, enables coq-watcher@coq-stable, prints the state. Run once per machine by the bring-up ticket, never by a seat during a run.</op>
-    <op name="status">systemctl --user status coq-watcher@coq-stable; coq owner lamp --page coq-stable (prints the last watcher.alive and its age)</op>
-    <op name="stop a tier">systemctl --user stop coq-watcher@&lt;page&gt;; stable is never stopped by hand (bearings-stable-is-the-only-always-on-monitor); N-48 stops dev and uat instances</op>
+    <op name="install">tools/bearings/bin/install-units.sh (idempotent): copies unit templates, systemctl daemon-reload, enables coq-watcher@coq-stable, prints the state. Run once per machine by the bring-up ticket, never by a seat during a run.</op>
+    <op name="status">systemctl status coq-watcher@coq-stable; coq owner lamp --page coq-stable (prints the last watcher.alive and its age)</op>
+    <op name="stop a tier">systemctl stop coq-watcher@&lt;page&gt;; stable is never stopped by hand (bearings-stable-is-the-only-always-on-monitor); N-48 stops dev and uat instances</op>
     <op name="break glass">If a lease is wedged (holder dead, ttl not expiring because the clock node is down): coq lease break watcher/&lt;page&gt; is owner-only and one time (shared/seat-contract.xml#break-glass); the record names who and why.</op>
     <op name="cleanup">tools/bearings/bin/cleanup-tier.sh &lt;page&gt; --dry-run, then --yes; tools/bearings/bin/cleanup-journal.sh; tools/bearings/bin/install-units.sh --remove on decommission</op>
     <cost>One more process per tier (about 10 MB), five small store writes a minute per tier, and a 15 s window in which a dead watcher still reads alive.</cost>
