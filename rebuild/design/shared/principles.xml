@@ -102,7 +102,7 @@
     </hard-rule>
 
     <hard-rule id="no-privileged-profile" title="No node selects the owner's privileged AWS profile">
-      <statement>minecraft-admin is user-initiated only; no node, unit, script or seat selects it, persists it or automates it; a cloud mirror of a backup is the owner's own one-time script (N-05).</statement>
+      <statement>the owner AWS admin profile (${SITE_AWS_ADMIN_PROFILE}) is user-initiated only; no node, unit, script or seat selects it, persists it or automates it; a cloud mirror of a backup is the owner's own one-time script (N-05).</statement>
       <test>grep over the book and the line scripts for the profile name finds only this rule and N-05's refusal.</test>
       <source>~/.claude/CLAUDE.md hard rule: owner aliases and privileged AWS profile.</source>
     </hard-rule>

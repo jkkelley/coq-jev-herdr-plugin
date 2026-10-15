@@ -149,7 +149,7 @@ flowchart LR
     </step>
     <step n="4" where="owner-infrastructure" once="true">
       <s>Route 53 A record map.gatehouse.click to ${SITE_VPS_ADDR} (the owner's site file $HOME/.config/coq/site.env); Nginx server block for map.gatehouse.click on the VPS with a Let's Encrypt certificate, proxying over the existing WireGuard tunnel to the DNAT that reaches HAProxy (runbook ~/Documents/local-k8s-docs/runbooks/yieldpoint-ai-ingress/yieldpoint-ai-ingress.md).</s>
-      <s>These two steps are the owner's infrastructure, done once, and recorded as deploy.prereq records with their proof (dig answer, curl -I). The aws-lightsail-k8s-router design is not used (build-notes.md note 5). No agent uses the minecraft-admin AWS profile for them (global rule).</s>
+      <s>These two steps are the owner's infrastructure, done once, and recorded as deploy.prereq records with their proof (dig answer, curl -I). The aws-lightsail-k8s-router design is not used (build-notes.md note 5). No agent uses the the owner AWS admin profile (${SITE_AWS_ADMIN_PROFILE}) AWS profile for them (global rule).</s>
     </step>
     <step n="5" where="go-service">
       <s>The verification probe lives in the Go service's tick handler (N-06): while a verified record for a tools/map/** merge has no terminal deploy record, each tick reads N-22's image record and the outcome of the coq-map job.run (followed by the Jenkins API), then GETs https://map.gatehouse.click/healthz and https://map.gatehouse.click/ from the host.</s>
@@ -241,7 +241,7 @@ flowchart LR
   <permissions id="permissions">
     <s>Build seat (worker, N-16): writes tools/map/Jenkinsfile, tools/map/Containerfile, tools/map/Makefile, tools/map/public/index.html, tools/map/README.md, and the gitops chart files in homelab-gitops through a pull request; declared at cut, refused on overlap.</s>
     <s>No seat runs Jenkins, Argo, kubectl or curl against the public name as a gate; the Go probe does.</s>
-    <s>No seat touches Route 53, the VPS or any AWS profile; minecraft-admin is owner-initiated only and never selected by an agent.</s>
+    <s>No seat touches Route 53, the VPS or any AWS profile; the owner AWS admin profile (${SITE_AWS_ADMIN_PROFILE}) is owner-initiated only and never selected by an agent.</s>
     <s>Build pods: the image is N-22's (Kaniko in namespace jenkins with the one ESO-synced push secret; the per-build secret leak of L10 section 5.4 is what N-22 removes); the coq-map job's pod runs in namespace jenkins with the gitops deploy key from Jenkins credentials; the factory namespace, which has no secret access (D23), runs nothing of this node.</s>
   </permissions>
 
@@ -270,7 +270,7 @@ flowchart LR
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C43, C44, C45, C53 rulings.</src>
     <src href="rebuild/factory-rebuild-plan.xml#principles">no-cog, build-mode, shelf-first.</src>
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md#4-gui-style-extraction">GUI tokens for the hello page frame.</src>
-    <src href="~/.claude/CLAUDE.md">Hard rule: minecraft-admin is owner-initiated only.</src>
+    <src href="~/.claude/CLAUDE.md">Hard rule: the owner AWS admin profile (${SITE_AWS_ADMIN_PROFILE}) is owner-initiated only.</src>
   </sources>
 
   <rejected id="rejected">
