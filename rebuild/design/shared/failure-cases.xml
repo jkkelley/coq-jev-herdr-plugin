@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Shared volume: the failure cases every node volume cites. Each case names the symptom, how the system detects it
      without anyone looking, what the system does, the records it writes, what the owner sees, and what never happens.
-     Validated by rebuild/design/check.sh against schema/volume.xsd. -->
-<volume id="failure-cases" kind="shared" version="1.0.0" issued="2026-10-14T06:30:00Z" timezone="UTC" title="Failure cases">
+     Validated by rebuild/design/check.sh against schema/volume.xsd.
+     Book 1.1.0 (2026-10-15): stall follows the lease machine and the one kill authority; unknown-outcome covers every
+     external effect through the outbox (review F16); store-down no longer promises a card from a store that is down
+     (F15); restore follows contracts.xml#restore (F14); a duplicate instance exits 4 (NF20). -->
+<volume id="failure-cases" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="Failure cases">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG</entry>
@@ -20,6 +23,8 @@
     <sibling href="state-store.xml#state-store" kind="shared"/>
     <sibling href="rejected-with-reason.xml#rejected-with-reason" kind="shared"/>
     <sibling href="command-center.xml#command-center" kind="shared"/>
+    <sibling href="contracts.xml#lease-machine" kind="shared"/>
+    <sibling href="outside-probe.xml#probe" kind="shared"/>
     <dag href="../dag.md#4-re-entries"/>
     <shared href="../../factory-rebuild-plan.xml#failure-cases" role="origin">The plan's four cases, carried here with the node that owns each</shared>
   </pointers>
@@ -30,15 +35,15 @@
   </purpose>
 
   <cases id="cases">
-    <failure-case id="stall" title="A run stops making progress" nodes="N-02 N-12 N-11 N-41">
-      <symptom>A lease is past expires_at with no renewal, or a heartbeat shows no progress for stall_seconds while the launcher is alive.</symptom>
-      <detected-by>N-12 on the stall tick (stall.tick_seconds 15) from the heartbeats table and the process table; never from a pane or a model (principles.xml#probes-not-opinions).</detected-by>
-      <response>N-02 sweeps the lease, bumps the generation and writes lease.expired 500; N-12 kills the process group (SIGTERM, then SIGKILL after 10 s) and writes stall (run killed, lease revoked, reason); N-11 decides attempt n+1 with backoff or dead after 3.</response>
-      <response>A launcher that is alive but whose seat is silent is killed_stall; a launcher that is gone is killed_lease_lost; the record names which.</response>
-      <records>lease.expired 500, stall 500, attempt 100 or dead 500, seat.result blocked 423 with the terminal reason.</records>
+    <failure-case id="stall" title="A run stops making progress" nodes="N-02 N-12 N-11 N-15 N-41">
+      <symptom>A running seat's heartbeat shows no progress for its role's stall bound, a lease passes expires_at with no renewal, or a reserved lease passes its start grace with no Start (contracts.xml#timing).</symptom>
+      <detected-by>N-12 on its tick from the leases and heartbeat entities and the unit state; N-02's Sweep for expiry; never from a pane or a model (principles.xml#probes-not-opinions).</detected-by>
+      <response>Expiry: Sweep moves the lease to expired (contracts.xml#lease-machine); a reserved lease that never started expires with no attempt charged. Stall: N-12 revokes the lease by compare-and-swap on its version and writes kill:RUN_ID in the same Commit (contracts.xml#kill-authority); the launcher stops the unit coq-seat-RUN_ID, which gets kill.grace_seconds (30) before SIGKILL through coq-seat-exec kill (authority.xml#principals); N-12 stops the unit itself only when the launcher's heartbeat is gone.</response>
+      <response>The launcher's terminal report for the killed run carries the revoked token and is accepted once with fenced true (contracts.xml#terminal-report); N-11 treats it as the echo of the stall, charges the one attempt the stall charged (contracts.xml#retry-owner), and cuts attempt n+1 or dead.</response>
+      <records>lease.expired 500, stall 500, seat.result blocked 423 killed_stall or killed_lease_lost with fenced true, attempt 100 or dead 500.</records>
       <owner-sees>One alert row naming the reason and the next attempt (N-41); a card only on dead.</owner-sees>
-      <never>A seat is never nudged, prompted or asked whether it is stuck; a stall never extends a deadline.</never>
-      <source>rebuild/factory-rebuild-plan.xml#failure-cases stall; 02-MAPPING T06, V08.</source>
+      <never>A seat is never nudged, prompted or asked whether it is stuck; a stall never extends a deadline; nobody but N-12 decides a kill, and a stall and its echo never charge two attempts.</never>
+      <source>rebuild/factory-rebuild-plan.xml#failure-cases stall; 02-MAPPING T06, V08; review F05, F11.</source>
     </failure-case>
 
     <failure-case id="prompt-parked" title="A long-lived seat is parked on an interactive prompt" nodes="N-12 N-28 N-42 N-41">
@@ -54,7 +59,7 @@
     <failure-case id="crash" title="The service or a unit crashes" nodes="N-05 N-06 N-07 N-15">
       <symptom>The Go service, a tier unit or a launcher exits unexpectedly.</symptom>
       <detected-by>systemd (Restart=always in 5 s, no start limit) and the unit.started record with reason on every start; N-06 counts starts in a ten-minute window.</detected-by>
-      <response>The unit restarts; migrations re-run idempotently; the scheduler re-attaches to running Jenkins builds by build number (state-store.xml#table-plans); a launcher restart adopts a live run against the same deadline (seat-contract.xml#one-shot); three starts in ten minutes is unit.crashloop 500 and one card, and the unit keeps restarting because a dark line is worse than a noisy one.</response>
+      <response>The unit restarts; migrations re-run idempotently; the scheduler finds running Jenkins builds by their COQ_OP_ID (#unknown-outcome); seats run in their own transient units outside the service cgroup, so a service or launcher restart kills none of them, and the launcher adopts each by unit name against the same deadline (contracts.xml#run-states, seat-contract.xml#one-shot); exit 3 (a missing or invalid config key) restarts like any crash and its unit.started reason names the key, so a config defect becomes the crashloop card; three starts in ten minutes is unit.crashloop 500 and one card, and the unit keeps restarting because a dark line is worse than a noisy one.</response>
       <records>unit.started 100 with reason, unit.crashloop 500, heartbeat adopted true.</records>
       <owner-sees>A card on crashloop; the health lamp amber during the restart; nothing on a single restart.</owner-sees>
       <never>Never a manual restart as the fix; never a start limit that leaves the line dark.</never>
@@ -64,7 +69,7 @@
     <failure-case id="bad-output" title="A seat produced output that fails its schema or its acceptance" nodes="N-10 N-11 N-15 N-18 N-19">
       <symptom>structured_output fails record.schema.json, a validator command exits non-zero on main, a review returns changes, or a gate is red.</symptom>
       <detected-by>The launcher's validator (schema_invalid), N-18 (validator.refused with the command), N-19 (review.changes 422), N-08 (gate.verdict red 422).</detected-by>
-      <response>A result is never retried as a transient (V05): N-11 cuts attempt n+1 with the evidence in the brief (a fresh seat; a rework resumes the session with the verdict in the brief); after 3, dead 500 and one card.</response>
+      <response>A result is never retried as a transient (V05): N-11 cuts attempt n+1 with the evidence in the brief (fresh or resumed only as contracts.xml#retry-owner says, the verdict always in the brief); after 3, dead 500 and one card.</response>
       <response>A red main is rejected 422 with merge.hold (N-10); the fix ticket names the hold id and is the only merge allowed under it.</response>
       <records>seat.result blocked 423 (schema_invalid, output_rejected), validator.refused 422, review.changes 422, attempt 100, dead 500, rejected 422, merge.hold 423.</records>
       <owner-sees>A card on dead or on rejected main; the rest is the alerts list.</owner-sees>
@@ -75,8 +80,8 @@
     <failure-case id="conflict" title="Two writers or a merge conflict" nodes="N-01 N-03 N-09 N-14">
       <symptom>A compare-and-swap miss, an idempotency key with a different payload, a claim race at readiness, a workspace claim overlap, or git refusing the merge.</symptom>
       <detected-by>N-01 in the write transaction (409 record.conflict); N-03 in the ticket.ready transaction; N-14 at provision; N-09 from gh pr merge or the mergeability field of the snapshot.</detected-by>
-      <response>The loser re-reads and retries inside its 3 attempts; merge.conflict 409 wakes the worker with a merge-main attempt (N-11 row for 409); a claim overlap without an attempt goes back to N-03 as waiting, not to N-11.</response>
-      <records>record.conflict 409, merge.conflict 409, workspace.refused 412 claim_overlap, ticket.waiting 100.</records>
+      <response>The loser re-reads and retries inside its retry row (contracts.xml#retry-owner); merge.conflict 409 wakes the worker with a merge-main attempt; a claim overlap is found by N-03 inside the readiness Commit (contracts.xml#claims) and the ticket stays waiting with no attempt charged; N-14 only verifies the ticket holds its claims (412 claim_missing).</response>
+      <records>record.conflict 409 (version or idempotency_mismatch), merge.conflict 409, workspace.refused 412 claim_missing, ticket.waiting 100.</records>
       <owner-sees>Nothing unless the conflict exhausts 3 attempts (then dead and one card).</owner-sees>
       <never>Never a silent overwrite; never a second in-flight ticket on a claimed file.</never>
       <source>02-MAPPING V02 claim before act, V07; memory one-file-one-in-flight-ticket.</source>
@@ -92,24 +97,46 @@
       <source>rebuild/factory-rebuild-plan.xml#failure-cases governance-interference; memory build-mode-rule.</source>
     </failure-case>
 
-    <failure-case id="unknown-outcome" title="A step's outcome is unknown" nodes="N-45 N-47 N-49 N-09 N-35">
-      <symptom>A process died between acting and recording (a deletion ran, a Drive upload finished, a gh call returned nothing), so the record is missing but the effect may exist.</symptom>
-      <detected-by>The next tick finds a lease held by a dead holder, a plan in state running with no result, or a cursor behind the newest merge.</detected-by>
-      <response>Re-run the step idempotently by its key: a deletion lists first and deletes only what remains; an upload checks the version folder; a merge checks the PR state (MERGED is success, not a second merge); never a blind repeat.</response>
-      <records>The step's own record on completion, with attempt unchanged and note "re-run after unknown outcome"; cleanup.run with remaining; drive.copy with the rows found.</records>
-      <owner-sees>Nothing; a card only when the re-run itself fails 3 times.</owner-sees>
-      <never>Never a retry that could delete, publish or merge twice.</never>
-      <source>02-MAPPING V05; principles.xml#three-attempts.</source>
+    <failure-case id="unknown-outcome" title="A step's outcome is unknown" nodes="N-01 N-20 N-23 N-25 N-16 N-09 N-52 N-45 N-47 N-49 N-35">
+      <symptom>A process died, or a call timed out, between acting and recording: a Jenkins build was triggered, a status posted, a branch pushed, a merge called, a push sent, a deletion run or an upload finished, and the record of it is missing.</symptom>
+      <detected-by>Every external effect is an effects row written in the Commit that decided it (contracts.xml#outbox); a row left in sent or unknown past its call bound, a plan in state running with no result, or a cursor behind the newest merge is found on the next tick.</detected-by>
+      <response>Look up before any resend, by the effect's own identity: a Jenkins build carries COQ_OP_ID as a parameter and is searched in the queue and in the job's builds before a new trigger (the queue item URL expires minutes after the build starts, so it is never the only handle); a status post is checked against the commit's statuses for the sha and context; a push is checked by ls-remote for the branch head equal to the intended sha; a merge by GET of the pull request (merged true with the expected sha is success); a phone push by the provider receipt; a deletion lists first and deletes only what remains; an upload checks the version folder.</response>
+      <response>Found means accepted and then done after read-back; not found means the effect is sent once more under the same operation key, inside the retry row of contracts.xml#retry-owner; never a blind repeat.</response>
+      <records>The effect row's state (intent, sent, accepted, unknown, done, failed; status-codes.xml#effect-states); the step's own record on completion with attempt unchanged and note "re-run after unknown outcome"; cleanup.run with remaining; drive.copy with the rows found.</records>
+      <owner-sees>Nothing; a card only when the effect ends failed.</owner-sees>
+      <never>Never a retry that could build, post, push, delete, publish or merge twice.</never>
+      <source>02-MAPPING V05; principles.xml#three-attempts; review F16.</source>
     </failure-case>
 
     <failure-case id="store-corrupt" title="The store fails its integrity check" nodes="N-01 N-05">
       <symptom>PRAGMA quick_check is not ok at open, or a page error surfaces on a read.</symptom>
       <detected-by>N-01 at open and on the health tick; the WAL size check (store.wal_large).</detected-by>
-      <response>gRPC Health goes NOT_SERVING; N-05 prepares a dry-run restore from the newest verified backup into STATE/store/restore/ and verifies it; one card carries the backup id, its top_seq and the records that would be lost; the owner confirms on the card before any file is swapped.</response>
-      <records>store.corrupt 500, health.unhealthy 503 reason store, backup restore-drill 201 or 500.</records>
-      <owner-sees>One card with the restore plan and the loss window.</owner-sees>
+      <response>gRPC Health goes NOT_SERVING and /livez reports the store down, so the outside probe alerts (#store-down); N-05 prepares a dry-run restore from the newest verified backup into STATE/store/restore/ and verifies it; the owner starts the restore with the owner CLI, which then runs as #restore.</response>
+      <records>store.corrupt 500 and health.unhealthy 503 reason store, appended to STATE/run/emergency.jsonl when the store cannot take them (outside-probe.xml#journal); backup restore-drill 201 or 500.</records>
+      <owner-sees>The probe's alert on the phone, then the restore plan and loss window from the owner CLI.</owner-sees>
       <never>Never an automatic restore over the live file; never dispatch while NOT_SERVING.</never>
       <source>N-01 and N-05 spec volumes; C34 backups scheduled.</source>
+    </failure-case>
+
+    <failure-case id="store-down" title="The store or the service is down" nodes="N-01 N-06 N-05">
+      <symptom>The service is not running, the store cannot open, or it refuses every Commit, so nothing inside the host can write a record or a card.</symptom>
+      <detected-by>The outside probe (outside-probe.xml#probe) on another machine, from GET /livez and the stable page every 30 s; nothing on the host is trusted to report its own outage.</detected-by>
+      <response>The probe alerts on its own topic and token within 3 minutes and reminds while the outage lasts (outside-probe.xml#alerting); systemd restarts the service (#crash); a node that cannot commit appends to STATE/run/emergency.jsonl; on recovery N-06 replays that file and imports the probe journal as host.outage (outside-probe.xml#journal).</response>
+      <records>host.outage on recovery, the replayed emergency records, unit.started with its reason.</records>
+      <owner-sees>A phone alert from the probe, a recovery message, then the host.outage row.</owner-sees>
+      <never>Never a card promised from a store that is down; never a monitor that depends on the thing it monitors.</never>
+      <source>Review F15; shared/outside-probe.xml.</source>
+    </failure-case>
+
+    <failure-case id="restore" title="The store is restored from a backup" nodes="N-01 N-05 N-29 N-04 N-09 N-20">
+      <symptom>The live store was lost or corrupt and the owner started a restore from a verified backup.</symptom>
+      <detected-by>The owner's restore command; the first Commit of the restored store.</detected-by>
+      <response>Exactly contracts.xml#restore: a new store epoch, the hold set with flags off, the lease token counter raised past every token issued, every lease expired, then reconciliation of the forge, Jenkins and merges through the effects table and #unknown-outcome, and store.restored.</response>
+      <response>The hold is released only by an owner ruling (an owner-only card, no default and no deadline, authority.xml#relayable-rulings); records, frames and cursors of the old epoch are never replayed as new (contracts.xml#epoch-cursor).</response>
+      <records>store.restored, the reconciliation records, then the owner's ruling.</records>
+      <owner-sees>One owner-only card with the loss window and the reconciliation summary.</owner-sees>
+      <never>Never a reissued sequence number or fencing token; never the line resumed by the restore itself.</never>
+      <source>Review F14; contracts.xml#restore.</source>
     </failure-case>
 
     <failure-case id="disk-full" title="Free space under the floor" nodes="N-01 N-05 N-45">
@@ -145,7 +172,7 @@
     <failure-case id="duplicate-instance" title="A second service instance is started" nodes="N-06">
       <symptom>A second binary is started by hand or by a stray unit.</symptom>
       <detected-by>flock on STATE/run/service.lock at start.</detected-by>
-      <response>The second instance exits 3 and writes unit.duplicate 500 naming the holder pid through the first instance's socket; RestartPreventExitStatus=3 stops systemd from looping it.</response>
+      <response>The second instance writes unit.duplicate 500 naming the holder pid through the first instance's socket and exits 4; the unit carries RestartPreventExitStatus=4, so systemd does not loop it. Exit 4 is reserved for a duplicate; exit 3 (config invalid) restarts like a crash (#crash).</response>
       <records>unit.duplicate 500.</records>
       <owner-sees>An alert row; a card at the second occurrence in a day.</owner-sees>
       <never>Never two writers on the store.</never>

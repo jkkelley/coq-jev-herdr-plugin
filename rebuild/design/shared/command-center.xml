@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Shared volume: the command center (the Factorio map) as a pointer volume. The screens, hosting, art and bindings
      are specified in the G6 node volumes N-35 to N-42; this volume is the one place that points at all of them, carries
-     the owner's six notes as requirements with their proof, and names the look. Validated by check.sh. -->
-<volume id="command-center" kind="shared" version="1.0.0" issued="2026-10-14T06:30:00Z" timezone="UTC" title="Command center: pointer volume">
+     the owner's six notes as requirements with their proof, and names the look. Validated by check.sh. Book 1.1.0 (2026-10-15): "the hold lamp" wording (review NF-E7); no personal paths. -->
+<volume id="command-center" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="Command center: pointer volume">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, the eight G6 volumes</entry>
@@ -43,7 +43,7 @@
   </purpose>
 
   <screens id="screens">
-    <s>Map (N-38): DAG nodes as machines with status and heartbeat, queues as belts with depth, seats in flight as inserters (one per live lease row), the HOLD or USERGO lamp; panels at nodes/N-38/spec.xml#panels; frame budget map.frame_budget_ms 16.</s>
+    <s>Map (N-38): DAG nodes as machines with status and heartbeat, queues as belts with depth, seats in flight as inserters (one per live lease row), the hold lamp (it shows HOLD and which owner word the line waits on, GOFACTORY or USERGO, cut-over.xml#bootstrap); panels at nodes/N-38/spec.xml#panels; frame budget map.frame_budget_ms 16.</s>
     <s>Machine (N-39): one node's input, output, attempt, lease with its fencing token, heartbeat age and last records; panels at nodes/N-39/spec.xml#panels.</s>
     <s>Stats (N-40): the counters view (state-store.xml#view-counters) as a production statistics panel; panels at nodes/N-40/spec.xml#panels.</s>
     <s>Alerts (N-41): every record whose code acts is owner (status-codes.xml#acts), stalls, dead, rejected main, unhealthy, with ack and the escalation bound; panels at nodes/N-41/spec.xml#panels.</s>
@@ -86,8 +86,8 @@
     <source path="rebuild/investigation/L10-cluster-and-gitops.md" anchor="3-where-it-lives" note="the cluster, HAProxy and Lightsail path"/>
     <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="" note="the page the map lives inside"/>
     <source path="tools/bearings/AGENTS.md" anchor="phone-on-the-tailnet-front-door" note="PR 186 and 187"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/factorio-map-replaces-board.md"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/command-center-visual-bar.md"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/factorio-map-replaces-board.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/command-center-visual-bar.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md"/>
   </sources>
 </volume>

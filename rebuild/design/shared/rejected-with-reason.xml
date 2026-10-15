@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Shared volume: every source the brief named that no volume cites as authority, with the reason, and every design
      item the book rejected book-wide. Brief C hard rule 8: nothing from prior iterations is lost. Per-node rejections
-     live in each node volume's rejected section; this volume carries the book-wide ones. Validated by check.sh. -->
-<volume id="rejected-with-reason" kind="shared" version="1.0.0" issued="2026-10-14T06:30:00Z" timezone="UTC" title="Rejected with reason">
+     live in each node volume's rejected section; this volume carries the book-wide ones. Validated by check.sh.
+     Book 1.1.0 (2026-10-15): four items rejected by the review fixes (merge train, single-user seats, a bare-mode
+     substitute, upstream Kaniko) and seat containers deferred. -->
+<volume id="rejected-with-reason" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="Rejected with reason">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings</entry>
@@ -50,7 +52,7 @@
       <superseded-by>nodes/N-04 (the poll) and N-07 (dispatch from the snapshot).</superseded-by>
     </rejection>
     <rejection id="ci-gate-design-webhook" source="plans/2026/10/20261013194800-ci-gate-design.md amendment 20:20Z: gh webhook forward into Jenkins" status="later">
-      <reason>Folded into N-04 as a later accelerator only: it may call poll_now; the poll stays the correctness path (principles.xml#level-triggered). GitHub cannot reach 192.168.1.245 today, which is the second reason the poll comes first.</reason>
+      <reason>Folded into N-04 as a later accelerator only: it may call poll_now; the poll stays the correctness path (principles.xml#level-triggered). GitHub cannot reach ${SITE_CI_LAN_ADDR} today, which is the second reason the poll comes first.</reason>
     </rejection>
     <rejection id="actions-runner-controller" source="GitHub Actions Runner Controller CRDs left on the cluster from 2026-07-20" status="retired">
       <reason>Stale: no controller runs them and no node uses GitHub Actions (D07: Jenkins as code on the existing path). N-45 cleanup-cluster.sh lists them under its dry run; they are deleted by a disposition in N-49's order.</reason>
@@ -116,6 +118,25 @@
     </rejection>
     <rejection id="wube-sprites" source="any Wube-derived or BiusArt sprite from the Krastorio 2 assets (art inventory classes 2 to 4)" status="rejected">
       <reason>Original art only (command-center.xml#art): 260 high-confidence Krastor originals may be used with attribution; belts, inserters, lamps and pipes are original art because no safe source exists.</reason>
+    </rejection>
+    <rejection id="merge-train-o71ee" source="roadmap ruling o71ee: never wait on a verify between merges (a merge train; N-09 1.0.0 :61)" status="rejected">
+      <reason>Superseded by the owner's pick for review F13: at most one unverified merge on main, N-09 holds awaiting-verify and a ticket stays merged until main is verified, because under a train newer merges starve verification and a red main has no single culprit.</reason>
+      <superseded-by>nodes/N-09/spec.xml#N-09 (awaiting-verify); shared/contracts.xml#ticket-transitions (merged to done only on verified main).</superseded-by>
+    </rejection>
+    <rejection id="single-user-seats" source="seats running as the owner's uid with a command allow list as the boundary (book 1.0.0: N-14 :113, N-15 :228, the 0600 same-user store socket of N-01 :124)" status="rejected">
+      <reason>Review F01: a permitted make target or test runs child code with every credential and socket of the owner's uid, and an allow list names commands, not what their children reach; COQ_SEAT, the variable the relay trusted, was never set. Authority now comes from separate Unix users and peer credentials.</reason>
+      <superseded-by>shared/authority.xml#principals, #peer-credentials, #seat-isolation.</superseded-by>
+    </rejection>
+    <rejection id="setting-sources-local-for-bare" source="--setting-sources local as a substitute for --bare on host seats (N-15 1.0.0 :155)" status="rejected">
+      <reason>Per claude --help (2.1.300) --setting-sources only selects which settings files load; hooks, plugins, auto-memory, keychain reads and CLAUDE.md discovery are skipped only by --bare, and the repository has a root CLAUDE.md a host seat would load. --setting-sources local stays beside --bare to keep project and user settings out of the fence.</reason>
+      <superseded-by>shared/seat-contract.xml#launch-flags.</superseded-by>
+    </rejection>
+    <rejection id="upstream-kaniko" source="GoogleContainerTools/kaniko and its gcr.io executor images" status="rejected">
+      <reason>The upstream repository was archived on 2025-06-03 and publishes no fixes; the builder is pinned by digest to the maintained osscontainertools fork, with BuildKit rootless as the fallback.</reason>
+      <superseded-by>shared/ci-capacity.xml#builder-pin.</superseded-by>
+    </rejection>
+    <rejection id="seat-containers-now" source="a rootless container per host seat as the isolation boundary" status="later">
+      <reason>Deferred, not rejected: separate uids, ACLs and uid-keyed nftables give the boundary on the WSL host now without a container runtime it does not run (shared/authority.xml#deferred).</reason>
     </rejection>
   </design-items>
 

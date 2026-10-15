@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: authority. Who may do what in the rebuilt factory, decided by the caller's Unix identity and never by a
+     field or an environment variable the caller sends. What broke (review F01, verified at fb7135e): seats ran as the
+     owner's uid, the store socket was 0600 "same user only", N-01 had no authorization step, and the relay clause trusted
+     COQ_SEAT being unset, a variable nothing ever set (seat-contract.xml 1.0.0 :148, :153; N-15 :145, :228). A permitted
+     make target could therefore run child code with every owner credential. Why this volume: principals, credentials and
+     the owner words are read by N-01, N-13, N-14, N-15, N-16, N-25, N-29, N-30, N-32 and N-42; one anchor each stops
+     ten volumes restating them. Rejected: containers per seat now (see #deferred) and a command allow list as the
+     boundary (rejected-with-reason.xml#single-user-seats). Validated by rebuild/design/check.sh. -->
+<volume id="authority" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="Authority: principals, isolation, credentials, owner words">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, the nodes that enforce this volume</entry>
+    <entry ref="purpose">Purpose and how to read it</entry>
+    <entry ref="principals">Principals: the Unix users, the coq-seat-exec helper and the two tables</entry>
+    <entry ref="peer-credentials">Peer credentials: the store socket and SO_PEERCRED</entry>
+    <entry ref="role-derivation">Role derivation: node, by and permitted kinds per role; the 403 reasons</entry>
+    <entry ref="seat-isolation">Seat isolation: filesystem, network, limits, scrub</entry>
+    <entry ref="wsl-host">The WSL host: interop and Windows mounts (owner decision)</entry>
+    <entry ref="credential-matrix">The credential matrix: every credential, its holder, scope, users and storage</entry>
+    <entry ref="github-app">The coq-gate GitHub App, the required check and the protection check</entry>
+    <entry ref="owner-words">Owner words: GOFACTORY, USERGO, USERHALT and how they are matched</entry>
+    <entry ref="relayable-rulings">Relayable rulings, defaults and imported messages</entry>
+    <entry ref="deferred">Deferred with reason: containers per seat; residual risks</entry>
+    <entry ref="proofs">Go-live proofs (all not-run)</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="contracts.xml#roles" kind="shared">Phase roles (worker, reviewer, spec-author, gate); principal roles here are a different axis</sibling>
+    <sibling href="contracts.xml#fencing" kind="shared">Fencing and 412 on a stale lease</sibling>
+    <sibling href="state-store.xml#state-store" kind="shared">The store that holds the principals and seat_users tables</sibling>
+    <sibling href="seat-contract.xml#seat-contract" kind="shared">What a seat may rely on; it points here for authority</sibling>
+    <sibling href="status-codes.xml#code-403" kind="shared">403 record.refused</sibling>
+    <sibling href="cut-over.xml#bootstrap" kind="shared">The bootstrap states the owner words move</sibling>
+    <sibling href="outside-probe.xml#alerting" kind="shared">The probe's own ntfy token</sibling>
+    <shared href="../nodes/N-01/spec.xml#N-01" role="enforcer">Authenticates every Commit (step 0)</shared>
+    <shared href="../nodes/N-15/spec.xml#N-15" role="launcher">Runs seats through coq-seat-exec</shared>
+    <shared href="../nodes/N-29/spec.xml#N-29" role="intake">Turns owner answers into rulings</shared>
+    <shared href="../nodes/N-32/spec.xml#web-security" role="owner-page">The owner page session that is an owner principal</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>Authority comes from the kernel: the uid of the process at the other end of the store socket, the uid a seat process runs as, and the file modes and nftables rules keyed on those uids.</s>
+    <s>No environment variable, record field, label or session name grants anything; COQ_SEAT survives only as a diagnostic label in logs.</s>
+    <s>Rows with attributes (principal, permit, refusal, credential, word, relayable) are machine-readable: N-01 loads the permits, N-46 checks that every credential row names a holder and a node that exists.</s>
+  </purpose>
+
+  <principals id="principals">
+    <principal name="owner" role="owner" uid="the owner's login account">The person; reaches the store only through the owner CLI (ctl) over the socket, or through the owner page session (nodes/N-32/spec.xml#web-security). Holds forge-admin. Its home stays 0750 or tighter so no other principal reads it.</principal>
+    <principal name="coq-svc" role="service" uid="system user, no login shell">Runs coq-service (every node in-process), is the sole owner of STATE (mode 0700) and of every service credential in #credential-matrix; owns /run/coq/store.sock.</principal>
+    <principal name="coq-launch" role="launcher" uid="system user, no login shell">Runs the launcher (N-15) and the per-run transient units; member of group coq-store; may execute coq-seat-exec; holds no forge, Jenkins or cluster credential.</principal>
+    <principal name="coq-seat-01..coq-seat-16" role="seat" uid="system users, one per seat slot">The seat pool, one user per slot of caps.max_seats (state-store.xml#config-keys). One run at a time per user; scrubbed between runs (#seat-isolation). Not in group coq-store, not in sudoers, docker, podman or any group that grants a socket.</principal>
+    <helper name="coq-seat-exec" path="/usr/local/libexec/coq-seat-exec" mode="4750 root:coq-launch" planned="true">
+      <s>The only privileged code on the seat path: a small root-owned setuid program executable only by group coq-launch; it refuses every other caller.</s>
+      <verb name="start">Arguments: slot, run_id, workspace path, bundle path. Checks the slot is in /etc/coq/seat-users (root-owned, planned) and its user is not running anything; sets PR_SET_NO_NEW_PRIVS; switches to the slot uid and gid with no supplementary groups; clears the environment to the fixed list of seat-contract.xml#launch-flags; chdirs to the workspace; execs the pinned harness binary with the argv the launcher built from #launch-flags and nothing else.</verb>
+      <verb name="kill">Argument: run_id. Writes 1 to cgroup.kill of the unit coq-seat-RUN_ID; used as the unit's ExecStop because a user manager running as coq-launch cannot signal processes of another uid. The kill authority stays contracts.xml#kill-authority.</verb>
+      <verb name="scrub">Argument: slot. Kills every process of the slot uid, removes the slot user's home contents, its files under /tmp and /var/tmp, its ACL entries on bundles and workspaces, and verifies none remain; prints the verified counts for the launcher to record.</verb>
+      <verb name="key">Prints the Anthropic seat credential to stdout only when the caller's uid is a pool user with a live assignment in /run/coq/seat-assign/SLOT (written by the launcher, read-only to root); the seat's apiKeyHelper (#credential-matrix).</verb>
+    </helper>
+    <table name="principals" href="state-store.xml#table-principals">uid (key), name, role (contracts.schema.json#/$defs/principal_role), nodes (the nodes a service or launcher uid may act as), version; written once at install by the owner CLI, changed only by a ruling.</table>
+    <table name="seat_users" href="state-store.xml#table-seat-users">uid (key), name, slot, run_id, ticket, phase, lease_key, lease_token, granted_at, expires_at, scrubbed_at, version; the launcher binds a free scrubbed user to a run in the N-15 Start Commit (statement seat_users.bind, contracts.xml#statements) and releases it after scrub.</table>
+  </principals>
+
+  <peer-credentials id="peer-credentials">
+    <s>The store listens on /run/coq/store.sock only: owner coq-svc, group coq-store, mode 0660, in the directory /run/coq created at boot by the tmpfiles entry d /run/coq 0750 coq-svc coq-store (planned /etc/tmpfiles.d/coq.conf); no TCP listener exists.</s>
+    <s>Group coq-store holds the owner and coq-launch; seats are outside the group and cannot traverse /run/coq.</s>
+    <s>On accept the server reads SO_PEERCRED (uid, gid, pid) once and binds the connection to that uid; every Commit, Get, List and Tail on the connection is judged by it; nothing the client sends can change it.</s>
+    <s>In-process callers (the nodes inside coq-service) use Store.Do with principal coq-svc and the node the Go package registered at boot; they pass the same permit check (#role-derivation).</s>
+    <s>The owner page reaches N-29 and N-30 through the page service (principal coq-svc, node N-32), which passes the role its session proved (owner or viewer, nodes/N-32/spec.xml#web-security); N-29 and N-30 treat only an owner session as an owner principal.</s>
+  </peer-credentials>
+
+  <role-derivation id="role-derivation">
+    <s>The server maps the peer uid through the principals table to a role and derives three things: node (the node the caller may act as), by (the principal name written into the envelope) and the permitted kinds and statements below; a request never supplies them, and a record or operation key that disagrees is refused.</s>
+    <permit role="service" kinds="every registered kind whose writers in record-kinds.xml include the calling node" statements="the statements the calling node owns (contracts.xml#statements)">In-process only; a node writing another node's kind is refused like any socket caller.</permit>
+    <permit role="launcher" node="N-15" kinds="seat.result phase.failed launcher.defect" statements="lease Start, Renew, Release (N-02); seat_users.bind; the run:RUN_ID and heartbeat entities">Each under the run's lease (contracts.xml#fencing); Get and List of its own runs only.</permit>
+    <permit role="owner" node="N-29" kinds="owner.answer owner.message control.action" statements="none">Through Intake (N-29) and the inbox (N-30) only; break glass verbs are control.action with origin break-glass (seat-contract.xml#break-glass); the owner words are judged by #owner-words.</permit>
+    <permit role="seat" kinds="none" statements="none">No socket, no file of STATE; a seat's only output is the structured output the launcher parses (seat-contract.xml#result-from-the-harness).</permit>
+    <refusal reason="unknown_principal" code="403">The peer uid has no principals row.</refusal>
+    <refusal reason="kind_not_permitted" code="403">A kind or statement outside the role's permit row.</refusal>
+    <refusal reason="principal_mismatch" code="403">An envelope node or by, or an operation key's node segment, differs from the derived one.</refusal>
+    <refusal reason="capability_expired" code="403">A launcher acts for a seat_users row whose expires_at passed or whose user was scrubbed.</refusal>
+    <s>Every refusal is the record record.refused 403 with reason, uid and principal (status-codes.xml#code-403), latched to one per principal, reason and minute (nodes/N-01/spec.xml#N-01); a stale lease is never 403 but 412 (contracts.xml#fencing).</s>
+  </role-derivation>
+
+  <seat-isolation id="seat-isolation">
+    <layer name="filesystem">STATE and COQ_CACHE are 0700 coq-svc; a seat reads none of them. A run's bundle directory is coq-svc:coq-launch 0750 plus a read ACL for that run's seat user only (setfacl u:coq-seat-NN:rX), removed at scrub. A worker's workspace slot carries an rwX ACL and a matching default ACL for its seat user; a reviewer or spec-author slot carries r-X only, so those roles cannot change a file whatever their settings say. Seat homes are /var/lib/coq-seats/coq-seat-NN, 0700, empty at assignment.</layer>
+    <layer name="network">The nftables table inet coq_seats (planned scheduler/host/nft/coq-seats.nft) matches meta skuid in the pool uid range on output: allow DNS to the host resolver and TCP 443 to the hosts of config seat.egress_allow (default the Anthropic API host only); drop everything else, loopback included, IPv4 and IPv6. A seat therefore reaches no forge, no Jenkins, no cluster, no tailnet page and no Windows host port.</layer>
+    <layer name="process">no_new_privs from coq-seat-exec; the transient unit sets MemoryMax and TasksMax from the role (nodes/N-15/spec.xml#N-15) and RuntimeMaxSec from the deadline; KillMode=control-group with ExecStop=coq-seat-exec kill.</layer>
+    <layer name="environment">The fixed list of seat-contract.xml#launch-flags; no store socket path, no STATE or cache path, no token; COQ_SEAT=RUN_ID is set as a diagnostic label only.</layer>
+    <layer name="scrub">After the unit ends and seat.result is committed, the launcher calls coq-seat-exec scrub and records scrubbed_at in seat_users; a user with scrubbed_at unset is never bound to another run. A scrub that finds a survivor is launcher.defect 500 and the slot stays out of the pool until a clean scrub.</layer>
+    <layer name="session">A resume rework needs the previous session file: the launcher copies it from the seat home into the run directory before scrub and back into the next seat home before start (seat-contract.xml#fresh-seat).</layer>
+  </seat-isolation>
+
+  <wsl-host id="wsl-host">
+    <setting file="/etc/wsl.conf" key="interop.enabled" value="false">A Linux process cannot start a Windows executable, which would run as the Windows user outside every boundary above.</setting>
+    <setting file="/etc/wsl.conf" key="interop.appendWindowsPath" value="false">No Windows directory on any PATH.</setting>
+    <setting file="/etc/wsl.conf" key="automount.options" value="uid=OWNER_UID,gid=OWNER_GID,umask=077">Windows drives under /mnt are the owner's alone; no service or seat user reads the Windows profile.</setting>
+    <decision status="owner-decision">Both settings take away conveniences the owner uses today (running Windows tools from WSL, other users reading /mnt/c), so they are owner decision D3 (review-dispositions.xml#D3). The book assumes them; until the owner rules, B2 is refused with the reason wsl_host_open and the check output (cut-over.xml#bootstrap), because a seat with interop on can leave every Linux boundary.</decision>
+  </wsl-host>
+
+  <credential-matrix id="credential-matrix">
+    <s>Every credential the factory uses, one row each; a credential not in this table does not exist for the factory, and N-46 fails a volume that names one. Service files live under STATE/secrets/ (mode 0600 coq-svc, STATE itself 0700) and never in a record, a log line or argv.</s>
+    <credential name="forge-read" holder="coq-svc" scope="fine-grained token on jkkelley/coq-jev-herdr-plugin: metadata, contents, pull requests and commit statuses read; administration read (to read branch protection)" used-by="N-04 N-25" stored="STATE/secrets/forge-read"/>
+    <credential name="coq-gate" holder="coq-svc" scope="GitHub App private key; installation token with commit statuses write only (#github-app)" used-by="N-25" stored="STATE/secrets/coq-gate-app.pem; the hourly token in memory only"/>
+    <credential name="forge-merge" holder="coq-svc" scope="fine-grained token: contents write and pull requests write (merge, update-branch)" used-by="N-09" stored="STATE/secrets/forge-merge"/>
+    <credential name="forge-pr" holder="coq-svc" scope="fine-grained token: contents write and pull requests write (push a ticket branch, open a PR); never statuses, never administration" used-by="N-16" stored="STATE/secrets/forge-pr"/>
+    <credential name="forge-admin" holder="owner" scope="administration write (branch protection, App installation)" used-by="the owner's one-time protection setup and break glass only" stored="the owner's own keyring; never on coq-svc"/>
+    <credential name="jenkins-coq-reconciler" holder="coq-svc" scope="Jenkins API token of user coq-reconciler: read, build and cancel on the coq folders" used-by="N-20 N-23 N-26 N-07" stored="STATE/secrets/jenkins-coq-reconciler"/>
+    <credential name="jenkins-held" holder="Jenkins controller" scope="ghcr push token and homelab-gitops deploy key" used-by="the Jenkins pipelines of N-22 and N-35" stored="Jenkins credentials and the Argo cluster; no host principal holds them"/>
+    <credential name="kubeconfig" holder="coq-svc" scope="service account bound to the coq-factory namespace roles of N-21" used-by="N-20 N-21" stored="STATE/secrets/kubeconfig"/>
+    <credential name="ntfy-publish" holder="coq-svc" scope="publish to the owner's push topic" used-by="N-52" stored="STATE/secrets/ntfy-publish (nodes/N-52/spec.xml#push-delivery)"/>
+    <credential name="ntfy-read" holder="owner" scope="subscribe to the owner's push topic" used-by="the owner's phone app" stored="the phone; never on the host"/>
+    <credential name="ntfy-probe" holder="coq-probe" scope="publish to the probe's own topic" used-by="the outside probe (outside-probe.xml#alerting)" stored="the probe host only"/>
+    <credential name="anthropic-seat" holder="root" scope="Anthropic API key for seats, with a spend limit set at the provider" used-by="host seats through apiKeyHelper = coq-seat-exec key; pod seats through ANTHROPIC_API_KEY in the pod spec" stored="/etc/coq/anthropic-seat.key, mode 0600 root"/>
+    <credential name="drive" holder="coq-svc" scope="rclone OAuth token for the publish folder" used-by="N-47" stored="STATE/secrets/rclone.conf"/>
+    <credential name="page-keys" holder="coq-svc" scope="owner key and viewer key of the bearings page" used-by="N-32" stored="one location, nodes/N-32/spec.xml#web-security"/>
+    <s>forge-pr and forge-merge carry the same GitHub permissions because a fine-grained token cannot tell merging from opening; they are split so each node's calls are attributable in the GitHub audit log and revocable alone, and N-51 checks the forge for merges with no N-09 record. Seats hold no row of this table except the Anthropic credential while running.</s>
+    <s>The anthropic-seat row follows from --bare (seat-contract.xml#launch-flags): under --bare the harness reads only ANTHROPIC_API_KEY or apiKeyHelper (claude --help, 2.1.300) and never the subscription login of D03 (C37); billing seats by API key instead of the subscription is an owner decision (review-dispositions.xml#owner-decisions); until it is made the launcher starts no host seat and the B7 ready card names the decision as missing.</s>
+  </credential-matrix>
+
+  <github-app id="github-app">
+    <s>coq-gate is a GitHub App the owner creates once with forge-admin, installed on jkkelley/coq-jev-herdr-plugin only, with permission commit statuses write (metadata read is implied) and nothing else; its app id is the config key forge.gate_app_id (state-store.xml#config-keys).</s>
+    <s>N-25 mints an installation token from the App's private key when it needs one; the token lives one hour and is re-minted when under ten minutes remain; it is never written to a record or a file.</s>
+    <s>Branch protection on main requires the status check context coq/gate with app_id equal to forge.gate_app_id and strict on, so a coq/gate status from any other writer, a seat or a token included, never satisfies it; the owner applies it with forge-admin and records protection.applied through the owner CLI.</s>
+    <s>The protection check: N-25 reads the protection of main with forge-read at service start and on the daily tick, and asserts strict true, a check entry coq/gate with that app_id, no force pushes and linear history; it writes protection.observed 200 (config hash, observed_at) when all hold and protection.drift 412 (what differs) with one card otherwise.</s>
+    <s>N-09 merges only while the newest protection.observed is younger than two daily ticks and no protection.drift is newer; otherwise every candidate is merge.held reason protection-unverified.</s>
+  </github-app>
+
+  <owner-words id="owner-words">
+    <word name="GOFACTORY" effect="gofactory">Authorizes bootstrap state B2 (cut-over.xml#bootstrap).</word>
+    <word name="USERGO" effect="control.resume">Clears flag:hold; accepted only in B7 or later, else control.refused 412 not-ready naming the missing proofs.</word>
+    <word name="USERHALT" effect="control.halt">Sets flag:hold (seat-contract.xml#halt-and-resume).</word>
+    <s>Match: the message text with leading and trailing white space removed equals the word exactly, case included (regex ^(GOFACTORY|USERGO|USERHALT)$ on the trimmed text); contracts.schema.json#/$defs/owner_word. "don't GOFACTORY yet", "USERGO please" and a quote of the word are ordinary messages, and N-30 replies once that an owner word is sent alone.</s>
+    <s>Source: only an owner principal on one of two channels: the owner page in an owner session (a typed message, or the Controls lever of N-42 posting its standing card's action) or the owner CLI under the owner uid reading the word from its controlling terminal.</s>
+    <s>Never a source: a relayed answer, a card default or deadline, an imported or legacy message, a seat, a viewer session, the phone push, a record field, or any text an agent produced; N-29 refuses these with answer.rejected 403 reason not_relayable and writes no ruling.</s>
+    <s>The owner CLI refuses the owner words when any ancestor process of the CLI is a known agent harness (claude, codex, kimi; the list is config owner.agent_harnesses) and records the ancestry with every owner word it accepts; the owner uid itself remains the trust root (#deferred residual risks).</s>
+    <s>The ruling records source (owner-page or owner-cli), the principal and the verbatim text; the book never generates, defaults or suggests an owner word, and no card offers one as a default.</s>
+  </owner-words>
+
+  <relayable-rulings id="relayable-rulings">
+    <relayable effect="none">An answer that only records the owner's words (a note, a pick with no effect).</relayable>
+    <relayable effect="ticket.unblock">An answer that lets one named ticket proceed.</relayable>
+    <s>Only these two effects may come from a relay (the owner's words carried into the owner CLI with --relay and recorded verbatim with the relayer's session label) or from a card's default at its deadline; any card whose answer has another effect is owner-only.</s>
+    <s>Owner-only cards (GOFACTORY, the B7 ready card, break glass, build mode, protection, promotion confirm, restore release, and every other effect) carry no default and no deadline; they escalate once by alert.aged (status-codes.xml#escalation-bound) and otherwise wait; seat-contract.xml#standing-policies applies defaults only to relayable cards.</s>
+    <s>A relayed or defaulted answer to an owner-only card is answer.rejected 403 reason not_relayable; nothing changes and the card stays open.</s>
+    <s>Imported messages (the legacy page import, nodes/N-32/spec.xml#cut-over step 3) are stored with imported true, acknowledged answered, and never routed, never matched as owner words and never turned into an effect; imported rulings C34 to C58 are records of past decisions with effects none.</s>
+  </relayable-rulings>
+
+  <deferred id="deferred">
+    <item name="containers-per-seat" status="deferred">A rootless container per seat would add mount and network namespaces; deferred because separate uids, ACLs and uid-keyed nftables give the boundary F01 asked for on the WSL host today without a container runtime the host does not run, and because the pod seats already run in containers. Revisit when a seat needs a tool the pool users cannot run, or when a proof above fails.</item>
+    <item name="owner-uid-trust-root" status="residual-risk">Any process under the owner uid is the owner by construction; an agent session the owner runs under their own uid can reach the owner CLI. Mitigated by the ancestry refusal above and the audit (N-51 counts owner words by channel); removed only by running such sessions under another uid.</item>
+    <item name="seat-credential-readable" status="residual-risk">A seat's own processes can call apiKeyHelper during its run; mitigated by the spend limit, the network allow list and rotation.</item>
+  </deferred>
+
+  <proofs id="proofs">
+    <proof status="not-run">A seat process reading STATE, the bundle of another run, or connecting to /run/coq/store.sock gets EACCES.</proof>
+    <proof status="not-run">From a seat, curl to the API host succeeds and curl to github.com, the Jenkins host and the page port fails.</proof>
+    <proof status="not-run">A seat running cmd.exe fails, and ls /mnt/c is denied.</proof>
+    <proof status="not-run">A coq/gate status posted with forge-merge leaves the required check unsatisfied; the same status from the App satisfies it.</proof>
+    <proof status="not-run">A Commit from coq-launch of kind merge is 403 kind_not_permitted; from an unknown uid 403 unknown_principal.</proof>
+    <proof status="not-run">The owner page message "don't GOFACTORY yet" produces no ruling; "GOFACTORY" alone in B1 produces one.</proof>
+  </proofs>
+
+  <many-agents id="many-agents">
+    <readers>N-01 loads the permit rows at start and on Reload; every node volume cites an anchor here; sixteen seats run at once because each is its own uid with its own ACLs, home and assignment row.</readers>
+    <writers>The principals table is written at install and by ruling only; seat_users rows are bound and released by the launcher with compare-and-swap on version, so two runs can never bind one pool user; this volume changes by one ticket at a time.</writers>
+    <collision>Two launches for one slot: the second seat_users.bind loses the version check (409) and the launcher picks another slot; two owner words at once: each is its own ruling keyed by card or message id, and N-29 applies them in seq order.</collision>
+  </many-agents>
+
+  <sources id="sources">
+    <source note="Review finding F01 (seat permissions do not establish the promised boundary), F08 (forge credentials and gate authority), verified at fb7135e; shared/review-dispositions.xml#F01, #F08."/>
+    <source note="claude --help of Claude Code 2.1.300, read 2026-10-15: --bare reads only ANTHROPIC_API_KEY or apiKeyHelper; --permission-prompts host or none."/>
+    <source note="GitHub REST branch protection: a required check is {context, app_id}; a set app_id means only that App satisfies it; changing protection needs administration write."/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="5-d03-seat-credential-and-billing" note="D03, the subscription login this volume's --bare row changes"/>
+  </sources>
+</volume>

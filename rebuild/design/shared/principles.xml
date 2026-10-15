@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Shared volume: the hard rules every node volume is written against. Each rule is one anchor a node volume cites
-     by href; the rule's test is what the review seat runs. Validated by rebuild/design/check.sh against schema/volume.xsd. -->
-<volume id="principles" kind="shared" version="1.0.0" issued="2026-10-14T06:30:00Z" timezone="UTC" title="Principles: the hard rules">
+     by href; the rule's test is what the review seat runs. Validated by rebuild/design/check.sh against schema/volume.xsd.
+     Book 1.1.0 (2026-10-15): three-attempts defers to the retry tables, verdict-read-only to authority.xml (a seat's
+     try is a denial, not a 412), machine-verdict-merges gains the one-unverified-merge bound; no personal paths. -->
+<volume id="principles" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="Principles: the hard rules">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG</entry>
@@ -52,6 +54,7 @@
       <statement>Backoff is min(10 s x 2^(n-1), 300 s) per attempt n; attempt 3 failing writes dead 500 with one escalation (one card by N-28), never a fourth attempt and never a silent stop.</statement>
       <statement>Results are never retried, only infrastructure is (V05): a red gate, a failed assertion or a rejected review is evidence, not a transient.</statement>
       <statement>A retry re-runs an idempotent step by its key; a step whose outcome is unknown is re-run idempotently, never blindly repeated (failure-cases.xml#unknown-outcome).</statement>
+      <statement>Three is the default; where a layer has another bound (the pod ladder, the plan attempts) it is named in shared/retry-budget.xml#budgets, only the innermost layer retries a given failure, and who retries and whether an attempt is charged is only shared/contracts.xml#retry-owner.</statement>
       <test>Review: every retries section names the attempt counter, the backoff and the record written at 3; a volume that retries a 422 fails.</test>
       <source>rebuild/factory-rebuild-plan.xml#no-cog; 02-MAPPING T02 capped backoff, V05.</source>
     </hard-rule>
@@ -117,13 +120,13 @@
     </hard-rule>
 
     <hard-rule id="verdict-read-only" title="The verdict an agent reads and cannot edit">
-      <statement>The verdict is the GitHub required status coq/gate on the head sha (D05) plus the review record in the store; a seat holds no Jenkins token, no kubeconfig and no GitHub token with status or administration write; a seat that tries is refused 412 (T04).</statement>
-      <test>N-13 renders the deny list for every role; N-25 posts statuses with the service token only; a seat test that calls gh api statuses gets 412 in its seat.result.</test>
+      <statement>The verdict is the GitHub required status coq/gate on the head sha (D05) plus the review record in the store; a seat holds no forge, Jenkins or cluster credential and its network reaches none of them (shared/authority.xml#credential-matrix, #seat-isolation); only the coq-gate App can satisfy the required check (shared/authority.xml#github-app) (T04).</statement>
+      <test>N-13 renders the deny list for every role; N-25 posts statuses with the App token only; a seat test that calls gh api statuses ends with a permission denial counted in denied_line_ops and no status on GitHub.</test>
       <source>03-DECISIONS section 7 D05; 02-MAPPING T04; I03 F8a a number the agent can read but not change.</source>
     </hard-rule>
 
     <hard-rule id="machine-verdict-merges" title="Machine verdict merges">
-      <statement>Green coq/gate plus review.passed on the same head sha merges (N-09), one at a time under its own lease; under a merge.hold the only merge allowed is the fix pull request whose ticket entity names the standing hold id (D15).</statement>
+      <statement>Green coq/gate plus review.passed on the same head sha merges (N-09), one at a time under its own lease and with at most one unverified merge on main; under a merge.hold the only merge allowed is the fix pull request whose ticket entity names the standing hold id (D15).</statement>
       <statement>The owner is an escalation after three failed fixes, never a wait in the merge path; the owner holds the line through cards and the Controls screen.</statement>
       <test>N-09 test: a green PR with no review record does not merge; a hold with a fix ticket merges exactly that ticket.</test>
       <source>03-DECISIONS section 17 D15 (C50); 02-MAPPING V03.</source>
@@ -191,7 +194,7 @@
       <statement>Owner 2026-10-14 ~04:45Z: all views shown to me better have that krastorio look to it. The bearings page, cards, strip, every command center screen and the rail panel use the token table below, exposed as CSS custom properties; values only, original art, no Wube or BiusArt sprite ever ships.</statement>
       <statement>Tokens (property: value): --k2-frame: #313031; --k2-edge: #4D4643; --k2-inner-ring: #231C19; --k2-deep-inset: #242324; --k2-shallow-inset: #403F40; --k2-caption: #FFE6C0; --k2-body: #FFFFFF; --k2-accent: #FAA838; --k2-hover: #E69C2B; --k2-glow: rgba(255,174,0,0.5); --k2-green: #2BE327; --k2-red: #DA4535; --k2-red-text: #FF8E8E; --k2-blue: #80CEF0; --k2-button: 108px 28px; --k2-padding: 4px; --k2-slot: 40px; --k2-font: "Titillium Web".</statement>
       <test>N-48 look check reads the tokens from the page's CSS custom properties and compares values; N-32 Playwright asserts them at 1440 and 430 widths.</test>
-      <source>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md section 4 (4.3 inherited vanilla palette, 4.4 panel definitions, 4.5 fonts); memory krastorio-look-on-every-view (~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/krastorio-look-on-every-view.md: the owner's rule itself, every owner-facing view including the cards, strip and rail), command-center-visual-bar, map-hosting-and-feel-rules; brief C, the look.</source>
+      <source>~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md section 4 (4.3 inherited vanilla palette, 4.4 panel definitions, 4.5 fonts); memory krastorio-look-on-every-view (~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/krastorio-look-on-every-view.md: the owner's rule itself, every owner-facing view including the cards, strip and rail), command-center-visual-bar, map-hosting-and-feel-rules; brief C, the look.</source>
     </hard-rule>
   </rules>
 
@@ -229,14 +232,14 @@
     <source path="AGENTS.md" anchor="" note="the project's laws: no file touched by two open PRs, the close-out flow"/>
     <source href="~/.claude/CLAUDE.md" note="global hard rules: owner surface, privileged profile, breadcrumb, one question at a time, design first"/>
     <source href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261012212500-roadmap.md" note="binding roadmap; nothing before USERGO"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-cog-system-drives.md"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/spec-book-many-small-xml.md"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/build-mode-rule.md"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/command-center-visual-bar.md"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/factorio-map-replaces-board.md"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/control-plane-go-grpc.md"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/no-cog-system-drives.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/spec-book-many-small-xml.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/build-mode-rule.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/command-center-visual-bar.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/factorio-map-replaces-board.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/control-plane-go-grpc.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md"/>
   </sources>
 </volume>
