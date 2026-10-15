@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- N-45 Cleanup registry and runs. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
-     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh. -->
-<volume id="N-45" kind="node-spec" node="N-45" group="G7" version="1.0.0" issued="2026-10-14" timezone="UTC">
+     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh.
+     Book 1.1.0 (2026-10-15): drain lease, inode bind and no-symlink walk (review F24); N-05 backup record consumed as
+     N-05 defines it (NF-D1); owner-acted entries never timer-run (NF-E4); shared envelope (NF-A12). -->
+<volume id="N-45" kind="node-spec" node="N-45" group="G7" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, shared</entry>
@@ -34,7 +36,8 @@
     <sibling href="../N-50/spec.xml#N-50" kind="node">Cut-over records, which feed branch deletions</sibling>
     <sibling href="../N-47/spec.xml#N-47" kind="node">Drive publish, same group</sibling>
     <shared href="../../shared/principles.xml#artifacts-out-of-repo">Artifacts out of the repository, cleanup scripts for every state path (owner C35)</shared>
-    <shared href="../../shared/state-store.xml#leases">Leases with fencing tokens</shared>
+    <shared href="../../shared/contracts.xml#lease-machine">Lease classes; drain and cleanup leases are maintenance class and run under a hold</shared>
+    <shared href="../../shared/contracts.xml#fencing">Fencing: lease key and token current at commit, else 412</shared>
     <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
     <shared href="../../dag.md#3-every-node">DAG row N-45</shared>
     <shared href="../../shared/cut-over.xml#legacy" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
@@ -49,7 +52,7 @@
 
   <input id="input">
     <record kind="merge" from="N-09">The merge record (PR number, branch, merge sha, ticket id). Trigger class merge.</record>
-    <record kind="backup" from="N-05">A backup record (snapshot path, retention class). Trigger class backup.</record>
+    <record kind="backup" from="N-05">The backup record exactly as N-05 writes it (record.schema.json#/$defs/input refs ../N-05/record.schema.json#/$defs/backup): path, checksum, retention_class tick, daily, monthly or manual, verified. Trigger class backup.</record>
     <record kind="tick" from="N-06">The daily tick and the hourly tick; the registry says which entries run on which. Trigger class timer.</record>
     <record kind="disposition" from="N-49">One per 04-UNLANDED entry with action supersede or close (and land after its ticket merges). Trigger class disposition.</record>
     <record kind="cancel" from="N-50">Cancel records name no paths. Trigger class disposition.</record>
@@ -60,19 +63,29 @@
   <output id="output">
     <record kind="cleanup.run" code="100">Phase plan: the dry-run listing (every path or ref that would go, its registry entry, its size, its lease state), the plan hash, nothing deleted.</record>
     <record kind="cleanup.run" code="200">Phase apply: what was deleted, what was skipped and why (lease held, not matching the plan, missing already), the plan hash it executed.</record>
+    <record kind="cleanup.run" code="412">Apply refused: a drain lease is no longer current (reason lease_not_current) or a bound inode changed since the plan (reason plan-changed); nothing further is deleted; the next trigger re-plans.</record>
     <record kind="cleanup.run" code="423">Three attempts failed on at least one entry; the failed entries and the last error; N-28 posts one card only when the failed entry is in the owner-acts set of the registry (a path only the owner can remove).</record>
     <schema href="record.schema.json#/$defs/output"/>
+    <example schema="record.schema.json#/$defs/output"><![CDATA[
+{ "id": "20261015T061000Z-412-c4p7w", "at": "2026-10-15T06:10:00Z", "kind": "cleanup.run", "code": 412, "node": "N-45",
+  "body": { "trigger_record": "20261015T060500Z-201-m2k8s", "trigger_class": "merge", "phase": "apply",
+            "plan_hash": "9f1c2e7a5b3d4c6e8f0a1b2c3d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5a6", "reason": "lease_not_current",
+            "drains": [ { "key": "drain:slot-03", "token": 1000000412, "generation": 7 } ],
+            "rows": [ { "entry": "N-14.workspace", "target": "$COQ_CACHE/ws/slot-03/", "action": "rm", "result": "skipped",
+                        "reason": "lease_not_current", "binding": { "dev": 2049, "inode": 918273, "type": "dir" } } ] } }
+    ]]></example>
   </output>
 
   <registry id="registry">
     <s>The registry is generated, like dag.md: rebuild/design/bin/registry.py reads every state-paths element of every node volume and every runbook volume under rebuild/design/nodes and writes rebuild/design/shared/cleanup-registry.json (committed, generated, checked for drift by N-46).</s>
-    <s>One entry per path (shared/cleanup-registry.schema.json): id (the path's id attribute, or node plus a slug of the glob), node, glob, class (host: a path on the host under an allowed root; store: rows N-45 prunes by the kind's retention class; client: the owner's browser storage; external: another system's retention such as the journal, Jenkins, GHCR or GitHub; tracked: a file in a repository, removed by pull request), retention (an ISO 8601 duration, never, or the run command's rule), trigger (timer, merge, backup, disposition), acts (system or owner), run (the command the volume names; per-group scripts are allowed) and verb, which is always line/bin/cleanup.sh --entry &lt;id&gt;: the one verb the service runs, which looks the entry up and runs its command in plan, then apply, mode.</s>
+    <s>One entry per path (shared/cleanup-registry.schema.json): id (the path's id attribute, or node plus a slug of the glob), node, glob, class (host: a path on the host under an allowed root; store: rows N-45 prunes by the kind's retention class; client: the owner's browser storage; external: another system's retention such as the journal, Jenkins, GHCR or GitHub; tracked: a file in a repository, removed by pull request), retention (an ISO 8601 duration, never, or the run command's rule), trigger (timer, merge, backup, disposition, owner), acts (system or owner), run (the command the volume names; per-group scripts are allowed) and verb, which is always line/bin/cleanup.sh --entry &lt;id&gt;: the one verb the service runs, which looks the entry up and runs its command in plan, then apply, mode.</s>
     <s>Retention never with acts owner is the class for a path kept on purpose: long-lived secrets (STATE/config/service.env, $COQ_STATE/secrets/*), the owner's data (the art reference copy, the unlanded backups), records another system keeps (GitHub statuses), the owner's browser storage and tracked sources; cleanup.sh lists such an entry in every plan and refuses to apply it, and only the owner removes it, by break glass or a disposition (registry.py rule R2 and R3; brief C rule 6).</s>
+    <s>Owner-acted entries (review NF-E4): an entry whose cleanup is break glass, a retirement, an uninstall or disable, a branch protection change, a namespace delete, a token or the store database itself carries trigger owner and acts owner. The service never selects it on a timer, merge or backup trigger and never applies it; cleanup.sh runs it only from the owner CLI under an owner principal (shared/authority.xml#principals), plan then apply, and the run is recorded as a hand line operation (N-51 row A3). registry.py fails the book (rules R7, R8) when such an entry is marked timer or system, and every path must declare trigger and acts explicitly: nothing defaults to timer.</s>
     <s>A volume that names a state path with no cleanup and no declared retention never fails N-46 (check.sh C14: every state path the design names has a cleanup script or is declared kept on purpose, brief rule 6).</s>
     <s>Git objects are entries too: remote branches (glob refs/remotes/origin/feat/*, trigger merge, retention P0D), local worktrees (the treehouse pool and $COQ_CACHE/worktrees, trigger merge), stale remotes (trigger disposition).</s>
     <example schema="../../shared/cleanup-registry.schema.json#/$defs/entry"><![CDATA[
 { "id": "N-14.workspace", "node": "N-14", "glob": "$COQ_CACHE/ws/<slot>/ and $COQ_CACHE/ws/<slot>.json", "class": "host",
-  "retention": "removed on merge, dead or cancel (N-45 trigger), or 24 h after", "trigger": "timer", "acts": "system",
+  "retention": "removed on merge, dead or cancel (N-45 trigger), or 24 h after", "trigger": "merge", "acts": "system",
   "run": "scheduler/host/bin/cleanup-workspaces.sh", "verb": "line/bin/cleanup.sh --entry N-14.workspace",
   "holds": "", "note": "...", "volume": "nodes/N-14/spec.xml" }
     ]]></example>
@@ -81,12 +94,13 @@
   <mechanism id="mechanism">
     <where>Go package cleanup in the service decides when; line/bin/cleanup.sh does the deleting as an Executor.Run verb (scheduler.proto line 19) with a timeout; the script lives in the repository (owner 2026-10-12, scripts live in the project).</where>
     <step n="1">On a trigger record, select the registry entries whose trigger class matches and whose retention has elapsed (timer), or whose key matches the record (merge: ticket id and branch; backup: retention class; disposition: the entry or ref the record names).</step>
-    <step n="2">Take the lease cleanup:&lt;entry-id&gt; for each selected entry (N-02, fencing token, expiry 15 minutes). An entry whose lease is held is skipped with reason lease-held and tried on the next trigger.</step>
-    <step n="3">Run cleanup.sh plan --entry &lt;ids&gt; --trigger &lt;record id&gt;: it expands globs, checks every path is under an allowed root, asks the store whether a live lease (workspace, seat, tier) holds the path, and prints the listing as JSON. The service writes cleanup.run 100 with the listing and its hash.</step>
-    <step n="4">Run cleanup.sh apply --plan &lt;hash&gt; --fence &lt;token&gt;: the script re-expands, refuses if the expansion differs from the plan hash (409, something changed; replan on the next trigger), then deletes with rm -rf for paths, git worktree remove --force then git worktree prune for worktrees, git push origin --delete for remote branches (through the service's gh auth), git branch -D for local branches, git remote remove for stale remotes, and treehouse return for pool slots. Each deletion is one row in the result.</step>
-    <step n="5">Write cleanup.run 200 with the rows; release the leases. On any failure retry the failed entries only, up to 3, then cleanup.run 423.</step>
+    <step n="2">Take the lease cleanup:&lt;entry-id&gt; for each selected entry (maintenance class, shared/contracts.xml#lease-machine; ttl lease.ttl_seconds). An entry whose lease is held is skipped with reason lease-held and tried on the next trigger.</step>
+    <step n="3">Drain (review F24): for every resource the entry would touch (a workspace slot, a worktree, a tier page directory, a snapshot, a branch), take the system lease drain:&lt;resource&gt; in one Commit whose preconditions say no live holder lease (workspace:, seat:, tier:, backup:) exists for that resource. Allocators refuse a resource with a live drain lease: N-14 never provisions into a drained slot, N-48 never promotes into a drained tier directory, N-05 never writes a drained snapshot path. A resource whose holder lease is live is skipped lease-held; no drain is taken for it.</step>
+    <step n="4">Run cleanup.sh plan --entry &lt;ids&gt; --trigger &lt;record id&gt;: it expands globs by a no-symlink walk (every component opened with O_NOFOLLOW from the allowed root's directory descriptor; a symlink anywhere, or a mount point crossed, is refused 400 outside-root), and binds each path to its device, inode, type, size and mtime. The listing, the bindings and the drain lease keys, tokens and generations hash to the plan hash. The service writes cleanup.run 100 with the listing and its hash.</step>
+    <step n="5">Run cleanup.sh apply --plan &lt;hash&gt;: before any deletion the service re-reads every drain lease of the plan; a lease that is not current (expired, revoked, or a new generation) refuses the apply with cleanup.run 412 lease_not_current. The script walks again from the root descriptors, compares each binding, and refuses with 412 plan-changed when a device, inode or type differs or a path appeared; nothing is re-resolved by string. It then unlinks relative to the verified directory descriptors (unlinkat, depth first; never rm -rf on a path string), removes worktrees with git worktree remove then prune, deletes remote branches with git push origin --delete through the service's forge-pr credential after checking the ref still points at the planned sha, git branch -D for local branches, git remote remove for stale remotes, and treehouse return for pool slots. Each deletion is one row in the result.</step>
+    <step n="6">Write cleanup.run 200 with the rows; release the drain and cleanup leases in the same Commit. On any failure retry the failed entries only, up to 3, then cleanup.run 423.</step>
     <merge-trigger-detail>For a merge record: delete the remote branch (the repository setting delete_branch_on_merge is set true by N-49 step 5, so this is a check, not a delete, once that lands), remove the ticket's worktrees and seat workspaces (after N-15 has written seat.result for every run of the ticket; a running seat holds a lease and is skipped), return the slot, remove the dev and uat tier pages of the ticket (N-48 registers them).</merge-trigger-detail>
-    <backup-trigger-detail>Keep the newest N per retention class from the backup record (daily 14, weekly 8, monthly 6 from config); list and delete older snapshots; never delete the newest, never delete a snapshot whose checksum is unverified (N-05 marks it).</backup-trigger-detail>
+    <backup-trigger-detail>Retention per class is N-05's (nodes/N-05/spec.xml#output, config backup.retention): tick, daily and monthly snapshots past their class retention are pruned through N-05's cleanup-backups.sh entry, selected from the backups table rows (class, epoch, high_water_seq, row_count, min_retained_seq; shared/state-store.xml, shared/contracts.xml#restore), never by file age; never the newest verified backup of any class; a backup whose record does not carry verified true is never selected. Class manual is owner-acted: kept until the owner's cleanup card, never timer-run.</backup-trigger-detail>
     <diagram>
       <mermaid><![CDATA[
 sequenceDiagram
@@ -96,22 +110,26 @@ sequenceDiagram
   participant X as cleanup.sh (Executor.Run)
   participant R as N-01 store
   T->>S: merge / backup / tick / disposition
-  S->>L: lease cleanup:<entry> (fence)
-  S->>X: plan --entry ids
-  X-->>S: listing + hash
+  S->>L: lease cleanup:<entry>
+  S->>L: drain:<resource> (no live holder lease)
+  S->>X: plan --entry ids (no-symlink walk)
+  X-->>S: listing + inode bindings + hash
   S->>R: cleanup.run 100 (plan)
-  S->>X: apply --plan hash --fence token
+  S->>L: recheck drain leases current
+  S->>X: apply --plan hash (rebind, unlinkat)
   X-->>S: rows (deleted, skipped, failed)
-  S->>R: cleanup.run 200 or 423
-  S->>L: release
+  S->>R: cleanup.run 200, 412 or 423
+  S->>L: release drain and cleanup
       ]]></mermaid>
     </diagram>
   </mechanism>
 
   <safety id="safety">
-    <rule>Allowed roots only: $COQ_STATE, $COQ_CACHE, the treehouse pool root from treehouse.toml, ~/.bearings for tier pages, and git refs by name. A path outside them is refused 400 and the entry is reported as a registry defect.</rule>
+    <rule>Allowed roots only: $COQ_STATE, $COQ_CACHE, the treehouse pool root from treehouse.toml, $HOME/.bearings for tier pages, $HOME/.config/systemd/user and $HOME/.local/bin for the entries that live there (coq unit files and pinned binaries; those entries are owner-acted when they uninstall or disable), and git refs by name. A path outside them, a symlink on the way, or a crossed mount point is refused 400 and the entry is reported as a registry defect.</rule>
+    <rule>Atomic exclusion: a resource is deleted only under its own drain lease, taken when no holder lease is live, and every allocator refuses a drained resource; the delete re-verifies the lease generation and the bound inode first (mechanism steps 3 to 5).</rule>
+    <rule>Owner-acted entries (trigger owner) never run from a trigger record; the service only lists them.</rule>
     <rule>Never the repository working tree of the owner checkout, never origin/main, never a branch with an open PR unless a disposition record names it, never a worktree whose lease is live, never the stable tier page directory, never the backup newest snapshot.</rule>
-    <rule>Plan before apply, always; apply refuses a plan older than 1 hour or whose expansion changed.</rule>
+    <rule>Plan before apply, always; apply refuses a plan older than cleanup.plan_ttl (PT1H), whose drain leases are not current (412 lease_not_current) or whose bindings changed (412 plan-changed).</rule>
     <rule>Every deletion of a git ref records the sha it pointed at in the result row, so a wrong deletion is recoverable from the reflog or the row for 30 days (N-05 backs up the mirror).</rule>
     <rule>Dry-run output for a disposition run is attached to the owner's card before GOFACTORY (N-49, D25 A); the apply waits for the GOFACTORY ruling record.</rule>
   </safety>
@@ -122,7 +140,7 @@ sequenceDiagram
   </start>
 
   <waits id="waits">
-    <wait id="w1" what="lease cleanup:entry" timeout="PT5S to acquire" fallback="skip the entry this run with reason lease-held; next trigger retries; a lease older than its 15 minute expiry is reclaimed by N-02"/>
+    <wait id="w1" what="lease cleanup:entry and drain:resource" timeout="PT5S to acquire" fallback="skip the entry or resource this run with reason lease-held; next trigger retries; an expired lease is swept by N-02 (shared/contracts.xml#lease-machine)"/>
     <wait id="w2" what="cleanup.sh plan" timeout="PT2M" fallback="kill, count one attempt; after 3 cleanup.run 423 naming the entry"/>
     <wait id="w3" what="cleanup.sh apply" timeout="PT10M" fallback="kill; rows already written are kept; the remaining entries retry; an apply killed mid-row leaves a path half-deleted, which the next plan lists again (idempotent)"/>
     <wait id="w4" what="git push --delete to the forge" timeout="PT30S per ref" fallback="retry by the N-04 ladder 10, 30, 90 s; then 423; the branch stays and the next merge trigger retries"/>
@@ -142,21 +160,23 @@ sequenceDiagram
     <collision>A seat starts on a ticket while the merge-trigger cleanup of a previous attempt runs: the new workspace is a new path (attempt in the name) and holds its own lease; the old attempt's path is the one deleted.</collision>
     <collision>Cleanup and N-05 backup on the same snapshot directory: the backup holds lease backup:&lt;snapshot&gt; while writing; cleanup skips it; the newest snapshot is never selected.</collision>
     <collision>Two applies with the same plan hash (a retry after an unknown outcome): the second finds the paths gone and writes rows with reason already-gone; no error.</collision>
+    <collision>N-14 allocates a slot while cleanup drains it: the drain Commit's precondition and N-14's provision Commit both touch the slot's lease row; one commits first; the other sees the lease and refuses (cleanup skips lease-held, or N-14 refuses the drained slot and picks another).</collision>
+    <collision>A symlink swapped in after the plan: apply walks with O_NOFOLLOW from the root descriptor and compares inodes, so the swap is 412 plan-changed and nothing outside the root is touched.</collision>
     <collision>A disposition record from N-49 and a merge trigger naming the same branch: both plan it; the first apply deletes; the second records already-gone.</collision>
   </many-agents>
 
   <status-codes id="status-codes">
     <emits code="100" kind="cleanup.run">Plan written; system acts (apply follows unless the trigger is a pre-GOFACTORY disposition dry run).</emits>
     <emits code="200" kind="cleanup.run">Applied; system acts (nothing).</emits>
-    <emits code="409" kind="cleanup.run">Plan expansion changed before apply; system acts (replan next trigger).</emits>
+    <emits code="412" kind="cleanup.run">Drain lease not current, or bound inodes changed, before apply; system acts (replan next trigger).</emits>
     <emits code="400" kind="cleanup.run">A registry entry names a path outside an allowed root; system acts (fix ticket request for the volume that registered it).</emits>
     <emits code="423" kind="cleanup.run">Three attempts failed; system acts on system entries (alert), owner acts on owner entries (one card).</emits>
   </status-codes>
 
   <state-paths id="state-paths">
-    <path id="N-45.plans" glob="$COQ_STATE/cleanup/plans/*.json" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-45.plans">Every plan listing by hash (the record holds it too; this is the file the script reads at apply).</path>
-    <path id="N-45.log" glob="$COQ_STATE/logs/cleanup/*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-45.log">Script output per run.</path>
-    <path id="N-45.registry-cache" glob="$COQ_CACHE/cleanup/registry-&lt;sha&gt;.json" retention="P7D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-45.registry-cache">The registry as read at a main sha.</path>
+    <path id="N-45.plans" glob="$COQ_STATE/cleanup/plans/*.json" retention="P30D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-45.plans">Every plan listing by hash (the record holds it too; this is the file the script reads at apply).</path>
+    <path id="N-45.log" glob="$COQ_STATE/logs/cleanup/*.jsonl" retention="P30D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-45.log">Script output per run.</path>
+    <path id="N-45.registry-cache" glob="$COQ_CACHE/cleanup/registry-&lt;sha&gt;.json" retention="P7D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-45.registry-cache">The registry as read at a main sha.</path>
     <rule>cleanup.sh --entry N-45.* is the one entry cleanup never selects while a run is in progress (self-cleaning only on the timer trigger when no lease cleanup:* is live).</rule>
   </state-paths>
 
@@ -172,18 +192,20 @@ sequenceDiagram
   <checklist id="checklist">
     <item><check>The registry is generated from the volumes and drift fails the check.</check><proof>registry.py --check exits non-zero after a volume gains a state path with no regenerated registry; N-46 runs it.</proof></item>
     <item><check>Every entry's glob is under an allowed root.</check><proof>A test registry with a path under /home refused 400 at plan.</proof></item>
-    <item><check>Plan then apply, with a changed expansion refused.</check><proof>A test that adds a file between plan and apply; apply exits 409; nothing deleted.</proof></item>
+    <item><check>Plan then apply, with a changed expansion refused.</check><proof>A test that adds a file between plan and apply, and one that swaps a directory for a symlink; apply is 412 plan-changed; nothing deleted.</proof></item>
+    <item><check>A drained resource cannot be allocated, and a stale drain refuses the apply.</check><proof>A test holding drain:slot-03; N-14 provision refuses the slot; a second test expires the drain lease between plan and apply; cleanup.run 412 lease_not_current; nothing deleted.</proof></item>
+    <item><check>Owner-acted entries never run on a trigger.</check><proof>A registry with an entry of trigger owner; daily, merge and backup triggers list it and apply nothing; registry.py fails a copy marked trigger timer with R7.</proof></item>
     <item><check>A leased worktree is skipped, not deleted.</check><proof>A test holding lease workspace:T; the merge trigger run lists the path as skipped lease-held.</proof></item>
     <item><check>A merge cleans its branch, worktree and tier pages.</check><proof>An end-to-end test world: after merge record, the branch ref is gone, the worktree is gone, the dev page dir is gone, one cleanup.run 200 with three rows.</proof></item>
     <item><check>Three failures end in one 423, never a loop.</check><proof>A test with an undeletable path (chattr or a mount); three attempts with backoff on the fake clock; one 423; no fourth attempt.</proof></item>
-    <item><check>Backups keep the newest per class.</check><proof>A test with 20 daily snapshots; 14 remain; the newest is among them.</proof></item>
+    <item><check>Backups keep the newest per class and N-05's record is accepted as written.</check><proof>N-05's golden backup record validates against record.schema.json#/$defs/input; a test with daily snapshots past backup.retention prunes all but the newest verified one; a manual snapshot is never selected.</proof></item>
   </checklist>
 
   <permissions id="permissions">
     <may role="system" do="plan and apply any registry entry; take cleanup leases; delete refs through the service's forge auth"/>
-    <may role="owner" do="run cleanup.sh plan and apply by hand as break glass, recorded by N-42"/>
+    <may role="owner" do="run cleanup.sh plan and apply by hand as break glass, recorded by N-42; the only actor for entries of trigger owner"/>
     <may-not role="seat" do="run cleanup.sh apply; delete any path it did not create in its own workspace; delete branches or worktrees"/>
-    <may-not role="system" do="delete outside the allowed roots; delete origin/main; delete the stable tier page; delete the newest backup"/>
+    <may-not role="system" do="delete outside the allowed roots; follow a symlink; delete origin/main; delete the stable tier page; delete the newest backup; apply an entry of trigger owner"/>
   </permissions>
 
   <monitoring id="monitoring">
@@ -204,7 +226,7 @@ sequenceDiagram
   </runbook>
 
   <sources id="sources">
-    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C35">Owner: keep all artifacts out of the git repo, ensure we have cleanup scripts</source>
+    <source path="$HOME/.bearings/coq-stable/answers.jsonl" anchor="C35">Owner: keep all artifacts out of the git repo, ensure we have cleanup scripts</source>
     <source path="rebuild/investigation/03-DECISIONS.md" anchor="#6-d04-where-tickets-and-their-status-live">D04 C: whole tickets in the state root, no cut PRs, no residue</source>
     <source path="rebuild/investigation/04-UNLANDED.md" anchor="#12-ordering-and-trigger">Each step three attempts then a record, never a hand step; dry-run first</source>
     <source path="rebuild/investigation/04-UNLANDED.md" anchor="#6-worktrees-88">88 worktrees, 73 to close</source>
@@ -214,7 +236,7 @@ sequenceDiagram
     <source path="rebuild/README.md" anchor="#7-cleanup">The existing cleanup command pattern for a directory's outputs</source>
     <source path="bin/state-root.sh" anchor="header">The one resolver for $COQ_STATE and $COQ_CACHE; every script asks it</source>
     <source path="rebuild/investigation/04-UNLANDED.md" anchor="#9-merged-but-dark-and-ruled-or-ready-but-unbuilt">WO-20261013-48f2 - Post-merge cleanup is code: line/bin/after-merge.sh cleans the branches, downs the ticket's seats and returns their slots, restores the checkout's ticket copies, starts verify-main.sh in an unowned pane and posts one record (superseded by D01 B; its cleanup list is carried here)</source>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/scripts-live-in-the-project.md" anchor="How to apply">Artifacts under $COQ_STATE with a README; scripts in the repo</source>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/scripts-live-in-the-project.md" anchor="How to apply">Artifacts under $COQ_STATE with a README; scripts in the repo</source>
     <source path="treehouse.toml" anchor="max_trees">The pool root is user-level, never in-project</source>
   </sources>
 
@@ -228,10 +250,11 @@ sequenceDiagram
   <shared-needs id="shared-needs">
     <need kind="volume">shared/cleanup-registry.json (generated) and its JSON schema; the generator rebuild/design/bin/registry.py and N-46 running registry.py --check.</need>
     <need kind="xsd">A state-paths element with path children carrying id, glob, retention, trigger, acts, cleanup, holds; required in every node and runbook volume.</need>
-    <need kind="store-table">cleanup_runs: id, trigger_record, plan_hash, phase, rows JSON, attempt; leases named cleanup:&lt;entry&gt;, workspace:&lt;ticket&gt;, seat:&lt;run&gt;, tier:&lt;name&gt;, backup:&lt;snapshot&gt; so the script can ask whether a path is held.</need>
+    <need kind="store-table">cleanup_runs: id, trigger_record, plan_hash, phase, rows JSON, attempt; leases named cleanup:&lt;entry&gt;, drain:&lt;resource&gt;, workspace:&lt;ticket&gt;, seat:&lt;run&gt;, tier:&lt;name&gt;, backup:&lt;snapshot&gt; (contracts.schema.json#/$defs/system_lease_key) so the script can ask whether a path is held.</need>
+    <need kind="allocators">N-14 (slots), N-48 (tier directories) and N-05 (snapshot paths) refuse a resource with a live drain:&lt;resource&gt; lease.</need>
     <need kind="record-kinds">cleanup.run, disposition, branch.delete, merge (with branch, ticket, pr), backup (with snapshot path and retention class), tick (daily, hourly).</need>
-    <need kind="status-codes">100 plan, 200 applied, 409 plan changed, 400 bad registry entry, 423 failed after 3.</need>
-    <need kind="config">cleanup.allowed_roots, cleanup.backup_keep {daily 14, weekly 8, monthly 6}, cleanup.plan_ttl PT1H, cleanup.lease_ttl PT15M, forge auth for ref deletion.</need>
+    <need kind="status-codes">100 plan, 200 applied, 412 drain lease not current or plan changed, 400 bad registry entry, 423 failed after 3.</need>
+    <need kind="config">cleanup.allowed_roots, cleanup.plan_ttl PT1H, backup.retention (N-05), lease.ttl_seconds (shared/contracts.xml#timing), the forge-pr credential for ref deletion.</need>
     <need kind="executor-verb">cleanup with plan and apply subcommands and the timeouts above in the verb table.</need>
     <need kind="principle">principles.xml#artifacts-out-of-repo stating the allowed roots and that every state path has a registry entry.</need>
   </shared-needs>

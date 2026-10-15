@@ -1,128 +1,535 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "rebuild/design/nodes/N-25/record.schema.json",
-  "title": "N-25 Gate status post: input result set for one head sha and output gate.run (the coq/gate status as posted)",
-  "description": "Written 2026-10-14T04:39Z UTC by the G4 spec-author seat. Envelope repeated from N-20 until shared/state-store.schema.json lands.",
-  "oneOf": [
-    { "$ref": "#/$defs/input" },
-    { "$ref": "#/$defs/output" },
-    { "$ref": "#/$defs/protection" }
-  ],
-  "$defs": {
-    "envelope": {
-      "type": "object",
-      "required": ["id", "kind", "code", "at", "node", "attempt", "key", "version"],
-      "properties": {
-        "id": { "type": "string", "pattern": "^r-[0-9]{17}-[a-z0-9]{5}$" },
-        "kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$" },
-        "code": { "type": "integer", "enum": [100, 200, 201, 300, 400, 409, 410, 412, 422, 423, 429, 500, 503] },
-        "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
-        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
-        "attempt": { "type": "integer", "minimum": 0, "maximum": 3 },
-        "key": { "type": "string", "minLength": 3 },
-        "version": { "type": "integer", "minimum": 1 },
-        "lease_token": { "type": "string" },
-        "note": { "type": "string", "maxLength": 240 }
-      }
-    },
-    "sha40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
-    "input": {
-      "type": "object",
-      "title": "The result set the verdict rule reads; assembled from pod.run and check.verdict records, not stored as one row",
-      "required": ["head_sha", "pr", "plan_attempt", "plan_kind", "entries_total", "results", "bound_passed"],
-      "properties": {
-        "head_sha": { "$ref": "#/$defs/sha40" },
-        "pr": { "type": "integer", "minimum": 0 },
-        "plan_attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
-        "plan_kind": { "type": "string", "enum": ["pr", "main"] },
-        "entries_total": { "type": "integer", "minimum": 0 },
-        "bound_passed": { "type": "boolean" },
-        "results": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["name", "kind", "code", "outcome"],
-            "properties": {
-              "name": { "type": "string" },
-              "kind": { "type": "string", "enum": ["pod", "spec-check"] },
-              "record": { "type": "string", "description": "pod.run or check.verdict record id" },
-              "code": { "type": "integer", "enum": [201, 422, 500, 410] },
-              "outcome": { "type": "string", "enum": ["pass", "fail", "timeout", "infra", "superseded"] },
-              "log": { "type": "string" }
-            }
-          }
-        }
-      }
-    },
-    "output": {
-      "allOf": [
-        { "$ref": "#/$defs/envelope" },
-        {
-          "type": "object",
-          "required": ["head_sha", "pr", "plan_attempt", "plan_kind", "state", "description", "target_url", "counts", "posted"],
-          "properties": {
-            "kind": { "enum": ["gate.run", "gate.pending"] },
-            "code": { "enum": [100, 201, 422, 500, 410, 412] },
-            "node": { "const": "N-25" },
-            "head_sha": { "$ref": "#/$defs/sha40" },
-            "pr": { "type": "integer", "minimum": 0 },
-            "plan_attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
-            "plan_kind": { "type": "string", "enum": ["pr", "main"] },
-            "context": { "const": "coq/gate" },
-            "state": { "type": "string", "enum": ["pending", "success", "failure", "error"] },
-            "description": { "type": "string", "minLength": 1, "maxLength": 140 },
-            "target_url": { "type": "string", "format": "uri" },
-            "counts": {
-              "type": "object",
-              "required": ["pass", "fail", "timeout", "infra", "superseded", "spec_check_pass", "spec_check_fail"],
-              "additionalProperties": false,
-              "properties": {
-                "pass": { "type": "integer", "minimum": 0 }, "fail": { "type": "integer", "minimum": 0 },
-                "timeout": { "type": "integer", "minimum": 0 }, "infra": { "type": "integer", "minimum": 0 },
-                "superseded": { "type": "integer", "minimum": 0 },
-                "spec_check_pass": { "type": "integer", "minimum": 0 }, "spec_check_fail": { "type": "integer", "minimum": 0 }
-              }
-            },
-            "first_failure": { "type": "object", "properties": { "name": { "type": "string" }, "log": { "type": "string" } } },
-            "superseded_by": { "$ref": "#/$defs/sha40" },
-            "posted": {
-              "type": "object", "required": ["ok", "attempts"],
-              "properties": {
-                "ok": { "type": "boolean" },
-                "status_id": { "type": "integer" },
-                "created_at": { "$ref": "#/$defs/utc" },
-                "attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
-                "skipped_same_content": { "type": "boolean" }
-              }
-            }
-          },
-          "allOf": [
-            { "if": { "properties": { "state": { "const": "success" } } }, "then": { "properties": { "code": { "const": 201 } } } },
-            { "if": { "properties": { "state": { "const": "failure" } } }, "then": { "properties": { "code": { "const": 422 } }, "required": ["first_failure"] } },
-            { "if": { "properties": { "state": { "const": "pending" } } }, "then": { "properties": { "code": { "const": 100 }, "kind": { "const": "gate.pending" } } } },
-            { "if": { "properties": { "code": { "const": 410 } } }, "then": { "properties": { "state": { "const": "error" } }, "required": ["superseded_by"] } }
-          ]
-        }
-      ]
-    },
-    "protection": {
-      "allOf": [
-        { "$ref": "#/$defs/envelope" },
-        {
-          "type": "object",
-          "required": ["branch", "contexts", "strict"],
-          "properties": {
-            "kind": { "enum": ["protection.applied", "protection.failed", "status.post.failed"] },
-            "code": { "enum": [200, 500] },
-            "node": { "const": "N-25" },
-            "branch": { "const": "main" },
-            "contexts": { "type": "array", "contains": { "const": "coq/gate" } },
-            "strict": { "type": "boolean" },
-            "error": { "type": "string" }
-          }
-        }
-      ]
-    }
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "rebuild/design/nodes/N-25/record.schema.json",
+ "title": "N-25 Gate status post: input result set for one head sha and output gate.run (the coq/gate status as posted)",
+ "description": "Book 1.1.0 (F08, F16, F19, F26, review C new 10 to 12). Envelope: shared/state-store.schema.json#/$defs/envelope (UTC-stamp ids). The status is posted only by the coq-gate GitHub App (shared/authority.xml#github-app) through the outbox (operation N-25/status.post/<sha>@<context>@<plan_attempt>/r1). The protection records are N-04's (nodes/N-04/record.schema.json#/$defs/protection). UTC everywhere.",
+ "oneOf": [
+  {
+   "$ref": "#/$defs/input"
+  },
+  {
+   "$ref": "#/$defs/output"
+  },
+  {
+   "$ref": "#/$defs/status_post_failed"
+  },
+  {
+   "$ref": "#/$defs/expected_red_row"
   }
+ ],
+ "$defs": {
+  "envelope": {
+   "$ref": "../../shared/state-store.schema.json#/$defs/envelope"
+  },
+  "sha40": {
+   "type": "string",
+   "pattern": "^[0-9a-f]{40}$"
+  },
+  "utc": {
+   "type": "string",
+   "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+  },
+  "input": {
+   "type": "object",
+   "title": "The result set the verdict rule reads; assembled from pod.run and check.verdict records, not stored as one row",
+   "required": [
+    "head_sha",
+    "pr",
+    "plan_attempt",
+    "plan_kind",
+    "entries_total",
+    "results",
+    "bound_passed"
+   ],
+   "properties": {
+    "head_sha": {
+     "$ref": "#/$defs/sha40"
+    },
+    "pr": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "plan_attempt": {
+     "$ref": "#/$defs/plan_attempt"
+    },
+    "plan_kind": {
+     "type": "string",
+     "enum": [
+      "pr",
+      "main"
+     ]
+    },
+    "entries_total": {
+     "type": "integer",
+     "minimum": 0
+    },
+    "bound_passed": {
+     "type": "boolean"
+    },
+    "results": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "name",
+       "kind",
+       "code",
+       "outcome"
+      ],
+      "properties": {
+       "name": {
+        "type": "string"
+       },
+       "kind": {
+        "type": "string",
+        "enum": [
+         "pod",
+         "spec-check"
+        ]
+       },
+       "record": {
+        "type": "string",
+        "description": "pod.run or check.verdict record id"
+       },
+       "code": {
+        "type": "integer",
+        "enum": [
+         201,
+         422,
+         500,
+         410
+        ]
+       },
+       "outcome": {
+        "type": "string",
+        "enum": [
+         "pass",
+         "fail",
+         "timeout",
+         "infra",
+         "superseded"
+        ]
+       },
+       "log": {
+        "type": "string"
+       },
+       "tests": {
+        "type": "array",
+        "items": {
+         "type": "object",
+         "required": [
+          "test_id",
+          "outcome"
+         ],
+         "properties": {
+          "test_id": {
+           "type": "string"
+          },
+          "path": {
+           "type": "string"
+          },
+          "outcome": {
+           "enum": [
+            "pass",
+            "fail",
+            "skip"
+           ]
+          },
+          "message": {
+           "type": "string",
+           "maxLength": 500
+          }
+         }
+        }
+       }
+      }
+     }
+    },
+    "expected_red": {
+     "type": "array",
+     "items": {
+      "$ref": "#/$defs/expected_red_row"
+     },
+     "description": "the rows of tests/expected-red.json at the head sha that N-25 honours (a row added by this head only when it equals an acceptance test_ref of the head's ticket, nodes/N-17/spec.xml)"
+    }
+   }
+  },
+  "output": {
+   "allOf": [
+    {
+     "$ref": "#/$defs/envelope"
+    },
+    {
+     "type": "object",
+     "required": [
+      "head_sha",
+      "pr",
+      "plan_attempt",
+      "plan_kind",
+      "state",
+      "description",
+      "target_url",
+      "counts",
+      "posted",
+      "op_id"
+     ],
+     "properties": {
+      "kind": {
+       "enum": [
+        "gate.run",
+        "gate.pending"
+       ]
+      },
+      "code": {
+       "enum": [
+        100,
+        201,
+        422,
+        500,
+        410,
+        412
+       ]
+      },
+      "node": {
+       "const": "N-25"
+      },
+      "head_sha": {
+       "$ref": "#/$defs/sha40"
+      },
+      "pr": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "plan_attempt": {
+       "$ref": "#/$defs/plan_attempt"
+      },
+      "plan_kind": {
+       "type": "string",
+       "enum": [
+        "pr",
+        "main"
+       ]
+      },
+      "context": {
+       "const": "coq/gate"
+      },
+      "state": {
+       "type": "string",
+       "enum": [
+        "pending",
+        "success",
+        "failure",
+        "error"
+       ]
+      },
+      "description": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 140
+      },
+      "target_url": {
+       "type": "string",
+       "format": "uri"
+      },
+      "counts": {
+       "type": "object",
+       "required": [
+        "pass",
+        "fail",
+        "timeout",
+        "infra",
+        "superseded",
+        "spec_check_pass",
+        "spec_check_fail",
+        "expected_red"
+       ],
+       "additionalProperties": false,
+       "properties": {
+        "pass": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "fail": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "timeout": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "infra": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "superseded": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "spec_check_pass": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "spec_check_fail": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "expected_red": {
+         "type": "integer",
+         "minimum": 0
+        }
+       }
+      },
+      "first_failure": {
+       "type": "object",
+       "properties": {
+        "name": {
+         "type": "string"
+        },
+        "log": {
+         "type": "string"
+        }
+       }
+      },
+      "superseded_by": {
+       "$ref": "#/$defs/sha40"
+      },
+      "posted": {
+       "type": "object",
+       "required": [
+        "ok",
+        "attempts"
+       ],
+       "properties": {
+        "ok": {
+         "type": "boolean"
+        },
+        "status_id": {
+         "type": "integer"
+        },
+        "created_at": {
+         "$ref": "#/$defs/utc"
+        },
+        "app_id": {
+         "type": "integer",
+         "minimum": 1,
+         "description": "forge.gate_app_id; the status creator"
+        },
+        "attempts": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 3
+        },
+        "skipped_same_content": {
+         "type": "boolean"
+        }
+       }
+      },
+      "unexpected_pass": {
+       "type": "array",
+       "items": {
+        "type": "string"
+       },
+       "description": "tests listed in the manifest that passed: the gate is failure until the row is removed"
+      },
+      "op_id": {
+       "$ref": "../../shared/contracts.schema.json#/$defs/operation_key"
+      }
+     },
+     "allOf": [
+      {
+       "if": {
+        "properties": {
+         "state": {
+          "const": "success"
+         }
+        }
+       },
+       "then": {
+        "properties": {
+         "code": {
+          "const": 201
+         }
+        }
+       }
+      },
+      {
+       "if": {
+        "properties": {
+         "state": {
+          "const": "failure"
+         }
+        }
+       },
+       "then": {
+        "properties": {
+         "code": {
+          "const": 422
+         }
+        },
+        "required": [
+         "first_failure"
+        ]
+       }
+      },
+      {
+       "if": {
+        "properties": {
+         "state": {
+          "const": "pending"
+         }
+        }
+       },
+       "then": {
+        "properties": {
+         "code": {
+          "const": 100
+         },
+         "kind": {
+          "const": "gate.pending"
+         }
+        }
+       }
+      },
+      {
+       "if": {
+        "properties": {
+         "code": {
+          "const": 410
+         }
+        }
+       },
+       "then": {
+        "properties": {
+         "state": {
+          "const": "error"
+         }
+        },
+        "required": [
+         "superseded_by"
+        ]
+       }
+      }
+     ]
+    }
+   ]
+  },
+  "plan_attempt": {
+   "type": "integer",
+   "minimum": 1,
+   "maximum": 2,
+   "description": "shared/retry-budget.xml#layers plan-attempt"
+  },
+  "expected_red_row": {
+   "type": "object",
+   "required": [
+    "path",
+    "test_id",
+    "content_sha256",
+    "ticket",
+    "expected_failure"
+   ],
+   "additionalProperties": false,
+   "properties": {
+    "path": {
+     "type": "string",
+     "minLength": 1
+    },
+    "test_id": {
+     "type": "string",
+     "minLength": 1
+    },
+    "content_sha256": {
+     "type": "string",
+     "pattern": "^[0-9a-f]{64}$"
+    },
+    "ticket": {
+     "$ref": "../../shared/contracts.schema.json#/$defs/ticket"
+    },
+    "expected_failure": {
+     "type": "object",
+     "required": [
+      "kind",
+      "match"
+     ],
+     "additionalProperties": false,
+     "properties": {
+      "kind": {
+       "enum": [
+        "exit-code",
+        "message",
+        "assertion"
+       ]
+      },
+      "match": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 500
+      }
+     }
+    }
+   }
+  },
+  "status_post_failed": {
+   "description": "The outbox effect of a coq/gate post failed after the status-post layer (shared/retry-budget.xml#layers); one card",
+   "allOf": [
+    {
+     "$ref": "#/$defs/envelope"
+    },
+    {
+     "type": "object",
+     "required": [
+      "head_sha",
+      "context",
+      "plan_attempt",
+      "op_id",
+      "state_wanted",
+      "error",
+      "attempts"
+     ],
+     "properties": {
+      "kind": {
+       "const": "status.post.failed"
+      },
+      "code": {
+       "const": 500
+      },
+      "node": {
+       "const": "N-25"
+      },
+      "head_sha": {
+       "$ref": "#/$defs/sha40"
+      },
+      "pr": {
+       "type": "integer",
+       "minimum": 0
+      },
+      "context": {
+       "const": "coq/gate"
+      },
+      "plan_attempt": {
+       "$ref": "#/$defs/plan_attempt"
+      },
+      "op_id": {
+       "$ref": "../../shared/contracts.schema.json#/$defs/operation_key"
+      },
+      "state_wanted": {
+       "enum": [
+        "pending",
+        "success",
+        "failure",
+        "error"
+       ]
+      },
+      "error": {
+       "type": "string",
+       "maxLength": 1000
+      },
+      "attempts": {
+       "const": 3
+      }
+     }
+    }
+   ]
+  }
+ }
 }

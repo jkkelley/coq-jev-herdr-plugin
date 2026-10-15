@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: the outside probe. The one detector of a host or store outage that does not run on the host and does
+     not depend on the store, so a dead line still reaches the owner's phone. Every node that says "the owner sees it
+     while the store is down" cites #alerting here instead of a card. Validated by rebuild/design/check.sh against
+     schema/volume.xsd. Design only: nothing here is built or run. -->
+<volume id="outside-probe" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="Outside probe">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings</entry>
+    <entry ref="purpose">Purpose: why a detector outside the host</entry>
+    <entry ref="probe">The probe: where it runs, what it checks, how often</entry>
+    <entry ref="alerting">Alerting: its own topic and token, within 3 minutes, a recovery message</entry>
+    <entry ref="journal">Journal: the capped outage journal on the Pi and the host-side emergency path</entry>
+    <entry ref="availability">Availability: the Pi is not confirmed; proof not-run</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="failure-cases.xml#failure-cases" kind="shared"/>
+    <sibling href="state-store.xml#state-store" kind="shared"/>
+    <sibling href="status-codes.xml#status-codes" kind="shared"/>
+    <shared href="../nodes/N-52/spec.xml#push-delivery" role="ntfy">The ntfy server, its access model and the phone's subscription; the probe uses its own topic and token on it</shared>
+    <shared href="../nodes/N-32/spec.xml#web-security" role="livez">The stable page service answers GET /livez without the store and without a key</shared>
+    <shared href="../nodes/N-34/spec.xml#security" role="reach">The tailnet front door the probe reaches the stable page through</shared>
+    <shared href="../nodes/N-06/spec.xml#N-06" role="importer">The service unit that imports the outage journal on recovery</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>What broke (review F15, 2026-10-15): every path by which the owner learned of an outage ran on the host and wrote to the store.</s>
+    <s>A card is a store commit (N-28), a push is a store subscription (N-31, N-52), and the dead man's switch of N-06 is a timer on the same host, so a store that cannot open or a host that is off produced no card, no push and no record.</s>
+    <s>On the 9.5 hour outage the review measured, nothing outside the host noticed.</s>
+    <s>The rule here: one probe that is not on the host and does not read or write the store detects the outage, tells the phone within 3 minutes on a channel of its own, says when it is over, and hands its journal to the store once the store is back.</s>
+    <s>Rejected: a second probe inside WSL (dies with the host); a systemd watchdog (restarts, never tells anyone when the host itself is down); a cloud uptime service (the page is tailnet-only and a third party would need a door into it).</s>
+    <s>Cost: one small process on one Raspberry Pi, one ntfy topic, one token, and a /livez route on the stable page.</s>
+  </purpose>
+
+  <probe id="probe">
+    <s>Where: coq-probe, a static Go binary (cmd/coq-probe, planned) on one Raspberry Pi of the owner's cluster (${SITE_PI_LAN_ADDR}), run as a systemd system unit coq-probe.service with Restart=always, as its own unprivileged user, joined to the tailnet so it reaches the host the way the owner's phone does.</s>
+    <s>Dependencies: none on the store, the host, the cluster API or Jenkins; its config file and its journal live on the Pi; its clock is the Pi's NTP clock; everything it times is UTC.</s>
+    <check name="livez" every="30 s" timeout="5 s">GET http://${SITE_TAILNET_HOST}:44900/livez through the front door (N-34); the stable page service answers it from memory with {up, store, page_state, at} and no key, and answers it while the store is down (nodes/N-32/spec.xml#web-security names the route).</check>
+    <check name="stable-page" every="30 s" timeout="5 s">GET http://${SITE_TAILNET_HOST}:44900/ and expect the page shell (200, the login page when no cookie); a 200 with store down still counts as page up.</check>
+    <rule>One check pass is both checks, every 30 s, 5 s timeout each, no retry inside a pass: the next pass is the retry.</rule>
+    <rule>States, a pure function of the last passes: up; host-down when both checks fail 4 passes in a row; store-down when /livez answers with store down 4 passes in a row; page-down when /livez fails and the stable page fails while the front door answers TCP.</rule>
+    <rule>4 failed passes at 30 s is 2 minutes, plus one 5 s timeout and the send bound below, so the alert leaves within 3 minutes of the first failed pass.</rule>
+    <wait what="a check request" timeout="5 s" fallback="count the pass as failed; the next pass in 30 s is the retry"/>
+  </probe>
+
+  <alerting id="alerting">
+    <s>Channel: the probe publishes to the ntfy server of nodes/N-52/spec.xml#push-delivery on a topic of its own (the probe topic) with a publish token of its own, scoped write-only to that topic; it never uses the bridge's token or topic, so a bridge defect or a revoked bridge token never silences the probe.</s>
+    <s>The owner's phone subscribes to the probe topic with the read token of #push-delivery; the same instant delivery path applies (upstream poll through ntfy.sh, body fetched over the tailnet).</s>
+    <s>Messages: one alert per outage at entry into host-down, store-down or page-down (priority urgent, title "coq host down since HH:MMZ" or the state's own words, body the failed check and the outage id); one reminder every 60 min while the outage lasts; one recovery message after 2 passing passes in a row ("coq back at HH:MMZ, down N min"), priority default.</s>
+    <s>Bound: the send is 3 attempts at 5, 15, 30 s; a send that still fails is written to the journal as alert_failed and retried at the next pass, so a recovery or an alert is never lost while the ntfy server is reachable at all.</s>
+    <s>No body ever carries a key, a record id or a ticket title: only the state, the times and the outage id.</s>
+    <wait what="ntfy publish" timeout="10 s per attempt, 3 attempts" fallback="journal alert_failed and retry at the next 30 s pass"/>
+    <risk>A cluster ntfy outage at the same moment as a host outage is not alerted; the probe journals it and the import shows it later. Recorded, not closed: a second channel would be a third party with the owner's data.</risk>
+  </alerting>
+
+  <journal id="journal">
+    <s>Probe side: the probe appends one JSON line per state change and per alert send to its journal on the Pi (/var/lib/coq-probe/outages.jsonl), capped at 10000 lines and 16 MiB by rotating the oldest file away (one rotation kept); each line carries outage_id, state, started_at, ended_at, passes_failed, last_error, alerts_sent, alert_failed.</s>
+    <s>Import: on recovery the host's service (N-06) reads the journal from the probe's read-only GET /journal?since=&lt;outage_id&gt; over the tailnet and commits one host.outage record per closed outage with operation key N-06/host.outage/&lt;outage_id&gt;/r1, so a repeated import is a replay and an outage is recorded once (shared/contracts.xml#operation-keys).</s>
+    <s>Host side, for the store that is up but cannot take a write: N-01 keeps store.reserve_mib (default 256 MiB, state-store.xml#config-keys) as a pre-allocated file STATE/run/store.reserve that it deletes, once, when free space falls under the floor, so the commits that report the fault (store.full, the alert, the card) have room; the reserve is re-created only after free space is back above floor plus reserve.</s>
+    <s>When a commit still fails, the deciding node appends the record it could not commit to STATE/run/emergency.jsonl (owner coq-svc, mode 0600, capped at 4 MiB, oldest dropped and counted), and N-06 replays it into the store on recovery with operation key N-06/emergency.replay/&lt;sha256 of the line&gt;/r1; the replay is idempotent and the file is truncated only after every line committed.</s>
+    <s>Cleanup: the Pi journal by the probe's own rotation; STATE/run/emergency.jsonl by the replay; STATE/run/store.reserve is never a cleanup target (it is the reserve). The nodes that own these paths (N-01, N-06) register them with N-45.</s>
+    <wait what="journal import on recovery" timeout="10 s per request, 3 attempts" fallback="leave the journal on the Pi and retry on the next N-06 daily tick; a gap is visible as a probe outage with no host.outage record"/>
+  </journal>
+
+  <availability id="availability">
+    <s>The owner has not confirmed that a Raspberry Pi of the cluster is free to run the probe; the Pi, its tailnet join and the probe topic are assumptions of this volume, not facts.</s>
+    <s>Until the owner confirms, the probe is not deployed and F15 stays open as a recorded risk: a host or store outage is seen only when the owner opens the page.</s>
+    <proof state="not-run">Go-live proof: stop coq.service on the host; the phone, locked, receives the store-down or host-down alert within 3 minutes; start it; the recovery message arrives; host.outage for that outage is in the store after the next import. Not run.</proof>
+    <proof state="not-run">Store-down proof: make the store refuse writes on a test state root; /livez reports store down; the probe alerts within 3 minutes; STATE/run/emergency.jsonl holds the refused records and the replay commits each once. Not run.</proof>
+  </availability>
+
+  <many-agents id="many-agents">
+    <readers>Every node that names an outage the owner must hear of while the store is down cites #alerting; failure-cases.xml cites this volume for the store and host outage cases.</readers>
+    <writers>One probe per CANON: a second coq-probe on the Pi is refused by its pid lock (/run/coq-probe.lock) and exits 3; a second Pi running it would double every alert, so the deploy manifest names exactly one host.</writers>
+    <collision>The probe's alert and a card from the recovered store about the same outage: the host.outage import names the outage_id, the card builder's dedupe keys on it, and the owner sees one card after the fact at most.</collision>
+    <collision>Two imports of one journal (two N-06 instances during an upgrade): the operation key replays; one host.outage per outage.</collision>
+  </many-agents>
+
+  <sources id="sources">
+    <source path="rebuild/design/shared/failure-cases.xml" anchor="cases" note="the cases that promised a card while the store refused puts"/>
+    <source href="https://docs.ntfy.sh/config/#ios-instant-notifications" note="upstream-base-url, poll requests with message id only (fetched 2026-10-15)"/>
+    <source path="rebuild/design/nodes/N-06/spec.xml" anchor="N-06" note="the dead man's switch that never fired in a 9.5 hour outage"/>
+  </sources>
+</volume>

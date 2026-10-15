@@ -22,7 +22,7 @@
   blocks the book now).
   Cost: a declared need is not a live pointer until shared/ lands.
 -->
-<volume id="N-14" node="N-14" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-14T05:04:00Z" timezone="UTC">
+<volume id="N-14" node="N-14" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
@@ -207,10 +207,10 @@
     <source href="specs/SPEC-04-herdr-seat-lifecycle.xml#s-leases">slot leases keyed by ticket</source>
     <source href="specs/SPEC-04-herdr-seat-lifecycle.xml#s-cleanup">nothing leased, dirty or unmerged is deleted</source>
     <source href="specs/SPEC-17-orchestrator-and-agent-health.xml#n-start">branch cut from main by the start wrapper</source>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/one-file-one-in-flight-ticket.md">owner 2026-10-12</source>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/release-branch-before-pr-opened.md">a worktree holding the branch blocked the next seat</source>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/treehouse-return-kills-parked-shells.md">return --force killed shells</source>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/work-order-start-branches-from-checkout-head.md">branches cut from the records branch</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/one-file-one-in-flight-ticket.md">owner 2026-10-12</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/release-branch-before-pr-opened.md">a worktree holding the branch blocked the next seat</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/treehouse-return-kills-parked-shells.md">return --force killed shells</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/work-order-start-branches-from-checkout-head.md">branches cut from the records branch</source>
     <source href="~/.bearings/coq-stable/answers.jsonl">C35 artifacts out of the repo with cleanup scripts</source>
   </section>
 

@@ -4,7 +4,13 @@
      revised 2026-10-14T06:40Z UTC by the round 3 spec-author seat against the round 2 review verdict (every reason named there is fixed in this revision)
      (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
      Every time in this volume is UTC. No em dash appears in this volume. Pointers are path plus anchor, never prose. -->
-<volume id="N-08" kind="node-spec" node="N-08" group="G2" title="Gate check" version="1.0.2" issued="2026-10-14" timezone="UTC" author="spec-author seat, group G2, round 3">
+<!-- N-08 book 1.1.0, 2026-10-15T06:00:00Z (review F08, F09, F26 deadlines, C new 4 and 5).
+     What broke: the verdict key pr:head:verdict replayed a re-run green after a red on the same head as nothing; the node
+     ran only when a snapshot record was appended, so error and timeout bounds were checked only on arrival; pushed_at and
+     the head repository owner were read from a snapshot that had neither; Jenkins was named as the status poster.
+     The fix: the CANON key with the status updated_at, a run on every poll tick with escalation by age, bounds derived from
+     shared/retry-budget.xml#deadlines, the fork and head age from N-04's snapshot, and the coq-gate GitHub App as the only poster. -->
+<volume id="N-08" kind="node-spec" node="N-08" group="G2" title="Gate check" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" author="spec-author seat, group G2, round 3; book 1.1.0 amendment">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
@@ -51,98 +57,102 @@
 
   <purpose id="purpose">
     <sentence>For every open pull request head in a forge snapshot, the Go service turns the GitHub commit status coq/gate into one gate.verdict record, green, red or pending, that every later node reads and no agent can edit.</sentence>
-    <is>The verdict the agent can read and cannot change (D05, T04, I03 F8a): the status lives on the commit on GitHub, is posted only by the Jenkins controller (N-25), and is a required status check on main, so GitHub itself refuses a merge without it.</is>
-    <is>Deterministic and idempotent: the same snapshot yields the same verdict; a verdict is written once per pull request, head sha and state, so a poll every tick writes nothing while nothing changes.</is>
+    <is>The verdict the agent can read and cannot change (D05, T04, I03 F8a): the status lives on the commit on GitHub, is posted only by the coq-gate GitHub App through N-25 (shared/authority.xml#github-app), and is a required status check on main pinned to that app_id, so GitHub itself refuses a merge without it and a green from any other source satisfies nothing.</is>
+    <is>Deterministic and idempotent: the same snapshot and clock yield the same verdict; a verdict is written once per pull request, head sha and status observation (its updated_at), so a poll every tick writes nothing while nothing changes, and a re-run green after a red on the same head is a new record.</is>
     <is-not>Not a test runner and not a status poster: N-23, N-24 and N-25 run the pods and post coq/gate; this node only reads.</is-not>
     <is-not>Not a tester seat: the tester role is retired (D11, card C39; WO-20261013-3eac in L07 section 5 item 4).</is-not>
     <decisions>D05 (C43, GitHub required status check coq/gate), D06 (C44, poll every tick), D11 (C39), V05 (infrastructure retried, assertions never), T04 (a verdict the agent cannot edit).</decisions>
   </purpose>
 
   <input id="input">
-    <record kind="forge.snapshot" code="100" from="N-04" schema="../N-04/record.schema.json#/$defs/forge_snapshot">
-      <field name="polled_at, seq">When N-04 polled and its counter that only grows; one snapshot per poll tick (tick:poll, forge.poll_seconds 30, N-06).</field>
+    <record kind="forge.snapshot" code="200" from="N-04" schema="../N-04/record.schema.json#/$defs/forge_snapshot">
+      <field name="polled_at, seq">When N-04 polled and its counter that only grows. A record is appended only when the hash changes; this node reads the entity forge:snapshot (../N-04/record.schema.json#/$defs/forge_entity) on every poll tick (tick:poll, forge.poll_seconds 30, N-06), which N-04 writes every poll.</field>
       <field name="main_sha, main_gate">The sha of main at poll time and the coq/gate status on it (N-10 and N-26 use main_gate; this node copies main_sha into each verdict for the Machine screen).</field>
-      <field name="prs">One entry per open pull request (N-04 pr): number, ticket (from the title, WO-YYYYMMDD-xxxx), head_sha, head_ref, base_ref, mergeable (MERGEABLE, CONFLICTING, UNKNOWN), draft, labels, gate (the coq/gate status: state success, failure, error, pending, or absent; description; target_url; updated_at), gate_page (the coq/gate-page status when posted), statuses_deferred (true when N-04 could not read this head's statuses in this poll, so a missing status is not read as absent; mechanism step 2).</field>
-      <field name="stale">N-04 marks a snapshot stale when a poll failed and the previous one was re-published; this node skips a stale snapshot (nothing changed).</field>
+      <field name="prs">One entry per open pull request (N-04 pr): number, ticket, head_sha, head_repo and fork, head_seen_at, base_ref, base_sha, mergeable and mergeable_state (GitHub's words, the one vocabulary of ../N-04/spec.xml#output), draft, labels, gate (the coq/gate status: state success, failure, error, pending or none; description; target_url; updated_at; app_id; observed_at), gate_page (the coq/gate-page status when posted), deferred (the reads N-04's budget postponed this poll; a postponed status is unknown, never none; mechanism step 2).</field>
+      <field name="stale">The entity's stale flag (N-04 sets it when a poll failed); this node writes nothing from a stale entity, and a gate whose observed_at is older than forge.stale_after_seconds is unknown.</field>
       <join name="review">The newest review.passed or review.changes record per head is read from the store by this node, not carried in the snapshot.</join>
-      <join name="fork">Whether the head is from a fork is read from head_ref's repository owner in the pr entry (N-04 pr.head_ref); a fork is a different owner.</join>
+      <join name="fork">Whether the head is from a fork is the pr entry's fork flag, which N-04 derives from head_repo (head.repo.full_name of GET pulls/N) against the polled repository; a poll-made pr.opened carries the same entry, so the guard runs for it too.</join>
     </record>
-    <starts-when>A forge.snapshot record is committed. The node is level-triggered: it reads the whole snapshot every time and compares with the newest gate.verdict per pull request and head.</starts-when>
+    <starts-when>Every poll tick, after N-04's entity write for that tick (and at once on a forge.snapshot record). The node is level-triggered: it reads the whole entity every tick and compares with the newest gate.verdict per pull request and head, so an aging status escalates on time without a new record.</starts-when>
   </input>
 
   <output id="output">
     <record kind="gate.verdict" code="201 422 100 500" to="N-09 N-11 N-02" schema="record.schema.json#/$defs/gate_verdict">
-      <field name="idempotency_key">pr number, colon, head_sha, colon, verdict; a second write with the same key is refused by N-01 with 409 and read as already written.</field>
+      <field name="idempotency_key">The operation key of shared/contracts.xml#operation-keys: N-08/gate.verdict/&lt;pr&gt;@&lt;head_sha&gt;@&lt;status_updated_at&gt;/r1, with the literal none in place of the time while no status exists; r2 is the age escalation (missing) of the same observation. The same key with the same body replays 200; a re-run on the same head has a new updated_at and so a new key.</field>
       <field name="pr">The pull request number.</field>
       <field name="ticket">The work order id from the title; a title with no ticket yields verdict red with reason no-ticket (merge.sh held outcome: its title names no ticket).</field>
       <field name="head_sha">The head the status is on.</field>
-      <field name="verdict">green (code 201, status success), red (code 422, status failure), pending (code 100, status pending, or absent within the absent bound), missing (code 500, status absent past the absent bound or error past three re-runs), superseded (code 100, status error with description superseded, the older head of a newer push; ci/README.md abortPrevious).</field>
+      <field name="verdict">green (code 201, status success from the coq-gate app), red (code 422, status failure), pending (code 100: status pending, none or error inside its age bound), missing (code 500: an age bound passed, N-25 gave up, or a success from another source), superseded (code 100, status error with description superseded, the older head of a newer push; ci/README.md abortPrevious).</field>
       <field name="gate_url">The target_url of the status (the Jenkins run) and the gate page url; the fix attempt's brief links them.</field>
       <field name="main_sha">Copied from the snapshot.</field>
       <field name="status_updated_at">GitHub's updated_at on the status, so staleness is a fact not a guess.</field>
     </record>
+    <example schema="record.schema.json#/$defs/gate_verdict">{"id":"20261015T064010Z-422-r2k9d","at":"2026-10-15T06:40:10Z","kind":"gate.verdict","code":422,"node":"N-08","epoch":1,"seq":5410,"idempotency_key":"N-08/gate.verdict/201@3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92@2026-10-15T06:39:51Z/r1","pr":201,"ticket":"WO-20261014-ab12","head_sha":"3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92","verdict":"red","reason":"status","gate_url":"http://jenkins.jenkins.svc.cluster.local:8080/job/coq-gate/411/","main_sha":"4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7","status_updated_at":"2026-10-15T06:39:51Z","status_app_id":104233,"snapshot_seq":5402}</example>
+    <example schema="record.schema.json#/$defs/gate_verdict">{"id":"20261015T065130Z-201-q7c4n","at":"2026-10-15T06:51:30Z","kind":"gate.verdict","code":201,"node":"N-08","epoch":1,"seq":5440,"idempotency_key":"N-08/gate.verdict/201@3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92@2026-10-15T06:51:02Z/r1","pr":201,"ticket":"WO-20261014-ab12","head_sha":"3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92","verdict":"green","reason":"status","gate_url":"http://jenkins.jenkins.svc.cluster.local:8080/job/coq-gate/412/","main_sha":"4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7","status_updated_at":"2026-10-15T06:51:02Z","status_app_id":104233,"snapshot_seq":5431}</example>
+    <example schema="record.schema.json#/$defs/gate_verdict">{"id":"20261015T141500Z-500-x1m3p","at":"2026-10-15T14:15:00Z","kind":"gate.verdict","code":500,"node":"N-08","epoch":1,"seq":5900,"idempotency_key":"N-08/gate.verdict/202@9a1b2c3d4e5f60718293a4b5c6d7e8f901234567@2026-10-15T07:02:11Z/r2","pr":202,"ticket":"WO-20261014-cd34","head_sha":"9a1b2c3d4e5f60718293a4b5c6d7e8f901234567","verdict":"missing","reason":"error-aged","main_sha":"4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7","status_updated_at":"2026-10-15T07:02:11Z","age_seconds":25969,"bound_seconds":25800,"snapshot_seq":5880}</example>
     <ends-when>Every pull request in the snapshot has a gate.verdict for its current head and current state. Green re-enters N-02 as a reviewer-phase claim (dag.md section 4); red and missing enter N-11 as failure records; pending ends the traversal and the next snapshot starts a new one.</ends-when>
   </output>
 
   <mechanism id="mechanism">
     <where>Go package gate inside the service; a pure function Verdicts(snapshot, previous verdicts, now, config) returns the verdict intents, and the engine writes them.</where>
     <step n="1" id="m-read">Read the newest gate.verdict per (pr, head_sha) from N-01 in one read transaction, and the forge.snapshot that started this traversal.</step>
-    <step n="2" id="m-errors">A pull request whose statuses_deferred is true is skipped this traversal, and a stale snapshot is skipped whole: a status GitHub did not answer is unknown, never absent (doc 31 rule: a deadline failure does not prove anything; L14 section 4.6). The skip is counted, never recorded, because the next snapshot retries.</step>
-    <step n="3" id="m-map">Map each pull request's gate state to a verdict: success to green 201; failure to red 422; pending to pending 100; error with description superseded to superseded 100; error otherwise to pending 100 on the first two sightings and missing 500 on the third sighting of error on the same head (the infrastructure ladder of N-24 and N-25 already retried; a third error is a pods or Jenkins fault for the system lane); absent to pending 100 while now minus the pull request's head pushed_at is below gate.absent_seconds (default 1800; the Jenkins full run budget 30 minutes, Jenkinsfile line 24 cited in L07 section 5 item 8), else missing 500.</step>
+    <step n="2" id="m-errors">A pull request whose deferred list holds statuses, or whose gate.observed_at is older than forge.stale_after_seconds, is skipped this tick, and a stale entity is skipped whole: a status GitHub did not answer is unknown, never none (doc 31 rule: a deadline failure does not prove anything; L14 section 4.6). The skip is counted, never recorded, and no age bound fires on unknown data.</step>
+    <step n="3" id="m-map">Map each pull request's gate state to a verdict: success with app_id equal to forge.gate_app_id to green 201 (a success from any other source is missing 500 reason wrong-source, a system-lane fault); failure to red 422; error with description superseded to superseded 100; error whose description says N-25 gave up (its last plan attempt, shared/retry-budget.xml#layers) to missing 500 reason gate-gave-up at once; any other error to pending 100 while now minus its updated_at is below gate.error_seconds, else missing 500 reason error-aged; pending to pending 100 while now minus its updated_at is below gate.pending_seconds, else missing reason pending-timeout; none to pending 100 while now minus head_seen_at is below gate.absent_seconds, else missing reason absent-timeout. The three bounds are derived from the inner bounds in shared/retry-budget.xml#deadlines (d-gate-absent, d-gate-pending; gate.error_seconds equals d-gate-pending), so a gate run still inside its own budget is never declared missing and never re-dispatched beside itself.</step>
     <step n="4" id="m-supersede">A head older than the pull request's current head gets no new verdict; its last verdict stands and N-09 never reads it because N-09 matches on the current head (gate.sh heads_match, lifted). The older head's open reviewer run, if any, is ended by N-12 through the dispatch deadline, not by this node.</step>
-    <step n="5" id="m-diff">Compare each intent with the newest stored verdict for the same (pr, head_sha); write only on a change of verdict. The idempotency key makes a concurrent duplicate a 409 (many-agents).</step>
-    <step n="6" id="m-draft-fork">A draft pull request yields pending with reason draft and is never green; a fork pull request yields red with reason fork (the Jenkins fork guard runs nothing for a fork, L07 section 4; a fork never merges by machine).</step>
+    <step n="5" id="m-diff">Compare each intent with the newest stored verdict for the same (pr, head_sha); write when the verdict or the status updated_at differs. The operation key makes a concurrent duplicate a replay (200), never a second record (many-agents).</step>
+    <step n="6" id="m-draft-fork">A draft pull request yields pending with reason draft and is never green; a pull request with fork true yields red with reason fork (the gate runs nothing for a fork, L07 section 4; a fork never merges by machine).</step>
     <step n="7" id="m-write">Write the verdicts; a green verdict is also the record N-02 reads to grant the reviewer-phase lease (re-entry), so nothing else needs to wake anything.</step>
-    <invariant>No agent and no seat can write a gate.verdict: N-01 refuses the kind from any writer but the service, and the status on GitHub is posted only by the Jenkins controller's token which no pod and no seat holds (L07 section 4: the GitHub token never enters a pod).</invariant>
-    <invariant>A verdict never changes for a (pr, head, state) triple; a new state is a new record, so the history of a head is append-only and readable on the Machine screen.</invariant>
+    <invariant>No agent and no seat can write a gate.verdict: N-01 refuses the kind from any principal but the service (shared/authority.xml#role-derivation), and the status on GitHub is posted only by the coq-gate GitHub App (N-25), whose key no pod, no seat and no other node holds (shared/authority.xml#credential-matrix).</invariant>
+    <invariant>A verdict never changes for a (pr, head, status observation); a new observation is a new record, so the history of a head is append-only and readable on the Machine screen.</invariant>
     <diagram format="mermaid">flowchart LR
-  S["forge.snapshot"] --> E{"statuses_deferred for this PR, or stale snapshot?"}
-  E -- yes --> K["skip, next snapshot retries"]
+  S["forge:snapshot entity, every poll tick"] --> E{"status deferred or not observed lately, or stale entity?"}
+  E -- yes --> K["skip, next tick retries"]
   E -- no --> M{"coq/gate state"}
   M -- success --> G["green 201"]
   M -- failure --> R["red 422"]
   M -- pending --> P["pending 100"]
   M -- "error superseded" --> U["superseded 100"]
-  M -- "error x3" --> X["missing 500"]
-  M -- "absent past bound" --> X
-  M -- "absent in bound" --> P
+  M -- "error past gate.error_seconds, or N-25 gave up" --> X["missing 500"]
+  M -- "pending or none past its bound" --> X
+  M -- "none or error inside its bound" --> P
   G --> D{"changed since last verdict?"}
   R --> D
   P --> D
   U --> D
   X --> D
   D -- no --> K
-  D -- yes --> W["write gate.verdict (idempotency key pr:head:verdict)"]
+  D -- yes --> W["write gate.verdict (key N-08/gate.verdict/pr@head@updated_at/r1)"]
   W --> N02["green: N-02 reviewer claim"]
   W --> N11["red or missing: N-11"]</diagram>
   </mechanism>
 
   <start id="start">
     <sentence>Nothing here starts by an agent typing.</sentence>
-    <by>N-06 broadcasts the tick:poll entity every forge.poll_seconds (default 30; Symphony polling.interval_ms 30000, I03 section 6); N-04 polls GitHub and writes forge.snapshot; the committed snapshot starts this node. Webhooks, when added, are accelerators that make N-04 poll sooner (its forge_poll_now record) and change nothing here (D06).</by>
+    <by>N-06 broadcasts the tick:poll entity every forge.poll_seconds (default 30; Symphony polling.interval_ms 30000, I03 section 6); N-04 polls GitHub and writes the forge:snapshot entity; this node runs on the same tick right after that write. Webhooks, when added, are accelerators that make N-04 poll sooner (its forge_poll_now record) and change nothing here (D06).</by>
     <restart>After a crash the next snapshot re-derives every verdict from GitHub and the stored verdicts; no memory is needed.</restart>
   </start>
 
   <waits id="waits">
     <wait id="w-read" on="N-01 read of stored verdicts" timeout="5 s" fallback="skip this traversal; the next snapshot retries; three skips in a row write store.unreachable 500 once (same latch as N-07)"/>
     <wait id="w-write" on="N-01 verdict writes" timeout="5 s" fallback="retry 1 s, 2 s, 4 s; then the verdict is derived again from the next snapshot, so nothing is lost"/>
-    <wait id="w-gate" on="coq/gate appearing on a new head" timeout="gate.absent_seconds, default 1800" fallback="missing 500 to N-11, which re-posts pr.opened through a gate dispatch (N-07 step 8) up to three times, then dead and one card"/>
-    <wait id="w-pending" on="coq/gate leaving pending" timeout="gate.pending_seconds, default 3600 (the Jenkins budget plus the ladder's 300 s rung)" fallback="missing 500 with reason pending-timeout; same path as absent"/>
-    <rule>This node holds no GitHub call; every GitHub wait is N-04's, with its own timeout and the statuses_deferred and stale fields.</rule>
+    <wait id="w-gate" on="coq/gate appearing on a new head" timeout="gate.absent_seconds, derived in shared/retry-budget.xml#deadlines (d-gate-absent)" fallback="missing 500 reason absent-timeout to N-11, which never dispatches the gate phase again (shared/retry-budget.xml#gate-phase); dead and one card"/>
+    <wait id="w-pending" on="coq/gate leaving pending" timeout="gate.pending_seconds, derived in shared/retry-budget.xml#deadlines (d-gate-pending)" fallback="missing 500 reason pending-timeout; same path as absent"/>
+    <wait id="w-error" on="coq/gate leaving a non-superseded error" timeout="gate.error_seconds, equal to d-gate-pending of shared/retry-budget.xml#deadlines (a non-final error is followed by N-25's next plan attempt inside the gate run bound)" fallback="missing 500 reason error-aged; an error that says N-25 gave up is missing gate-gave-up at once, with no re-dispatch"/>
+    <rule>This node holds no GitHub call; every GitHub wait is N-04's, with its own timeout and the deferred, observed_at and stale fields.</rule>
   </waits>
 
   <retries id="retries">
     <step name="store read" attempts="3 traversals" backoff="next snapshot" then="store.unreachable 500 once; N-28 one card"/>
     <step name="verdict write" attempts="3" backoff="1 s, 2 s, 4 s" then="derived again on the next snapshot; a gate.write.failed 500 is written once per head when the third write fails"/>
-    <step name="missing gate" attempts="3 (through N-11 as gate phase attempts)" backoff="N-11 backoff min(10 s x 2^(n-1), 300 s)" then="dead record by N-11, one card by N-28 naming the head and the last Jenkins url"/>
+    <step name="missing gate" attempts="none here: the innermost layer that retried (N-24 ladder, N-25 plan attempts) owns the retry; shared/retry-budget.xml#layers and shared/contracts.xml#retry-owner" backoff="none" then="N-11 records the gate phase failed with no new dispatch (shared/retry-budget.xml#gate-phase); dead and one card by N-28 naming the head and the last gate url"/>
     <not-retried>A red verdict is never retried by this node: a failing assertion is the worker's fix (V05); the fix is attempt n plus 1 of the worker phase through N-11.</not-retried>
     <report>Every then clause is a 500 record; N-28 builds exactly one card per latched kind and head.</report>
   </retries>
 
   <many-agents id="many-agents">
     <readers>Any number of seats read gate.verdict records; a reviewer brief (N-19) cites the verdict id and the gate url; nobody reads GitHub statuses directly from a seat (permissions).</readers>
-    <two-writers>Two service processes during a restart overlap may both derive the same verdict from the same snapshot; the idempotency key pr:head:verdict makes the second write a 409 that is logged and counted, never a second record.</two-writers>
-    <two-snapshots>Two snapshots in flight (a slow write and a fast next poll) can write the same verdict in either order; the key makes them one. A state that flips pending, green, pending between snapshots yields two records with different keys, which is the true history.</two-snapshots>
+    <two-writers>Two service processes during a restart overlap may both derive the same verdict from the same entity; the operation key makes the second Commit a replay (200, same request hash), never a second record; a different body under the same key is 409 idempotency_mismatch, logged and counted.</two-writers>
+    <two-snapshots>Two ticks in flight can write the same verdict in either order; the key makes them one. A head that goes red, then green after a re-run, has two status observations and so two keys and two records, which is the true history (AT-F09 same-head failure, pending, success).</two-snapshots>
     <seat-cannot-edit>A seat that tries to post a gate.verdict or a commit status is refused: N-01 by writer identity, GitHub by token; the deny list of the seat layer (N-13) also denies gh api on statuses. The reviewer reads a number it cannot change (T04).</seat-cannot-edit>
     <stale-head>A seat working an older head posts its result with the old head sha; N-09 matches on the current head and ignores it; no lock is needed because heads are facts in the snapshot.</stale-head>
     <test>Test case two-snapshots-one-verdict: two Verdicts calls over the same snapshot write one record and one 409 (checklist c-idempotent).</test>
@@ -152,15 +162,15 @@
     <emits code="201" kind="gate.verdict" verdict="green" acts="N-02 grants the reviewer-phase lease; N-09 reads it with review.passed" shared="../../shared/status-codes.xml#code-201"/>
     <emits code="422" kind="gate.verdict" verdict="red" acts="N-11 schedules the worker fix attempt with the gate url" shared="../../shared/status-codes.xml#code-422"/>
     <emits code="100" kind="gate.verdict" verdict="pending or superseded" acts="nobody; the Machine screen shows it" shared="../../shared/status-codes.xml#code-100"/>
-    <emits code="500" kind="gate.verdict" verdict="missing" acts="N-11 gate-phase retry; N-41 alerts" shared="../../shared/status-codes.xml#code-500"/>
+    <emits code="500" kind="gate.verdict" verdict="missing" acts="N-11 records the gate phase failure and never re-dispatches it (shared/retry-budget.xml#gate-phase); N-28 one card; N-41 alerts" shared="../../shared/status-codes.xml#code-500"/>
     <emits code="500" kind="gate.write.failed" acts="N-28 one card; N-41" shared="../../shared/status-codes.xml#code-500"/>
     <emits code="500" kind="store.unreachable" acts="N-28 one card; N-06 health" shared="../../shared/status-codes.xml#code-500"/>
   </status-codes>
 
   <state-paths id="state-paths">
     <root>$COQ_STATE as in ../N-07/spec.xml#state-paths; path elements in N-45's generator form.</root>
-    <path id="N-08.store" glob="$COQ_STATE/store/coq.db" retention="owned by N-01" trigger="none here" cleanup="line/bin/cleanup.sh --entry N-01.store">Rows of kind gate.verdict; verdicts of merged tickets older than retention are pruned after the verified record (N-01's row).</path>
-    <path id="N-08.logs" glob="$COQ_STATE/logs/gate/*/*/*-snapshot-*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-08.logs">One line per pull request per traversal with the mapped state; rotated daily.</path>
+    <path acts="owner" id="N-08.store" glob="$COQ_STATE/store/coq.db" retention="owned by N-01" trigger="owner" cleanup="line/bin/cleanup.sh --entry N-01.store">Rows of kind gate.verdict; verdicts of merged tickets older than retention are pruned after the verified record (N-01's row).</path>
+    <path acts="system" id="N-08.logs" glob="$COQ_STATE/logs/gate/*/*/*-snapshot-*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-08.logs">One line per pull request per traversal with the mapped state; rotated daily.</path>
     <never>No file under the repository; no copy of a GitHub status anywhere but the store.</never>
   </state-paths>
 
@@ -178,11 +188,14 @@
   </schema>
 
   <checklist id="checklist">
-    <item id="c-map" proof="go test ./internal/gate -run TestMap covers success, failure, pending, error superseded, error x3, absent in and past bound, draft, fork, no-ticket">Every GitHub state maps to exactly one verdict.</item>
-    <item id="c-idempotent" proof="test TestTwoSnapshotsOneVerdict writes one record and one 409">A verdict is written once per pr, head and state.</item>
-    <item id="c-unknown" proof="test TestDeferredSkips: a PR with statuses_deferred true, and every PR of a stale snapshot, gets no verdict">A missing answer is never read as absent.</item>
+    <item id="c-map" proof="go test ./internal/gate -run TestMap covers success from the app and from another source, failure, pending in and past bound, error superseded, error gave-up, error in and past gate.error_seconds, none in and past bound, draft, fork, no-ticket">Every GitHub state maps to exactly one verdict.</item>
+    <item id="c-idempotent" proof="test TestTwoTicksOneVerdict writes one record and one replay">A verdict is written once per pr, head and status observation.</item>
+    <item id="c-rerun" proof="test TestRerunSameHead: failure then success on one head with two updated_at values writes red then green">A re-run green on the same head is recorded.</item>
+    <item id="c-age" proof="test TestAgeEscalation with the fake clock and no new snapshot record: an unchanged error escalates to missing at gate.error_seconds">Bounds fire on the tick, not on record arrival.</item>
+    <item id="c-deadlines" proof="check deadline-nesting of shared/retry-budget.xml#deadlines: gate.absent_seconds and gate.pending_seconds exceed N-25's plan bound times its attempts; not-run">No gate run is declared missing while inside its own budget.</item>
+    <item id="c-unknown" proof="test TestDeferredSkips: a PR whose deferred list holds statuses, a gate not observed within forge.stale_after_seconds, and every PR of a stale entity get no verdict">A missing answer is never read as none.</item>
     <item id="c-no-seat-write" proof="N-01 test TestWriterIdentity refuses gate.verdict from a seat socket; N-13 deny list test shows gh api statuses denied">No agent can write the verdict.</item>
-    <item id="c-required-check" proof="gh api repos/jkkelley/coq-jev-herdr-plugin/branches/main/protection shows coq/gate in required_status_checks (the N-25 go-live ticket's proof, cited here)">GitHub refuses a merge without coq/gate.</item>
+    <item id="c-required-check" proof="gh api repos/jkkelley/coq-jev-herdr-plugin/branches/main/protection shows coq/gate with app_id forge.gate_app_id in required_status_checks, and N-04's newest protection.observed agrees (the N-25 go-live ticket's proof, cited here)">GitHub refuses a merge without coq/gate from the coq-gate app.</item>
     <item id="c-waits" proof="grep of internal/gate finds no time.Sleep and no GitHub client import">This node holds no GitHub call and no sleep.</item>
     <item id="c-dark" proof="config key gate.enabled false until the go-live ticket flips it with the proof above">Ships dark.</item>
   </checklist>
@@ -208,7 +221,7 @@
   <runbook id="runbook">
     <bring-up>N-25 must post coq/gate and main protection must require it (N-25 runbook); then set gate.enabled true; proof: a gate.verdict record for the newest open pull request.</bring-up>
     <read-status>Scheduler.Status lists open heads with their newest verdict; the Machine screen shows one pull request with its verdict history.</read-status>
-    <recover-missing>Nothing by hand: missing goes to N-11, which re-posts pr.opened through a gate dispatch; after three the card names the Jenkins url and the owner decides. A hand re-run in Jenkins is a break glass through N-42, recorded.</recover-missing>
+    <recover-missing>Nothing by hand: missing goes to N-11, which never dispatches the gate phase again (shared/retry-budget.xml#gate-phase); the dead card names the gate url and the owner decides. A hand re-run in Jenkins is a break glass through N-42, recorded, and its new status is a new observation this node records.</recover-missing>
     <recover-store-unreachable>N-01 runbook.</recover-store-unreachable>
     <cleanup entry="N-08.logs" command="line/bin/cleanup.sh --entry N-08.logs" mode="dry-run first, then --apply"/>
     <registry>Generated into shared/cleanup-registry.json from the state-paths element (../N-45/spec.xml#state-paths).</registry>

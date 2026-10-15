@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-08/record.schema.json",
   "title": "N-08 Gate check: input and output records",
-  "description": "Input forge.snapshot (../N-04/record.schema.json#/$defs/forge_snapshot, not repeated); output gate.verdict. Base shape as in ../N-07/record.schema.json#/$defs/base and ../../shared/state-store.xml#table-records. Times are UTC strings 2006-01-02T15:04:05Z. Written 2026-10-14 UTC by the G2 spec-author seat.",
+  "description": "Book 1.1.0. Input forge.snapshot (../N-04/record.schema.json#/$defs/forge_snapshot, not repeated; the node reads the entity every poll tick); output gate.verdict. Base shape ../N-07/record.schema.json#/$defs/base (the shared committed envelope). The idempotency key is the operation key of shared/contracts.xml#operation-keys with the status updated_at, so a re-run on the same head is a new record. Times are UTC strings 2006-01-02T15:04:05Z.",
   "oneOf": [
     { "$ref": "../N-04/record.schema.json#/$defs/forge_snapshot" },
     { "$ref": "#/$defs/gate_verdict" }
@@ -12,29 +12,42 @@
     "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
     "base": { "$ref": "../N-07/record.schema.json#/$defs/base" },
-    "gate_verdict": {
-      "allOf": [{ "$ref": "#/$defs/base" }],
-      "properties": {
-        "kind": { "const": "gate.verdict" },
-        "code": { "type": "integer", "enum": [100, 201, 422, 500] },
-        "node": { "const": "N-08" },
-        "idempotency_key": { "type": "string", "pattern": "^[0-9]+:[0-9a-f]{40}:(green|red|pending|missing|superseded)$" },
-        "pr": { "type": "integer", "minimum": 1 },
-        "ticket": { "$ref": "#/$defs/ticket" },
-        "head_sha": { "$ref": "#/$defs/sha" },
-        "verdict": { "type": "string", "enum": ["green", "red", "pending", "missing", "superseded"] },
-        "reason": { "type": "string", "enum": ["status", "draft", "fork", "no-ticket", "absent-timeout", "pending-timeout", "error-x3", "superseded"] },
-        "gate_url": { "type": "string" },
-        "gate_page_url": { "type": "string" },
-        "main_sha": { "$ref": "#/$defs/sha" },
-        "status_updated_at": { "$ref": "#/$defs/at" },
-        "snapshot_seq": { "type": "integer", "minimum": 1, "description": "N-04 seq of the snapshot judged" }
-      },
-      "required": ["idempotency_key", "pr", "head_sha", "verdict", "reason", "main_sha", "snapshot_seq"],
+    "verdict_key": {
       "allOf": [
-        { "if": { "properties": { "verdict": { "const": "green" } } }, "then": { "properties": { "code": { "const": 201 } } } },
+        { "$ref": "../../shared/contracts.schema.json#/$defs/operation_key" },
+        { "type": "string", "pattern": "^N-08/gate\\.verdict/[0-9]+@[0-9a-f]{40}@([0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z|none)/r[12]$" }
+      ],
+      "description": "N-08/gate.verdict/<pr>@<head_sha>@<status_updated_at or none>/r1; r2 is the age escalation (missing) of the same observation"
+    },
+    "gate_verdict": {
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "gate.verdict" },
+            "code": { "type": "integer", "enum": [100, 201, 422, 500] },
+            "node": { "const": "N-08" },
+            "idempotency_key": { "$ref": "#/$defs/verdict_key" },
+            "pr": { "type": "integer", "minimum": 1 },
+            "ticket": { "$ref": "#/$defs/ticket" },
+            "head_sha": { "$ref": "#/$defs/sha" },
+            "verdict": { "type": "string", "enum": ["green", "red", "pending", "missing", "superseded"] },
+            "reason": { "type": "string", "enum": ["status", "draft", "fork", "no-ticket", "absent-timeout", "pending-timeout", "error-aged", "gate-gave-up", "wrong-source", "superseded"] },
+            "gate_url": { "type": "string" },
+            "gate_page_url": { "type": "string" },
+            "main_sha": { "$ref": "#/$defs/sha" },
+            "status_updated_at": { "$ref": "#/$defs/at", "description": "GitHub's updated_at on the status; absent when no status exists" },
+            "status_app_id": { "type": "integer", "minimum": 1, "description": "the app that posted the status, as N-04 copied it" },
+            "age_seconds": { "type": "integer", "minimum": 0, "description": "the age the bound was measured on, for pending and missing" },
+            "bound_seconds": { "type": "integer", "minimum": 1, "description": "the derived bound that fired (shared/retry-budget.xml#deadlines), for missing by age" },
+            "snapshot_seq": { "type": "integer", "minimum": 1, "description": "N-04 seq of the newest forge.snapshot record at the tick judged" }
+          },
+          "required": ["idempotency_key", "pr", "head_sha", "verdict", "reason", "main_sha", "snapshot_seq"]
+        },
+        { "if": { "properties": { "verdict": { "const": "green" } } }, "then": { "required": ["status_updated_at"], "properties": { "code": { "const": 201 } } } },
         { "if": { "properties": { "verdict": { "const": "red" } } }, "then": { "properties": { "code": { "const": 422 } } } },
-        { "if": { "properties": { "verdict": { "const": "missing" } } }, "then": { "properties": { "code": { "const": 500 } } } },
+        { "if": { "properties": { "verdict": { "const": "missing" } } }, "then": { "properties": { "code": { "const": 500 }, "reason": { "enum": ["absent-timeout", "pending-timeout", "error-aged", "gate-gave-up", "wrong-source"] } } } },
         { "if": { "properties": { "verdict": { "enum": ["pending", "superseded"] } } }, "then": { "properties": { "code": { "const": 100 } } } }
       ]
     }

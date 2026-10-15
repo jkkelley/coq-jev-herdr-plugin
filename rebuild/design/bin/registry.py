@@ -20,6 +20,15 @@ or the volume's words), trigger, acts (system or owner), run (the command as the
 Class is the attribute class= when present, else inferred from the glob (store rows, browser storage, another system,
 a tracked file in a repository, a host path).
 
+Book 1.1.0 (review NF-E4, NF-E6, 2026-10-15): nothing defaults to a timer job any more. Book 1.0.0 turned every
+unmarked path into trigger timer, acts system, which scheduled owner break glass (removing main's branch protection),
+namespace deletes, unit uninstalls, tokens and the store database itself as system timer jobs. Now every path declares
+trigger and acts (R8); an entry whose glob or command is owner-acted (OWNER_RE: break glass, retire, uninstall,
+disable, branch protection, namespace or PVC delete, a token, secret or credential, the store database, a unit file or
+a binary under ~/.local/bin) renders as trigger owner, acts owner when unmarked and fails R7 when marked otherwise,
+because the service never runs it (nodes/N-45/spec.xml#registry). R2 needs a real script path (a/b.sh, not any text
+containing .sh). R6 fails when jsonschema is not importable instead of skipping silently.
+
 Checks (one line "FAIL C14 <volume> <detail>" each):
   R1 every path element names a cleanup;
   R2 a host or external path whose cleanup names no script or retention mechanism declares retention="never" and
@@ -27,9 +36,13 @@ Checks (one line "FAIL C14 <volume> <detail>" each):
   R3 a tracked or client path declares retention="never" (tracked files leave by pull request, browser storage by the
      page's Reset view; neither is a host state path);
   R4 ids are unique across the book; R5 the committed registry equals the generated one (--check);
-  R6 every entry validates against shared/cleanup-registry.schema.json (when the jsonschema module is importable).
+  R6 every entry validates against shared/cleanup-registry.schema.json; a missing jsonschema module is a failure;
+  R7 an owner-acted entry (OWNER_RE matches its glob or command) declares trigger="owner" acts="owner";
+  R8 every path declares trigger (one of TRIGGERS) and acts (system or owner) explicitly.
 
-Usage: bin/registry.py [--check]
+Usage: bin/registry.py [--check] [--out PATH]
+  --check     compare with the committed registry; writes nothing
+  --out PATH  write the generated registry to PATH instead of shared/cleanup-registry.json (a dry run)
 """
 import glob
 import json
@@ -40,8 +53,19 @@ import xml.etree.ElementTree as ET
 
 BOOK = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 TARGET = os.path.join(BOOK, "shared", "cleanup-registry.json")
-SCRIPT_RE = re.compile(r"(\S+\.(sh|py|mjs)\b|line/bin/cleanup\.sh|retention class|buildDiscarder|journalctl|vacuum|retention:)")
+# R2: a real script path (at least one directory, then name.sh, .py or .mjs), never any text that merely contains ".sh".
+SCRIPT_RE = re.compile(r"(?<![\w./-])(?:\$\{?[A-Z_]+\}?/|\.?/)?(?:[A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+\.(?:sh|py|mjs)\b")
+# An external system's own retention mechanism counts only for class external.
+EXTERNAL_MECH_RE = re.compile(r"(buildDiscarder|journalctl\s+--vacuum|retention:|ttlSecondsAfterFinished|lifecycle rule)")
 CLASSES = ("host", "store", "client", "external", "tracked")
+TRIGGERS = ("timer", "merge", "backup", "disposition", "owner", "unit-stop")
+ACTS = ("system", "owner")
+# R7: cleanups only the owner performs; matched on the glob and the command, never on the note.
+OWNER_RE = re.compile(
+    r"(break[- ]?glass|owner[- ]only|\bretire|\buninstall|\bdisable\b|install-units\.sh\s+--remove|"
+    r"branch[- ]protection|delete[- ]namespace|namespace\s+delete|whole namespace|-namespace\b|\bpvc\b|persistentvolumeclaim|"
+    r"\btokens?\b|secrets?/|credential|keyring|service\.env\b|coq\.db\b|store database|"
+    r"systemd/user/|\.local/bin/)", re.I)
 
 
 def infer_class(glob_text, pid):
@@ -98,11 +122,29 @@ def collect():
                     fails.append((rel, "class %r of %s is not one of %s" % (cls, pid, ", ".join(CLASSES))))
                 cleanup = (a.get("cleanup") or "").strip()
                 retention = (a.get("retention") or "").strip()
-                acts = a.get("acts", "system")
+                trigger = (a.get("trigger") or "").strip()
+                acts = (a.get("acts") or "").strip()
+                owner_hit = OWNER_RE.search(g + " " + cleanup)
+                if not trigger or not acts:
+                    missing = " and ".join(x for x, v in (("trigger", trigger), ("acts", acts)) if not v)
+                    want = 'trigger="owner" acts="owner"' if owner_hit else 'trigger="timer|merge|backup|disposition|owner|unit-stop" acts="system|owner"'
+                    fails.append((rel, "R8 %s (%s) declares no %s; nothing defaults to a timer job any more: add %s" % (pid, g[:60], missing, want)))
+                elif trigger not in TRIGGERS or acts not in ACTS:
+                    fails.append((rel, "R8 %s has trigger %r acts %r; trigger must be one of %s and acts one of %s" % (pid, trigger, acts, ", ".join(TRIGGERS), ", ".join(ACTS))))
+                if owner_hit:
+                    if (trigger and trigger != "owner") or (acts and acts != "owner"):
+                        fails.append((rel, "R7 %s (%s) is owner-acted (matched %r) but declares trigger %r acts %r; it must declare trigger=\"owner\" acts=\"owner\": the service never runs break glass, retirement, uninstall, protection, namespace, token or store-database cleanups as timer jobs" % (pid, g[:60], owner_hit.group(0), trigger or "-", acts or "-")))
+                    trigger_out, acts_out = "owner", "owner"
+                else:
+                    # unmarked never means timer/system: an undeclared path is owner-acted until its volume says otherwise
+                    trigger_out = trigger if trigger in TRIGGERS else "owner"
+                    acts_out = acts if acts in ACTS else "owner"
                 if not cleanup:
                     fails.append((rel, "R1 %s names no cleanup" % pid))
-                elif cls in ("host", "external") and not SCRIPT_RE.search(cleanup) and not (retention == "never" and acts == "owner"):
-                    fails.append((rel, "R2 %s (%s) names no cleanup script; give it one or declare retention=\"never\" acts=\"owner\"" % (pid, g[:60])))
+                elif cls in ("host", "external") and not SCRIPT_RE.search(cleanup) \
+                        and not (cls == "external" and EXTERNAL_MECH_RE.search(cleanup)) \
+                        and not (retention == "never" and acts_out == "owner"):
+                    fails.append((rel, "R2 %s (%s) names no cleanup script path (dir/name.sh, .py or .mjs); give it one or declare retention=\"never\" acts=\"owner\"" % (pid, g[:60])))
                 if cls in ("tracked", "client") and retention != "never":
                     fails.append((rel, "R3 %s is class %s and must declare retention=\"never\"" % (pid, cls)))
                 entries.append({
@@ -111,8 +153,8 @@ def collect():
                     "glob": g,
                     "class": cls,
                     "retention": retention or "as the run command applies",
-                    "trigger": a.get("trigger", "timer"),
-                    "acts": acts,
+                    "trigger": trigger_out,
+                    "acts": acts_out,
                     "run": cleanup,
                     "verb": "line/bin/cleanup.sh --entry %s" % pid,
                     "holds": a.get("holds", ""),
@@ -144,13 +186,22 @@ def main():
         rc = 1
     try:
         import jsonschema
+    except ImportError:
+        jsonschema = None
+        print("FAIL C14 bin/registry.py R6 the jsonschema module is not importable, so no entry was validated against shared/cleanup-registry.schema.json; install python3-jsonschema (check.sh arranges it)")
+        rc = 1
+    if jsonschema is not None:
         with open(os.path.join(BOOK, "shared", "cleanup-registry.schema.json"), encoding="utf-8") as fh:
             schema = json.load(fh)
         for err in jsonschema.Draft202012Validator(schema).iter_errors(json.loads(text)):
-            print("FAIL C14 shared/cleanup-registry.json schema: %s at %s" % (err.message, "/".join(str(x) for x in err.path)))
+            print("FAIL C14 shared/cleanup-registry.json R6 schema: %s at %s" % (err.message, "/".join(str(x) for x in err.path)))
             rc = 1
-    except ImportError:
-        pass
+    if "--out" in sys.argv:
+        out = sys.argv[sys.argv.index("--out") + 1]
+        with open(out, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        print("wrote %s (%d entries; dry run, the committed registry is untouched)" % (out, len(entries)))
+        return rc
     if "--check" in sys.argv:
         current = open(TARGET, encoding="utf-8").read() if os.path.exists(TARGET) else ""
         if current != text:

@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: the CI capacity model. Every CPU, memory, pod and in-flight number of the factory namespace lives here once,
+     as rows a script can recompute (check C26 capacity), and every node volume cites the anchor instead of repeating a number.
+     Book 1.1.0 (review F18, F25; verification NF-E1, NF-E8). Validated by rebuild/design/check.sh against schema/volume.xsd. -->
+<volume id="ci-capacity" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="CI capacity">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, the nodes that cite this volume</entry>
+    <entry ref="purpose">Purpose and how to read a row</entry>
+    <entry ref="model">The model: containers, pods, runs in flight, the container cap</entry>
+    <entry ref="pod-template">The rendered suite pod template, both containers, and the restricted fields per container</entry>
+    <entry ref="admission">Admission: a refusal is 403 at create, never a Pending pod, and never climbs the ladder</entry>
+    <entry ref="quota">ResourceQuota coq-factory and its derivation</entry>
+    <entry ref="limit-range">LimitRange coq-factory</entry>
+    <entry ref="canary">The canary pod, the server-side dry-run and the connectivity probes</entry>
+    <entry ref="builder-pin">The image builder pin: Kaniko fork by digest, the fallback, the cool-off</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="retry-budget.xml#retry-budget" kind="shared">The ladder and attempt counts that multiply these pods</sibling>
+    <sibling href="contracts.xml#contracts" kind="shared">Outbox, operation keys, retry owner</sibling>
+    <sibling href="authority.xml#authority" kind="shared">Credential matrix: who may create pods and push images</sibling>
+    <sibling href="review-dispositions.xml#review-dispositions" kind="shared">F18 and F25 resolve here</sibling>
+    <sibling href="status-codes.xml#status-codes" kind="shared"/>
+    <shared href="../nodes/N-20/spec.xml#N-20" role="cites">JCasC cloud: containerCap and the pod template with an explicit jnlp container</shared>
+    <shared href="../nodes/N-21/spec.xml#N-21" role="cites">Quota, LimitRange, canary, dry-run, probes</shared>
+    <shared href="../nodes/N-22/spec.xml#N-22" role="cites">The builder pin</shared>
+    <shared href="../nodes/N-23/spec.xml#N-23" role="cites">Runs in flight</shared>
+    <shared href="../nodes/N-24/spec.xml#N-24" role="cites">maxPods per build, the template, admission-refused</shared>
+    <dag href="../dag.md#3-every-node"/>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>Book 1.0.0 stated the suite pod, the quota and the in-flight rule in three volumes with three sets of numbers: the quota held 4 suite pods while the text promised 8, memory was over as well as CPU, the canary had no room, and the jnlp container the Kubernetes plugin injects had no resources and no restricted fields (review F18; verification NF-E1).</s>
+    <s>This volume is the one place those numbers live; a node volume names the anchor and the row, never the value.</s>
+    <s>Every number is an attribute, so check C26 (capacity) recomputes the pod sums, the container cap and the quota from the rows and fails when one disagrees; the derivation is stated beside each row in words and as a formula.</s>
+    <s>Units: cpu in millicores (m), memory in mebibytes (Mi); 1Gi is 1024Mi.</s>
+    <s>Nothing here is built yet; every runtime proof named below is not-run until the build ticket that cites the anchor lands it.</s>
+  </purpose>
+
+  <model id="model">
+    <s>A gate run is one coq-gate build (N-23 or N-26 plan attempt); inside it at most pods-per-run suite pods run at once (N-24 maxPods); the Go service keeps at most runs-in-flight gate runs (N-23 many agents); the Jenkins kubernetes cloud caps the namespace at container-cap pods (N-20 JCasC containerCap), which equals runs-in-flight x pods-per-run, so the cap and the in-flight rule cannot disagree.</s>
+    <s>Each suite pod has exactly two containers, case and jnlp; the canary is a separate one-container pod owned by N-21; the spec-book check (N-46) and the art suite (N-36) are ordinary suite units, not spares.</s>
+    <container name="case" pod="suite" cpu="1000m" mem-request="256Mi" mem-limit="1024Mi" image="ghcr.io/jkkelley/&lt;name&gt;@&lt;manifest digest from the N-22 image record&gt;">The unit under test; the memory limit is the 1Gi answer to the 31.8G death (L07 section 4).</container>
+    <container name="jnlp" pod="suite" cpu="100m" mem-request="256Mi" mem-limit="512Mi" image="docker.io/jenkins/inbound-agent:3391.va_37fa_a_305d6d-3-jdk21@sha256:6a31d728c22ad74adbb6b9a1a210eb9ec2599f644b95edd7f8a3b8a71d20772c">The Jenkins agent, declared in the template so the plugin uses it instead of injecting its own (verification NF-E8: the injected one had a floating tag, no resources, no restricted fields).</container>
+    <container name="canary" pod="canary" cpu="100m" mem-request="64Mi" mem-limit="128Mi" image="ghcr.io/jkkelley/coq-test@&lt;manifest digest from the N-22 image record&gt;">The N-21 canary: git, curl and a DNS lookup, nothing else.</container>
+    <pod name="suite" containers="case jnlp" cpu="1100m" mem-request="512Mi" mem-limit="1536Mi" formula="sum of its container rows">case 1000m + jnlp 100m; 256Mi + 256Mi; 1024Mi + 512Mi.</pod>
+    <pod name="canary" containers="canary" cpu="100m" mem-request="64Mi" mem-limit="128Mi" formula="sum of its container rows">One container.</pod>
+    <capacity runs-in-flight="2" runs-key="gate.runs_in_flight_max" pods-per-run="3" container-cap="6" formula="container-cap = runs-in-flight x pods-per-run">Two gate runs of three pods each; the Jenkins cloud cap is 6, so a third run or a fourth pod in a build waits in Jenkins' queue, never at admission.</capacity>
+    <s>Why 3 pods per run and not 4: the herdr cap of config/tests.json is one herdr server per pod and does not require 4 at once; with 4, two runs need 8 suite pods, 8800m and 4096Mi requested, which the cluster's roughly 8 unrequested cores (L10 section 8 item 1) cannot give a low-priority namespace beside its tenants.</s>
+    <s>Image pins: the jnlp row's tag 3391.va_37fa_a_305d6d-3-jdk21 was pushed 2026-09-18 and is multi-arch (linux/amd64, linux/arm64 and others; read from the registry index 2026-10-15); rebuilds -4 (2026-10-02) and -5 (2026-10-06) are held by the same 14-day cool-off as the builder (#builder-pin); the pin lives in ci/config/images.json row jnlp (planned) and images.sh verify-pins (N-22) alerts when it vanishes.</s>
+  </model>
+
+  <pod-template id="pod-template">
+    <s>The suite pod template is one tracked file, ci/pod/suite.pod.yaml (planned), rendered by ci/bin/render-pod.sh (planned) from the rows of #model; coqGate's podYaml() loads that file and substitutes only the case image, the labels, the env and activeDeadlineSeconds (N-24 step m-template); the JCasC cloud names the same file as its base template (N-20 step m-casc); the N-21 check admits that same file with a server-side dry-run (#canary). One file, three readers, so the template admitted is the template run.</s>
+    <rendered format="yaml"><![CDATA[
+apiVersion: v1
+kind: Pod
+metadata:
+  namespace: coq-factory
+  labels: {app.kubernetes.io/part-of: coq-ci, coq-ci/sha: SHA12, coq-ci/unit: UNIT_HASH, coq-ci/attempt: "N"}
+spec:
+  serviceAccountName: coq-pod
+  automountServiceAccountToken: false
+  enableServiceLinks: false
+  priorityClassName: coq-factory-low
+  restartPolicy: Never
+  activeDeadlineSeconds: DEADLINE        # (connect 5 + budget + 5) x 60, retry-budget.xml#deadlines d-pod
+  imagePullSecrets: [{name: ghcr-pull-secret}]
+  securityContext: {runAsNonRoot: true, runAsUser: 1000, runAsGroup: 1000, fsGroup: 1000, seccompProfile: {type: RuntimeDefault}}
+  volumes: [{name: repo, emptyDir: {}}, {name: home, emptyDir: {}}]
+  containers:
+  - name: case
+    image: ghcr.io/jkkelley/NAME@sha256:DIGEST
+    imagePullPolicy: IfNotPresent
+    resources: {requests: {cpu: 1000m, memory: 256Mi}, limits: {memory: 1024Mi}}
+    securityContext: {runAsNonRoot: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}, seccompProfile: {type: RuntimeDefault}}
+    volumeMounts: [{name: repo, mountPath: /repo}, {name: home, mountPath: /tmp/home}]
+  - name: jnlp
+    image: docker.io/jenkins/inbound-agent:3391.va_37fa_a_305d6d-3-jdk21@sha256:6a31d728c22ad74adbb6b9a1a210eb9ec2599f644b95edd7f8a3b8a71d20772c
+    imagePullPolicy: IfNotPresent
+    resources: {requests: {cpu: 100m, memory: 256Mi}, limits: {memory: 512Mi}}
+    securityContext: {runAsNonRoot: true, allowPrivilegeEscalation: false, capabilities: {drop: [ALL]}, seccompProfile: {type: RuntimeDefault}}
+    volumeMounts: [{name: repo, mountPath: /repo}]
+]]></rendered>
+    <container-security container="case" run-as-non-root="true" allow-privilege-escalation="false" capabilities-drop="ALL" seccomp-profile="RuntimeDefault"/>
+    <container-security container="jnlp" run-as-non-root="true" allow-privilege-escalation="false" capabilities-drop="ALL" seccomp-profile="RuntimeDefault"/>
+    <container-security container="canary" run-as-non-root="true" allow-privilege-escalation="false" capabilities-drop="ALL" seccomp-profile="RuntimeDefault"/>
+    <pod-security level="restricted" run-as-user="1000" run-as-group="1000" fs-group="1000" seccomp-profile="RuntimeDefault" automount-token="false"/>
+    <s>Restricted (Pod Security Standards) requires, per container including the jnlp one: allowPrivilegeEscalation false, capabilities drop ALL, runAsNonRoot true, seccompProfile RuntimeDefault or Localhost; the rows above give every container all four, and check C26 refuses a template whose container rows lack one (the template-restricted mutation drops capabilities from jnlp).</s>
+    <s>CPU limits are not set: the LimitRange gives every container a cpu limit equal to its max (Kubernetes uses max as the default limit when no default is given), and the quota has no limits.cpu row, so a cpu limit never refuses a pod.</s>
+    <s>The plugin merges its agent env (JENKINS_URL, secret, name) into the container named jnlp and keeps the image, resources and securityContext the template declares; the case container is the one coqGate runs the command in (container('case')).</s>
+  </pod-template>
+
+  <admission id="admission">
+    <s>The API server refuses a pod at create when the namespace ResourceQuota would be exceeded, when Pod Security restricted is violated, or when a LimitRange maximum is exceeded: the create call returns 403 Forbidden and no Pod object exists, so nothing is Pending (book 1.0.0 said Pending, nodes/N-21/spec.xml line 126 at fb7135e; verification F18).</s>
+    <s>Pending exists only after admission, when the scheduler cannot place an admitted pod (node pressure, a cordoned node); that is infrastructure and climbs the N-24 ladder with rung reason unschedulable.</s>
+    <rule id="admission-refused">A 403 at create is rung reason admission-refused: N-24 writes pod.run 500 outcome infra reason admission-refused with one rung, writes capacity.defect 500 naming the refusal text (quota, pod-security or limit-range) and the live quota used and hard values, and N-28 posts one card deduped on the namespace and the quota hash; the unit does not climb, because with the rows of this volume a refusal can only mean the model and the cluster disagree, and a retry would hide that (retry-budget.xml#layers).</rule>
+    <s>Detection: coqGate's runPod reads the plugin's provisioning failure; a message carrying Forbidden with exceeded quota, violates PodSecurity or maximum ends the unit at once with that reason (ci/jenkins-lib/vars/coqGate.groovy, planned change) instead of waiting for the connect timeout.</s>
+    <s>Room by construction: container-cap suite pods plus one canary fit the quota exactly (#quota), so the canary never competes with a suite pod and the daily re-check can run beside two full gate runs.</s>
+  </admission>
+
+  <quota id="quota">
+    <quota-row name="coq-factory" pods="7" requests-cpu="6700m" requests-memory="3136Mi" limits-memory="9344Mi"/>
+    <derivation formula="quota = container-cap x suite pod + canary pod">
+      <term field="pods" value="7">6 x 1 + 1</term>
+      <term field="requests-cpu" value="6700m">6 x 1100m + 100m</term>
+      <term field="requests-memory" value="3136Mi">6 x 512Mi + 64Mi</term>
+      <term field="limits-memory" value="9344Mi">6 x 1536Mi + 128Mi</term>
+    </derivation>
+    <s>The quota is the physical bound and the in-flight rule is the logical one; they are equal, so the quota is never hit in normal operation and a hit is a defect (#admission).</s>
+    <s>Rendered into homelab-gitops apps/coq-factory/resourcequota.yaml (planned) by the same render script, so the gitops file and this row cannot drift; N-21's check compares the live hard values with this row and writes namespace.unready on a difference.</s>
+  </quota>
+
+  <limit-range id="limit-range">
+    <limit-range-row name="coq-factory" type="Container" default-request-cpu="100m" default-request-memory="64Mi" default-limit-memory="256Mi" max-cpu="1000m" max-memory="1Gi"/>
+    <s>A container that forgets its resources lands at 100m and 64Mi requested, 256Mi limit, inside the quota and never above it; the maxima equal the case container's row, so no container can ask for more than the largest planned one.</s>
+    <s>Book 1.0.0 defaulted 500m and 1Gi and allowed 2 cpu and 2Gi, so an unresourced jnlp or canary took half a suite pod's CPU (verification F18).</s>
+  </limit-range>
+
+  <canary id="canary">
+    <s>N-21's check runs three things against the live namespace; all three run on every check attempt and on the daily re-check (nodes/N-21/spec.xml#m-check).</s>
+    <probe id="dry-run" what="kubectl create --dry-run=server -f ci/pod/suite.pod.yaml -n coq-factory as system:serviceaccount:jenkins:jenkins-controller" pass="admitted with no warning: quota, LimitRange and Pod Security restricted all evaluated on the real two-container template"/>
+    <probe id="canary-pod" what="one pod from ci/pod/canary.pod.yaml with the canary row's resources, activeDeadlineSeconds 120" pass="Succeeded within 180 s; the pod is deleted on every exit"/>
+    <probe id="dns" what="inside the canary: getent hosts github.com" pass="resolves"/>
+    <probe id="jenkins-agent" what="inside the canary: TCP connect to jenkins.jenkins.svc.cluster.local 50000 and 8080, 5 s each" pass="both connect (the agent dials out; coq-factory-egress-jenkins allows it)"/>
+    <probe id="git" what="inside the canary: git ls-remote https://github.com/jkkelley/coq-jev-herdr-plugin HEAD" pass="succeeds within 30 s"/>
+    <probe id="image-pull" what="the canary pod itself pulls coq-test by digest with ghcr-pull-secret" pass="the Pulled or already-present event for that digest"/>
+    <probe id="blocked" what="inside the canary: curl --max-time 10 https://example.com" pass="fails (default deny holds)"/>
+    <s>The dry-run is what catches a jnlp container without restricted fields; the canary pod has no jnlp, so it alone could not (verification F18).</s>
+  </canary>
+
+  <builder-pin id="builder-pin">
+    <pin tool="kaniko" image="ghcr.io/osscontainertools/kaniko" version="v1.28.5" digest="sha256:738807f0e31daf07743f89260a95956dcc6ee4f62553f4f6344c990cabab8675" checked="2026-10-15" platforms="linux/amd64 linux/arm64 linux/s390x linux/riscv64 linux/ppc64le" attestations="true" cool-off-days="14"/>
+    <held version="v1.28.6" published="2026-10-11" until="2026-10-25">Inside the 14-day cool-off; a later ticket may move the pin after that date with a new checked date.</held>
+    <fallback tool="buildkit" image="docker.io/moby/buildkit" variant="rootless" when="the osscontainertools fork goes 90 days without a release, or drops linux/arm64">Pinned by digest on the day of the switch, by a ticket that changes this row and the coq-image Jenkinsfile together.</fallback>
+    <s>Why this fork: upstream GoogleContainerTools/kaniko was archived on 2025-06-03; chainguard-dev/kaniko is maintained but publishes no public images; osscontainertools/kaniko calls itself the supported replacement and released v1.28.1 (2026-07-18) to v1.28.5 (2026-09-20) with multi-arch images and attestations (checked 2026-10-15).</s>
+    <s>Where it is used: the cluster leg of N-22 (nodes/N-22/spec.xml#m-cluster-leg) runs this image by digest in namespace jenkins; ci/config/images.json carries the pin, the checked date and the fallback as a builder row (planned), and the daily images.sh verify-pins (N-22) writes image.failed 500 when the digest no longer resolves and an N-41 row when the checked date is older than 90 days.</s>
+  </builder-pin>
+
+  <many-agents id="many-agents">
+    <readers>N-20, N-21, N-22, N-23, N-24, N-36 and N-46 cite these anchors; a build seat implementing any of them reads the row, never a number in its own node volume.</readers>
+    <writers>A change to a number is one ticket that edits this volume, the rendered files (ci/pod/suite.pod.yaml, the gitops quota and LimitRange) and nothing else; C26 recomputes the derivation, so a ticket that edits one row and not the derived ones cannot merge.</writers>
+    <collision>Two tickets changing capacity at once both declare this file, so the one-file-one-in-flight-ticket rule (N-14) runs them in order; the live cluster follows the merged rows through Argo, and N-21's daily re-check reports any drift as namespace.unready.</collision>
+  </many-agents>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/L10-cluster-and-gitops.md" anchor="8-what-to-carry-forward" note="item 1: about 8 unrequested cores on the arm64 cluster"/>
+    <source path="rebuild/investigation/L07-ci-and-pods.md" anchor="4-what-works" note="the 1Gi limit and the pod lines"/>
+    <source path="https://kubernetes.io/docs/concepts/security/pod-security-standards/" note="restricted profile fields, per container"/>
+    <source path="https://kubernetes.io/docs/concepts/policy/resource-quotas/" note="a create that exceeds quota is rejected with 403 Forbidden"/>
+    <source path="https://kubernetes.io/docs/concepts/policy/limit-range/" note="defaults and maxima per container"/>
+    <source path="https://hub.docker.com/r/jenkins/inbound-agent/tags" note="tag 3391.va_37fa_a_305d6d-3-jdk21 pushed 2026-09-18, index digest above, read 2026-10-15"/>
+    <source path="https://github.com/GoogleContainerTools/kaniko" note="archived 2025-06-03"/>
+    <source path="https://github.com/chainguard-dev/kaniko" note="maintained fork, no public images"/>
+    <source path="https://github.com/osscontainertools/kaniko/releases" note="v1.28.1 to v1.28.6, checked 2026-10-15"/>
+    <source path="https://pkg.go.dev/github.com/osscontainertools/kaniko" note="module of the fork"/>
+    <source path="https://thenewstack.io/kaniko-lives-on-chainguard-forks-googles-dumped-tool/" note="2025-06-23, the archive and the forks"/>
+  </sources>
+</volume>

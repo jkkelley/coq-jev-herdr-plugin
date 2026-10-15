@@ -1,58 +1,46 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-24/record.schema.json",
-  "title": "N-24 Pod run: input suite.plan entry and output pod.run",
-  "description": "Written 2026-10-14T04:39Z UTC by the G4 spec-author seat. Envelope repeated from N-20 until shared/state-store.schema.json lands. The input is an element of N-23's entries array, repeated here so this file validates on its own.",
+  "title": "N-24 Pod run: input suite.plan entry and output pod.run, capacity.defect, test.proof, artifact.refused",
+  "description": "Book 1.1.0 (F18, F19, F26, NF-E1, NF-E2). The envelope is shared/state-store.schema.json#/$defs/envelope (the UTC-stamp id form; the operation key and the lease ride the commit request, shared/contracts.xml#batch). The input is N-23's $defs/entry plus the plan's identity, by $ref, so the edge cannot drift. Numbers come from shared/ci-capacity.xml and shared/retry-budget.xml. UTC everywhere.",
   "oneOf": [
     { "$ref": "#/$defs/input" },
-    { "$ref": "#/$defs/output" }
+    { "$ref": "#/$defs/output" },
+    { "$ref": "#/$defs/capacity_defect" },
+    { "$ref": "#/$defs/test_proof" },
+    { "$ref": "#/$defs/artifact_refused" }
   ],
   "$defs": {
-    "envelope": {
-      "type": "object",
-      "required": ["id", "kind", "code", "at", "node", "attempt", "key", "version"],
-      "properties": {
-        "id": { "type": "string", "pattern": "^r-[0-9]{17}-[a-z0-9]{5}$" },
-        "kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$" },
-        "code": { "type": "integer", "enum": [100, 200, 201, 300, 400, 409, 410, 412, 422, 423, 429, 500, 503] },
-        "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
-        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
-        "attempt": { "type": "integer", "minimum": 0, "maximum": 3 },
-        "key": { "type": "string", "minLength": 3 },
-        "version": { "type": "integer", "minimum": 1 },
-        "lease_token": { "type": "string" },
-        "note": { "type": "string", "maxLength": 240 }
-      }
-    },
+    "envelope": { "$ref": "../../shared/state-store.schema.json#/$defs/envelope" },
     "sha40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
     "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "plan_attempt": { "type": "integer", "minimum": 1, "maximum": 2, "description": "shared/retry-budget.xml#layers plan-attempt max 2" },
+    "build": {
+      "type": "object", "required": ["job", "number"],
+      "properties": { "job": { "const": "coq-gate" }, "number": { "type": "integer", "minimum": 1 }, "url": { "type": "string" } }
+    },
+    "rung_reason": {
+      "type": "string",
+      "enum": ["provision", "checkout", "connect-timeout", "agent-lost", "image-pull", "unschedulable", "admission-refused", "unknown"],
+      "description": "admission-refused is a 403 at pod create (shared/ci-capacity.xml#admission): one rung, no climb"
+    },
     "input": {
-      "type": "object",
       "title": "suite.plan entry plus the plan's identity",
-      "required": ["head_sha", "pr", "plan_attempt", "build", "name", "suite", "image", "workdir", "cmd", "budget_minutes", "kind"],
-      "properties": {
-        "head_sha": { "$ref": "#/$defs/sha40" },
-        "pr": { "type": "integer", "minimum": 0 },
-        "plan_attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
-        "build": { "type": "object", "required": ["job", "number"], "properties": { "job": { "const": "coq-gate" }, "number": { "type": "integer", "minimum": 1 } } },
-        "name": { "type": "string", "pattern": "^[a-z0-9-]+(:[A-Za-z0-9._-]+)?$" },
-        "suite": { "type": "string" },
-        "image": { "type": "object", "required": ["name", "digest"], "properties": { "name": { "type": "string" }, "digest": { "$ref": "#/$defs/digest" } } },
-        "workdir": { "type": "string", "pattern": "^/repo(/.*)?$" },
-        "cmd": { "type": "string", "minLength": 1 },
-        "budget_minutes": { "type": "integer", "minimum": 5, "maximum": 30 },
-        "kind": { "const": "pod" },
-        "ladder": {
+      "allOf": [
+        { "$ref": "../N-23/record.schema.json#/$defs/entry" },
+        {
           "type": "object",
-          "description": "Defaults when absent: connect 5, waits 10 30 90, clean rerun 300.",
+          "required": ["head_sha", "pr", "build"],
           "properties": {
-            "connect_minutes": { "type": "integer", "minimum": 1, "maximum": 10 },
-            "retry_wait_seconds": { "type": "array", "items": { "type": "integer", "minimum": 1 }, "minItems": 3, "maxItems": 3 },
-            "clean_rerun_wait_seconds": { "type": "integer", "minimum": 60, "maximum": 600 }
+            "head_sha": { "$ref": "#/$defs/sha40" },
+            "pr": { "type": "integer", "minimum": 0 },
+            "build": { "$ref": "#/$defs/build" },
+            "kind": { "enum": ["pod", "spec-check"] }
           }
         }
-      }
+      ]
     },
     "output": {
       "allOf": [
@@ -66,9 +54,9 @@
             "node": { "const": "N-24" },
             "head_sha": { "$ref": "#/$defs/sha40" },
             "pr": { "type": "integer", "minimum": 0 },
-            "plan_attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "plan_attempt": { "$ref": "#/$defs/plan_attempt" },
             "name": { "type": "string" },
-            "exit_code": { "type": "integer", "minimum": -1, "maximum": 255 },
+            "exit_code": { "type": "integer", "minimum": -1, "maximum": 255, "description": "the command's exit code; -1 when no command ran" },
             "outcome": { "type": "string", "enum": ["pass", "fail", "timeout", "infra", "superseded"] },
             "rungs": {
               "type": "array", "maxItems": 4,
@@ -76,15 +64,31 @@
                 "type": "object", "required": ["rung", "reason", "pod", "wait_s"],
                 "properties": {
                   "rung": { "type": "integer", "minimum": 1, "maximum": 4 },
-                  "reason": { "type": "string", "enum": ["provision", "checkout", "connect-timeout", "agent-lost", "image-pull", "unschedulable", "unknown"] },
+                  "reason": { "$ref": "#/$defs/rung_reason" },
                   "pod": { "type": "string" },
-                  "wait_s": { "type": "integer", "enum": [10, 30, 90, 300] }
+                  "wait_s": { "type": "integer", "enum": [0, 10, 30, 90, 300] }
+                }
+              }
+            },
+            "tests": {
+              "type": "array",
+              "description": "Per-test outcomes when the unit's runner reports them (ci/bin/unit-wrap.sh writes results/<name>.json); N-25 matches them against tests/expected-red.json",
+              "items": {
+                "type": "object", "required": ["test_id", "outcome"],
+                "properties": {
+                  "test_id": { "type": "string", "minLength": 1, "maxLength": 200 },
+                  "path": { "type": "string" },
+                  "outcome": { "enum": ["pass", "fail", "skip"] },
+                  "message": { "type": "string", "maxLength": 500 }
                 }
               }
             },
             "log": {
               "type": "object", "required": ["artifact"],
-              "properties": { "artifact": { "type": "string", "format": "uri" }, "host": { "type": "string" } }
+              "properties": {
+                "artifact": { "type": "string", "format": "uri" },
+                "host": { "type": "string", "pattern": "^\\$COQ_STATE/ci/logs/gate/[0-9]{4}/[0-9]{2}/[0-9a-f]{12}-[1-2]/units/[A-Za-z0-9:._-]+\\.log$" }
+              }
             },
             "duration_s": { "type": "number", "minimum": 0 },
             "pod": {
@@ -95,15 +99,82 @@
                 "started_at": { "$ref": "#/$defs/utc" }, "finished_at": { "$ref": "#/$defs/utc" }
               }
             },
-            "build": { "type": "object", "required": ["job", "number", "url"], "properties": { "job": { "const": "coq-gate" }, "number": { "type": "integer" }, "url": { "type": "string" } } },
-            "reason": { "type": "string", "description": "For outcome infra: the last rung's reason, or result-missing when the build died." }
+            "build": { "allOf": [ { "$ref": "#/$defs/build" }, { "required": ["url"] } ] },
+            "reason": {
+              "type": "string",
+              "enum": ["provision", "checkout", "connect-timeout", "agent-lost", "image-pull", "unschedulable", "admission-refused", "unknown", "result-missing", "build-timeout"],
+              "description": "For outcome infra: the last rung's reason, result-missing when the build died, build-timeout when the plan bound passed"
+            }
           },
           "allOf": [
             { "if": { "properties": { "outcome": { "const": "pass" } } }, "then": { "properties": { "code": { "const": 201 }, "exit_code": { "const": 0 } } } },
             { "if": { "properties": { "outcome": { "enum": ["fail", "timeout"] } } }, "then": { "properties": { "code": { "const": 422 } } } },
             { "if": { "properties": { "outcome": { "const": "infra" } } }, "then": { "properties": { "code": { "const": 500 }, "exit_code": { "const": -1 } }, "required": ["reason"] } },
-            { "if": { "properties": { "outcome": { "const": "superseded" } } }, "then": { "properties": { "code": { "const": 410 } } } }
+            { "if": { "properties": { "outcome": { "const": "superseded" } } }, "then": { "properties": { "code": { "const": 410 } } } },
+            { "if": { "properties": { "reason": { "const": "admission-refused" } }, "required": ["reason"] }, "then": { "properties": { "rungs": { "maxItems": 1 } } } }
           ]
+        }
+      ]
+    },
+    "capacity_defect": {
+      "description": "A 403 at pod create: the capacity model and the live namespace disagree (shared/ci-capacity.xml#admission); N-28 posts one card",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["head_sha", "name", "refusal", "message", "quota_used", "quota_hard"],
+          "properties": {
+            "kind": { "const": "capacity.defect" },
+            "code": { "const": 500 },
+            "node": { "const": "N-24" },
+            "head_sha": { "$ref": "#/$defs/sha40" },
+            "name": { "type": "string" },
+            "refusal": { "enum": ["quota", "pod-security", "limit-range", "other"] },
+            "message": { "type": "string", "maxLength": 1000 },
+            "quota_used": { "type": "object" },
+            "quota_hard": { "type": "object" }
+          }
+        }
+      ]
+    },
+    "test_proof": {
+      "description": "A ticket's acceptance case passed in a pod at the head sha (written by the artifact import)",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["ticket", "acceptance_id", "head_sha", "exit_code", "log"],
+          "properties": {
+            "kind": { "const": "test.proof" },
+            "code": { "const": 201 },
+            "node": { "const": "N-24" },
+            "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/ticket" },
+            "acceptance_id": { "type": "string", "minLength": 1 },
+            "head_sha": { "$ref": "#/$defs/sha40" },
+            "exit_code": { "const": 0 },
+            "platform": { "enum": ["linux/arm64", "linux/amd64"] },
+            "log": { "type": "string" }
+          }
+        }
+      ]
+    },
+    "artifact_refused": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["head_sha", "name", "line", "reason"],
+          "properties": {
+            "kind": { "const": "artifact.refused" },
+            "code": { "const": 412 },
+            "node": { "const": "N-24" },
+            "head_sha": { "$ref": "#/$defs/sha40" },
+            "name": { "type": "string" },
+            "line": { "type": "integer", "minimum": 1 },
+            "record_kind": { "type": "string" },
+            "reason": { "enum": ["kind-not-listed", "schema-invalid", "unparsable"] },
+            "detail": { "type": "string", "maxLength": 1000 }
+          }
         }
       ]
     }

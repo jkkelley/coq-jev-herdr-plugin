@@ -4,7 +4,7 @@
      revised 2026-10-14T06:40Z UTC by the round 3 spec-author seat against the round 2 review verdict (every reason named there is fixed in this revision)
      (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
      Every time in this volume is UTC. No em dash appears in this volume. Pointers are path plus anchor, never prose. -->
-<volume id="N-12" kind="node-spec" node="N-12" group="G2" title="Stall timer" version="1.0.2" issued="2026-10-14" timezone="UTC" author="spec-author seat, group G2, round 3">
+<volume id="N-12" kind="node-spec" node="N-12" group="G2" title="Stall timer" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" author="spec-author seat, group G2, round 3">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>

@@ -16,7 +16,7 @@
      Rejected: writing shared/ from this seat (one shared author owns it; two authors on one file is the collision the book forbids)
      and leaving the hrefs to resolve later (a failing volume blocks the book now).
      Cost: a need is not a live pointer until shared/ lands; check.sh matches each need against the shared volumes then. -->
-<volume id="N-37" kind="node-spec" node="N-37" group="G6" version="1.1.0" issued="2026-10-14" written="2026-10-14T05:09:51Z" timezone="UTC">
+<volume id="N-37" kind="node-spec" node="N-37" group="G6" version="1.1.0" issued="2026-10-15T06:00:00Z" written="2026-10-14T05:09:51Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG edges</entry>
@@ -224,7 +224,7 @@ flowchart LR
     <s>Readers: a screen builder reads the #panels of its own screen volume and this volume's #mechanism; the registry is one generated file per concern, read by all screens at build time.</s>
     <s>Writers: bindings.json and machines.json are generated, never hand-edited; the sources are the screen volumes, each owned by one node directory, so five authors add panels in five files and the generator merges. Two tickets that add panels to two screens never touch one file; a ticket that adds a panel to a screen already in flight is refused at N-14 by the file claim on that screen volume.</s>
     <s>Record kinds are declared in the shared registry (shared/state-store.xml#record-kinds-registry, a need of this volume); a screen that needs a new kind cuts a ticket against that shared volume, never adds the kind in the registry.</s>
-    <s>Store writes: the binding record is keyed by commit sha with the sha as the idempotency key; a duplicate import is a 409 at N-01 reported as 200.</s>
+    <s>Store writes: the binding record is committed under operation key N-37/binding.record/&lt;sha&gt;/r1 (shared/contracts.xml#operation-keys); a duplicate import with the same request replays 200 at N-01, and only a different request under the same key is 409 idempotency_mismatch.</s>
     <s>Two builds on two commits produce two independent records; the newest 201 on main is what N-48 promotes, so a race between branches cannot bind a page to the wrong registry.</s>
   </many-agents>
 
@@ -235,8 +235,8 @@ flowchart LR
   </status-codes>
 
   <state-paths id="state-paths" cleanup-registry="../N-45/spec.xml#N-45">
-    <path p="$COQ_STATE/map/registry/check/YYYY/MM/&lt;sha&gt;.txt" cleanup="tools/map/bin/cleanup.sh --registry-logs --older-than 30d">The check output per commit, imported from the CI artifact.</path>
-    <path p="store table binding_records" cleanup="N-45 retention class: keep the newest 100">Binding records.</path>
+    <path trigger="timer" acts="system" p="$COQ_STATE/map/registry/check/YYYY/MM/&lt;sha&gt;.txt" cleanup="tools/map/bin/cleanup.sh --registry-logs --older-than 30d">The check output per commit, imported from the CI artifact.</path>
+    <path trigger="timer" acts="system" p="store table binding_records" cleanup="N-45 retention class: keep the newest 100">Binding records.</path>
     <s>The registry files themselves live in the repository because they are generated code the build depends on, not runtime state.</s>
   </state-paths>
 
@@ -274,7 +274,7 @@ flowchart LR
   </runbook>
 
   <sources id="sources">
-    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/factorio-map-replaces-board.md">Enforcement of nothing outside the panel: node volume without a panel binding fails spec validation; machines exist only as store records keyed by node id.</src>
+    <src href="$HOME/.claude/projects/${HOME_SLUG}/memory/factorio-map-replaces-board.md">Enforcement of nothing outside the panel: node volume without a panel binding fails spec validation; machines exist only as store records keyed by node id.</src>
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/wireframe-brief.json">Screens, their data and primary actions; nav pattern tabs; states.</src>
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-plan.json">50 approved frames (C32) the registry names per panel.</src>
     <src href="~/.bearings/coq-stable/answers.jsonl">C32 approve all five, 2026-10-14T03:31:18Z.</src>

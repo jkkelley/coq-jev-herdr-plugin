@@ -2,23 +2,73 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-29/record.schema.json",
   "title": "N-29 Owner answer intake: input and output records",
-  "description": "owner.answer (input, from the page, a relay, a policy or the Controls screen) and ruling (output), with the refusal and rejection forms. Envelope per shared/state-store.xml#envelope.",
+  "description": "owner.answer (input, from the page, the Controls lever, the inbox, the owner CLI, a relay, a policy default or the cut-over import) and ruling (output, typed effects), with the refusal and rejection forms. Book 1.1.0: ids use the shared envelope form (NF-A5); effects are typed per kind and the flag effects are N-44's own defs (NF-A5, NF-A9); relayed, defaulted and imported rulings carry only none or ticket.unblock (shared/authority.xml#relayable-rulings, NF-A1, report C new 2). Envelope per shared/state-store.xml#envelope.",
   "$defs": {
-    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "utc": { "$ref": "../../shared/state-store.schema.json#/$defs/at" },
+    "recordId": { "$ref": "../../shared/state-store.schema.json#/$defs/id" },
     "cardId": { "type": "string", "pattern": "^C-[0-9]{1,6}$" },
-    "recordId": { "type": "string", "minLength": 8, "maxLength": 64 },
-    "answerId": { "type": "string", "pattern": "^a-[0-9]{17}-[a-z0-9]{5}$" },
     "tier": { "enum": ["stable", "uat", "dev"] },
-    "source": { "enum": ["page", "relay", "policy", "controls"] },
-    "effect": {
+    "source": {
+      "enum": ["page", "controls", "cli", "relay", "policy", "imported"],
+      "description": "spec.xml#sources-of-answers; owner-only effects need page, controls or cli from an owner principal"
+    },
+    "via": { "enum": ["tap", "message"], "description": "source page only: a card option tapped, or an owner word typed alone and delivered by N-30" },
+    "actionId": {
+      "type": "string",
+      "pattern": "^([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5})$",
+      "description": "standing cards only: the Controls lever's action id (UUID, N-42) or the owner.message id (N-30)"
+    },
+    "relayableKind": { "enum": ["none", "ticket.unblock"] },
+    "effect_none": {
       "type": "object",
       "required": ["kind"],
+      "properties": { "kind": { "const": "none" } },
+      "additionalProperties": false
+    },
+    "effect_ticket_unblock": {
+      "type": "object",
+      "required": ["kind", "ticket"],
+      "properties": { "kind": { "const": "ticket.unblock" }, "ticket": { "$ref": "../../shared/state-store.schema.json#/$defs/ticket" } },
+      "additionalProperties": false
+    },
+    "effect_gofactory": {
+      "type": "object",
+      "required": ["kind", "card_id"],
+      "properties": { "kind": { "const": "gofactory" }, "card_id": { "$ref": "#/$defs/cardId" }, "word": { "const": "GOFACTORY" } },
+      "additionalProperties": false
+    },
+    "effect_break_glass": {
+      "type": "object",
+      "required": ["kind", "request", "target"],
       "properties": {
-        "kind": { "enum": ["ticket.unblock", "build-mode.set", "gofactory", "control.halt", "control.resume", "promotion.confirm", "break.glass", "reopen", "none"] },
-        "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
-        "expiry": { "$ref": "#/$defs/utc" },
-        "request": { "$ref": "#/$defs/recordId", "description": "break.glass: the 300 request id" }
-      }
+        "kind": { "const": "break.glass" },
+        "request": { "$ref": "#/$defs/recordId", "description": "the 300 request id; one ruling per request" },
+        "target": {
+          "type": "object",
+          "required": ["kind", "id"],
+          "properties": { "kind": { "enum": ["merge.hold", "dead"] }, "id": { "type": "string", "minLength": 1 } },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "effect_promotion_confirm": {
+      "type": "object",
+      "required": ["kind", "head_sha"],
+      "properties": { "kind": { "const": "promotion.confirm" }, "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" } },
+      "additionalProperties": false
+    },
+    "effect": {
+      "description": "one typed effect; build-mode.set, control.halt and control.resume are N-44's defs so N-44 consumes exactly what N-29 writes",
+      "oneOf": [
+        { "$ref": "#/$defs/effect_none" },
+        { "$ref": "#/$defs/effect_ticket_unblock" },
+        { "$ref": "../N-44/record.schema.json#/$defs/build_mode_effect" },
+        { "$ref": "../N-44/record.schema.json#/$defs/hold_effect" },
+        { "$ref": "#/$defs/effect_gofactory" },
+        { "$ref": "#/$defs/effect_break_glass" },
+        { "$ref": "#/$defs/effect_promotion_confirm" }
+      ]
     },
     "envelope": {
       "type": "object",
@@ -26,94 +76,146 @@
       "properties": {
         "id": { "$ref": "#/$defs/recordId" },
         "kind": { "type": "string" },
-        "code": { "enum": [100, 200, 201, 204, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "code": { "enum": [100, 200, 400, 403, 409, 412, 500, 503] },
         "at": { "$ref": "#/$defs/utc" },
         "node": { "const": "N-29" },
         "seq": { "type": "integer", "minimum": 1 },
+        "epoch": { "type": "integer", "minimum": 1 },
         "version": { "type": "integer", "minimum": 1 },
-        "idempotency_key": { "type": "string", "maxLength": 128 },
-        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 }
+        "idempotency_key": { "$ref": "../../shared/contracts.schema.json#/$defs/operation_key" },
+        "attempt": { "type": "integer", "minimum": 0, "maximum": 3 }
       }
-    }
-  },
-  "oneOf": [
-    {
+    },
+    "owner.answer": {
       "title": "owner.answer (input, persisted first)",
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "if": { "properties": { "source": { "const": "page" } } }, "then": { "required": ["via"] } },
+        { "if": { "properties": { "source": { "const": "imported" } } }, "then": { "required": ["imported"], "properties": { "imported": { "const": true } } } }
+      ],
       "properties": {
         "kind": { "const": "owner.answer" },
         "code": { "const": 100 },
-        "id": { "$ref": "#/$defs/answerId" },
         "card": { "$ref": "#/$defs/cardId" },
         "pick": { "type": "integer", "minimum": 0, "maximum": 3 },
         "words": { "type": "string", "maxLength": 4000 },
         "source": { "$ref": "#/$defs/source" },
-        "by": { "type": "string", "minLength": 1, "maxLength": 64, "description": "owner; or seat name and role for relay; or POL-id for policy" },
-        "tier": { "$ref": "#/$defs/tier" }
+        "via": { "$ref": "#/$defs/via" },
+        "action_id": { "$ref": "#/$defs/actionId" },
+        "by": { "type": "string", "minLength": 1, "maxLength": 96, "description": "server-derived principal (shared/authority.xml#role-derivation); for relay, the owner principal plus the --session label; never caller-supplied" },
+        "principal_role": { "$ref": "../../shared/contracts.schema.json#/$defs/principal_role" },
+        "tier": { "$ref": "#/$defs/tier" },
+        "imported": { "type": "boolean" }
       },
-      "required": ["card", "pick", "words", "source", "by", "tier"]
+      "required": ["card", "pick", "words", "source", "by", "principal_role", "tier"]
     },
-    {
-      "title": "ruling (output, one per card)",
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+    "ruling": {
+      "title": "ruling (output, one per card; one per action on a standing card)",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "description": "relayed, defaulted and imported rulings, and any ruling not from an owner principal, carry only none or ticket.unblock (shared/authority.xml#relayable-rulings)",
+          "if": {
+            "anyOf": [
+              { "properties": { "source": { "enum": ["relay", "policy", "imported"] } }, "required": ["source"] },
+              { "properties": { "principal_role": { "not": { "const": "owner" } } }, "required": ["principal_role"] }
+            ]
+          },
+          "then": { "properties": { "effects": { "items": { "properties": { "kind": { "$ref": "#/$defs/relayableKind" } } } } } }
+        }
+      ],
       "properties": {
         "kind": { "const": "ruling" },
         "code": { "const": 200 },
         "card": { "$ref": "#/$defs/cardId" },
-        "cause": { "$ref": "#/$defs/recordId" },
+        "cause": { "type": "string", "minLength": 1, "maxLength": 64 },
         "pick": { "type": "integer", "minimum": 0, "maximum": 3 },
         "choice": { "type": "string", "minLength": 1, "maxLength": 80 },
         "words": { "type": "string", "maxLength": 4000 },
         "source": { "$ref": "#/$defs/source" },
-        "by": { "type": "string", "minLength": 1, "maxLength": 64 },
-        "answer": { "$ref": "#/$defs/answerId" },
-        "effects": { "type": "array", "maxItems": 4, "items": { "$ref": "#/$defs/effect" } },
-        "idempotency_key": { "type": "string", "pattern": "^ruling:C-[0-9]{1,6}$" }
+        "via": { "$ref": "#/$defs/via" },
+        "by": { "type": "string", "minLength": 1, "maxLength": 96 },
+        "principal_role": { "$ref": "../../shared/contracts.schema.json#/$defs/principal_role" },
+        "answer": { "$ref": "#/$defs/recordId" },
+        "action_id": { "$ref": "#/$defs/actionId" },
+        "reopenable": { "type": "boolean", "description": "policy rulings only" },
+        "effects": { "type": "array", "minItems": 1, "maxItems": 4, "items": { "$ref": "#/$defs/effect" } },
+        "idempotency_key": {
+          "type": "string",
+          "pattern": "^N-29/ruling/C-[0-9]{1,6}(@[A-Za-z0-9._:-]+)?/r[0-9]{1,4}$",
+          "description": "N-29/ruling/<card_id>/r1, or N-29/ruling/<card_id>@<action_id>/r1 on a standing card (shared/contracts.xml#operation-keys)"
+        }
       },
-      "required": ["card", "cause", "pick", "choice", "words", "source", "by", "answer", "effects", "idempotency_key"]
+      "required": ["card", "cause", "pick", "choice", "words", "source", "by", "principal_role", "answer", "effects", "idempotency_key"]
     },
-    {
+    "answer.refused": {
       "title": "answer.refused (output: a ruling already exists)",
       "allOf": [{ "$ref": "#/$defs/envelope" }],
       "properties": {
         "kind": { "const": "answer.refused" },
         "code": { "const": 409 },
         "card": { "$ref": "#/$defs/cardId" },
-        "answer": { "$ref": "#/$defs/answerId" },
+        "answer": { "$ref": "#/$defs/recordId" },
         "ruling": { "$ref": "#/$defs/recordId" }
       },
       "required": ["card", "answer", "ruling"]
     },
-    {
-      "title": "answer.rejected (output: validation failed)",
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+    "answer.rejected": {
+      "title": "answer.rejected (output: validation 400 or authority 403)",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "if": { "properties": { "reason": { "enum": ["not_relayable", "not_owner", "caller_not_allowed"] } } },
+          "then": { "properties": { "code": { "const": 403 } } },
+          "else": { "properties": { "code": { "const": 400 } } }
+        }
+      ],
       "properties": {
         "kind": { "const": "answer.rejected" },
-        "code": { "const": 400 },
+        "code": { "enum": [400, 403] },
         "card": { "type": "string", "maxLength": 64 },
-        "reason": { "enum": ["unknown-card", "card-closed", "pick-out-of-range", "wrong-tier", "words-over-cap", "relay-role-not-allowed", "source-caller-mismatch", "store"] }
+        "answer": { "$ref": "#/$defs/recordId" },
+        "source": { "$ref": "#/$defs/source" },
+        "reason": {
+          "enum": ["unknown-card", "card-closed", "pick-out-of-range", "wrong-tier", "words-over-cap", "not-standing-card", "store", "not_relayable", "not_owner", "caller_not_allowed"]
+        }
       },
       "required": ["card", "reason"]
     },
-    {
+    "control.refused": {
+      "title": "control.refused (output: USERGO before bootstrap B7)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "control.refused" },
+        "code": { "const": 412 },
+        "card": { "$ref": "#/$defs/cardId" },
+        "answer": { "$ref": "#/$defs/recordId" },
+        "reason": { "const": "not-ready" },
+        "bootstrap_state": { "$ref": "../../shared/contracts.schema.json#/$defs/bootstrap_state/properties/state" },
+        "missing_proofs": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+      },
+      "required": ["card", "answer", "reason", "bootstrap_state", "missing_proofs"]
+    },
+    "ruling.effects.unknown": {
       "title": "ruling.effects.unknown (output, alert)",
       "allOf": [{ "$ref": "#/$defs/envelope" }],
-      "properties": {
-        "kind": { "const": "ruling.effects.unknown" },
-        "code": { "const": 500 },
-        "ruling": { "$ref": "#/$defs/recordId" }
-      },
+      "properties": { "kind": { "const": "ruling.effects.unknown" }, "code": { "const": 500 }, "ruling": { "$ref": "#/$defs/recordId" } },
       "required": ["ruling"]
     },
-    {
+    "intake.unavailable": {
       "title": "intake.unavailable (output: store down after 3 tries)",
       "allOf": [{ "$ref": "#/$defs/envelope" }],
-      "properties": {
-        "kind": { "const": "intake.unavailable" },
-        "code": { "const": 503 },
-        "answer": { "$ref": "#/$defs/answerId" }
-      },
+      "properties": { "kind": { "const": "intake.unavailable" }, "code": { "const": 503 }, "answer": { "$ref": "#/$defs/recordId" } },
       "required": ["answer"]
     }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/owner.answer" },
+    { "$ref": "#/$defs/ruling" },
+    { "$ref": "#/$defs/answer.refused" },
+    { "$ref": "#/$defs/answer.rejected" },
+    { "$ref": "#/$defs/control.refused" },
+    { "$ref": "#/$defs/ruling.effects.unknown" },
+    { "$ref": "#/$defs/intake.unavailable" }
   ]
 }

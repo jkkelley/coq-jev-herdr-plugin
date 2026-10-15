@@ -22,7 +22,7 @@
   blocks the book now).
   Cost: a declared need is not a live pointer until shared/ lands.
 -->
-<volume id="N-13" node="N-13" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-14T05:04:00Z" timezone="UTC">
+<volume id="N-13" node="N-13" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
@@ -237,8 +237,8 @@
     <source href="rebuild/factory-rebuild-plan.xml#principles">no-cog, build-mode</source>
     <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C47</source>
     <source href="~/.bearings/coq-stable/answers.jsonl">C36, C37, C39</source>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/build-mode-rule.md">build mode</source>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/right-size-agent-models.md">model from the role</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/build-mode-rule.md">build mode</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/right-size-agent-models.md">model from the role</source>
   </section>
 
   <rejected id="rejected">

@@ -2,19 +2,92 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-12/record.schema.json",
   "title": "N-12 Stall timer: input and output records",
-  "description": "Inputs lease.granted and lease.expired (../N-02/record.schema.json), seat.heartbeat (../N-15/record.schema.json#/$defs/seat.heartbeat) and the tick:stall entity (../N-06/record.schema.json#/$defs/tick), none repeated here; outputs stall and stall.kill.failed. Base shape as in ../N-07/record.schema.json#/$defs/base. Times are UTC. Written 2026-10-14 UTC by the G2 spec-author seat.",
+  "description": "Book 1.1.0. Inputs: the leases table (../../shared/contracts.schema.json#/$defs/lease_row), the heartbeats row of each run (../N-15/record.schema.json#/$defs/seat.heartbeat), N-02 lease.expired, the tick:stall entity (../N-06/record.schema.json#/$defs/tick) and herdr agent.status for long-lived seats. Outputs: the stall record and the kill:<run_id> entity, written in one Commit with Lease.Revoke (shared/contracts.xml#kill-authority, operation key N-12/kill/<run_id>@<lease_version>/r1 on the request); stall.kill.failed; prompt.parked and prompt.cleared. Every record is on the shared committed envelope; the stall record carries ../../shared/contracts.schema.json#/$defs/failure_body so N-11 reads it as it is.",
   "oneOf": [
-    { "$ref": "../N-02/record.schema.json#/$defs/lease_granted" },
-    { "$ref": "../N-02/record.schema.json#/$defs/lease_expired" },
+    { "$ref": "../../shared/contracts.schema.json#/$defs/lease_row" },
     { "$ref": "../N-15/record.schema.json#/$defs/seat.heartbeat" },
+    { "$ref": "../N-02/record.schema.json#/$defs/lease_expired" },
     { "$ref": "../N-06/record.schema.json#/$defs/tick" },
-    { "$ref": "#/$defs/stall" },
-    { "$ref": "#/$defs/stall_kill_failed" },
     { "$ref": "#/$defs/agent_status" },
+    { "$ref": "#/$defs/stall" },
+    { "$ref": "#/$defs/kill" },
+    { "$ref": "#/$defs/stall_kill_failed" },
     { "$ref": "#/$defs/prompt_parked" },
     { "$ref": "#/$defs/prompt_cleared" }
   ],
   "$defs": {
+    "at": { "$ref": "../../shared/contracts.schema.json#/$defs/at" },
+    "envelope": { "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" },
+    "run_id": { "type": "string", "pattern": "^d-[0-9]{14}-[a-z0-9]{6}$", "description": "equals the dispatch_id" },
+    "seat_lease": {
+      "description": "a seat-class lease_ref: WO worker, reviewer or gate, or CR spec",
+      "allOf": [
+        { "$ref": "../../shared/contracts.schema.json#/$defs/lease_ref" },
+        { "properties": { "key": { "$ref": "../../shared/contracts.schema.json#/$defs/seat_lease_key" } } }
+      ]
+    },
+    "stall": {
+      "description": "The failure record of a killed run, appended in the Revoke Commit (or, for lease-expired, in the Commit that writes only the kill entity, since the row is already expired). failure_kind stall, outcome killed. The fenced seat.result that follows is an echo (shared/contracts.xml#terminal-report).",
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "$ref": "../../shared/contracts.schema.json#/$defs/failure_body" }
+      ],
+      "required": ["run_id", "role", "lease", "lease_version", "reason", "end_reason", "age_seconds", "bound_seconds", "bound_key", "signalled_by"],
+      "properties": {
+        "kind": { "const": "stall" },
+        "code": { "const": 500 },
+        "node": { "const": "N-12" },
+        "outcome": { "const": "killed" },
+        "failure_kind": { "const": "stall" },
+        "run_id": { "$ref": "#/$defs/run_id" },
+        "dispatch_id": { "$ref": "#/$defs/run_id" },
+        "role": { "enum": ["worker", "reviewer", "spec-author"] },
+        "lease": { "$ref": "#/$defs/seat_lease" },
+        "lease_version": { "type": "integer", "minimum": 1, "description": "the leases row version N-12 judged; Revoke is a compare-and-swap on it" },
+        "reason": { "enum": ["no-progress", "launcher-dead", "lease-expired", "ruling"] },
+        "end_reason": { "enum": ["revoked-stall", "revoked-launcher-lost", "revoked-ruling", "expired"] },
+        "last_heartbeat_at": { "$ref": "#/$defs/at" },
+        "last_progress_at": { "$ref": "#/$defs/at" },
+        "age_seconds": { "type": "integer", "minimum": 0 },
+        "bound_seconds": { "type": "integer", "minimum": 1 },
+        "bound_key": { "type": "string", "pattern": "^(stall\\.seconds\\.(worker|reviewer|spec-author)|lease\\.heartbeat_seconds|lease\\.ttl_seconds|ruling)$", "description": "the shared/contracts.xml#timing key the bound came from" },
+        "signalled_by": { "enum": ["launcher", "N-12"], "description": "N-12 only when the launcher is gone (shared/contracts.xml#kill-authority)" },
+        "ruling_ref": { "type": "string", "description": "the owner kill ruling (N-42) for reason ruling" }
+      },
+      "if": { "properties": { "reason": { "const": "ruling" } } },
+      "then": { "required": ["ruling_ref"] }
+    },
+    "kill": {
+      "description": "Entity kill:<run_id>, written with precondition absent in the Revoke Commit; the launcher (N-15) watches kill:* and stops unit coq-seat-<run_id>.",
+      "type": "object",
+      "required": ["entity", "reason", "lease_version", "at", "version"],
+      "properties": {
+        "entity": { "type": "string", "pattern": "^kill:d-[0-9]{14}-[a-z0-9]{6}$" },
+        "reason": { "enum": ["no-progress", "launcher-dead", "lease-expired", "ruling"] },
+        "lease_version": { "type": "integer", "minimum": 1 },
+        "at": { "$ref": "#/$defs/at" },
+        "version": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "stall_kill_failed": {
+      "description": "The unit was still active kill.grace_seconds after the stop, three times; a host fault for the owner. The lease stays revoked.",
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "required": ["run_id", "unit", "lease", "attempts", "owner_acts"],
+      "properties": {
+        "kind": { "const": "stall.kill.failed" },
+        "code": { "const": 500 },
+        "node": { "const": "N-12" },
+        "run_id": { "$ref": "#/$defs/run_id" },
+        "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/ticket" },
+        "unit": { "type": "string", "pattern": "^coq-seat-d-[0-9]{14}-[a-z0-9]{6}\\.service$" },
+        "lease": { "$ref": "#/$defs/seat_lease" },
+        "attempts": { "const": 3 },
+        "owner_acts": { "const": true }
+      }
+    },
     "agent_status": {
       "description": "herdr pane.agent_status_changed for a registered long-lived seat; input only, section prompt-parked",
       "type": "object",
@@ -29,94 +102,42 @@
       },
       "required": ["kind", "pane_id", "seat", "session_id", "status", "at"]
     },
-    "prompt_cleared": {
-      "allOf": [{ "$ref": "#/$defs/base" }],
-      "properties": {
-        "kind": { "const": "prompt.cleared" },
-        "code": { "const": 200 },
-        "node": { "const": "N-12" },
-        "idempotency_key": { "type": "string" },
-        "seat": { "type": "string" },
-        "session_id": { "type": "string" },
-        "cleared_at": { "$ref": "#/$defs/at" },
-        "parked_seconds": { "type": "integer", "minimum": 0 }
-      },
-      "required": ["idempotency_key", "seat", "session_id", "cleared_at", "parked_seconds"]
-    },
     "prompt_parked": {
-      "allOf": [{ "$ref": "#/$defs/base" }],
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
       "properties": {
         "kind": { "const": "prompt.parked" },
         "code": { "const": 423 },
         "node": { "const": "N-12" },
-        "idempotency_key": { "type": "string", "description": "seat, colon, session id, colon, the UTC second the blocked status began" },
+        "episode": { "type": "string", "description": "seat, colon, session id, colon, the UTC second the blocked status began; the subject of the operation key N-12/prompt.parked/<episode>" },
         "seat": { "type": "string" },
         "pane_id": { "type": "string" },
         "session_id": { "type": "string" },
         "rule": { "type": "string", "description": "the id of the matching prompt-rules.json rule, or unmatched" },
         "action": { "enum": ["card", "answer", "down"] },
-        "answer_model": { "type": "string", "description": "for rule model-limit with action answer: the model read from roles/ROLE.json key model for the seat's runtime; absent when the action is card" },
+        "answer_model": { "type": "string" },
         "message": { "type": "string" },
         "blocked_since": { "$ref": "#/$defs/at" },
         "detected_at": { "$ref": "#/$defs/at" },
         "age_seconds": { "type": "integer", "minimum": 0 },
         "recard_count": { "type": "integer", "minimum": 0 }
       },
-      "required": ["idempotency_key", "seat", "pane_id", "session_id", "rule", "action", "blocked_since", "detected_at", "age_seconds", "recard_count"]
+      "required": ["episode", "seat", "pane_id", "session_id", "rule", "action", "blocked_since", "detected_at", "age_seconds", "recard_count"]
     },
-    "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
-    "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
-    "phase": { "$ref": "../N-07/record.schema.json#/$defs/phase" },
-    "role": { "$ref": "../N-07/record.schema.json#/$defs/role" },
-    "base": { "$ref": "../N-07/record.schema.json#/$defs/base" },
-    "stall": {
-      "allOf": [{ "$ref": "#/$defs/base" }],
+    "prompt_cleared": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
       "properties": {
-        "kind": { "const": "stall" },
-        "code": { "const": 500 },
+        "kind": { "const": "prompt.cleared" },
+        "code": { "const": 200 },
         "node": { "const": "N-12" },
-        "idempotency_key": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}:[a-z-]+:[1-3]:[0-9]+$", "description": "the lease key (ticket:phase:attempt), colon, the generation written by the revoke" },
-        "ticket": { "$ref": "#/$defs/ticket" },
-        "phase": { "$ref": "#/$defs/phase" },
-        "role": { "$ref": "#/$defs/role" },
-        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
-        "dispatch_id": { "type": "string" },
-        "run_id": { "type": "string" },
-        "lease_key": { "type": "string" },
-        "old_token": { "type": "integer", "minimum": 1 },
-        "new_generation": { "type": "integer", "minimum": 2 },
-        "reason": { "type": "string", "enum": ["no-progress", "launcher-dead", "deadline", "no-first-heartbeat", "lease-expired"] },
-        "outcome": { "const": "stalled" },
-        "last_heartbeat_at": { "$ref": "#/$defs/at" },
-        "last_progress_at": { "$ref": "#/$defs/at" },
-        "age_seconds": { "type": "integer", "minimum": 0 },
-        "bound_seconds": { "type": "integer", "minimum": 1 },
-        "deadline": { "$ref": "#/$defs/at" },
-        "pid": { "type": "integer", "minimum": 0 },
-        "killed": { "type": "boolean" },
-        "kill_reason": { "type": "string", "enum": ["term", "kill", "already-gone", "pid-reused"] },
-        "kill_attempts": { "type": "integer", "minimum": 0, "maximum": 3 },
-        "handled_by": { "type": "string", "description": "set by N-11" },
-        "handled_generation": { "type": "integer" }
+        "episode": { "type": "string" },
+        "seat": { "type": "string" },
+        "session_id": { "type": "string" },
+        "cleared_at": { "$ref": "#/$defs/at" },
+        "parked_seconds": { "type": "integer", "minimum": 0 }
       },
-      "required": ["idempotency_key", "ticket", "phase", "role", "attempt", "dispatch_id", "run_id", "lease_key", "old_token", "new_generation", "reason", "outcome", "age_seconds", "bound_seconds", "killed", "kill_attempts"]
-    },
-    "stall_kill_failed": {
-      "allOf": [{ "$ref": "#/$defs/base" }],
-      "properties": {
-        "kind": { "const": "stall.kill.failed" },
-        "code": { "const": 500 },
-        "node": { "const": "N-12" },
-        "idempotency_key": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}:[a-z-]+:[1-3]:[0-9]+:kill-failed$" },
-        "lease_key": { "type": "string" },
-        "run_id": { "type": "string" },
-        "ticket": { "$ref": "#/$defs/ticket" },
-        "pid": { "type": "integer", "minimum": 1 },
-        "process_start": { "$ref": "#/$defs/at" },
-        "attempts": { "const": 3 },
-        "owner_acts": { "const": true }
-      },
-      "required": ["idempotency_key", "lease_key", "run_id", "ticket", "pid", "attempts", "owner_acts"]
+      "required": ["episode", "seat", "session_id", "cleared_at", "parked_seconds"]
     }
   }
 }

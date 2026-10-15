@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: the retry budget. Every layer that retries anything, the one failure class each layer retries, the
+     budgets that bound the product of the layers, and the deadlines that nest. Book 1.1.0 (review F26; verification NF-E5,
+     NF-E3). Rows are attributes so check C27 (retry composition) and C28 (deadline nesting) can recompute them.
+     Validated by rebuild/design/check.sh against schema/volume.xsd. -->
+<volume id="retry-budget" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="Retry budget">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings</entry>
+    <entry ref="purpose">Purpose and the one rule: only the innermost layer retries a failure</entry>
+    <entry ref="layers">The layers: owner, maximum tries, parent, the failure classes each retries</entry>
+    <entry ref="operations">The operations that leave the host, their keys and the lookup before a repost</entry>
+    <entry ref="budgets">The budgets: per unit per head, per ticket, per day</entry>
+    <entry ref="deadlines">The deadlines and how they nest</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="contracts.xml#retry-owner" kind="shared">Who retries what and whether an attempt is charged; this volume is the composition of that table</sibling>
+    <sibling href="contracts.xml#timing" kind="shared">Seat timing defaults</sibling>
+    <sibling href="contracts.xml#outbox" kind="shared">Effects written in the deciding Commit; the external lookup before a repost</sibling>
+    <sibling href="ci-capacity.xml#ci-capacity" kind="shared">The pods these layers multiply</sibling>
+    <sibling href="review-dispositions.xml#review-dispositions" kind="shared">F26 resolves here</sibling>
+    <shared href="../nodes/N-11/spec.xml#N-11" role="cites">Seat attempts and backoff</shared>
+    <shared href="../nodes/N-24/spec.xml#N-24" role="cites">The pod ladder</shared>
+    <shared href="../nodes/N-25/spec.xml#N-25" role="cites">Plan attempts and the status post</shared>
+    <shared href="../nodes/N-07/spec.xml#N-07" role="cites">Enforces the per-ticket and daily budgets</shared>
+    <dag href="../dag.md#4-re-entries"/>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>Book 1.0.0 had seventeen retry layers stacked with no composition: a 5-rung pod ladder inside 3 plan attempts inside 3 gate re-dispatches inside 3 worker attempts, up to 135 pods per unit per ticket and no global cap; deadlines were inverted, so N-08 declared a gate missing after 3600 s while one N-25 attempt could run 3 hours (review F26; verification NF-E5).</s>
+    <rule id="innermost">Only the innermost layer retries a given failure class. A layer that gives up emits its own exhausted class (for example ladder-exhausted); the parent retries that class only when its row lists it, and no class appears in the retries-on list of two layers.</rule>
+    <s>max is the number of tries including the first, so max 1 means the layer never retries; parent is the layer whose one try contains this layer's tries, or none.</s>
+    <s>A test assertion, a review verdict, a refused plan and a 403, 409 or 412 from the store are results, never retried by any layer (V05; shared/contracts.xml#retry-owner).</s>
+    <s>Every runtime proof is not-run until the build ticket citing the anchor lands it.</s>
+  </purpose>
+
+  <layers id="layers">
+    <layer id="pod-ladder" owner="N-24" max="5" parent="plan-attempt" chain="ci" retries-on="unschedulable image-pull checkout connect-timeout agent-lost provision" exhausted="ladder-exhausted" charged="none">Rungs 1 to 3 after 10, 30, 90 s, rung 4 a clean re-run after 300 s, rung 5 the report (nodes/N-24/spec.xml#m-ladder); admission-refused is not in the list: it ends the unit at once (ci-capacity.xml#admission).</layer>
+    <layer id="plan-attempt" owner="N-25" max="2" parent="gate-phase" chain="ci" retries-on="ladder-exhausted build-died result-missing build-timeout" exhausted="gate-infra" charged="none">A fresh coq-gate build of the same plan (nodes/N-25/spec.xml#m-attempts); after the second, coq/gate error and one card.</layer>
+    <layer id="gate-phase" owner="N-11" max="1" parent="none" chain="ci" retries-on="" exhausted="gate-infra" charged="none">The gate phase of a head is never re-dispatched after N-25 has given up; a missing gate verdict past its derived deadline (#deadlines d-gate-pending) is gate.verdict missing and one card, not a new gate run.</layer>
+    <layer id="planner" owner="N-23" max="3" parent="none" retries-on="mirror-fetch jenkins-queue-timeout planner-stall" exhausted="planner-exhausted" charged="none">One planner job per try with N-11 backoff; then plan.refused 412 diff-unavailable or plan.blocked 423 jenkins-queue and one card.</layer>
+    <layer id="gate-trigger" owner="N-23" max="3" parent="planner" retries-on="jenkins-post-timeout jenkins-5xx" exhausted="planner-stall" charged="none">The outbox effect that posts buildWithParameters; before every repost the worker looks for COQ_OP_ID in the queue and the builds (#operations gate.run).</layer>
+    <layer id="artifact-fetch" owner="N-24" max="3" parent="plan-attempt" retries-on="artifact-http" exhausted="result-missing" charged="none">Fetching gate-result.jsonl, unit logs and records/*.jsonl after the build.</layer>
+    <layer id="status-post" owner="N-25" max="3" parent="none" retries-on="github-timeout github-5xx github-secondary-limit" exhausted="status-post-failed" charged="none">The outbox effect that posts coq/gate with the coq-gate GitHub App; a read of the statuses for the sha and context comes before every repost; then status.post.failed 500 and one card.</layer>
+    <layer id="spec-check" owner="N-46" max="1" parent="plan-attempt" retries-on="" exhausted="none" charged="none">check.sh exit 0, 1 or 2 is a result of the unit; only the pod around it climbs pod-ladder.</layer>
+    <layer id="seat-attempt" owner="N-11" max="3" parent="none" retries-on="phase.failed stall crashed no_result schema_invalid output_rejected seat_blocked error_max_turns error_max_budget" exhausted="dead" charged="attempt">One row for each seat phase: worker, reviewer and spec-author have 3 attempts each (shared/contracts.xml#retry-owner); a review.changes verdict routes to the worker and is the worker's next attempt, not a reviewer retry; harness_mismatch is never retried and charges nothing (the ticket waits with one card, shared/contracts.xml#retry-owner).</layer>
+    <layer id="validator" owner="N-18" max="3" parent="seat-attempt" retries-on="validator-infra cannot-run" exhausted="validator-exhausted" charged="none">The dark-build validator's infrastructure only; validator-exhausted is not in seat-attempt's list, so a broken validator never burns seat attempts.</layer>
+    <layer id="main-fix" owner="N-11" max="3" parent="none" retries-on="main.rejected" exhausted="dead" charged="ticket">Fix tickets cut for one red main; each fix ticket has its own seat-attempt budget and the per-ticket budget below.</layer>
+    <layer id="store-commit" owner="N-01" max="3" parent="none" retries-on="store-unavailable store-deadline" exhausted="store.unreachable" charged="none">The store client used by every node retries only transport failures with the same operation key; a replay is answered by the idempotency row (shared/contracts.xml#operation-keys).</layer>
+    <layer id="image-job" owner="N-22" max="3" parent="none" retries-on="image-queue-timeout build-pod-unschedulable build-aborted registry-timeout" exhausted="image-infra" charged="none">A fresh coq-image build or host leg per try (nodes/N-22/spec.xml#retries).</layer>
+    <layer id="host-build" owner="N-22" max="3" parent="image-job" retries-on="podman-push host-registry-timeout" exhausted="registry-timeout" charged="none">ci/image/build.sh's own loop on the host leg; registry-timeout from an exhausted host build is retried by image-job once per job try.</layer>
+    <layer id="jenkins-check" owner="N-20" max="3" parent="none" retries-on="jenkins-argo-not-synced jenkins-unreachable job-missing jenkins-check-stall" exhausted="jenkins.unready" charged="none">Check attempts per gitops sha.</layer>
+    <layer id="jenkins-call" owner="N-20" max="3" parent="jenkins-check" retries-on="http-transport kube-transport" exhausted="jenkins-unreachable" charged="none">One HTTP or kube call inside a check; backoff 2, 4, 8 s.</layer>
+    <layer id="namespace-check" owner="N-21" max="3" parent="none" retries-on="namespace-argo-not-synced namespace-api-down pull-secret-not-ready canary-unschedulable namespace-check-stall" exhausted="namespace.unready" charged="none">Check attempts per gitops sha; a dry-run refusal or a failed probe is a result (namespace.unready at once), not a retry.</layer>
+    <layer id="namespace-call" owner="N-21" max="3" parent="namespace-check" retries-on="kube-api-transport" exhausted="namespace-api-down" charged="none">One kube call inside a check.</layer>
+    <layer id="plugin-provision" owner="N-20" max="1" parent="pod-ladder" retries-on="" exhausted="connect-timeout" charged="none">The Kubernetes plugin's own re-provisioning is cut by the connect timeout, so the plugin never adds pods beyond a rung.</layer>
+    <layer id="cleanup-delete" owner="N-45" max="3" parent="none" retries-on="delete-error" exhausted="cleanup.failed" charged="none">One deletion of one path.</layer>
+    <layer id="backup" owner="N-05" max="3" parent="none" retries-on="backup-io" exhausted="backup.failed" charged="none">One backup class run.</layer>
+    <layer id="seat-api" owner="N-15" max="1" parent="seat-attempt" retries-on="" exhausted="stall" charged="none">The CLI's own API retries inside one seat run are bounded by run.deadline and are part of that one attempt; the launcher adds none.</layer>
+  </layers>
+
+  <operations id="operations">
+    <s>An operation that leaves the host is an outbox effect written in the Commit that decides it (shared/contracts.xml#outbox); its operation key is the effect's op_id and travels with the external call, so a repost can find the first post.</s>
+    <operation id="gate.run" key="N-23/gate.run/&lt;pr&gt;@&lt;head_sha&gt;@&lt;plan_attempt&gt;/r1" provider="jenkins" action="build" layer="gate-trigger" carries="COQ_OP_ID build parameter" lookup="GET /queue/api/json and GET /job/coq-gate/api/json?tree=builds[number,actions[parameters[name,value]]] filtered by COQ_OP_ID, before every repost; a queue item URL expires 5 minutes after its build starts, so the builds list is always read too">N-26 uses the same shape under its own node segment for main.</operation>
+    <operation id="image.build" key="N-22/image.build/&lt;name&gt;:&lt;version&gt;:&lt;inputs_hash12&gt;@&lt;attempt&gt;/r1" provider="jenkins" action="build" layer="image-job" carries="COQ_OP_ID build parameter" lookup="queue and builds of coq-image by COQ_OP_ID; GHCR HEAD on the leg tag for an already-pushed leg"/>
+    <operation id="status.post" key="N-25/status.post/&lt;sha&gt;@&lt;context&gt;@&lt;plan_attempt&gt;/r1" provider="github" action="status" layer="status-post" carries="the description and target_url" lookup="GET /repos/jkkelley/coq-jev-herdr-plugin/commits/&lt;sha&gt;/statuses filtered by context coq/gate and creator the coq-gate app; equal state and description is done"/>
+    <operation id="build.stop" key="N-23/build.stop/&lt;pr&gt;@&lt;head_sha&gt;@&lt;plan_attempt&gt;/r1" provider="jenkins" action="stop" layer="gate-trigger" carries="the build number" lookup="GET /job/coq-gate/&lt;n&gt;/api/json building false is done"/>
+    <operation id="pod.create" key="none: the Jenkins plugin creates pods inside a build" provider="kubernetes" action="create" layer="pod-ladder" carries="pod name with sha12, unit hash, plan attempt and rung" lookup="the plugin owns the pod; a rung never reuses a name"/>
+  </operations>
+
+  <budgets id="budgets" pods-per-unit-per-head="10" pods-per-unit-per-ticket="30" seat-usd-per-ticket="100">
+    <budget id="pods-per-unit-per-head" value="10" formula="pod-ladder.max x plan-attempt.max" enforced-by="N-24 N-25">5 rungs x 2 plan attempts; gate-phase adds none.</budget>
+    <budget id="pods-per-unit-per-ticket" key="budget.ticket_pods_per_unit" value="30" formula="pods-per-unit-per-head x seat-attempt.max" enforced-by="N-07">Three worker heads at most, each with its own gate; N-07 refuses to dispatch a planner or a plan attempt that would pass it (plan.blocked 423 reason budget, one card).</budget>
+    <budget id="seat-usd-per-ticket" key="budget.ticket_seat_usd" value="100" unit="USD" enforced-by="N-07">The sum of total_cost_usd over every seat.result of the ticket; N-07 refuses GrantDispatch past it (lease not granted, one card).</budget>
+    <budget id="daily-seat-usd" key="budget.daily_seat_usd" default="300" unit="USD" enforced-by="N-07">UTC day; past it N-07 grants no seat lease except a system-epic ticket until the next day or an owner ruling; three tickets at the per-ticket cap; owner-tunable.</budget>
+    <budget id="daily-pod-minutes" key="budget.daily_pod_minutes" default="4320" unit="minutes" enforced-by="N-07">UTC day, summed from pod.run durations and rung waits; past it N-07 plans no new gate run except main; half of container-cap 6 x 1440 minutes (ci-capacity.xml#model); owner-tunable.</budget>
+    <s>The four budget keys are N-07 config (shared/state-store.xml#config-keys, defaults in shared/contracts.xml#timing); this volume states what they mean.</s>
+    <s>Worst cases that remain, stated so nobody rediscovers them: a herdr plan of 31 units costs at most 310 pods per head and 930 per ticket; a red main costs at most 3 fix tickets, each under the per-ticket caps.</s>
+  </budgets>
+
+  <deadlines id="deadlines">
+    <s>Grammar for C28: derived-from lists the ids of the deadlines this one waits for, an id repeated once per sequential try; the row holds when value-seconds is at least the sum of theirs; an empty list is a leaf whose basis is the text; truncates names the deadline that cuts a row short instead of waiting for it.</s>
+    <deadline id="d-connect" node="N-24" key="ladder.connect_seconds" value-seconds="300" derived-from="">The Jenkins agent connect timeout (slaveConnectTimeout) of 5 minutes.</deadline>
+    <deadline id="d-budget-cap" node="N-23" key="suite.budget_cap_seconds" value-seconds="1800" derived-from="">The budget_minutes cap of 30 (p95 x 1.5, floor 5).</deadline>
+    <deadline id="d-pod-slack" node="N-24" key="pod.deadline_slack_seconds" value-seconds="300" derived-from="">The 5 minutes after the test timeout so w3 always fires before the kubelet.</deadline>
+    <deadline id="d-pod" node="N-24" key="pod.active_deadline_seconds" value-seconds="2400" derived-from="d-connect d-budget-cap d-pod-slack">(connect 5 + budget + 5) x 60 at the budget cap.</deadline>
+    <deadline id="d-ladder-waits" node="N-24" key="ladder.waits_seconds" value-seconds="430" derived-from="">10 + 30 + 90 + 300.</deadline>
+    <deadline id="d-unit-worst" node="N-24" key="unit.worst_seconds" value-seconds="12430" truncates="d-build" derived-from="d-pod d-pod d-pod d-pod d-pod d-ladder-waits">Five pods each to its deadline plus the waits; the build bound cuts it short.</deadline>
+    <deadline id="d-build" node="N-24" key="gate.build_bound_seconds" value-seconds="10800" derived-from="">Sum of budgets / maxPods + 1800, capped at PT3H.</deadline>
+    <deadline id="d-follow-slack" node="N-24" key="gate.follow_slack_seconds" value-seconds="600" derived-from="">N-24 w6: the plan bound plus 10 minutes.</deadline>
+    <deadline id="d-follow" node="N-24" key="gate.follow_seconds" value-seconds="11400" derived-from="d-build d-follow-slack">The Go service follows the build to its bound plus slack, then stops it.</deadline>
+    <deadline id="d-queue" node="N-23" key="jenkins.queue_seconds" value-seconds="600" derived-from="">N-23 w3 PT10M.</deadline>
+    <deadline id="d-import" node="N-24" key="artifact.import_seconds" value-seconds="600" derived-from="">N-24 w7, 60 s per file, 3 tries, the result file and the records files.</deadline>
+    <deadline id="d-plan-attempt" node="N-25" key="gate.plan_attempt_seconds" value-seconds="12600" derived-from="d-queue d-follow d-import">Queue, build followed to its bound, artifacts imported.</deadline>
+    <deadline id="d-backoff" node="N-11" key="retry.backoff_max_seconds" value-seconds="300" derived-from="">Min(10 s x 2^(n-1), 5 min).</deadline>
+    <deadline id="d-status-post" node="N-25" key="status.post_seconds" value-seconds="120" derived-from="">3 calls of 10 s with 2, 4, 8 s backoff, plus outbox worker ticks.</deadline>
+    <deadline id="d-gate-run" node="N-25" key="gate.run_bound_seconds" value-seconds="25620" derived-from="d-plan-attempt d-plan-attempt d-backoff d-status-post">Two plan attempts, one backoff, the final post.</deadline>
+    <deadline id="d-planner" node="N-23" key="planner.stall_seconds" value-seconds="900" derived-from="">N-23 stall bound PT15M.</deadline>
+    <deadline id="d-planner-total" node="N-23" key="planner.bound_seconds" value-seconds="3300" derived-from="d-planner d-planner d-planner d-backoff d-backoff">Three planner tries and two backoffs.</deadline>
+    <deadline id="d-poll" node="N-04" key="forge.stale_after_seconds" value-seconds="180" derived-from="">A posted status is in a fresh snapshot within this bound.</deadline>
+    <deadline id="d-gate-absent" node="N-08" key="gate.absent_seconds" value-seconds="4200" derived-from="d-planner-total d-queue d-status-post d-poll">The pending status is posted once the plan has a build number; derived, replaces the 1800 default.</deadline>
+    <deadline id="d-gate-pending" node="N-08" key="gate.pending_seconds" value-seconds="25800" derived-from="d-gate-run d-poll">The gate-missing bound: a terminal status follows within the gate run bound; derived, replaces the 3600 default.</deadline>
+    <deadline id="d-main-run" node="N-26" key="main.run_bound_seconds" value-seconds="28920" derived-from="d-planner-total d-gate-run">The main plan uses the same planner and gate run bounds.</deadline>
+    <deadline id="d-verify-slack" node="N-10" key="verify.slack_seconds" value-seconds="600" derived-from="">CANON F13: N-26 plan bound plus 600 s.</deadline>
+    <deadline id="d-verify" node="N-10" key="verify.expected_seconds" value-seconds="29700" derived-from="d-main-run d-poll d-verify-slack">The verify bound; derived, replaces the 3600 default.</deadline>
+    <s>Seat deadlines (run.deadline_seconds, stall, start and kill grace) are in shared/contracts.xml#timing and nest inside one seat-attempt; they do not compose with the CI chain because a seat never waits on a gate.</s>
+    <s>The CI deadlines are long because a build may legitimately run 3 hours; the derived N-08 and N-10 bounds are the honest consequence, and shrinking them means shrinking d-build, never cutting a deadline below its inner sum.</s>
+  </deadlines>
+
+  <many-agents id="many-agents">
+    <readers>Every node that retries cites its layer row by id; a reviewer checks a new retry against #innermost before anything else.</readers>
+    <writers>A new layer or a changed maximum is one ticket on this file; C27 recomputes the budgets from the layer rows and refuses a class listed by two layers, and C28 refuses a deadline below its inner sum.</writers>
+    <collision>Two tickets changing two layers at once both declare this file and run in order (N-14); a node volume that states its own retry count instead of citing a row is a review finding.</collision>
+  </many-agents>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep" note="V05: infrastructure retried, assertions never"/>
+    <source path="rebuild/investigation/S02-k8s-jobs-tekton-jenkins.md" anchor="8-what-to-carry-forward" note="an agent tuning retries masks failures"/>
+    <source path="https://docs.cloudbees.com/d/kb-360028147532" note="build trigger returns a queue item; the queue URL expires 5 minutes after the build starts"/>
+  </sources>
+</volume>

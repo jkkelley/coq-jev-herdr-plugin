@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- N-50 Cut-over records. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
      Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh. -->
-<volume id="N-50" kind="node-spec" node="N-50" group="G7" version="1.0.0" issued="2026-10-14" timezone="UTC">
+<volume id="N-50" kind="node-spec" node="N-50" group="G7" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, shared</entry>
@@ -45,8 +45,8 @@
   </purpose>
 
   <input id="input">
-    <record kind="ruling" from="N-29">The GOFACTORY ruling record.</record>
-    <record kind="ruling" from="N-29">The D09 ruling (card C41) and the D14 ruling (card C42) as records in the store (rulings a gate checks are records; the system lane records the answers.jsonl rows as ruling records at bring-up).</record>
+    <record kind="ruling" from="N-29">The GOFACTORY ruling record: the owner word matched by N-29 from an owner principal on the owner page or the owner CLI (shared/authority.xml#owner-words); never a relay, a default, an import or seat text.</record>
+    <record kind="ruling" from="N-29">The D09 ruling (card C41) and the D14 ruling (card C42). The answers.jsonl rows imported at bring-up are evidence only (source import); they authorize nothing on their own. They count as rulings once the GOFACTORY card, which lists C41 and C42 and the cut-over they cause (fourteen cancels, PR 35 closed, design branch deleted after harvest), is answered GOFACTORY by the owner: that one owner answer is the authority for this node's records.</record>
     <record kind="merge" from="N-09" via="store query">Merges of small-cut tickets whose declared files came from the design branch (the ticket carries source_branch and source_sha); the design branch delete waits on the last of them.</record>
     <schema href="record.schema.json#/$defs/input"/>
   </input>
@@ -68,7 +68,7 @@
 
   <mechanism id="mechanism">
     <where>Go package cutover in the service; forge calls through the service's gh auth; file reads from the mirror at the GOFACTORY sha.</where>
-    <step n="1">On GOFACTORY: verify the D09 and D14 ruling records exist (by card id C41 and C42); if either is missing, write cancel 412 reason ruling-missing and one card; nothing else runs.</step>
+    <step n="1">On GOFACTORY: verify the ruling's principal is the owner and its source the owner page or CLI, and that the GOFACTORY card listed the D09 and D14 rulings (card ids C41 and C42); if either is missing from the card, write cancel 412 reason ruling-missing and one owner card; nothing else runs. A ruling from any other principal or source applies nothing (N-29 refuses it 403 upstream).</step>
     <step n="2">Compute the cancel set (rule above) from the ticket files at the sha; write one cancel 200 per ticket, idempotent by key cancel:&lt;ticket&gt;; write one ticket.request for the archive PR.</step>
     <step n="3">PR 35: gh pr close 35 --comment with the text; release the treehouse slot lease (slot 2) through N-45 with a disposition pointing at N-49's entry U02-35; write pr.close 200. Its branch is then a CLOSE row for N-45 (the record carries the branch name and sha).</step>
     <step n="4">Design branch: wait until every merged small-cut ticket that names source_branch feat/go-scheduler-design-one-xml-spec-per-domain-unde has its merge record, and no open small-cut ticket names it; then tag rebuild/spec-16-design-&lt;YYYYMMDD&gt; at the branch sha (history kept), write branch.delete 200, and N-45 deletes the branch on that record.</step>
@@ -96,7 +96,7 @@ flowchart LR
   <waits id="waits">
     <wait id="w1" class="bounded" what="the D09 and D14 ruling records" timeout="PT0S: checked once when the GOFACTORY ruling arrives, never waited on" fallback="cancel 412 and one card; GOFACTORY's other nodes (N-49) proceed"/>
     <wait id="w2" what="gh pr close" timeout="PT30S" fallback="ladder 10, 30, 90 s; then 423 and an alert; N-49's entry for PR 35 stays planned and the daily retry applies"/>
-    <wait id="w3" what="small-cut merges naming the design branch" timeout="P14D from GOFACTORY" fallback="branch.delete 423 reason harvest-late with the open tickets named; one card: delete anyway (the tag keeps history) or extend; default after 7 more days is delete, because the tag holds every file"/>
+    <wait id="w3" what="small-cut merges naming the design branch" timeout="P14D from GOFACTORY" fallback="branch.delete 423 reason harvest-late with the open tickets named; one card: delete anyway (the tag keeps history) or extend; default after 7 more days is delete, because the tag holds every file. This card is not owner-only: its default is a system branch delete already authorized by the GOFACTORY answer, never an owner word or a break glass."/>
     <wait id="w4" what="the archive ticket's merge" timeout="P7D" fallback="N-11's dead path for the ticket; the cancel records are already the truth in the store; the file status lags, which N-51's audit shows as a known row, not a failure"/>
     <cog-test>The cog that could stall this node is a human waiting to be sure the small cut took every file it needs. The tag removes the risk: a deleted branch's files are one git show away.</cog-test>
   </waits>
@@ -128,8 +128,8 @@ flowchart LR
   </status-codes>
 
   <state-paths id="state-paths">
-    <path id="N-50.log" glob="$COQ_STATE/logs/cutover/*.jsonl" retention="P90D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-50.log">Run output.</path>
-    <path id="N-50.cancel-set" glob="$COQ_STATE/cutover/cancel-set-&lt;sha&gt;.json" retention="P365D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-50.cancel-set">The computed set with full titles at the GOFACTORY sha.</path>
+    <path id="N-50.log" glob="$COQ_STATE/logs/cutover/*.jsonl" retention="P90D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-50.log">Run output.</path>
+    <path id="N-50.cancel-set" glob="$COQ_STATE/cutover/cancel-set-&lt;sha&gt;.json" retention="P365D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-50.cancel-set">The computed set with full titles at the GOFACTORY sha.</path>
   </state-paths>
 
   <edges id="edges">
@@ -150,8 +150,9 @@ flowchart LR
 
   <permissions id="permissions">
     <may role="system" do="compute the set; write cancel, pr.close, branch.delete; close PR 35; tag the design branch; request the archive ticket"/>
-    <may role="owner" do="rule a different cancel set on the 409 card; rule on the w3 card"/>
+    <may role="owner" do="answer GOFACTORY (owner page or CLI); rule a different cancel set on the 409 card; rule on the w3 card"/>
     <may-not role="seat" do="cancel a ticket; close a PR; delete or tag a branch"/>
+    <may-not role="relay" do="carry GOFACTORY or the 409 cancel-set answer; a relayed or imported answer authorizes nothing here"/>
     <may-not role="system" do="cancel outside the computed set; delete the design branch before the tag exists; delete before the harvest or the w3 default"/>
   </permissions>
 
@@ -159,12 +160,12 @@ flowchart LR
     <counter name="cutover_cancels" kind="gauge">Cancel records written over fourteen.</counter>
     <counter name="cutover_pr35_state" kind="gauge-label">open or closed, from the forge snapshot.</counter>
     <counter name="cutover_design_branch" kind="gauge-label">present, tagged, deleted; and the count of open small-cut tickets naming it.</counter>
-    <panel screen="Rail">The R-04 row shows PR 35 closed and the branch state.</panel>
+    <panel screen="Rail" kind="pr.close">The R-04 row shows PR 35 closed and the branch state.</panel>
   </monitoring>
 
   <runbook id="runbook">
     <step n="1" when="a 409 card">Read the set found; if the tree moved (a ticket was done or re-cut), answer with the set to cancel; the ruling re-runs the node.</step>
-    <step n="2" when="a 412 card">The system lane records the missing ruling from answers.jsonl (C41 or C42) as a ruling record; the node re-runs on the next tick.</step>
+    <step n="2" when="a 412 card">The GOFACTORY card did not list C41 or C42: N-28 posts a fresh GOFACTORY card that lists both, and the owner answers it on the owner page or CLI; no system lane writes a ruling for the owner.</step>
     <step n="3" when="the w3 card">Delete anyway (the tag keeps the files) or extend; the default is delete after 7 more days.</step>
     <step n="4" when="a file from the deleted branch is needed later">git show rebuild/spec-16-design-&lt;date&gt;:&lt;path&gt; from the mirror; no branch restore needed.</step>
     <cleanup>line/bin/cleanup.sh --entry N-50.log, N-50.cancel-set.</cleanup>
@@ -174,13 +175,13 @@ flowchart LR
   <sources id="sources">
     <source path="rebuild/investigation/03-DECISIONS.md" anchor="#11-d09-the-spec-16-go-scheduler-and-its-14-build-tickets">D09 B: cancel the fourteen, keep the proto, interfaces and testkit; the design branch kept only for the files the cut packages take, then deleted</source>
     <source path="rebuild/investigation/03-DECISIONS.md" anchor="#16-d14-the-canonical-design-document">D14 D: a new rebuild design; PR 35 closed; SPEC-17 and its draft become sources</source>
-    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C41 and C42">The owner's picks: small cut, cancel fourteen; new rebuild design (from the phone, went recommended)</source>
-    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="Checkpoint 2026-10-14T03:51Z">Ruling 27: cancels and the small-cut tickets land only at GOFACTORY through the normal ticket path</source>
+    <source path="$HOME/.bearings/coq-stable/answers.jsonl" anchor="C41 and C42">The owner's picks: small cut, cancel fourteen; new rebuild design (from the phone, went recommended)</source>
+    <source path="$HOME/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="Checkpoint 2026-10-14T03:51Z">Ruling 27: cancels and the small-cut tickets land only at GOFACTORY through the normal ticket path</source>
     <source path="rebuild/investigation/L14-go-grpc-control-plane.md" anchor="#41-the-go-scheduler-spec-16">The fourteen unbuilt tickets under work-orders/WO-20261010-329d/WO-20261012-ea33/ (fifteen lines listed; 8d87 has its own verdict)</source>
     <source path="rebuild/investigation/04-UNLANDED.md" anchor="#2-open-pull-requests">PR 35: DECIDE D14 then CLOSE; its slot 2 lease goes with it</source>
     <source path="rebuild/investigation/04-UNLANDED.md" anchor="#3-remote-branches-not-merged-to-main">go-scheduler-design KEEP until D09; under D09 B keep only what the cut packages need, then delete</source>
     <source path="rebuild/investigation/L05-git-state.md" anchor="#9-what-to-kill">Each ticket takes its file from this branch at 012fa41; delete after the last build ticket merges</source>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/rulings-gates-check-are-records.md" anchor="file">Rulings a gate checks are records; post via the record path before any node reads them</source>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/rulings-gates-check-are-records.md" anchor="file">Rulings a gate checks are records; post via the record path before any node reads them</source>
     <source path="rebuild/factory-rebuild-plan.xml" anchor="#steps">R-04: PR 35 landed, superseded or closed with a reason</source>
   </sources>
 
@@ -198,7 +199,7 @@ flowchart LR
     <need kind="store-table">ticket status values including cancelled with reason and ruling id; a query for children of an epic by status at a sha; leases cutover:run.</need>
     <need kind="record-kinds">cancel, pr.close, branch.delete, ruling (with card_id and decision), ticket.request, merge (with source_branch and source_sha on the ticket).</need>
     <need kind="status-codes">200, 409 set mismatch (owner acts), 412 ruling missing (owner acts), 423.</need>
-    <need kind="n-29">answers.jsonl rows C34 to C42 and rulings-r02.jsonl rows C43 to C58 are recorded as ruling records at bring-up, keyed by card id.</need>
+    <need kind="n-29">answers.jsonl rows C34 to C42 and rulings-r02.jsonl rows C43 to C58 are imported at bring-up as evidence (source import, keyed by card id), never as owner answers; the GOFACTORY card lists the ones this node acts on.</need>
     <need kind="n-17 n-18">Small-cut tickets carry source_branch and source_sha when their files come from the design branch.</need>
     <need kind="config">cutover.epic WO-20261012-ea33, cutover.expected_count 14, cutover.harvest_timeout P14D, cutover.harvest_default_days 7, cutover.pr 35.</need>
   </shared-needs>

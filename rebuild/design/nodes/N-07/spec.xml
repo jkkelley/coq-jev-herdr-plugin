@@ -3,14 +3,14 @@
      Written 2026-10-14T04:40Z UTC by the spec-author seat for group G2, round 1, against brief C
      (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
      Every time in this volume is UTC. No em dash appears in this volume. Pointers are path plus anchor, never prose. -->
-<volume id="N-07" kind="node-spec" node="N-07" group="G2" title="Scheduler tick and dispatch" version="1.0.0" issued="2026-10-14" timezone="UTC" author="spec-author seat, group G2, round 1">
+<volume id="N-07" kind="node-spec" node="N-07" group="G2" title="Scheduler tick and dispatch" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" author="spec-author seat, group G2, round 1">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
     <entry ref="purpose">Purpose and the one sentence</entry>
-    <entry ref="input">Input: the tick:scheduler entity and lease.granted</entry>
-    <entry ref="output">Output record: dispatch, and the sched:tick entity</entry>
-    <entry ref="mechanism">Mechanism: the level-triggered tick in the Go service</entry>
+    <entry ref="input">Input: the tick:scheduler entity, the tickets and leases tables</entry>
+    <entry ref="output">Output record: dispatch, dispatch.refused, budget.held and the sched:tick entity</entry>
+    <entry ref="mechanism">Mechanism: the level-triggered tick and the GrantDispatch Commit</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
     <entry ref="retries">Retries: three attempts, then recover and report</entry>
@@ -18,7 +18,7 @@
     <entry ref="status-codes">Status codes this node emits</entry>
     <entry ref="state-paths">State paths written and the cleanup script for each</entry>
     <entry ref="edges">DAG edges in and out</entry>
-    <entry ref="schema">Schema: record.schema.json</entry>
+    <entry ref="schema">Schema: record.schema.json and examples</entry>
     <entry ref="checklist">Checklist with proof per item</entry>
     <entry ref="permissions">Permissions</entry>
     <entry ref="monitoring">Monitoring</entry>
@@ -30,120 +30,113 @@
   <pointers id="pointers">
     <parent path="../../index.xml" anchor="N-07"/>
     <dag path="../../dag.md" anchor="3-every-node"/>
-    <sibling node="N-08" path="../N-08/spec.xml" anchor="contents"/>
-    <sibling node="N-09" path="../N-09/spec.xml" anchor="contents"/>
-    <sibling node="N-10" path="../N-10/spec.xml" anchor="contents"/>
+    <sibling node="N-02" path="../N-02/spec.xml" anchor="contents"/>
+    <sibling node="N-03" path="../N-03/spec.xml" anchor="contents"/>
     <sibling node="N-11" path="../N-11/spec.xml" anchor="contents"/>
     <sibling node="N-12" path="../N-12/spec.xml" anchor="contents"/>
+    <sibling node="N-13" path="../N-13/spec.xml" anchor="contents"/>
+    <sibling node="N-14" path="../N-14/spec.xml" anchor="contents"/>
+    <sibling node="N-15" path="../N-15/spec.xml" anchor="contents"/>
     <schema path="record.schema.json" anchor="/$defs/dispatch"/>
+    <shared path="../../shared/contracts.xml" anchor="dispatch"/>
+    <shared path="../../shared/contracts.xml" anchor="roles"/>
+    <shared path="../../shared/contracts.xml" anchor="operation-keys"/>
+    <shared path="../../shared/contracts.xml" anchor="batch"/>
+    <shared path="../../shared/contracts.xml" anchor="lease-machine"/>
+    <shared path="../../shared/contracts.xml" anchor="ticket-transitions"/>
+    <shared path="../../shared/contracts.xml" anchor="retry-owner"/>
+    <shared path="../../shared/contracts.xml" anchor="timing"/>
+    <shared path="../../shared/contracts.xml" anchor="entity-only"/>
+    <shared path="../../shared/retry-budget.xml" anchor="budgets"/>
+    <shared path="../../shared/authority.xml" anchor="role-derivation"/>
     <shared path="../../shared/status-codes.xml" anchor="code-100"/>
     <shared path="../../shared/status-codes.xml" anchor="code-412"/>
+    <shared path="../../shared/status-codes.xml" anchor="code-423"/>
     <shared path="../../shared/status-codes.xml" anchor="code-429"/>
     <shared path="../../shared/status-codes.xml" anchor="code-500"/>
-    <shared path="../../shared/status-codes.xml" anchor="code-503"/>
     <shared path="../../shared/principles.xml" anchor="level-triggered"/>
     <shared path="../../shared/principles.xml" anchor="no-cog"/>
     <shared path="../../shared/principles.xml" anchor="three-attempts"/>
-    <shared path="../../shared/state-store.xml" anchor="table-records"/>
     <shared path="../../shared/state-store.xml" anchor="table-leases"/>
-    <shared path="../../shared/state-store.xml" anchor="cas"/>
     <shared path="../../shared/seat-contract.xml" anchor="brief"/>
     <shared path="../../shared/failure-cases.xml" anchor="crash"/>
     <shared href="../../shared/cut-over.xml#step-scheduler" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
   </pointers>
 
   <purpose id="purpose">
-    <sentence>On every scheduler tick the Go service compares the work that should be running with the work that is running, and writes one dispatch record for each gap, so that no agent and no human ever starts a seat.</sentence>
-    <is>The one place a seat run or a code job is born: a dispatch record is the only thing N-13, N-14 and N-15 consume to bring a seat up.</is>
-    <is>Level-triggered: a lost record never strands a ticket, because the next tick sees the gap again; a duplicate record never double-dispatches, because the dispatch key is deterministic.</is>
-    <is-not>Not a router of records by table: the old belt routed every record through factory/config/routes.json; here records are facts in the store and the tick derives the plan from the facts.</is-not>
-    <is-not>Not a seat, not a pane, not a prompt: dispatch is a row the launcher reads, never text typed into a window.</is-not>
+    <sentence>On every scheduler tick the Go service compares the work that should be running with the work that is running and, for each gap, runs one GrantDispatch Commit that reserves the lease, writes the dispatch record and moves the ticket to in_flight together, so that no agent and no human ever starts a seat.</sentence>
+    <is>The one place a seat run or a gate run is born: the dispatch record (body ../../shared/contracts.xml#dispatch) is the only thing N-13, N-14 and N-15 consume to bring a seat up, and the gate lease is the only thing N-25 runs under.</is>
+    <is>Level-triggered: a lost tick never strands a ticket, because the next tick sees the gap again; a duplicate never double-dispatches, because the operation key and the lease guard of ../../shared/contracts.xml#lease-machine admit one grant per (ticket, phase).</is>
+    <is>The enforcer of the per-ticket and daily budgets (../../shared/retry-budget.xml#budgets): a spent budget holds the grant with one budget.held record.</is>
+    <is-not>Not a router of records by table: the old belt routed every record through factory/config/routes.json; here the tick derives the plan from the tickets and leases tables.</is-not>
+    <is-not>Not the retry owner: N-11 decides attempt n plus 1, a free regrant or dead (../../shared/contracts.xml#retry-owner); this node only grants what is ready.</is-not>
     <decisions>D01 (Go service with gRPC owns scheduling), D02 (one-shot seats), D11 (code does mechanical jobs), D17 (stall timer replaces the idle alarm), T02 and T03 (Symphony loop, level-triggered reconcile), V02 (claim before act).</decisions>
   </purpose>
 
   <input id="input">
     <record kind="tick" subkind="scheduler" entity="tick:scheduler" from="N-06" schema="../N-06/record.schema.json#/$defs/tick">
-      <field name="n">A counter that only grows; the tick that starts this traversal.</field>
-      <field name="at">UTC second of the tick.</field>
-      <field name="interval_seconds">The configured interval, default 5 (config key tick.scheduler_seconds, N-06 schedule; the old belt's factory/config/runner.json poll_seconds 10 is the source of the shape).</field>
-      <note>Ticks are entities, not log records: N-06 compare-and-swap writes the entity tick:scheduler and broadcasts it on an in-process channel with a buffer of 1, so a slow tick coalesces (N-06 output rule); this node consumes that channel.</note>
+      <field name="n, at">The tick that starts this traversal and its UTC second; the interval is tick.scheduler_seconds (../../shared/contracts.xml#timing).</field>
+      <note>An entity broadcast in process with a buffer of 1, so a slow tick coalesces (N-06 output rule).</note>
     </record>
-    <record kind="lease.granted" code="201" from="N-02" schema="../N-02/record.schema.json#/$defs/lease_granted">
-      <field name="key">The lease key: ticket, phase and attempt (N-02 lease_key).</field>
-      <field name="ticket">The work order id the lease is about.</field>
-      <field name="phase">One of worker, reviewer, spec (a cut request, key CR-&lt;request id&gt;, nodes/N-03/spec.xml#input) or gate; the phase of the traversal the lease grants. The validator is never dispatched: N-18 is code that validates every draft on its own tick.</field>
-      <field name="attempt">1 to 3, the attempt this lease grants (from N-02, or from N-11 on a re-entry).</field>
-      <field name="role">The role N-02 copied from the ticket's phase.</field>
-      <field name="holder">Empty until N-07 dispatches; then the dispatch id (N-02: a string the store does not interpret).</field>
-      <field name="token">The fencing token: a store-wide counter that only grows; every later write about this run carries it (N-02 output).</field>
-      <field name="generation">Incremented by N-02 on every grant, renewal or revoke; the compare-and-swap version of the lease row.</field>
-      <field name="expires_at">UTC second the lease dies without a renewal (N-12 reads it).</field>
-      <field name="heartbeat_seconds">The renewal interval N-15 must keep: config key lease.heartbeat_seconds, default 30 (shared/state-store.xml#config-keys).</field>
-      <join name="not_before">The lease body carries no backoff; N-07 joins the attempt record of N-11 by the same key (ticket:phase:attempt) and reads its not_before; a lease with no attempt record (attempt 1) has none.</join>
+    <record kind="ticket row" from="N-03" schema="../N-18/record.schema.json#/$defs/ticket">
+      <field name="id, status, phase, attempt, not_before, lane, priority, version">The dispatchable rows: status ready, or pr_open with phase reviewer or gate (../../shared/contracts.xml#ticket-transitions), not_before passed. The ticket shape is the one def N-18 owns; the status column is ../../shared/contracts.schema.json#/$defs/ticket_status.</field>
+      <field name="target">WO: the PR and head sha once pr_open; CR: request, anchor, group and source_request (../../shared/contracts.schema.json#/$defs/target_cr).</field>
     </record>
-    <reads>The tick also reads, without consuming: the set of open dispatch records with no terminal seat.result, the heartbeat age per run (N-12 owns the verdict, N-07 only counts live runs), the caps table, the roles table, the build-mode state (N-44), the entity flag:hold (set by N-29 from a control.action or a card, read into memory on every scheduler tick per N-06), and the halt record (503).</reads>
+    <record kind="lease row" from="N-02" schema="../../shared/contracts.schema.json#/$defs/lease_row">
+      <field name="key, class, state, token, version, end_reason">Read to find which (ticket, phase) already holds a reserved or running lease, and whether the last end of a key was a free regrant recorded by N-11 (../../shared/contracts.xml#lease-machine).</field>
+    </record>
+    <reads>Without consuming: the entity counter:lease_token (its version is the last token issued), the entity flag:hold, the entity flag:build_mode (N-44) with its version, the roles table, the caps (caps.max_seats), the attempts and seat.result cost rows that the budgets sum, and the harness pin. lease.granted is no longer an input: this node writes it.</reads>
     <starts-when>The tick:scheduler entity is broadcast and the service holds the leader lease node:N-07:leader (see many-agents).</starts-when>
   </input>
 
   <output id="output">
-    <record kind="dispatch" code="100" to="N-13 N-14" schema="record.schema.json#/$defs/dispatch">
-      <field name="dispatch_id">The record id.</field>
-      <field name="idempotency_key">ticket, colon, phase, colon, attempt; a second write with the same key is refused by N-01 with 409 and read as already dispatched.</field>
-      <field name="ticket">The work order id.</field>
-      <field name="role">worker, reviewer, spec-author (for phase spec), or the code role gate; the role file N-13 renders from (shared/seat-contract.xml#roles).</field>
-      <field name="phase">The lease phase, copied.</field>
-      <field name="attempt">The lease attempt, copied.</field>
-      <field name="deadline">UTC second by which the run must end: at plus the role's run_deadline_seconds (default worker 3600, reviewer 1800, spec-author 3600, gate 60; source Symphony turn_timeout_ms 3600000, I02 section 6).</field>
-      <field name="lease_key, lease_token">The lease key and its fencing token, copied; every heartbeat and the seat.result carry the token.</field>
-      <field name="brief_path">Absolute path under the state root of the brief N-13 renders, named by ticket, phase and attempt; written before the dispatch record (see mechanism step 6).</field>
-      <field name="lane">build, verify or system; from the ticket's epic (three loops, AGENTS.md Law: three loops, always).</field>
-      <field name="not_before">Copied from the lease; always at or before at.</field>
+    <record kind="dispatch" code="100" to="N-13 N-14 N-15" schema="record.schema.json#/$defs/dispatch">
+      <field name="body">Exactly ../../shared/contracts.schema.json#/$defs/dispatch_body on the shared committed envelope; unevaluatedProperties false, so no consumer reads a field the body does not define. dispatch_id is the run id (../../shared/contracts.xml#dispatch): d, the grant UTC second as 14 digits, and six characters of the sha256 of lease_key@token.</field>
+      <field name="lease">The integer token this Commit proposed (version of counter:lease_token plus 1) and generation; every later write of the run carries it (../../shared/contracts.xml#fencing).</field>
+      <field name="deadline_at, session, build_mode, target, brief_path">Per ../../shared/contracts.xml#dispatch: deadline_at from run.deadline_seconds.ROLE; session new or resume as N-11 recorded on the attempt (../../shared/contracts.xml#retry-owner); build_mode the flag:build_mode entity with its version; brief_path inside the run bundle N-13 writes.</field>
+      <note>Written only inside the GrantDispatch Commit with the reserved lease (statement leases.grant), the lease.granted record (node N-02, by N-07), tickets.transition ready or pr_open to in_flight, and the counter:lease_token entity; all or nothing. Operation key N-07/dispatch/LEASE_KEY@TOKEN/r1 on the request.</note>
     </record>
-    <record kind="dispatch.refused" code="412" to="N-11" schema="record.schema.json#/$defs/dispatch_refused">
-      <field name="reason">role-unknown, brief-missing, files-claimed, or address-unknown: the address check failed before any dispatch.</field>
-      <field name="ticket">The ticket held.</field>
+    <record kind="dispatch.refused" code="412" to="N-28" schema="record.schema.json#/$defs/dispatch_refused">
+      <field name="reason">role-unknown, brief-render-failed (the phase template does not render in memory) or address-unknown. Nothing is granted and no attempt is charged; the ticket stays dispatchable and is held with reason refused until the repository is fixed. Latched once per (ticket, phase, attempt, reason), so N-28 posts one card. Not a failure record: N-11 never sees it.</field>
+    </record>
+    <record kind="budget.held" code="429" to="N-28 N-40" schema="record.schema.json#/$defs/budget_held">
+      <field name="scope, measure, used, limit, config_key">A budget of ../../shared/retry-budget.xml#budgets is spent: per ticket (#seat-usd-per-ticket, #pods-per-unit-per-ticket) or per UTC day (#daily-seat-usd, #daily-pod-minutes). A hold, not a refusal: the next tick re-examines; latched once per (scope, ticket or day, measure).</field>
     </record>
     <record kind="sched.tick" entity="sched:tick" code="100" to="N-40" schema="record.schema.json#/$defs/tick_done">
-      <field name="counts">desired, live, dispatched, held_by_cap, held_by_hold, refused, conflicts_409; the counters the Stats screen reads.</field>
-      <field name="n">The tick this closes.</field>
-      <note>An entity, not a log record: compare-and-swap written every tick (version grows) and pushed by N-31; 17,280 scheduler ticks a day in the records log would bury every real record (N-06 output rule). A tick that found a gap also leaves its dispatch records, which are the log.</note>
+      <field name="counts">desired, live, dispatched, held_by_cap, held_by_hold, held_by_budget, held_by_refusal, conflicts.</field>
+      <note>Entity-only (../../shared/contracts.xml#entity-only): compare-and-swap every tick, no record.</note>
     </record>
-    <ends-when>Every gap of this tick has a dispatch, a dispatch.refused or a hold reason, and the sched:tick entity is written; the traversal is over and the next tick is a new traversal.</ends-when>
+    <ends-when>Every gap of this tick is dispatched or held with a counted reason, and the sched:tick entity is written; the next tick is a new traversal.</ends-when>
   </output>
 
   <mechanism id="mechanism">
-    <where>Go package sched inside the one service binary (D01, D09); it keeps the core interfaces Clock, JobStore and Ledger of scheduler/internal/core/interfaces.go and the fake clock of scheduler/internal/testkit, and drops the routes table (rejected, see rejected item 1).</where>
-    <shape>One goroutine runs ticks; it never blocks on a dispatch, because a dispatch is a store write and nothing else (SPEC-16 overview sh-loop: ticks never block on a job). The tick function is pure over a snapshot: Tick(snapshot, now, config) returns intents; the engine writes intents with compare-and-swap.</shape>
-    <step n="1" id="m-leader">Read the leader lease node:N-07:leader from N-02. Not held by this process: write nothing, log one line, end the tick. Held: continue with its fencing token.</step>
-    <step n="2" id="m-flags">Read the halt record and the entity flag:hold. Halt (503) present: end the tick after writing sched:tick with held_by_hold equal to desired. Hold present: dispatch nothing new but still count, so the Stats screen shows the backlog.</step>
-    <step n="3" id="m-snapshot">Take one snapshot from N-01 in a single read transaction: leases with empty holder and not_before at or before now; open dispatch records (no seat.result, no stall record with the same lease_token); the caps table; the roles table; the build-mode state; the file claims of in-flight tickets.</step>
-    <step n="4" id="m-desired">Desired set equals the leases of step 3 (worker and reviewer leases on tickets, spec leases on cut-request keys CR-..., which dispatch as role spec-author with the request as the brief target, and gate leases) ordered by lane priority (system first, then verify, then build; source memory three-loops-always), then ticket priority, then lease at. Live set equals the open dispatch records. Gap equals desired minus the tickets with a live run in the same phase.</step>
-    <step n="5" id="m-caps">Clip the gap to capacity: total live seats below caps.max_seats (default 16; owner card C27 lever 2, L06 section 5.8 item g), per role below the role's max_seats, and two worker slots reserved for the system lane (memory three-loops-always). A lease clipped by a cap is held with reason cap and counted; it is not refused and no record is written for it, because the next tick sees it again (SPEC-16.C c-caps: hold, never refuse).</step>
-    <step n="6" id="m-address">Address check before any dispatch (D01 B; Symphony SPEC.md reconcile before dispatch): the role exists in the roles table; the brief renders (N-13 is asked synchronously over the in-process interface to render the brief for ticket, phase, attempt, and returns a path); the ticket's declared files overlap no other in-flight ticket (V07; N-14 refuses again at start). A failed check writes dispatch.refused 412 with the reason and ends this lease's traversal; N-11 decides the retry.</step>
-    <step n="7" id="m-write">Write the dispatch record with idempotency_key ticket:phase:attempt and the lease token, and in the same transaction compare-and-swap the lease row: holder from empty to the dispatch id, expected generation from step 3. A 409 on either write means another tick already dispatched it; read it back and count it as live.</step>
-    <step n="8" id="m-code-roles">A dispatch whose role is a code role (gate) is not a seat: the service performs it in process at once, by writing the record the role names (gate: a pr.opened record with the same head sha and attempt n plus 1 for N-23), then writes seat.result done 200 for the dispatch so the run is terminal. No pane is opened.</step>
-    <step n="9" id="m-done">Compare-and-swap write the sched:tick entity with the counters. End. The next tick:scheduler broadcast starts a new traversal.</step>
-    <invariant>A ticket and phase has at most one live dispatch at any time: guaranteed by the idempotency key (one per attempt) and the lease holder compare-and-swap (one attempt granted at a time by N-02).</invariant>
-    <invariant>Every dispatch names a lease that exists and is unexpired at write time; N-12 kills the run if the lease later dies.</invariant>
+    <where>Go package sched inside the one service binary (D01, D09); it keeps the core interfaces Clock, JobStore and Ledger of scheduler/internal/core/interfaces.go and the fake clock of scheduler/internal/testkit. Tick(snapshot, now, config) is pure and returns grant intents; the engine sends each as one Store.Do (../../shared/contracts.xml#batch).</where>
+    <step n="1" id="m-leader">Read the leader lease node:N-07:leader. Not held by this process: write nothing, log one line, end the tick.</step>
+    <step n="2" id="m-snapshot">One read transaction: dispatchable ticket rows, reserved and running leases, counter:lease_token, flag:hold, flag:build_mode, the roles table, caps, the budget sums of step 5 and the harness pin.</step>
+    <step n="3" id="m-desired">Desired set, computed before any hold so the counters are true under a hold (../../shared/contracts.xml#lease-machine): tickets ready, or pr_open awaiting reviewer or gate, with not_before passed and no reserved or running lease for the ticket and phase; ordered by lane (system, verify, build), then priority, then age. Live set: reserved and running seat-class leases. Gap: desired minus live.</step>
+    <step n="4" id="m-hold">flag:hold set (USERHALT and owner holds are holds, never kills): count every gap item as held_by_hold, write sched:tick, end. Under a hold this node grants nothing; running seats finish.</step>
+    <step n="5" id="m-caps">Capacity and budget, before any write. Seats reserved or running below caps.max_seats, per role below its max_seats, two worker slots reserved for the system lane (memory three-loops-always); gate counts against gate.runs_in_flight_max, not caps.max_seats (../../shared/contracts.xml#roles). A cap miss is a held_by_cap count and no record. Then the budgets of ../../shared/retry-budget.xml#budgets: the ticket's summed seat cost against budget.ticket_seat_usd, its pods per suite unit against budget.ticket_pods_per_unit, the UTC day's seat cost and pod minutes against budget.daily_seat_usd and budget.daily_pod_minutes (values in ../../shared/contracts.xml#timing). Spent: budget.held 429 latched, held_by_budget counted, no grant.</step>
+    <step n="6" id="m-address">Address check, in memory: the role exists in the roles table, the phase template renders for the ticket (a dry render; the brief file itself is written only by N-13 into the run bundle), and the ticket's repository and target resolve. A failure writes dispatch.refused 412 (latched) and holds the ticket with reason refused; nothing is reserved, no attempt is charged.</step>
+    <step n="7" id="m-grant">GrantDispatch, one Store.Do with operation key N-07/dispatch/LEASE_KEY@TOKEN/r1 where TOKEN is the counter:lease_token version plus 1 (../../shared/contracts.xml#dispatch). Preconditions: the ticket row at its read version and status; counter:lease_token at its read version; flag:hold absent; for a re-grant of a key, the row's last end a free regrant (../../shared/contracts.xml#lease-machine). Statements: leases.grant (reserved, holder the dispatch id, expires_at now plus start.grace_seconds), tickets.transition ready or pr_open to in_flight. Records: lease.granted (node N-02, by N-07) and dispatch. Entity: counter:lease_token to TOKEN. Refusals: 409 version (another grant took the token or the ticket moved), 412 precondition, 423 hold, 429 cap; each is re-read on the next tick and counted in conflicts.</step>
+    <step n="8" id="m-gate">A gate-phase grant is the same Commit with role gate; N-25 runs it as code under the gate lease (../../shared/contracts.xml#roles); N-13, N-14 and N-15 skip role gate. The gate phase is never re-dispatched after N-25 has given up (../../shared/contracts.xml#retry-owner row gate.red).</step>
+    <step n="9" id="m-done">Compare-and-swap the sched:tick entity with the counters. End.</step>
+    <invariant>One reserved or running lease per (ticket, phase) at any time, and no dispatch without its lease or lease without its dispatch: both live in one Commit (closes F05 on the node side).</invariant>
+    <invariant>This node never charges an attempt and never writes attempt n plus 1; it grants the attempt the ticket row carries.</invariant>
     <diagram format="mermaid">flowchart TD
-  T["tick:scheduler entity"] --> L{"leader lease node:N-07:leader held?"}
+  T["tick:scheduler entity"] --> L{"leader lease held?"}
   L -- no --> E["log one line, end"]
-  L -- yes --> F{"halt 503?"}
-  F -- yes --> D9["sched:tick entity, end"]
-  F -- no --> S["snapshot: leases, open dispatches, caps, roles, claims"]
-  S --> G["gap = desired minus live, ordered by lane then priority then age"]
-  G --> C["clip to caps and reserved system slots"]
-  C --> A{"address check: role, brief, files"}
-  A -- fails --> R["dispatch.refused 412 to N-11"]
-  A -- passes --> W["write dispatch + CAS lease holder"]
-  W -- 409 --> V["already dispatched, count as live"]
-  W -- ok --> K{"code role?"}
-  K -- yes --> P["perform in process, seat.result 200"]
-  K -- no --> N13["N-13, N-14, N-15 bring the seat up"]
-  P --> D9
-  N13 --> D9
-  V --> D9
-  R --> D9</diagram>
+  L -- yes --> S["snapshot: tickets, leases, counter, flags, caps, budgets"]
+  S --> G["desired minus live, ordered by lane, priority, age"]
+  G --> H{"flag:hold?"}
+  H -- yes --> D9["sched:tick entity, end"]
+  H -- no --> C{"cap or budget left?"}
+  C -- cap --> D9
+  C -- budget spent --> B["budget.held 429 latched"] --> D9
+  C -- yes --> A{"address check"}
+  A -- fails --> R["dispatch.refused 412 latched, card"] --> D9
+  A -- passes --> W["GrantDispatch Commit: lease reserved, lease.granted, dispatch, ticket in_flight"]
+  W -- "409, 412, 423, 429" --> V["count conflict, next tick re-reads"] --> D9
+  W -- ok --> D9</diagram>
   </mechanism>
 
   <start id="start">
@@ -289,8 +282,8 @@
     <source path="factory/config/routes.json" anchor="/routes" use="the SDLC edges the tick derives; the table itself is retired (rejected item 1)"/>
     <source path="line/bin/route-retry.sh" anchor="header" use="one read per pass and a refusal-only filter; folded into the tick's hold counter"/>
     <source path="rebuild/factory-rebuild-plan.xml" anchor="principles" use="no-cog, build-mode, design-first"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/three-loops-always.md" anchor="top" use="two worker slots reserved for system fixes"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md" anchor="top" use="the many-agents section"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/three-loops-always.md" anchor="top" use="two worker slots reserved for system fixes"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md" anchor="top" use="the many-agents section"/>
     <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C49" use="one-shot seats plus a stall timer"/>
     <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C36" use="one-shot runs"/>
   </sources>

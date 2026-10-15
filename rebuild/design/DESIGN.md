@@ -3,6 +3,7 @@
 The rebuilt factory, in one document, for the owner's read.
 The XML volumes beside this file stay the agents' source; every section here points into them by anchor for depth.
 Written 2026-10-14 (UTC) by the R-03 spec-author seat from the spec book on branch `rebuild/design` (PR 189).
+Version 1.1.0, issued 2026-10-15T06:00:00Z: the review fixes are folded in ([what changed](#21-what-changed-in-110)).
 
 ## 1. Contents
 
@@ -26,7 +27,13 @@ Written 2026-10-14 (UTC) by the R-03 spec-author seat from the spec book on bran
 
 DRAFT for the owner's read.
 Nothing in this design is built yet: every one of the 52 nodes ships dark and goes live by its own ticket with a named proof.
-No build ticket is cut from this book until the owner closes R-03 and then gives GOFACTORY.
+The order is one state machine, [bootstrap](shared/cut-over.xml#bootstrap), states B0 to B8.
+B0 is this design approved (the owner closes R-03).
+B1 is the foundation only: the store, the schemas, the fixtures and dark binaries run against a test state root, with no live unit and no forge or Jenkins effect; B1 tickets may be cut and built before GOFACTORY.
+Every runtime ticket, every live unit and every external effect waits for the owner's GOFACTORY ruling, which moves the line to B2.
+B3 to B6 are cut-over steps, each entered by the proof of the one before.
+B7 is ready: the proofs of cut-over steps 2, 6 and 7 are recorded.
+USERGO is accepted only at B7 and moves the line to B8, live; a USERGO before B7 is refused 412 not-ready, naming the missing proofs.
 
 What exists today on main (`4f7f44c`, 2026-10-14):
 
@@ -38,18 +45,37 @@ What exists today on main (`4f7f44c`, 2026-10-14):
 
 What this branch adds (PR 189, branch `rebuild/design`):
 
-- 52 DAG nodes (N-01 to N-52) in seven groups, written as 62 XML volumes (52 node volumes, 9 shared volumes, the index) and 55 JSON schemas.
-- `check.sh` with 22 checks (C01 to C22), proven to fire by `bin/test-checks.py` (23 cases, 0 missed); it exits 0 today.
-- The no-cog review: 52 of 52 nodes pass (no cog, many agents at once, pointers resolve, 1000-line cap), proof at `~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md`.
+- 52 DAG nodes (N-01 to N-52) in seven groups, written as XML volumes (the 52 node volumes, the shared volumes and the index) with a JSON schema beside each node; [`index.xml`](index.xml) lists every volume with its line count.
+- `check.sh` with the checks listed at the top of [`bin/check-book.py`](bin/check-book.py), each proven to fire by `bin/test-checks.py`.
+- The no-cog review of 1.0.0 (no cog, many agents at once, pointers resolve, 1000-line cap), proof at `$HOME/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md`.
 - This file, the owner's read of the whole design.
 
 What waits for the owner, in order:
 
-1. Read this file and close R-03 (decision 1 in [section 15](#15-decisions-for-the-owner)).
-2. Give GOFACTORY (decision 2), which starts the unlanded cleanup as a dry run first and lets build tickets be cut.
-3. Later, after the line is proven up to cut-over step 6, give USERGO to clear the hold.
+1. Read this file and close R-03 (decision 1 in [section 15](#15-decisions-for-the-owner)): the bootstrap enters B0, and B1 foundation tickets may be cut.
+2. Give GOFACTORY when you choose: B2 starts the runtime, the unlanded cleanup as a dry run first, and the cut-over steps.
+3. Give USERGO only when the line reports B7 with the proofs of cut-over steps 2, 6 and 7; it moves the line to B8 and clears the hold.
+4. Answer the open decisions of [section 15](#15-decisions-for-the-owner) (probe Pi, GitHub App, WSL interop, bootstrap merge path, Kaniko fork pin).
 
 The line is held today: the owner's USERHALT stands, product work is frozen (D19), and the stable bearings page is the one monitor that never stops.
+GOFACTORY, USERGO and USERHALT are the owner's words only: they count only as the whole trimmed message of an owner principal on the owner page or the owner CLI, and relayed, defaulted, imported or seat-produced text never becomes one ([owner words](shared/authority.xml#owner-words)).
+
+### 2.1 What changed in 1.1.0
+
+An outside review of 1.0.0 raised findings F01 to F26, and the verification of that review raised more from F27 onward.
+Each finding has one disposition, with its evidence and the anchor that fixes it, in [review dispositions](shared/review-dispositions.xml).
+The architecture is unchanged: one Go service, one SQLite store with one writer, level-triggered reconciliation, one-shot seats, the SHA-bound gate, independent Jenkins CI, systemd units and gRPC on unix sockets.
+What 1.1.0 adds is one authority for each contract the volumes used to restate:
+
+- [Contracts](shared/contracts.xml#roles): the store `Commit` transaction, operation keys with a request hash, the lease machine and fencing, ticket transitions, claims, the retry owner, the outbox, the epoch and the timing table; the JSON shapes are [`contracts.schema.json`](shared/contracts.schema.json).
+- [Authority](shared/authority.xml#principals): separate Unix users for the service, the launcher and pooled seats; the store derives the caller from the socket peer uid; credentials per job; the owner words.
+- [Bootstrap](shared/cut-over.xml#bootstrap): B0 to B8, so the foundation can be built before GOFACTORY and nothing goes live before USERGO at B7.
+- [CI capacity](shared/ci-capacity.xml#model): pod sizes, quota and admission in one place, and the pinned image builder.
+- [Retry budget](shared/retry-budget.xml#layers): which layer retries what, and the budgets and deadlines that bound every loop.
+- [Outside probe](shared/outside-probe.xml#probe): a store outage is seen and pushed from a machine outside the host.
+- The page's [web security](nodes/N-32/spec.xml#web-security) and the phone's [instant push delivery](nodes/N-52/spec.xml#push-delivery).
+
+The runtime loops the DAG cannot draw are shown as state machines in [section 8.4](#84-runtime-state-machines).
 
 ## 3. Goal
 
@@ -81,7 +107,8 @@ The outcome:
 - The machine merges on a green gate plus a reviewer record and verifies main after every merge; a red main holds every merge but its fix.
 - The owner reads and decides on one surface, the bearings page, as cards with receipts; his messages are routed by rule with four acknowledgements.
 - The command center map (Factorio and Krastorio 2 look, phone first) replaces `/board` on every tier and is public at `map.gatehouse.click`.
-- Every wait has a timeout and a fallback, every automated step retries three times then reports, and the line proves itself with a daily exit test.
+- Every wait has a timeout and a fallback, every failure has exactly one retry owner inside a bounded budget ([retry owner](shared/contracts.xml#retry-owner), [budgets](shared/retry-budget.xml#budgets)), and the line proves itself with a daily exit test.
+- Authority comes from the operating system, not from a seat's word: seats run as separate users with no store socket and no forge credential ([authority](shared/authority.xml#seat-isolation)).
 
 ## 4. What is reused
 
@@ -89,7 +116,7 @@ Working code and working infrastructure are copied, not reinvented.
 
 | Source | What is copied |
 | --- | --- |
-| [`scheduler/api/scheduler/v1/scheduler.proto`](../../scheduler/api/scheduler/v1/scheduler.proto) | Kept whole: `Put`, `Get`, `List`, `Subscribe`, `Lease`, `Heartbeat`, `Executor.Run`; the store API and the executor verb table extend it (D09, [N-01](nodes/N-01/spec.xml#mechanism)). |
+| [`scheduler/api/scheduler/v1/scheduler.proto`](../../scheduler/api/scheduler/v1/scheduler.proto) | Kept and extended, never rewritten. Today it has `Executor{Run, Health}` and `Scheduler{Health, Status, Reload, Drain, Retry}`, and nothing streams. The book adds three services: `coq.store.v1.Store` (`Commit`, `Get`, `List`, `Tail`, `Snapshot`, `Health`; a single put is a `Commit` of one record), `Lease` (`Renew`, `Release`, `Start`) and `Intake` (`Answer`); `Tail` is the stream older text called Subscribe (D09, [store transaction](shared/contracts.xml#batch), [N-01](nodes/N-01/spec.xml#mechanism)). |
 | [`scheduler/internal/core/`](../../scheduler/internal/core/) and [`scheduler/internal/testkit/`](../../scheduler/internal/testkit/) | The `Clock`, `JobStore`, `Ledger` and `Executor` interfaces and the fake clock every node's tests run on (the D09 small cut, [N-07](nodes/N-07/spec.xml#mechanism)). |
 | [`line/bin/merge.sh`](../../line/bin/merge.sh) | Ported to Go as N-09 with the same choices: squash with the head sha guard, already-merged is success, hold read twice, never match refusal text ([N-09](nodes/N-09/spec.xml#mechanism)). |
 | [`line/bin/verify-main.sh`](../../line/bin/verify-main.sh) | Its verdict and hold logic, ported as N-10, with the hold file turned into a `merge.hold` record and the suites moved to pods ([N-10](nodes/N-10/spec.xml#mechanism)). |
@@ -99,10 +126,10 @@ Working code and working infrastructure are copied, not reinvented.
 | [`factory/bin/claims.sh`](../../factory/bin/claims.sh) | The file overlap rule, kept verbatim, for readiness, workspace claims and the validator ([N-03](nodes/N-03/spec.xml#mechanism)). |
 | [`events/schema/event.schema.json`](../../events/schema/event.schema.json) | The record id form `YYYYMMDDTHHMMSSZ-CODE-xxxxx` and the HTTP-shaped code enum ([state store envelope](shared/state-store.xml#envelope)). |
 | [`tools/bearings/`](../../tools/bearings/) | `page.html` and `theme.css` (the owner's), the key and cookie model, `bearings.json` and its schema, the Playwright suite, the front door of PR 187, the ask, wait and reply contract of `AGENTS.md` ([N-32](nodes/N-32/spec.xml#mechanism), [N-34](nodes/N-34/spec.xml#mechanism)). |
-| `herdr/config/leases.json` | The seat lease ttl of 900 s ([N-02](nodes/N-02/spec.xml#mechanism)). |
+| `herdr/config/leases.json` | The seat lease ttl, now one key of the [timing table](shared/contracts.xml#timing) ([N-02](nodes/N-02/spec.xml#mechanism)). |
 | [jenkins-shared-lib](https://github.com/jkkelley/jenkins-shared-lib) | `buildKaniko`, `updateGitOpsManifest` and `agentPodYaml`, as the yieldpoint-ai pipeline uses them ([N-22](nodes/N-22/spec.xml#mechanism), [N-35](nodes/N-35/spec.xml#mechanism)). |
 | [homelab-gitops](https://github.com/jkkelley/homelab-gitops) | The JCasC seed `apps/jenkins/jenkins.yaml`, the ESO secret `jenkins-eso/externalsecret-ghcr.yaml`, the Application shape of `resume-star.yaml`, the ntfy deployment on branch `feat/ntfy-alerts` ([N-20](nodes/N-20/spec.xml#mechanism), [N-21](nodes/N-21/spec.xml#mechanism), [N-52](nodes/N-52/spec.xml#provider)). |
-| Argo CD app-of-apps, HAProxy ingress, WireGuard to k8s-worker-01, Lightsail VPS 44.194.240.148 (Nginx, Let's Encrypt), Route 53 zone `gatehouse.click` | The public path for the map, exactly as yieldpoint-ai runs today: one more name on the existing Nginx server block (owner note 5, [N-35](nodes/N-35/spec.xml#mechanism)). |
+| Argo CD app-of-apps, HAProxy ingress, WireGuard to `${SITE_K8S_WORKER}`, Lightsail VPS `${SITE_VPS_ADDR}` (Nginx, Let's Encrypt), Route 53 zone `gatehouse.click`; the site values resolve from the owner's site file `$HOME/.config/coq/site.env`, never from the repository ([config keys](shared/state-store.xml#config-keys)) | The public path for the map, exactly as yieldpoint-ai runs today: one more name on the existing Nginx server block (owner note 5, [N-35](nodes/N-35/spec.xml#mechanism)). |
 | `ghcr.io/jkkelley` | The image registry for every image, pinned by digest. |
 | Tailscale user-space front door (PR 186, PR 187) | Ported to Go as the unit `coq-front-door@<page>`, same behaviour ([N-34](nodes/N-34/spec.xml#mechanism)). |
 | [Krastorio2Assets v2.0.5](https://codeberg.org/raiguard/Krastorio2Assets) and the vanilla GUI palette | Palette values only, as CSS custom properties (`--k2-frame #313031`, `--k2-accent #FAA838`, `--k2-green #2BE327`, `--k2-red #DA4535` and the rest), and the 260 high-confidence Krastor original sprites with attribution ([principles](shared/principles.xml#krastorio-look), [N-36](nodes/N-36/spec.xml#mechanism)). |
@@ -113,12 +140,12 @@ Working code and working infrastructure are copied, not reinvented.
 
 Not copied, with the reason ([rejected with reason](shared/rejected-with-reason.xml#rejected)):
 
-- The fourteen SPEC-16 build tickets: cancelled at GOFACTORY by N-50, because the small Go cut on the same proto replaces them (D09, card C41).
+- The fourteen SPEC-16 build tickets: cancelled after GOFACTORY by N-50, because the small Go cut on the same proto replaces them (D09, card C41).
 - PR 35 and its v2.0 export, SPEC-17 1.0.1 and its 1.1.0 draft: sources, never authority (D14, card C42); PR 35 is closed by N-50.
 - Wube-derived and BiusArt sprites (inventory classes 2 to 4: 443, 8 and 131 files): never ship; belts, inserters, lamps and pipes are original art.
 - A broker (NATS): one store, no broker; 212 of the 391 route failures were addressing errors a broker would only store (D10, card C34).
 - `route.sh` and its routes table, the tester, merger and verifier seats, and the idle alarm with its patrol watches: code does the mechanical jobs and a stall timer replaces the alarm (D11, D17).
-- The webhook listener (`line/bin/hook-listener.sh`, PR 177): GitHub cannot reach 192.168.1.245; the poll is the correctness path (D06).
+- The webhook listener (`line/bin/hook-listener.sh`, PR 177): GitHub cannot reach the host on its private LAN address; the poll is the correctness path (D06).
 - herdr as scheduler, router or store: herdr is the owner's window only (D08).
 - The page polling loop as transport and the Execution Rail as a second page: push for everything, one surface (D20, D21).
 - Drive as the source of truth: the repository is the truth, Drive gets copies (D24).
@@ -128,7 +155,11 @@ Not copied, with the reason ([rejected with reason](shared/rejected-with-reason.
 
 ## 5. Architecture
 
-One Go binary (`coq-service`) runs on the WSL host as a systemd user unit and owns every decision; seats run on the host as one-shot processes; tests, lint and image builds run as pods on the owner's cluster; the owner sees everything through the bearings page.
+One Go binary (`coq-service`) runs on the WSL host as a systemd user unit of its own service user and owns every decision.
+Seats run on the host as one-shot processes under pooled seat users, each in its own transient unit.
+Tests, lint and image builds run as pods on the owner's cluster.
+The owner sees everything through the bearings page.
+Who may do what is one volume, [authority](shared/authority.xml#principals): the service user `coq-svc` alone owns the state root and the service credentials, the launcher user `coq-launch` starts seats through the root-owned helper `coq-seat-exec`, and the seat users `coq-seat-01` to `coq-seat-16` run one run at a time and hold no store socket and no forge credential.
 
 ```mermaid
 flowchart LR
@@ -137,11 +168,11 @@ flowchart LR
     DT["Desktop browser"]
     HW["herdr panes: the owner's window only"]
   end
-  subgraph HOST["WSL host: systemd user units with linger"]
+  subgraph HOST["WSL host: systemd units with linger, WSL interop off"]
     FD["coq-front-door@coq-stable N-34: Tailscale bind"]
     PG["coq-bearings@tier N-32: loopback, SSE /events, POST /answer /message"]
     WT["coq-watcher@page N-27: the watcher lamp"]
-    subgraph SVC["coq-service: one Go binary, gRPC on unix sockets"]
+    subgraph SVC["coq-service as user coq-svc: one Go binary, gRPC on unix sockets"]
       CORE["N-06 clock and health, N-01 store API, N-02 leases, N-43 code table, N-44 flags"]
       LINE["N-03 intake, N-07 scheduler, N-08 gate, N-09 merge, N-10 verify, N-11 retry, N-12 stall"]
       SEATL["N-13 seat layer, N-14 workspace, N-15 launcher, N-18 validator"]
@@ -150,11 +181,13 @@ flowchart LR
       GOV["N-45 cleanup, N-47 Drive publish, N-48 promote, N-49 unlanded, N-50 cut-over, N-51 exit test"]
       POLL["N-04 GitHub poll every 30 s"]
     end
-    DB[("COQ_STATE/store/coq.db: SQLite WAL, one writer")]
-    BK[("N-05 backups: daily 14, weekly 8, monthly 6")]
-    SEATS["one-shot claude -p seats: worker N-16, spec-author N-17, reviewer N-19"]
+    DB[("COQ_STATE/store/coq.db: SQLite WAL, one writer, epoch")]
+    BK[("N-05 backups: classes tick, daily, monthly, manual")]
+    SEATS["one-shot claude -p seats as users coq-seat-NN: worker N-16, spec-author N-17, reviewer N-19"]
     WS[("COQ_CACHE: git mirror and workspace slots")]
   end
+  PROBE["coq-probe on one Raspberry Pi: outside the host, no store"]
+  UP["ntfy.sh upstream: message id and topic hash only"]
   subgraph GHB["GitHub"]
     REPO["jkkelley/coq-jev-herdr-plugin: PRs, coq/gate required on main"]
   end
@@ -178,13 +211,14 @@ flowchart LR
   DB --> BK
   LINE --> CORE
   OWNS --> CORE
-  SEATL -->|"spawn, heartbeat, kill"| SEATS
+  SEATL -->|"coq-launch via coq-seat-exec: one transient unit per run"| SEATS
+  SEATS -->|"result file only, no store socket"| SEATL
   SEATL --> WS
-  SEATS -->|"push branch, open PR"| REPO
-  POLL -->|"REST with ETag"| REPO
-  LINE -->|"squash merge"| REPO
-  CIQ -->|"buildWithParameters"| JK
-  CIQ -->|"coq/gate status"| REPO
+  SEATL -->|"push branch, open PR as coq-svc, forge-pr"| REPO
+  POLL -->|"REST with ETag, forge-read"| REPO
+  LINE -->|"squash merge, forge-merge"| REPO
+  CIQ -->|"buildWithParameters with COQ_OP_ID"| JK
+  CIQ -->|"coq/gate status, coq-gate GitHub App"| REPO
   JK --> POD
   JK --> KAN
   KAN --> GHCR
@@ -194,25 +228,36 @@ flowchart LR
   JK -->|"Argo sync"| MAPP
   LS -->|"WireGuard, HAProxy"| MAPP
   OWNS -->|"POST card"| NTFY
-  NTFY -->|"push"| PH
+  NTFY -->|"poll request"| UP
+  UP -->|"APNs wake"| PH
+  PH -->|"fetch the body over the tailnet"| NTFY
+  PROBE -->|"GET /livez and the stable page"| FD
+  PROBE -->|"its own topic and token"| NTFY
   HW -.->|"agent status events only"| LINE
 ```
 
 How to read it:
 
-- Every arrow into `coq-service` lands as a record in the store; every arrow out of it is a step a node takes on a record, never a prompt.
+- Every arrow into `coq-service` lands as a record in the store through one `Commit` transaction; every arrow out of it is a step a node takes on a record, never a prompt ([store transaction](shared/contracts.xml#batch)).
+- The store socket accepts only the users of group `coq-store`; the server reads the peer uid from the socket and derives the caller's node and permitted kinds from it ([peer credentials](shared/authority.xml#peer-credentials)).
+- An external effect (a push, a PR, a status, a merge, a Jenkins build) is first an outbox row written in the same transaction as the record that decided it, so after a crash the row is reconciled by its external id before anything is sent again ([outbox](shared/contracts.xml#outbox)).
+- Each forge job has its own credential, and seats hold none ([credential matrix](shared/authority.xml#credential-matrix), [GitHub App](shared/authority.xml#github-app)).
 - The page service, the watcher and the front door are separate units with separate lifetimes, so a page upgrade never stops the owner's intake ([N-27](nodes/N-27/spec.xml#mechanism)).
-- The cluster never reaches the host: pods have egress to GitHub and GHCR only, so the public map is static and live state reaches the phone over the tailnet ([N-38](nodes/N-38/spec.xml#mechanism)).
+- The cluster never reaches the host: pods have egress to cluster DNS, the Jenkins controller, GitHub and GHCR only, so the public map is static and live state reaches the phone over the tailnet ([pod template](shared/ci-capacity.xml#pod-template), [N-21](nodes/N-21/spec.xml#mechanism), [N-38](nodes/N-38/spec.xml#mechanism)).
+- A store or host outage is seen from outside: `coq-probe` on a Raspberry Pi of the cluster checks the host and alerts on its own ntfy topic, with no store in its path ([outside probe](shared/outside-probe.xml#probe)).
+- A card reaches a locked iPhone at once: the cluster ntfy forwards only a poll request through ntfy.sh, and the phone fetches the body from the cluster over the tailnet ([push delivery](nodes/N-52/spec.xml#push-delivery)).
 - herdr sends exactly one thing to the line: the agent status event N-12 uses to see a long-lived seat parked on a prompt.
 
-Depth: [state store](shared/state-store.xml#purpose), [seat contract](shared/seat-contract.xml#run), [command center](shared/command-center.xml#hosting), [N-06 unit](nodes/N-06/spec.xml#mechanism).
+Depth: [state store](shared/state-store.xml#purpose), [seat contract](shared/seat-contract.xml#run), [command center](shared/command-center.xml#hosting), [N-06 unit](nodes/N-06/spec.xml#mechanism), [WSL host](shared/authority.xml#wsl-host).
 
 ## 6. DAG
 
 Every node turns one input record into one output record; a seat or a process on a node exists only between the two.
 An edge means the output record of the source is the input record of the target.
 The store (N-01) carries every record and the push transport (N-31) carries every page-bound record; their return edges are not drawn, because they would make every node a cycle through the store.
-Time loops (a retry, a phase change, an owner answer) are re-entries into the sink `RE` with a counter that only grows, so the graph stays acyclic: 52 nodes, 97 drawn edges, 10 re-entries, checked by Kahn's algorithm in [`bin/dag-check.py`](bin/dag-check.py) (check C16).
+Time loops (a retry, a phase change, an owner answer) are re-entries into the sink `RE` with a counter that only grows, so the graph stays acyclic: 52 nodes, 125 drawn edges, 12 re-entries, checked by Kahn's algorithm in [`bin/dag-check.py`](bin/dag-check.py) (check C16).
+Since 1.1.0 the same check compares the drawing with the edges every node volume declares, so a node cannot name an input the DAG does not show ([dag.md section 2.1](dag.md#21-declared-edges-that-are-not-drawn)).
+The acyclic drawing does not prove that the loops end: the [retry owner](shared/contracts.xml#retry-owner) and the [budgets](shared/retry-budget.xml#budgets) do, and the loops themselves are drawn as state machines in [section 8.4](#84-runtime-state-machines).
 
 ```mermaid
 flowchart LR
@@ -290,25 +335,40 @@ flowchart LR
   N-02 --> N-07
   N-02 --> N-12
   N-03 --> N-02
+  N-03 --> N-09
   N-04 --> N-08
+  N-04 --> N-35
+  N-04 --> RE
   N-05 --> N-45
+  N-06 --> N-02
+  N-06 --> N-03
   N-06 --> N-04
   N-06 --> N-05
   N-06 --> N-07
   N-06 --> N-12
   N-06 --> N-28
+  N-06 --> N-41
   N-06 --> N-42
+  N-06 --> N-43
+  N-06 --> N-44
   N-06 --> N-45
+  N-06 --> N-49
   N-06 --> N-51
+  N-07 --> N-11
   N-07 --> N-13
   N-07 --> N-14
+  N-07 --> N-40
   N-08 --> N-09
+  N-08 --> N-11
+  N-08 --> N-48
   N-08 --> RE
   N-09 --> N-11
   N-09 --> N-26
+  N-09 --> N-35
   N-09 --> N-45
   N-09 --> N-47
   N-09 --> N-48
+  N-09 --> N-50
   N-10 --> N-28
   N-10 --> N-41
   N-10 --> N-51
@@ -317,16 +377,21 @@ flowchart LR
   N-11 --> N-41
   N-11 --> RE
   N-12 --> N-11
+  N-12 --> N-28
   N-12 --> N-41
+  N-13 --> N-11
   N-13 --> N-15
+  N-14 --> N-11
   N-14 --> N-15
   N-15 --> N-11
   N-15 --> N-12
   N-15 --> N-16
   N-15 --> N-17
   N-15 --> N-19
+  N-16 --> N-11
   N-16 --> N-23
   N-16 --> N-48
+  N-17 --> N-11
   N-17 --> N-18
   N-18 --> N-11
   N-18 --> RE
@@ -340,14 +405,19 @@ flowchart LR
   N-22 --> N-24
   N-22 --> N-35
   N-23 --> N-24
+  N-23 --> N-36
   N-23 --> N-46
   N-24 --> N-25
   N-25 --> N-04
   N-26 --> N-10
   N-27 --> N-28
+  N-27 --> N-29
+  N-27 --> N-30
   N-27 --> N-42
   N-28 --> N-32
   N-28 --> N-52
+  N-28 --> RE
+  N-29 --> N-10
   N-29 --> N-44
   N-29 --> N-49
   N-29 --> N-50
@@ -364,7 +434,9 @@ flowchart LR
   N-32 --> N-34
   N-32 --> RE
   N-33 --> N-32
+  N-33 --> N-40
   N-35 --> N-38
+  N-35 --> N-48
   N-36 --> N-38
   N-36 --> N-39
   N-36 --> N-40
@@ -376,10 +448,13 @@ flowchart LR
   N-37 --> N-41
   N-37 --> N-42
   N-38 --> N-39
+  N-41 --> N-39
+  N-41 --> N-52
   N-42 --> RE
   N-43 --> N-07
   N-43 --> N-28
   N-43 --> N-37
+  N-44 --> N-07
   N-44 --> N-13
   N-44 --> N-42
   N-46 --> N-25
@@ -387,8 +462,8 @@ flowchart LR
   N-48 --> N-32
   N-49 --> N-45
   N-49 --> RE
-  N-50 --> RE
   N-50 --> N-45
+  N-50 --> RE
   N-51 --> N-28
 ```
 
@@ -398,18 +473,18 @@ The wave column is the build order of [section 6.3](#63-build-order-as-numbered-
 
 | Id | Name | Group | Input record | Output record | Wave | Volume |
 | --- | --- | --- | --- | --- | --- | --- |
-| N-01 | State store | G1 | record.put request over gRPC (any node, idempotency key, expected version) | record.committed (seq, hash, version) or 409 conflict | 1 | [spec](nodes/N-01/spec.xml#N-01) |
-| N-02 | Lease service | G1 | ticket.ready record (claimable node and attempt) | lease record (holder, fencing token, expiry, generation) or lease.refused | 1 | [spec](nodes/N-02/spec.xml#N-02) |
+| N-01 | State store | G1 | Commit request over gRPC from an authenticated principal (operation key with request hash, fence, preconditions, entity writes, records, outbox effects) | commit reply (seq, epoch, hash, versions) or a refusal: 403 record.refused, 409 conflict, 412 stale token | 1 | [spec](nodes/N-01/spec.xml#N-01) |
+| N-02 | Lease service | G1 | ticket.ready record (claimable node and attempt) | lease row (class, state, non-empty holder, integer token, generation, expiry) reserved in N-07's GrantDispatch, or lease.refused | 1 | [spec](nodes/N-02/spec.xml#N-02) |
 | N-03 | Ticket intake and readiness | G1 | ticket record (validated, files declared, deps named; re-entry from N-18 or an owner cut) or a ticket.request admitted as a spec-phase cut request | ticket.ready record (deps done, no file claimed by another in-flight ticket) or ticket.waiting | 7 | [spec](nodes/N-03/spec.xml#N-03) |
 | N-04 | GitHub poll | G1 | tick record (every tick from N-06, plus coq/gate statuses posted by N-25) | forge.snapshot record (open PRs, head shas, coq/gate status, mergeability, main sha) | 4 | [spec](nodes/N-04/spec.xml#N-04) |
-| N-05 | Backups | G1 | backup.tick record (schedule from N-06) over the live store | backup record (snapshot path, checksum, retention class) or backup.failed after 3 attempts | 1 | [spec](nodes/N-05/spec.xml#N-05) |
+| N-05 | Backups | G1 | backup.tick record (schedule from N-06) over the live store | backup record (snapshot path, checksum, class tick, daily, monthly or manual) or backup.failed | 1 | [spec](nodes/N-05/spec.xml#N-05) |
 | N-06 | Service unit, clock and health | G1 | unit.start (systemd user unit of the Go service) | tick record (scheduler, poll, backup, stall and daily ticks) and health record (gRPC Health, counters) | 1 | [spec](nodes/N-06/spec.xml#N-06) |
-| N-07 | Scheduler tick and dispatch | G2 | lease record plus tick record (level-triggered: compare open work with live runs before any dispatch) | dispatch record (ticket, role, attempt n, deadline, lease token, brief path) | 7 | [spec](nodes/N-07/spec.xml#N-07) |
+| N-07 | Scheduler tick and dispatch | G2 | lease record plus tick record (level-triggered: compare open work with live runs before any dispatch) | dispatch record (the contracts dispatch body: ticket, phase, role, attempt, lease key and token, deadline_at, repo_sha, brief path), committed with the lease and the ticket transition in one GrantDispatch | 7 | [spec](nodes/N-07/spec.xml#N-07) |
 | N-08 | Gate check | G2 | forge.snapshot record for a PR head sha | gate.verdict record (green, red or pending for the head sha, from the coq/gate status the agent can read but not edit) | 4 | [spec](nodes/N-08/spec.xml#N-08) |
 | N-09 | Merge | G2 | gate.verdict green plus review.passed on the same head sha | merge record (merge sha, PR number) or merge.conflict 409 | 7 | [spec](nodes/N-09/spec.xml#N-09) |
 | N-10 | Main verdict and hold | G2 | main.gate.status record (coq/gate on the main sha after a merge) | verified 201 record, or rejected 422 plus merge.hold record (no merge until a green main) | 5 | [spec](nodes/N-10/spec.xml#N-10) |
-| N-11 | Retry and backoff | G2 | failure record (seat.result blocked or failed, review.changes, merge.conflict, stall, validator refusal) | attempt record n+1 with backoff min(10 s x 2^(n-1), 5 min), or dead record after 3 attempts with one escalation | 7 | [spec](nodes/N-11/spec.xml#N-11) |
-| N-12 | Stall timer | G2 | lease record plus heartbeat records plus stall tick | stall record (run killed, lease revoked, reason) when no heartbeat within the stall bound | 7 | [spec](nodes/N-12/spec.xml#N-12) |
+| N-11 | Retry and backoff | G2 | failure record (seat.result blocked or failed, review.changes, merge.conflict, stall, validator refusal) | attempt record n+1 when the [retry owner](shared/contracts.xml#retry-owner) table charges it, or dead record with one escalation | 7 | [spec](nodes/N-11/spec.xml#N-11) |
+| N-12 | Stall timer | G2 | lease record plus heartbeat records plus stall tick | stall record (lease revoked, kill:run_id written for the launcher, reason) when no progress within the stall bound | 7 | [spec](nodes/N-12/spec.xml#N-12) |
 | N-13 | Seat layer render | G3 | dispatch record (role, repo, build-mode state) | seat.bundle record (settings.json from the role, deny list from declared files, brief, hash) | 6 | [spec](nodes/N-13/spec.xml#N-13) |
 | N-14 | Workspace provision | G3 | dispatch record | workspace record (worktree path, branch from origin/main, slot, file claims checked and recorded) or workspace.refused | 6 | [spec](nodes/N-14/spec.xml#N-14) |
 | N-15 | One-shot seat launcher | G3 | seat.bundle plus workspace record | seat.result record always (outcome, cost, turns, terminal reason, session id; a dead run yields blocked) and heartbeat records while it runs | 6 | [spec](nodes/N-15/spec.xml#N-15) |
@@ -418,7 +493,7 @@ The wave column is the build order of [section 6.3](#63-build-order-as-numbered-
 | N-18 | Validator | G3 | ticket-set.draft record | ticket records accepted (acceptance commands run on main with observed exit codes) or validator.refused with the failing command | 6 | [spec](nodes/N-18/spec.xml#N-18) |
 | N-19 | Reviewer run | G3 | reviewer brief inside a seat run (PR, gate green, diff) | review.passed 201 or review.changes 422 record on the head sha | 6 | [spec](nodes/N-19/spec.xml#N-19) |
 | N-20 | Jenkins as code | G4 | jenkins config record (JCasC, job by config, pinned image, resources, Longhorn home; a commit in gitops) | job.registered record (config hash, image digest, resource limits, home volume) | 4 | [spec](nodes/N-20/spec.xml#N-20) |
-| N-21 | Factory namespace | G4 | namespace manifest record (ResourceQuota, LimitRange, PriorityClass, service account with no secret access, egress to GitHub and GHCR; a commit in gitops) | namespace.ready record (Argo synced, quota and policy present) | 4 | [spec](nodes/N-21/spec.xml#N-21) |
+| N-21 | Factory namespace | G4 | namespace manifest record (ResourceQuota, LimitRange, PriorityClass, service account with no secret access, egress to cluster DNS, the Jenkins controller, GitHub and GHCR; a commit in gitops) | namespace.ready record (Argo synced, quota and policy present) | 4 | [spec](nodes/N-21/spec.xml#N-21) |
 | N-22 | Image build | G4 | image config record (images.json or Containerfile change, digest pins) | image record (ghcr digest, pinned in config, checksum-verified binaries) | 4 | [spec](nodes/N-22/spec.xml#N-22) |
 | N-23 | Suite planner | G4 | pr.opened record (head sha, diff) | suite.plan record (suites from the diff; an unmapped path plans the full set) | 4 | [spec](nodes/N-23/spec.xml#N-23) |
 | N-24 | Pod run | G4 | suite.plan entry (one case) | pod.run record (exit code, log path, infrastructure retries by the ladder; an assertion failure never retried) | 4 | [spec](nodes/N-24/spec.xml#N-24) |
@@ -435,7 +510,7 @@ The wave column is the build order of [section 6.3](#63-build-order-as-numbered-
 | N-35 | Hello page deploy | G6 | map app commit (Jenkinsfile with jenkins-shared-lib, image on ghcr.io/jkkelley, app entry in homelab-gitops) | deploy record (image digest, Argo synced, HAProxy route, Lightsail name map.gatehouse.click answering 200) | 8 | [spec](nodes/N-35/spec.xml#N-35) |
 | N-36 | Art pipeline | G6 | art inventory record (Krastor class 1 files, original art for belts, inserters, lamps and pipes) | sprite.sheet record (atlas, attribution text, license text; no Wube-derived or BiusArt file) | 8 | [spec](nodes/N-36/spec.xml#N-36) |
 | N-37 | Panel binding registry | G6 | screen spec volume (every panel of the five screens) | binding record (panel to store record kind) and binding.check result; an unbound panel fails the build | 8 | [spec](nodes/N-37/spec.xml#N-37) |
-| N-38 | Map screen | G6 | pushed.frame record (DAG nodes with status and heartbeat, queues with depth, seats in flight, HOLD or GOFACTORY lamp) | map.frame (machines, belts, inserters, lamps at the frame budget) and selection record | 8 | [spec](nodes/N-38/spec.xml#N-38) |
+| N-38 | Map screen | G6 | pushed.frame record (DAG nodes with status and heartbeat, queues with depth, seats in flight, the hold lamp: HOLD and the owner word it waits on) | map.frame (machines, belts, inserters, lamps at the frame budget) and selection record | 8 | [spec](nodes/N-38/spec.xml#N-38) |
 | N-39 | Machine screen | G6 | selection record plus the node's state frame | machine.panel frame (one node: input, output, attempt, lease, last records) | 8 | [spec](nodes/N-39/spec.xml#N-39) |
 | N-40 | Stats screen | G6 | counters frame (records, jobs, wakes, seats, pods, cost) | stats.frame (production statistics panel) | 8 | [spec](nodes/N-40/spec.xml#N-40) |
 | N-41 | Alerts screen | G6 | alert records (stall, dead, rejected main, unhealthy) | alerts.frame and alert.ack record | 8 | [spec](nodes/N-41/spec.xml#N-41) |
@@ -449,16 +524,18 @@ The wave column is the build order of [section 6.3](#63-build-order-as-numbered-
 | N-49 | Unlanded cleanup | G7 | GOFACTORY ruling record | disposition records, one per 04-UNLANDED entry (land, supersede, close), dry-run listing first | 2 | [spec](nodes/N-49/spec.xml#N-49) |
 | N-50 | Cut-over records | G7 | GOFACTORY ruling plus the D09 and D14 rulings | cancel records for the fourteen SPEC-16 tickets, PR 35 close record, design branch delete record | 2 | [spec](nodes/N-50/spec.xml#N-50) |
 | N-51 | Exit test | G7 | daily tick plus the day's verified records, line-ops audit and git status | exit.verdict record (zero agent line operations and a clean checkout, or not); product freeze lifts only on pass | 9 | [spec](nodes/N-51/spec.xml#N-51) |
-| N-52 | Phone push bridge | G5 | card record | push.receipt record (delivered to the phone); ships dark until the Go inbox is live | 9 | [spec](nodes/N-52/spec.xml#N-52) |
+| N-52 | Phone push bridge | G5 | card record | push.receipt record (the provider accepted it) and push.observed (the phone fetched it); ships dark until the Go inbox is live | 9 | [spec](nodes/N-52/spec.xml#N-52) |
 
 ### 6.2 Re-entries
 
 | Source | What re-enters | Enters at | Bound |
 | --- | --- | --- | --- |
+| N-04 | a commit to `shared/status-codes.xml` seen on main | N-43, which loads the new table by hash | one load per table hash |
 | N-08 | `gate.verdict` green | N-03, which moves the ticket to the reviewer phase | one phase change per phase: worker, reviewer, merge |
-| N-10 | `rejected` 422 on main | N-03 as a fix-for-hold `ticket.request`, cut by a spec-author | the hold stands until a green main; 3 fix tickets, then one owner card |
-| N-11 | `attempt` n+1 | N-02 as a fresh claim | 3 attempts, then `dead` and one card |
+| N-10 | `rejected` 422 on main, and the hold | N-03 as a fix-for-hold `ticket.request`, cut by a spec-author; N-09 reads the hold and merges only the fix | the hold stands until a green main; 3 fix tickets, then one owner card |
+| N-11 | `attempt` n+1 | N-02 as a fresh claim; N-07 reads it for `not_before` | the [retry owner](shared/contracts.xml#retry-owner) charge, then `dead` and one card |
 | N-18 | accepted `ticket` records | N-03 as new tickets | a ticket set is finite and every ticket names its files |
+| N-28 | a card's policy default at its deadline | N-29 as a defaulted answer | never on an owner-only card; one ruling per card id |
 | N-29 | `ruling` | N-03 (unblock a dead ticket) or N-44 (a flag) | one ruling per card id |
 | N-30 | `routed.message` | N-03 as a `ticket.request` (rule R05) | one request per message id |
 | N-32 | the owner's answer or message | N-29 or N-30 | the owner acts; nothing loops without him |
@@ -471,12 +548,16 @@ Depth: [dag.md section 4](dag.md#4-re-entries).
 ### 6.3 Build order as numbered waves
 
 A wave is a set of build tickets that run in parallel under the one-file, one-in-flight-ticket rule; a wave starts when the waves it depends on have merged dark.
+Wave 1 is the [bootstrap](shared/cut-over.xml#bootstrap) foundation B1 and may be built before GOFACTORY, against a test state root with no live unit and no forge or Jenkins effect; waves 2 to 9 are cut only after the GOFACTORY ruling (B2).
+Building is never going live: every wave merges dark, the cut-over steps turn flags on, and the build order ends at USERGO, accepted only at B7, which makes the line live (B8).
 Each node is built and tested against record fixtures of its input on the fake clock, so a consumer may be built before its producer (for example N-28 cards before N-11 retry), because its input is a record with a schema, not a running node.
 The go-live column is the step of the one cut-over order ([cut-over](shared/cut-over.xml#order)) that turns the wave's flags on.
 
 ```mermaid
 flowchart LR
-  W1["Wave 1 foundation: N-01 N-43 N-06 N-05 N-02 N-45"] --> W2["Wave 2 rulings and the cut: N-29 N-44 N-49 N-50"]
+  B0(["B0 design approved: R-03 closed"]) --> W1["Wave 1 foundation, B1, dark on a test state root: N-01 N-43 N-06 N-05 N-02 N-45"]
+  W1 --> GF{"GOFACTORY ruling: B2"}
+  GF --> W2["Wave 2 rulings and the cut: N-29 N-44 N-49 N-50"]
   W2 --> W3["Wave 3 owner surface: N-31 N-30 N-27 N-28 N-33 N-32 N-34"]
   W2 --> W4["Wave 4 CI as code: N-20 N-21 N-22 N-23 N-24 N-25 N-04 N-08 N-46"]
   W4 --> W5["Wave 5 main verify: N-26 N-10"]
@@ -485,14 +566,16 @@ flowchart LR
   W6 --> W7
   W3 --> W8["Wave 8 command center and promotion: N-35 N-36 N-37 N-38 N-39 N-40 N-41 N-42 N-47 N-48"]
   W4 --> W8
-  W7 --> U{"USERGO"}
-  W3 --> U
-  U --> W9["Wave 9 after the resume: N-51 N-52"]
+  W3 --> W9["Wave 9 built dark, live after B8: N-51 N-52"]
+  W7 --> R(["B3 to B6 cut-over steps by proofs, then B7 ready: proofs of steps 2, 6 and 7"])
+  W8 --> R
+  W9 --> R
+  R --> U{"USERGO at B7 only: B8 live"}
 ```
 
 | Wave | Nodes | Why here | Goes live at cut-over step |
 | --- | --- | --- | --- |
-| 1 | N-01 State store, N-43 Status code map loader, N-06 Service unit, clock and health, N-05 Backups, N-02 Lease service, N-45 Cleanup registry and runs | The system comes up before anyone works; every later node writes to the store, reads the clock and registers a cleanup | 0 |
+| 1 | N-01 State store, N-43 Status code map loader, N-06 Service unit, clock and health, N-05 Backups, N-02 Lease service, N-45 Cleanup registry and runs | The system comes up before anyone works; every later node writes to the store, reads the clock and registers a cleanup; built in B1 before GOFACTORY, dark | 0, after GOFACTORY |
 | 2 | N-29 Owner answer intake, N-44 Build-mode flag, N-49 Unlanded cleanup, N-50 Cut-over records | The rulings C34 to C58 and the standing USERHALT are imported as records; GOFACTORY needs the cleanup plan and the cancels | 0 and 1 |
 | 3 | N-31 Push transport, N-30 Go inbox with acks, N-27 Watcher lamp, N-28 System lane card builder, N-33 Rail panel, N-32 Bearings page service, N-34 Tailnet front door | The owner must see the new line before it moves | 2 |
 | 4 | N-20 Jenkins as code, N-21 Factory namespace, N-22 Image build, N-23 Suite planner, N-24 Pod run, N-25 Gate status post, N-04 GitHub poll, N-08 Gate check, N-46 Spec book check | A verdict on GitHub before any machine merge; runs beside wave 3 | 3 |
@@ -510,6 +593,7 @@ Every message is a record put in the store or a call a node makes on a record; n
 ### 7.1 Ticket intake to merge
 
 A validated ticket becomes ready, a fresh worker seat writes the change, pods judge it, a fresh reviewer seat judges the diff, and the machine merges.
+Each status change is a row of [ticket transitions](shared/contracts.xml#ticket-transitions), and each effect on GitHub carries its [operation key](shared/contracts.xml#operation-keys).
 
 ```mermaid
 sequenceDiagram
@@ -529,34 +613,36 @@ sequenceDiagram
   participant M as N-09 Merge
   participant X as N-45 Cleanup
   V->>I: ticket 201, files, deps, acceptance observed on main
-  I->>I: tick Evaluate, deps done, files free, no hold
-  I->>L: ticket.ready 200 with claim rows taken
-  L->>S: lease.granted 201, ticket worker attempt 1, fencing token
-  S->>S: gap equals desired minus live, caps, address check
-  S->>B: dispatch 100, role worker, deadline_at, brief path
+  I->>I: tick Evaluate, deps done, claims free in the same Commit, no hold
+  I->>S: ticket.ready 200
+  S->>S: gap equals desired minus live, caps, budgets, address check
+  S->>L: GrantDispatch, one Commit: lease reserved with a new token, dispatch 100, ticket ready to in_flight
+  S->>B: dispatch body: lease key and token, deadline_at, repo_sha, bundle brief path
   B->>R: seat.bundle and workspace on branch wo/ticket
-  R->>W: claude -p with brief.md, settings.json, output schema
-  loop every 30 s
-    R->>L: seat.heartbeat and lease renew
+  R->>L: Lease.Start, reserved to running
+  R->>W: claude -p as a pooled seat user in its own transient unit
+  loop every heartbeat of the timing table
+    R->>L: seat.heartbeat and Lease.Renew with the token
   end
-  W-->>R: structured output worker.result ready
-  R->>GH: close-out by code, push wo/ticket, open the PR
-  R->>I: seat.result 200 and pr.opened 100 with head sha
-  R->>C: pr.opened starts the suite plan from the diff
+  W-->>R: structured output in result.json, worker.result ready
+  R->>I: seat.result 200 with the token, accepted while the lease is current
+  I->>GH: N-16 close-out as coq-svc with forge-pr: push wo/ticket, open the PR; the seat never pushes
+  I->>I: pr.opened 100 with head sha, ticket pr_open
+  I->>C: pr.opened starts the suite plan from the diff
   C->>GH: coq/gate pending, then success or failure on the head sha
   P->>GH: GET main ref, open PRs, statuses, with ETag
   P->>G: forge.snapshot 200
   G->>I: gate.verdict green 201 on the head
-  I->>L: phase reviewer, ticket.ready
-  L->>S: lease.granted reviewer
+  I->>S: phase reviewer, ticket.ready
+  S->>L: GrantDispatch for the reviewer phase
   S->>RV: dispatch, bundle, read-only workspace at the head sha
   RV-->>R: review.result with evidence per criterion
   R->>M: review.passed 201 on the head sha, GitHub approve mirrored
-  M->>M: both records name the current head, no hold, merge.lock lease
-  M->>GH: squash merge with sha equal to the head
-  GH-->>M: merge sha
-  M->>I: merge 200 with merge_sha and merge_seq
-  I->>I: ticket done, claims released
+  M->>M: both records name the current head, no hold, no unverified merge on main, merge.lock lease
+  M->>GH: squash merge with sha equal to the head, outbox row first
+  GH-->>M: merge sha, read back
+  M->>I: merge 200 with merge_sha, parent_main and base_sha, ticket merged
+  Note over M,I: the ticket becomes done only when N-10 verifies main (7.2)
   M->>X: branch, worktree and slot cleanup from the merge record
 ```
 
@@ -565,6 +651,7 @@ Depth: [N-03](nodes/N-03/spec.xml#mechanism), [N-07](nodes/N-07/spec.xml#mechani
 ### 7.2 Gate verdict, main verify and hold
 
 Every merge is verified on main in pods; a red main holds every merge but the fix, and the owner hears only after three fixes fail.
+At most one merge on main is unverified at a time, so a newer merge never starves the verification of an older one ([ticket transitions](shared/contracts.xml#ticket-transitions)).
 
 ```mermaid
 sequenceDiagram
@@ -579,17 +666,17 @@ sequenceDiagram
   participant SA as N-17 and N-18 Fix cut
   participant CB as N-28 Card builder
   participant O as Owner
-  M->>MV: merge 200, merge_sha, merge_seq k
-  MV->>MV: coalesce to the newest main sha, an older run is superseded 410
+  M->>MV: merge 200, merge_sha, parent_main, merge_seq k
+  M->>M: awaiting-verify, no next merge until the verdict
   MV->>J: main.plan with every suite of suites.json full
   J-->>ST: pod.run per unit, infrastructure retried by the ladder
   ST->>GH: coq/gate on the main sha
   ST->>MV: gate.run with the result set
   MV->>VH: main.gate.status with the range of merges
   alt success
-    VH->>VH: verified 201 per PR in the range
-    VH->>M: merge.hold.lifted when the held seq is at or below k
-  else failure, or error after 3 infrastructure attempts
+    VH->>VH: verified 201, ticket merged to done
+    VH->>M: awaiting-verify cleared, merge.hold.lifted when one stood
+  else failure, or error once N-25 has spent its retry budget
     VH->>VH: rejected 422 with the red suites
     VH->>M: merge.hold 423, no merge but the fix
     loop fix_attempt 1 to 3
@@ -608,7 +695,8 @@ Depth: [N-10](nodes/N-10/spec.xml#mechanism), [N-26](nodes/N-26/spec.xml#mechani
 
 ### 7.3 Seat launch, run, stall timer and retry
 
-A seat is fenced before it is killed and killed before it is retried, so a zombie can never post after the retry started.
+A seat is fenced before it is killed and killed before it is retried.
+A late terminal report carrying the revoked token is accepted once per run with `fenced: true`, and N-11 treats it as an echo, never as a new failure ([terminal report](shared/contracts.xml#terminal-report), [kill authority](shared/contracts.xml#kill-authority)).
 
 ```mermaid
 sequenceDiagram
@@ -626,32 +714,33 @@ sequenceDiagram
   S->>B: dispatch, ticket, phase, attempt n, deadline_at, lease token
   B->>DB: seat.bundle, settings.json, mcp.json, brief.md, output.schema.json, bundle_hash
   S->>WS: dispatch
-  WS->>DB: file_claims rows, slot by CAS, worktree from the mirror, workspace 100
-  R->>R: preflight, bundle hash, base sha, lease alive
-  R->>DB: started.json under seats/runs/run_id
-  R->>CL: claude -p, permission-mode dontAsk, max-turns, max-budget-usd, json-schema
-  loop every lease.heartbeat_seconds, 30 s
+  WS->>DB: the ticket holds its claims or 412 claim_missing, slot by CAS, worktree from the mirror, workspace 100
+  R->>R: preflight, bundle hash, base sha, lease reserved and current
+  R->>L: Lease.Start, reserved to running, run state spawning
+  R->>CL: systemd-run unit coq-seat-run_id as a seat user, claude -p with dontAsk, max-turns, max-budget-usd, json-schema
+  loop every heartbeat of the timing table
     R->>DB: seat.heartbeat, progress_at from the transcript mtime
-    R->>L: renew with token and generation
+    R->>L: Lease.Renew with key and token
   end
   loop every stall.tick_seconds, 15 s
     ST->>DB: read leases, heartbeats, dispatches
     ST->>ST: judge progress age, launcher age, deadline, first heartbeat grace
   end
   alt run ends inside its bounds
-    CL-->>R: JSON envelope, subtype, cost, turns, structured_output
+    CL-->>R: result.json.partial validated, renamed result.json, fsync, sha256
     R->>DB: seat.result 200 done, or 423 blocked with terminal_reason
   else stalled
-    ST->>L: CAS revoke, generation plus 1, new token
-    ST->>CL: SIGTERM, 2 s, SIGKILL, up to 3 rounds
-    R->>DB: seat.result 423 killed_stall
-    ST->>DB: stall 500 keyed by lease key and generation
+    ST->>L: Revoke by CAS on the lease version, state revoked
+    ST->>DB: entity kill:run_id
+    R->>CL: systemctl stop the unit, kill grace of the timing table
+    R->>DB: seat.result 423 killed_by_record with the revoked token, accepted once, fenced true
+    ST->>DB: stall 500 keyed by lease key and token
   end
-  RT->>DB: CAS handled_by on the failure record
-  alt attempt n below 3
-    RT->>L: attempt n+1, not_before now plus min(10 x 2^(n-1), 300) s
-    L->>S: fresh lease and token, the next tick dispatches a fresh seat
-  else n equals 3
+  RT->>DB: CAS handled_by on the failure record, a fenced echo is not charged
+  alt the retry owner charges an attempt and the budget allows it
+    RT->>L: attempt n+1 with not_before from the retry-owner backoff
+    S->>L: the next tick's GrantDispatch issues a new token to a fresh seat
+  else attempts or budget spent
     RT->>CB: dead 500, exactly one card
   end
 ```
@@ -661,6 +750,7 @@ Depth: [N-15](nodes/N-15/spec.xml#mechanism), [N-12](nodes/N-12/spec.xml#mechani
 ### 7.4 Owner card and answer with acks
 
 The system builds the card from a record; a card never posts unwatched; the owner's answer is persisted before it is acknowledged.
+The page accepts the answer only from an authenticated same-origin request ([web security](nodes/N-32/spec.xml#web-security)), and the phone push path is [push delivery](nodes/N-52/spec.xml#push-delivery).
 
 ```mermaid
 sequenceDiagram
@@ -680,7 +770,7 @@ sequenceDiagram
   CB->>DB: tick query, owner-acts records with no card
   CB->>DB: read watcher.alive for coq-stable
   alt lamp alive, beat under 15 s
-    CB->>DB: card 300, C-number, about, decide, options, recommendation, deadline
+    CB->>DB: card 300, C-number, about, decide, options, recommendation; an owner-only card has no default and no deadline
   else lamp not alive
     CB->>DB: card.held 423 with backoff, card.unwatched 500 at attempt 3
   end
@@ -688,7 +778,8 @@ sequenceDiagram
   PU->>PG: SSE frame, the card joins the deck
   PG->>O: card drawn, card.shown 200 recorded
   PU->>PB: card frame, dark until cut-over step 9
-  PB->>O: ntfy push, push.receipt 200
+  PB->>O: ntfy publish; ntfy.sh forwards only a poll request that wakes the locked iPhone
+  PB->>DB: push.receipt when the provider accepted, push.observed when the phone fetched the body
   O->>FD: taps an option on the phone over Tailscale
   FD->>PG: bytes piped to loopback unchanged
   PG->>IN: Intake.Answer, card, pick, words, source page
@@ -696,7 +787,7 @@ sequenceDiagram
   IN->>DB: ruling 200, create only, one per card
   IN-->>PG: receipt with the ruling id
   PG-->>O: answer receipt on the card
-  WL->>DB: stream owner.answer since delivered_seq
+  WL->>DB: Tail owner.answer from its cursor, epoch and seq
   WL->>IN: Intake.Answer again, idempotent no-op, watermark advances
   CB->>DB: card.done 200 naming the ruling
   TI->>DB: effect ticket.unblock, re-entry with the attempt reset
@@ -727,6 +818,7 @@ sequenceDiagram
   PG-->>O: first receipt mark
   IN->>IN: rule table R01 to R99, top to bottom
   IN->>DB: routed.message 300 and ack routed
+  Note over IN: an owner word counts only as the whole trimmed message of an owner principal
   alt R01 USERHALT, R02 USERGO, R03 GOFACTORY, R04 card reply
     IN->>CN: N-29 within 5 s
   else R05 cut or ticket
@@ -828,9 +920,10 @@ sequenceDiagram
 
 Depth: [N-12 prompt-parked](nodes/N-12/spec.xml#prompt-parked), [failure case](shared/failure-cases.xml#prompt-parked).
 
-### 7.8 GOFACTORY cut-over
+### 7.8 Bootstrap and cut-over, GOFACTORY to USERGO
 
-The one order from GOFACTORY to the old line retired; each step starts on its trigger record and ends on its proof record.
+The one order from the approved design to the old line retired; each step starts on its trigger record and ends on its proof record, and the bootstrap state moves one step at a time on those proofs ([bootstrap](shared/cut-over.xml#bootstrap)).
+Under the hold, merges follow the [bootstrap merge path](shared/cut-over.xml#bootstrap-merge): by default N-09 merges only pull requests of the current bootstrap step with a green gate and review.passed on the same head, and the owner's break glass merges the pull requests that come before the first gate; the owner's pick is still open ([section 15](#15-decisions-for-the-owner)).
 
 ```mermaid
 sequenceDiagram
@@ -846,8 +939,9 @@ sequenceDiagram
   participant CI as N-20 to N-26 CI as code
   participant SC as N-07 to N-12 line
   participant EX as N-51 Exit test
-  Note over O,EX: step 0, system up, every flag false, flag hold set from the standing USERHALT
-  O->>IN: GOFACTORY ruling, card or rule R03
+  Note over O,EX: B0 design approved; B1 foundation built dark on a test state root, no live unit, no forge or Jenkins effect
+  O->>IN: GOFACTORY typed by the owner into the owner CLI after the N-49 dry-run listing: B2
+  IN->>IN: step 0, the live store is created held, every flag false, the rulings C34 to C58 imported with no effects
   IN->>N50: gofactory effect
   N50->>N50: D09 and D14 rulings present, cancel set equals 14
   N50->>GH: close PR 35 with the comment
@@ -865,9 +959,10 @@ sequenceDiagram
   RS->>SC: step 5, stall in shadow for 24 h then live, retry on
   RS->>SC: step 6, sched and merge on under the hold
   Note over RS,SC: step 7, records leave git, events out of the repository
-  SC->>O: one card, the line is ready, proofs named
-  O->>IN: USERGO ruling
-  IN->>SC: flag hold cleared, first dispatch, first machine merge
+  Note over RS,SC: B3 to B6 advance only on the proofs of steps 3, 4 and 5; merges by the bootstrap merge path
+  SC->>O: B7 ready, bootstrap.ready names the proofs of steps 2, 6 and 7, one owner-only card, no default, no deadline
+  O->>IN: USERGO at B7, refused 412 not-ready before B7
+  IN->>SC: B8 live, flag hold cleared, first dispatch, first machine merge
   SC->>SC: step 8, merge.sh and the old roles retired
   EX->>O: step 11, daily exit test, the product freeze lifts on the first pass
 ```
@@ -878,12 +973,13 @@ Depth: [cut-over order](shared/cut-over.xml#order), [N-49 order](nodes/N-49/spec
 
 ### 8.1 State root
 
-All runtime data lives outside the repository, resolved by [`bin/state-root.sh`](../../bin/state-root.sh) (`COQ_STATE` and `COQ_CACHE` win when set):
+All runtime data lives outside the repository, resolved by [`bin/state-root.sh`](../../bin/state-root.sh) (`COQ_STATE` and `COQ_CACHE` win when set).
+The state root belongs to the service user `coq-svc` alone, mode 0700; no seat user can read it ([principals](shared/authority.xml#principals)):
 
 ```text
-~/.local/state/coq/coq-jev-herdr-plugin/          COQ_STATE
+$HOME/.local/state/coq/coq-jev-herdr-plugin/      COQ_STATE, $HOME of coq-svc
   store/coq.db, coq.db-wal, coq.db-shm             the one store (N-01)
-  backup/store/YYYY/MM/*.zst                       snapshots (N-05)
+  backup/store/YYYY/MM/*.zst                       snapshots, classes tick, daily, monthly, manual (N-05)
   config/service.env                               tokens and keys, mode 0600 (N-04, N-06)
   run/service.lock, service.pid, scheduler.heartbeat
   logs/<node area>/YYYY/MM/*.jsonl                 service, scheduler, gate, merge, verify, retry, stall, cleanup, publish, promote
@@ -901,12 +997,12 @@ All runtime data lives outside the repository, resolved by [`bin/state-root.sh`]
   tiers/<tier>/src@<sha>, screenshots/<tier>/<sha>/
   unlanded/plan-*.json, backup/unlanded/, cutover/cancel-set-<sha>.json, exittest/<day>.json
   tickets/export/WO-*.md                           read-only exports for humans
-~/.cache/coq/coq-jev-herdr-plugin/                 COQ_CACHE, safe to delete
+$HOME/.cache/coq/coq-jev-herdr-plugin/             COQ_CACHE, safe to delete
   git/<slug>.git                                   the bare mirror (N-14)
   ws/<slot>/                                       workspace slots
   ci/image/<name>/, cleanup/registry-<sha>.json
-$XDG_RUNTIME_DIR/coq/store.sock, control.sock      gRPC sockets
-~/.config/systemd/user/coq-service.service, coq-bearings@.service, coq-watcher@.service, coq-front-door@.service, coq-cutover@.service
+/run/coq/store.sock                                the store socket, 0660, group coq-store; seats get none
+$HOME/.config/systemd/user/coq-service.service, coq-bearings@.service, coq-watcher@.service, coq-front-door@.service, coq-cutover@.service
 ```
 
 ### 8.2 State store tables
@@ -915,20 +1011,22 @@ One SQLite file in WAL mode, opened by the Go service alone; every table has one
 
 | Table | Owner | Mode | Holds |
 | --- | --- | --- | --- |
-| `records` | N-01 | append-only | Every record of every kind; `seq` strictly increasing; indexes (kind, seq), (ticket, seq), (code, seq) |
-| `entities` | N-01 | compare-and-swap | Current state by key (tickets, flags, ticks, health, snapshots); every write is also a record |
-| `idempotency` | N-01 | append-only | A seen key replays its first response (200); same key, other payload is 409 |
+| `records` | N-01 | append-only | Every record of every kind; `seq` strictly increasing but not gapless, and every record carries the store epoch ([epoch](shared/contracts.xml#epoch-cursor)); indexes (kind, seq), (ticket, seq), (code, seq) |
+| `entities` | N-01 | compare-and-swap | Current state by key (flags, `store:epoch`, `bootstrap:state`, `kill:<run_id>`, `run:<run_id>`); a write is also a record unless the kind is registered entity-only ([entity-only](shared/contracts.xml#entity-only)) |
+| `idempotency` | N-01 | append-only | One row per operation key with kind, node and request hash: the same hash replays 200, another hash is 409 idempotency_mismatch ([operation keys](shared/contracts.xml#operation-keys)) |
+| `effects` | N-01 | compare-and-swap | The outbox: one row per external effect, written in the Commit that decided it ([outbox](shared/contracts.xml#outbox)) |
+| `principals` | N-01 | compare-and-swap | Socket peer uid to node, role and permitted kinds ([principals](shared/authority.xml#principals)) |
 | `code_table` | N-43 | append-only | The status code map loaded from `shared/status-codes.xml` by hash |
-| `leases` | N-02 | compare-and-swap | One holder per key, fencing token, generation, expiry, heartbeat |
+| `leases` | N-02 | compare-and-swap | One row per key: class, state, integer token, holder never empty, generation, expiry ([lease machine](shared/contracts.xml#lease-machine)) |
 | `heartbeats` | N-15 | upsert | Newest heartbeat per run: pid, progress_at, transcript_bytes, adopted |
-| `attempts` | N-11 | append-only | One row per attempt of a ticket phase with its backoff; row 4 never exists |
+| `attempts` | N-11 | append-only | One row per charged attempt of a ticket phase with its backoff ([retry owner](shared/contracts.xml#retry-owner)) |
 | `slots` | N-14 | compare-and-swap | Workspace slots 1 to `workspace_slots` |
-| `tickets` | N-03 | compare-and-swap | The whole ticket; status cut, waiting, ready, in_flight, done, dead, cancelled, refused |
-| `claims`, `file_claims` | N-03, N-14 | append-only | One file, one in-flight ticket, taken at ready, released at the terminal state |
+| `tickets` | N-03 | compare-and-swap | The whole ticket; a status column and a separate phase column, changed only by a row of [ticket transitions](shared/contracts.xml#ticket-transitions) |
+| `claims` | N-03 | append-only | The one claims authority: overlap is checked inside the Commit, and N-14 only verifies the ticket holds its claims ([claims](shared/contracts.xml#claims)) |
 | `ticket_sets`, `id_mint` | N-18 | compare-and-swap, append-only | Drafts and accepted sets; reserved ids so a crashed mint resumes with the same ids |
 | `flags` | N-44 | compare-and-swap | build-mode, hold, freeze, each with scope, expiry, card and ruling |
 | `forge_history` | N-04 | append-only | GitHub snapshots on hash change, 30 days |
-| `backups` | N-05 | append-only | Snapshot path, checksums, class, verified |
+| `backups` | N-05 | append-only | Snapshot path, checksums, class (tick, daily, monthly, manual), epoch, verified ([restore](shared/contracts.xml#restore)) |
 | `plans`, `suite_budget` | N-23, N-06 | compare-and-swap, upsert | Suite and main plans with Jenkins build numbers; per-suite time budgets |
 | `cards`, `rulings`, `messages`, `acks`, `replies`, `routed_messages` | N-28, N-29, N-30 | mixed | The owner surface; one ruling per card id |
 | `watcher_alive`, `page_state`, `front_door`, `cutover` | N-27, N-32, N-34 | compare-and-swap | Unit liveness and the page's own staleness |
@@ -939,74 +1037,103 @@ One SQLite file in WAL mode, opened by the Go service alone; every table has one
 
 ### 8.3 Record examples
 
-Every record carries the envelope `id` (UTC stamp, code, five characters), `at` (UTC), `kind`, `code` and `node`, plus `seq` assigned by the store at commit ([envelope](shared/state-store.xml#envelope), [N-01 schema](nodes/N-01/record.schema.json)).
-The examples below are one ticket's path as committed records; each one validates against its node's `record.schema.json`.
+Every record carries the envelope `id` (UTC stamp, code, five characters), `at` (UTC), `kind`, `code` and `node`, plus `seq` and the store `epoch` assigned by the store at commit ([envelope](shared/state-store.xml#envelope), [epoch](shared/contracts.xml#epoch-cursor), [N-01 schema](nodes/N-01/record.schema.json)).
+The operation key and the lease fence ride on the `Commit` request, not in the record ([store transaction](shared/contracts.xml#batch), [operation keys](shared/contracts.xml#operation-keys)).
+The examples below are one ticket's path as committed records; each one validates against its node's `record.schema.json`, and `bin/check-examples.py` (C22) checks that.
 
-A lease granted to the first worker attempt ([N-02 schema](nodes/N-02/record.schema.json)):
+The lease and the dispatch are written in one `Commit`, N-07's GrantDispatch, under operation key `N-07/dispatch/WO-20261014-ab12:worker:1@184/r1`, together with the ticket's move from ready to in_flight ([lease machine](shared/contracts.xml#lease-machine)).
+The lease is reserved, its holder is the dispatch id, and it expires after the start grace unless the launcher starts it ([N-02 schema](nodes/N-02/record.schema.json)):
 
 ```json
 {
-  "schema_version": "2.0.0",
   "id": "20261014T063000Z-201-k3v9q",
   "at": "2026-10-14T06:30:00Z",
   "kind": "lease.granted",
   "code": 201,
   "node": "N-02",
   "seq": 5101,
-  "ticket": "WO-20261014-ab12",
-  "attempt": 1,
+  "epoch": 1,
   "key": "WO-20261014-ab12:worker:1",
+  "class": "seat",
+  "state": "reserved",
+  "ticket": "WO-20261014-ab12",
   "phase": "worker",
   "role": "worker",
-  "holder": "20261014T063005Z-100-p2m7d",
+  "attempt": 1,
+  "holder": "d-20261014063000-p2m7dq",
   "token": 184,
   "generation": 1,
   "granted_at": "2026-10-14T06:30:00Z",
-  "expires_at": "2026-10-14T06:45:00Z",
-  "heartbeat_seconds": 30
+  "expires_at": "2026-10-14T06:32:00Z",
+  "version": 1
 }
 ```
 
-The dispatch that follows it ([N-07 schema](nodes/N-07/record.schema.json)):
+The dispatch in the same `Commit`: the envelope plus the one dispatch body every consumer reads ([dispatch](shared/contracts.xml#dispatch), [`dispatch_body`](shared/contracts.schema.json), [N-07 schema](nodes/N-07/record.schema.json)):
 
 ```json
 {
-  "id": "20261014T063005Z-100-p2m7d",
-  "at": "2026-10-14T06:30:05Z",
+  "id": "20261014T063000Z-100-p2m7d",
+  "at": "2026-10-14T06:30:00Z",
   "kind": "dispatch",
   "code": 100,
   "node": "N-07",
   "seq": 5102,
-  "dispatch_id": "20261014T063005Z-100-p2m7d",
-  "idempotency_key": "WO-20261014-ab12:worker:1",
+  "epoch": 1,
+  "dispatch_id": "d-20261014063000-p2m7dq",
   "ticket": "WO-20261014-ab12",
-  "role": "worker",
   "phase": "worker",
+  "role": "worker",
   "attempt": 1,
-  "deadline": "2026-10-14T07:30:05Z",
-  "lease_key": "WO-20261014-ab12:worker:1",
-  "lease_token": 184,
-  "brief_path": "/home/luna/.local/state/coq/coq-jev-herdr-plugin/briefs/2026/10/20261014063005-WO-20261014-ab12-worker-1.md",
-  "lane": "build"
+  "lane": "build",
+  "lease": {
+    "key": "WO-20261014-ab12:worker:1",
+    "token": 184,
+    "generation": 1
+  },
+  "deadline_at": "2026-10-14T08:00:00Z",
+  "repo": {
+    "slug": "jkkelley/coq-jev-herdr-plugin",
+    "origin": "https://github.com/jkkelley/coq-jev-herdr-plugin.git"
+  },
+  "repo_sha": "4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7",
+  "build_mode": {
+    "on": false,
+    "scope": "rebuild",
+    "version": 3
+  },
+  "target": {
+    "type": "wo",
+    "ticket": "WO-20261014-ab12"
+  },
+  "session": {
+    "mode": "new"
+  },
+  "brief_path": "bundle/d-20261014063000-p2m7dq/brief.md"
 }
 ```
 
-The seat result the launcher parses from the harness envelope ([N-15 schema](nodes/N-15/record.schema.json)):
+The seat result the launcher parses from the harness envelope, committed under `N-15/seat.result/d-20261014063000-p2m7dq/r1` while the lease token is current ([N-15 schema](nodes/N-15/record.schema.json)):
 
 ```json
 {
-  "schema_version": "2.0.0",
   "id": "20261014T064212Z-200-x81fe",
   "at": "2026-10-14T06:42:12Z",
   "kind": "seat.result",
   "code": 200,
   "node": "N-15",
   "seq": 5188,
-  "run_id": "run-20261014T063007Z-ab12-1",
+  "epoch": 1,
+  "run_id": "d-20261014063000-p2m7dq",
+  "dispatch_id": "d-20261014063000-p2m7dq",
   "ticket": "WO-20261014-ab12",
   "role": "worker",
   "phase": "worker",
   "attempt": 1,
+  "lease": {
+    "key": "WO-20261014-ab12:worker:1",
+    "token": 184
+  },
   "outcome": "done",
   "terminal_reason": "success",
   "exit_code": 0,
@@ -1014,6 +1141,10 @@ The seat result the launcher parses from the harness envelope ([N-15 schema](nod
   "turns": 37,
   "session_id": "5b0e2c1a-6d7f-4f3e-9a51-0c2d8e4b7a10",
   "model": "claude-sonnet-5-5",
+  "harness": {
+    "version": "2.1.0",
+    "sha256": "9d3f1c0b7a2e4d6f8a1b3c5d7e9f0a2b4c6d8e0f1a3b5c7d9e1f2a4b6c8d0e2f"
+  },
   "started_at": "2026-10-14T06:30:07Z",
   "finished_at": "2026-10-14T06:42:12Z",
   "duration_seconds": 725,
@@ -1021,17 +1152,21 @@ The seat result the launcher parses from the harness envelope ([N-15 schema](nod
     "count": 0,
     "first": []
   },
+  "denied_line_ops": {
+    "count": 0,
+    "commands": []
+  },
   "structured": {
     "status": "ready",
-    "head_sha": "3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92",
-    "pr": 201
+    "head_sha": "3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92"
   },
-  "result_path": "/home/luna/.local/state/coq/coq-jev-herdr-plugin/seats/runs/run-20261014T063007Z-ab12-1/result.json",
-  "stderr_path": "/home/luna/.local/state/coq/coq-jev-herdr-plugin/seats/runs/run-20261014T063007Z-ab12-1/stderr.log"
+  "result_path": "$COQ_STATE/seats/runs/d-20261014063000-p2m7dq/result.json",
+  "result_sha256": "4a7c1e9b3d5f2a8c6e0b4d2f9a1c3e5b7d9f0a2c4e6b8d1f3a5c7e9b2d4f6a8c",
+  "stderr_path": "$COQ_STATE/seats/runs/d-20261014063000-p2m7dq/stderr.log"
 }
 ```
 
-The gate verdict on that head ([N-08 schema](nodes/N-08/record.schema.json)):
+The gate verdict on that head, keyed by the head and the status time it judged ([N-08 schema](nodes/N-08/record.schema.json)):
 
 ```json
 {
@@ -1040,7 +1175,9 @@ The gate verdict on that head ([N-08 schema](nodes/N-08/record.schema.json)):
   "kind": "gate.verdict",
   "code": 201,
   "node": "N-08",
-  "idempotency_key": "201:3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92:green",
+  "seq": 5240,
+  "epoch": 1,
+  "idempotency_key": "N-08/gate.verdict/201@3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92@2026-10-14T06:51:02Z/r1",
   "pr": 201,
   "ticket": "WO-20261014-ab12",
   "head_sha": "3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92",
@@ -1049,12 +1186,11 @@ The gate verdict on that head ([N-08 schema](nodes/N-08/record.schema.json)):
   "gate_url": "http://jenkins.jenkins.svc.cluster.local:8080/job/coq-gate/412/",
   "main_sha": "4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7",
   "status_updated_at": "2026-10-14T06:51:02Z",
-  "snapshot_seq": 5120,
-  "seq": 5240
+  "snapshot_seq": 5120
 }
 ```
 
-The merge ([N-09 schema](nodes/N-09/record.schema.json)):
+The merge, read back from GitHub with the main sha it landed on (`parent_main`) and the base the pull request had when the merge was decided (`base_sha`); N-26 and N-47 read the same record ([N-09 schema](nodes/N-09/record.schema.json)):
 
 ```json
 {
@@ -1063,11 +1199,15 @@ The merge ([N-09 schema](nodes/N-09/record.schema.json)):
   "kind": "merge",
   "code": 200,
   "node": "N-09",
-  "idempotency_key": "201:3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92",
+  "seq": 5301,
+  "epoch": 1,
+  "idempotency_key": "N-09/merge/201@3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92/r1",
   "pr": 201,
   "ticket": "WO-20261014-ab12",
   "head_sha": "3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92",
+  "base_sha": "4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7",
   "merge_sha": "a71d0b4e2c9f8a6d5b3e1c7f9a2d4b6e8c0f1a3d",
+  "parent_main": "4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7",
   "merge_seq": 93,
   "branch": "wo/WO-20261014-ab12",
   "paths": [
@@ -1075,8 +1215,7 @@ The merge ([N-09 schema](nodes/N-09/record.schema.json)):
     "scheduler/internal/lease/lease_test.go"
   ],
   "gate_verdict_id": "20261014T065130Z-201-q7c4n",
-  "review_record_id": "20261014T070122Z-201-v6t2b",
-  "seq": 5301
+  "review_record_id": "20261014T070122Z-201-v6t2b"
 }
 ```
 
@@ -1109,12 +1248,14 @@ A card about a dead ticket ([N-28 schema](nodes/N-28/record.schema.json)) and th
     "id": "WO-20261014-ab12",
     "title": "Lease service claim, renew, release and sweep"
   },
+  "owner_only": false,
   "deadline": "2026-10-15T08:15:00Z",
   "default": 0,
   "watcher": 7,
   "posted_at": "2026-10-14T08:15:00Z",
-  "idempotency_key": "cause:20261014T081455Z-500-d4t8h",
-  "seq": 5402
+  "idempotency_key": "N-28/card.post/20261014T081455Z-500-d4t8h/r1",
+  "seq": 5402,
+  "epoch": 1
 }
 ```
 
@@ -1132,15 +1273,17 @@ A card about a dead ticket ([N-28 schema](nodes/N-28/record.schema.json)) and th
   "words": "",
   "source": "page",
   "by": "owner",
-  "answer": "a-20261014082231907-k2p4z",
+  "principal_role": "owner",
+  "answer": "20261014T082231Z-100-k2p4z",
   "effects": [
     {
       "kind": "ticket.unblock",
       "ticket": "WO-20261014-ab12"
     }
   ],
-  "idempotency_key": "ruling:C-60",
-  "seq": 5417
+  "idempotency_key": "N-29/ruling/C-60/r1",
+  "seq": 5417,
+  "epoch": 1
 }
 ```
 
@@ -1153,53 +1296,122 @@ One acknowledgement of an owner message, an upsert keyed by the message whose st
   "kind": "ack",
   "code": 100,
   "node": "N-30",
-  "message": "m-20261014090101544-h2k9q",
+  "message": "20261014T090101Z-100-h2k9q",
   "state": "routed",
   "by": "inbox",
   "ref": "20261014T090102Z-300-l0r5u",
   "version": 2,
-  "seq": 5502
+  "seq": 5502,
+  "epoch": 1
 }
 ```
 
-### 8.4 Ticket lifecycle
+### 8.4 Runtime state machines
 
-The closed status set of a ticket; a transition not drawn here is 409 `ticket.transition_refused` ([N-03](nodes/N-03/spec.xml#mechanism)).
+The DAG is acyclic on purpose; the runtime is not, and these three diagrams show its loops.
+Each is a picture of a table that lives in one place, and the table wins wherever they differ: [ticket transitions](shared/contracts.xml#ticket-transitions), [lease machine](shared/contracts.xml#lease-machine) and [bootstrap](shared/cut-over.xml#bootstrap).
+What bounds each loop is the [retry owner](shared/contracts.xml#retry-owner) and the [budgets](shared/retry-budget.xml#budgets), never the drawing.
+
+A ticket: status and phase are separate columns, and a transition not in the table is refused 412 `ticket.transition_refused`.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> cut: Admit, schema ok, no cycle
-  cut --> refused: cycle, empty files, unknown dep, 422
-  cut --> waiting: deps or files not free
-  cut --> ready: all free at admit
-  waiting --> ready: deps done, files free, claims taken
-  ready --> in_flight: lease.granted by N-02
-  in_flight --> waiting: lease expired or blocked, attempt below 3
-  in_flight --> ready: phase change on gate green or review passed
-  in_flight --> done: merge record by N-09
-  in_flight --> dead: attempt 3 failed, N-11
-  dead --> waiting: a ruling unblocks it, attempt reset
-  waiting --> cancelled: ruling or cut-over
+  [*] --> cut: admitted by N-03
+  cut --> refused: ticket.refused
+  cut --> waiting: ticket.waiting
+  cut --> ready: ticket.ready, claims taken
+  waiting --> ready: ticket.ready, claims taken
+  ready --> waiting: ticket.waiting, claims released
+  ready --> in_flight: dispatch, N-07 GrantDispatch
+  in_flight --> ready: free regrant, no attempt charged
+  in_flight --> retry_wait: attempt n+1 charged by N-11
+  retry_wait --> ready: not_before passed
+  in_flight --> pr_open: pr.opened
+  pr_open --> in_flight: dispatch of the reviewer or gate phase
+  pr_open --> retry_wait: review.changes, gate red or merge.conflict
+  pr_open --> merged: merge by N-09
+  merged --> done: verified main contains the merge
+  in_flight --> dead: attempts spent
+  pr_open --> dead: attempts spent
+  waiting --> dead: ticket.stale
+  dead --> waiting: owner ruling ticket.unblock, attempt reset
+  waiting --> cancelled
+  ready --> cancelled
+  in_flight --> cancelled
+  retry_wait --> cancelled
+  pr_open --> cancelled
   done --> [*]
   cancelled --> [*]
   refused --> [*]
 ```
 
+A lease: one row per key with an integer token that only grows; a stale or non-current token is refused 412 ([fencing](shared/contracts.xml#fencing)).
+
+```mermaid
+stateDiagram-v2
+  [*] --> reserved: GrantDispatch by N-07, new token, holder the dispatch id
+  reserved --> reserved: Renew
+  reserved --> running: Start by N-15
+  running --> running: Renew with the token
+  reserved --> released: Release
+  running --> released: Release
+  reserved --> expired: Sweep after the start grace, no attempt charged
+  running --> expired: Sweep after the ttl, kill and charge per retry owner
+  reserved --> revoked: Revoke by N-12, CAS on the version
+  running --> revoked: Revoke by N-12, kill entity in the same Commit
+  released --> reserved: free regrant only, new token
+  expired --> reserved: free regrant only, new token
+  released --> [*]
+  expired --> [*]
+  revoked --> [*]
+  note right of revoked
+    one late terminal report with the
+    revoked token is accepted once,
+    fenced, and is an echo to N-11
+  end note
+```
+
+The line's bootstrap: one entity, moved forward one state at a time on proof records; only the two owner words are steps an agent cannot cause.
+
+```mermaid
+stateDiagram-v2
+  [*] --> B0: this book merged, check.sh green
+  B0 --> B1: foundation tickets cut
+  B1 --> B2: GOFACTORY, with the foundation proven
+  B2 --> B3: proofs of steps 0 and 1
+  B3 --> B4: proof of step 3
+  B4 --> B5: proof of step 4
+  B5 --> B6: proof of step 5
+  B6 --> B7: proofs of steps 2, 6 and 7, bootstrap.ready
+  B7 --> B8: USERGO
+  B8 --> [*]
+  note right of B6
+    USERGO in B0 to B6 is refused
+    412 not-ready, naming the
+    missing proofs; the hold
+    stands from B2 to B7
+  end note
+```
+
+A restore is the one way back: it starts a new store epoch held with every flag off, expires every lease, moves the token counter past every token issued, reconciles GitHub, Jenkins and merges, and only an owner ruling releases the hold ([restore](shared/contracts.xml#restore)).
+
 ### 8.5 Config keys that matter most
 
 Every value is a key in `STATE/config/service.env` or the config table, applied by `Reload` without a restart ([config keys](shared/state-store.xml#config-keys)).
+The lease, heartbeat, grace, stall, deadline, tick, cap and budget defaults are one table, [timing](shared/contracts.xml#timing), and the CI sizes are [CI capacity](shared/ci-capacity.xml#model); this section names the keys and leaves the numbers there.
 
 | Key | Default | Owner |
 | --- | --- | --- |
-| `lease.ttl_seconds`, `lease.heartbeat_seconds` | 900 s, 30 s (a dead launcher is judged at 3 x 30 = 90 s) | N-02 |
+| `lease.ttl_seconds`, `lease.heartbeat_seconds`, `start.grace_seconds`, `kill.grace_seconds` | [timing](shared/contracts.xml#timing) | N-02, N-12, N-15 |
 | tick intervals | scheduler 5 s, poll 30 s, stall 15 s, health 15 s, backup 6 h, daily 00:05Z | N-06 |
 | `forge.poll_seconds`, `forge.calls_per_poll_max` | 30 s, 60 (halves under 1000 remaining) | N-04 |
-| `gate.absent_seconds`, `gate.pending_seconds` | 1800 s, 3600 s | N-08 |
+| `gate.absent_seconds`, `gate.pending_seconds` | derived from the inner bounds ([deadlines](shared/retry-budget.xml#deadlines)) | N-08 |
 | `merge.hold_age_alert_seconds` | 14400 s | N-09 |
-| stall bounds per role | worker 300 s, reviewer 300 s, spec-author 300 s, gate 60 s; first heartbeat grace 120 s | N-12 |
+| `stall.seconds.<role>`, `run.deadline_seconds.<role>` | [timing](shared/contracts.xml#timing) | N-12 |
 | `stall.prompt_park_seconds`, `stall.prompt_recard_seconds` | 30 s, 900 s | N-12 |
-| retry backoff | min(10 x 2^(n-1), 300) s, 3 attempts | N-11 |
-| `gate.runs_in_flight_max`, `image.builds_in_flight_max` | 2 (main first), 2 | N-07, N-22 |
+| retry backoff and attempts | [retry owner](shared/contracts.xml#retry-owner) | N-11 |
+| `caps.max_seats`, `workspace_slots`, `budget.*` | [timing](shared/contracts.xml#timing), enforced at GrantDispatch ([budgets](shared/retry-budget.xml#budgets)) | N-07 |
+| gate runs in flight and pod sizes | [CI capacity](shared/ci-capacity.xml#model) | N-07, N-22, N-24 |
 | `flags.build_mode.max_duration` | P7D | N-44 |
 | `tiers.stable.port`, `tiers.uat.port_range`, `tiers.dev.port_range` | 44900, 44910 to 44919, 44920 to 44939 | N-48 |
 | `map.frame_budget_ms`, `map.stale_after_s` | 16 ms, 90 s | N-38 |
@@ -1213,18 +1425,18 @@ No seat may run anything in the "owner only" or "service only" rows: the seat la
 
 | Command | What it does | Dry run and apply | Who runs it |
 | --- | --- | --- | --- |
-| `make -C scheduler build` then `make -C scheduler install-unit` | Builds `coq-service`, installs `~/.config/systemd/user/coq-service.service`, prints the `loginctl enable-linger` line | none; install is the owner's one-time step | owner, once |
+| `make -C scheduler build` then `make -C scheduler install-unit` | Builds `coq-service`, installs `$HOME/.config/systemd/user/coq-service.service`, prints the `loginctl enable-linger` line | none; install is the owner's one-time step | owner, once |
 | `systemctl --user status coq-service`, `journalctl --user -u coq-service -f` | Unit state and the process journal | read-only | anyone |
 | `scheduler ctl health`, `scheduler ctl status` | gRPC health with reasons; counters, ticks, held and dead jobs | read-only | anyone |
 | `scheduler ctl store status`, `scheduler ctl record get ID`, `scheduler ctl record list --since SEQ --kind KIND` | Store size, top seq, tail clients; read records | read-only | anyone |
 | `scheduler ctl reload` | Applies a merged config change by hash, writes `reload.applied` | none; the config change is a merged PR | service, after a merge |
 | `scheduler ctl hold set --reason TEXT`, `scheduler ctl hold clear` | Sets or clears `flag:hold` as a `control.action` through N-29 | none; recorded | owner (or the Controls screen) |
-| `scheduler/host/bin/restore-store.sh --from BACKUP --dry-run`, then `--apply` | Restores the store from a backup and prints the seq gap | `--dry-run` lists, `--apply` moves the live file aside with a UTC stamp | owner, unit stopped |
+| `scheduler/host/bin/restore-store.sh --from BACKUP --dry-run`, then `--apply` | Restores the store from a backup into a new epoch, held, with every lease expired and the token counter moved past every token issued, then reconciles GitHub, Jenkins and merges ([restore](shared/contracts.xml#restore)) | `--dry-run` lists, `--apply` moves the live file aside with a UTC stamp; only an owner ruling releases the hold | owner, unit stopped |
 | `line/bin/cleanup.sh plan --entry ID`, then `line/bin/cleanup.sh apply --plan HASH --fence TOKEN` | Expands a registry entry, lists what would go, then deletes exactly that | `plan` is the dry run; `apply` refuses if the expansion changed | service (N-45); `apply` outside a plan is owner break glass |
 | `line/bin/cleanup.sh --entry ID` | The registry verb for one state path (176 entries) | plan first, always | service (N-45) |
-| `coq owner answer --relay --card C-42 --pick 3 --words "..."` | Records an answer the owner gave in chat or on the phone, verbatim, before any gate reads it | none; refused for any caller with `COQ_SEAT` set | owner or the owner's own architect session |
-| `coq owner import-answers --file ~/.bearings/coq-stable/answers.jsonl` | Imports the legacy answers once at cut-over | `--dry-run`, then `--yes`; refuses an existing id unless `--skip-existing` | owner, once |
-| `coq owner import-messages --file ~/.bearings/coq-stable/messages.jsonl` | Imports legacy messages once | `--dry-run`, then `--yes` | owner, once |
+| `coq owner answer --relay --card C-42 --pick 3 --words "..."` | Records an answer the owner gave in chat or on the phone, verbatim, before any gate reads it; a relayed answer may only carry effects none or ticket.unblock and never becomes an owner word ([relayable rulings](shared/authority.xml#relayable-rulings)) | none; the store derives the caller from the socket peer uid, so a seat user is refused 403 whatever its environment (`COQ_SEAT` is diagnostic only, never authority) | owner or the owner's own architect session |
+| `coq owner import-answers --file $HOME/.bearings/coq-stable/answers.jsonl` | Imports the legacy answers once at cut-over | `--dry-run`, then `--yes`; refuses an existing id unless `--skip-existing` | owner, once |
+| `coq owner import-messages --file $HOME/.bearings/coq-stable/messages.jsonl` | Imports legacy messages once | `--dry-run`, then `--yes` | owner, once |
 | `coq owner reply --to m-ID "text"` | Replies on the page through `Inbox.Reply` with the comms checker | refused with the violations | the only way a seat speaks on the page |
 | `coq owner inbox --tier stable --open`, `coq inbox digest --since T` | Open messages with ack state; the architect digest | read-only | owner, architect |
 | `coq owner url --page coq-stable` | Prints the loopback and tailnet URLs with the key, to the terminal only | read-only | owner |
@@ -1263,12 +1475,13 @@ Depth: [N-01 runbook](nodes/N-01/spec.xml#runbook), [N-06 runbook](nodes/N-06/sp
 | Owner answer, message, file | in | `POST /answer {card, pick, words}`, `POST /message {id, text, files, reply_to}`, `POST /file` (N-32) |
 | Page stream | out | Server-sent events on `/events`: `id` = seq, snapshot on reconnect, 1 s heartbeat (N-31, N-32) |
 | herdr agent status event | in | `pane.agent_status_changed` with the harness notification text, for registered long-lived seats only (N-12) |
-| Phone push | out | ntfy POST with title, body, priority by code, click to the tailnet page without the key (N-52) |
+| Phone push | out | ntfy POST with title, body, priority by code, click to the tailnet page without the key; ntfy forwards only a poll request through the ntfy.sh upstream so a locked iPhone wakes at once, and the body stays on the cluster ([push delivery](nodes/N-52/spec.xml#push-delivery)) |
 | Map public page | out | Static bundle at `map.gatehouse.click` with `healthz.json` naming the sha (N-35) |
 | Drive copies | out | Version-named immutable files with a manifest, scope `drive.file` (N-47) |
 | Screenshots | out | PNG at 1280x800 and 430x932 under `$COQ_STATE/screenshots/<tier>/<sha>/` (N-48) |
-| Service tokens | in | `STATE/config/service.env` (mode 0600): the fine-grained GitHub read token; Jenkins and kube credentials from the host keyring; never in a record |
-| Backups | out | `VACUUM INTO` snapshots compressed to `.zst` with checksums (N-05) |
+| Service credentials | in | One credential per job, held by `coq-svc` only, never by a seat and never in a record: forge-read (N-04), the coq-gate GitHub App (N-25), forge-merge (N-09), forge-pr (N-16 close-out); forge-admin stays in the owner's keyring ([credential matrix](shared/authority.xml#credential-matrix)) |
+| Outside probe alerts | out | `coq-probe` on a Pi posts to its own ntfy topic with its own token when the host stops answering, and its outage journal is imported on recovery as `host.outage` ([outside probe](shared/outside-probe.xml#alerting)) |
+| Backups | out | Snapshots taken on a reader connection, compressed to `.zst` with checksums, classes tick, daily, monthly and manual, carrying the epoch ([restore](shared/contracts.xml#restore), N-05) |
 
 ## 11. Status and exit codes
 
@@ -1307,7 +1520,7 @@ A code whose actor is the owner becomes exactly one card; nothing else reaches t
 | 1 | Checks failed (one `FAIL` line each), or a unit was fenced by a newer lease generation and exits for systemd to restart | the writer of the failing file; systemd for a fenced unit |
 | 2 | Usage, or the checker cannot run (no validator) | the caller |
 | 3 | Refused: a second instance of a unit (systemd `RestartPreventExitStatus=3` stops the loop), a validation failure, an unknown config variable | nobody for a second instance; the config author otherwise |
-| 4 | I/O or a step failed after its 3 attempts (bind, cleanup, publish, promotion), or an owner-only verb was called with `COQ_SEAT` set | the system reports it as a record; the owner only through the card it produces |
+| 4 | I/O or a step failed after its 3 attempts (bind, cleanup, publish, promotion), or an owner-only verb was called by a caller whose peer uid is not the owner principal | the system reports it as a record; the owner only through the card it produces |
 
 ## 12. Tool choices
 
@@ -1315,12 +1528,12 @@ A code whose actor is the owner becomes exactly one card; nothing else reaches t
 | --- | --- | --- |
 | Control plane | One Go service with gRPC on unix sockets | Owner ruling 2026-10-14 ~04:00Z ("GO ... handles this, agents and humans dont", "grpc for the win"); the proto and the fake clock already exist; one binary, one test harness (D01, D09) |
 | State | SQLite in WAL mode, one file, one writer | One host, no broker to run; compare-and-swap and idempotency keys give the many-writer safety; a broker would only have stored 212 of the 391 misaddressed wakes (D10, card C34) |
-| Supervision | systemd user units with linger, `Restart=always`, `WatchdogSec=60` | A crash restarts in 5 s and a hang is killed by the watchdog, never by a pane reader; the 9.5 hour dark outage cannot repeat |
+| Supervision | systemd user units with linger, `Restart=always`, `WatchdogSec=60`, each seat in its own transient unit outside the service's cgroup | A crash restarts in 5 s and a hang is killed by the watchdog, never by a pane reader; a restart repeats no effect, because every effect carries an operation key with a request hash and an outbox row ([operation keys](shared/contracts.xml#operation-keys)); a whole-host or store outage like the 9.5 hour dark one is detected from outside by the probe within its bound ([alerting](shared/outside-probe.xml#alerting)) |
 | Gate verdict | GitHub required status `coq/gate` | Readable by an agent, editable by none; GitHub itself refuses a merge without it (D05, card C43) |
-| GitHub events | Poll every 30 s with ETags | GitHub cannot reach 192.168.1.245; a missed webhook is never redelivered; a webhook may only call `poll_now` later (D06, card C44) |
+| GitHub events | Poll every 30 s with ETags | GitHub cannot reach the host on its private LAN address; a missed webhook is never redelivered; a webhook may only call `poll_now` later (D06, card C44) |
 | CI executor | Jenkins as code: JCasC, job by config, image pinned by digest, Longhorn home, synced by Argo | The owner's working pipeline, fixed instead of replaced; no UI clicks; no CIFS home on a Windows PC (D07, card C45) |
-| Tests, lint, image builds | Pods in namespace `coq-factory`: quota, priority -100, no secrets, egress GitHub and GHCR only | Pod tests already pass 30 of 31 herdr cases; the WSL host had eleven crashes in seven weeks (D22, D23, cards C38, C53) |
-| Image builds | Kaniko through `jenkins-shared-lib`, pushed to `ghcr.io/jkkelley` | The yieldpoint-ai path, already working |
+| Tests, lint, image builds | Pods in namespace `coq-factory`: quota and sizes from [CI capacity](shared/ci-capacity.xml#quota), priority -100, no secrets, egress to cluster DNS, the Jenkins controller, GitHub and GHCR only | Pod tests already pass 30 of 31 herdr cases; the WSL host had eleven crashes in seven weeks (D22, D23, cards C38, C53) |
+| Image builds | Kaniko through `jenkins-shared-lib`, pushed to `ghcr.io/jkkelley`, the builder image pinned by digest to the maintained fork with a fallback ([builder pin](shared/ci-capacity.xml#builder-pin)) | The yieldpoint-ai path, already working; the upstream Kaniko project is archived, so the pin and its fallback are written down |
 | Seats | `claude -p` one-shot with `--json-schema`, `--permission-mode dontAsk`, limits as flags | Result, cost, turns and terminal state come from the harness, not the model; a miss is a recorded denial, not a prompt (D02, card C36) |
 | Seat credential | Subscription login on the host; API key only for pod seats | No new bill now; exact caps when seats move to pods (D03, card C37) |
 | Model per seat | The role file's model; Sonnet by default; Opus only by a ruling | Right-size rule (owner 2026-10-13); a model-limit prompt switches to the ruled model, never spends extra credits |
@@ -1330,7 +1543,7 @@ A code whose actor is the owner becomes exactly one card; nothing else reaches t
 | Owner surface | The bearings page as the one surface, rail folded in as a panel | One place to read and decide (D20, card C51) |
 | Page transport | Server-sent events from the Go page service, full state on reconnect | `EventSource` reconnects by itself with `Last-Event-ID`; WebSocket only if a measured phone frame-time miss demands it (D21, card C52) |
 | Phone access | Tailscale front door unit `coq-front-door@<page>` | Works today (PR 186, PR 187), no root, rebinds by itself when the tailnet address changes |
-| Phone push | Self-hosted ntfy on the cluster | No app to build, no third party holding card titles, one POST per push (C58) |
+| Phone push | Self-hosted ntfy on the cluster, with `upstream-base-url` set to ntfy.sh for instant iOS delivery | No app to build, one POST per push (C58); the owner wants pushes instant, and iOS wakes a locked phone only through Apple's push service, so ntfy.sh sees a message id and a topic hash, never a card title or body ([push delivery](nodes/N-52/spec.xml#push-delivery)) |
 | Public map hosting | Jenkins, `jenkins-shared-lib`, ghcr, homelab-gitops Helm chart, Argo, HAProxy, Lightsail Nginx, Route 53 | Owner note 5: "the plumbing needs to work first ... lets not make this hard"; a hello page proves it before map code |
 | Map rendering | TypeScript, Canvas 2D, fixed 60 Hz simulation, 16 ms frame budget | 60 fps pushed state on a phone; no framework beyond the renderer |
 | Look | Krastorio 2 token table as CSS custom properties, Titillium Web, original art only | Owner rule "all views shown to me better have that krastorio look"; Titillium is SIL OFL 1.1; no Wube or BiusArt file ships |
@@ -1361,7 +1574,7 @@ These bind every agent once the rebuilt line runs; each is enforced by a node, n
 - A rule that blocks a rebuild ticket under build mode is a defect in the rule (`rule.bit` 300), not a failure of the ticket.
 - A hand fix is a defect: turn it into a ticket that makes the system do it.
 - Leave the breadcrumb at the fix site: what broke, why it mattered, why this fix, what it costs.
-- Never select the privileged AWS profile `minecraft-admin`.
+- Never select the privileged AWS profile the owner's site file names.
 
 ## 14. Files created
 
@@ -1375,6 +1588,9 @@ These bind every agent once the rebuilt line runs; each is enforced by a node, n
 | `scheduler/internal/owner/watcher`, `cards`, `intake`, `inbox`, `push`, `pushbridge` | G5: the owner surface inside the Go module, plus the commands `coq-bearings` and `coq-watcher` |
 | `scheduler/internal/flags`, `cleanup`, `promote`, `cutover`, `exittest` | G7: build mode and hold flags, cleanup runs, tier promotion, cut-over records, the exit test |
 | `scheduler/host/systemd/coq-service.service` | The service unit |
+| `scheduler/config/principals.json`, `/etc/coq/seat-users`, the root-owned helper `coq-seat-exec`, the WSL host settings | The principals, the seat user pool, the seat launcher helper and the host checks of [authority](shared/authority.xml#wsl-host), each planned there |
+| `scheduler/api/store/v1/`, `lease/v1/`, `intake/v1/` protos | The new Store, Lease and Intake services beside the existing `scheduler.proto` ([N-01](nodes/N-01/spec.xml#mechanism)) |
+| `coq-probe` on one Pi, with its own ntfy topic and token | The outside probe ([outside probe](shared/outside-probe.xml#probe)) |
 | `scheduler/host/bin/restore-store.sh` and `cleanup-*.sh` (store, run, logs, leases, forge, backups, unit, seat-bundles, seat-runs, workspaces, validator, git-mirror, tickets, branches) | Restore and the per-area cleanup scripts the registry calls |
 | `scheduler/config/seats.json`, `retry.json`, `prompt-rules.json`, `cleanup.json` | Seat limits and git identity, the retry table, prompt routing, cleanup config |
 | `roles/schema/role.schema.json` gains `max_turns`, `max_budget_usd`, `wall_clock_seconds`, `stall_seconds` | Limits as fields, never prose ([N-13](nodes/N-13/spec.xml#mechanism)) |
@@ -1401,7 +1617,7 @@ Every state path a volume names is an entry of [`shared/cleanup-registry.json`](
 | Path | Purpose | Cleanup |
 | --- | --- | --- |
 | `$COQ_STATE/store/coq.db` and its WAL | The one store | Never deleted live; rows by retention class: `line/bin/cleanup.sh --entry N-01.store`, leases `--entry N-02.store-coq-db-table-leases-entity-counter` |
-| `$COQ_STATE/backup/store/YYYY/MM/*.zst` | Snapshots | `--entry N-05.backup-store-yyyy-mm-zst` (keeps daily 14, weekly 8, monthly 6, never the newest verified) |
+| `$COQ_STATE/backup/store/YYYY/MM/*.zst` | Snapshots | `--entry N-05.backup-store-yyyy-mm-zst` (keeps each class tick, daily, monthly and manual by its own rule and a free-space floor, never the newest verified; [N-05](nodes/N-05/spec.xml#mechanism)) |
 | `$COQ_STATE/logs/**/*.jsonl` | Structured logs by node | `--entry N-01.logs-service-store-jsonl`, `N-07.logs`, `N-08.logs`, `N-09.logs` and the other `.logs` entries |
 | `$COQ_STATE/briefs/` | Rendered briefs | `--entry N-07.briefs` (30 days after verified) |
 | `$COQ_STATE/seats/bundles/<run_id>/`, `seats/runs/<run_id>/` | Seat bundles and run files | `--entry N-13.seats-bundles-run-id`, `--entry N-15.seats-runs-run-id` |
@@ -1413,33 +1629,50 @@ Every state path a volume names is an entry of [`shared/cleanup-registry.json`](
 | `$COQ_STATE/svc/codes/`, `cleanup/plans/`, `publish/`, `tiers/`, `screenshots/` | Code tables, cleanup plans, Drive exports, tier sources, promotion pictures | `--entry N-43.table`, `N-45.plans`, `N-47.export`, `N-48.tier-src`, `N-48.screenshots` |
 | `$COQ_STATE/unlanded/`, `backup/unlanded/`, `cutover/`, `exittest/` | Cut-over and exit-test working files | `--entry N-49.plan`, `N-49.backup`, `N-50.cancel-set`, `N-51.rows` |
 | `$COQ_STATE/secrets/rclone.conf`, `owner/push/token`, `config/service.env` | Secrets, mode 0600 | `--entry N-47.secret`, `N-52.owner-push-token`, `N-06.config-service-env` (owner only) |
-| `~/.config/systemd/user/coq-*.service`, `~/.local/bin/coq-service` | Units and the binary | `--entry N-06.config-systemd-user-coq-service-service`, `tools/bearings/bin/install-units.sh --remove` |
-| `~/.bearings/coq-stable/` | The legacy page state, retired at cut-over step 10 | `tools/bearings/bin/cleanup-tier.sh coq-stable --legacy` |
+| `$HOME/.config/systemd/user/coq-*.service`, `$HOME/.local/bin/coq-service` | Units and the binary | `--entry N-06.config-systemd-user-coq-service-service`, `tools/bearings/bin/install-units.sh --remove` |
+| `$HOME/.bearings/coq-stable/` | The legacy page state, retired at cut-over step 10 | `tools/bearings/bin/cleanup-tier.sh coq-stable --legacy` |
 | Cluster: namespace `coq-factory` pods, Kaniko pods, ghcr package versions | Test pods and images | `ci/bin/cleanup-cluster.sh --what`, `ci/bin/cleanup-ghcr.sh --image NAME` |
 | GitHub: branches `wo/<ticket>` | Ticket branches | Deleted on merge (`forge.delete_branch_on_merge`), checked by `scheduler/host/bin/cleanup-branches.sh` |
 
 ## 15. Decisions for the owner
 
 Only the open ones; the R-02 rulings (C34 to C58) are closed and not asked again.
-Each goes on the stable page as its own card, one at a time, in this order.
+Each goes on the stable page as its own card, one at a time, in this order; the same list is kept in [owner decisions](shared/review-dispositions.xml#owner-decisions).
+GOFACTORY and USERGO are not on this list: they stay your words, given when you choose, and nothing in this book grants, implies, defaults or relays either ([owner words](shared/authority.xml#owner-words)).
 
 1. **Close R-03 on this read?**
    Recommendation: close it.
-   Then: PR 189 merges, this book becomes the one design on main, and no build ticket is cut until GOFACTORY.
+   Then: PR 189 merges, this book becomes the one design on main, the bootstrap enters B0, and only the B1 foundation tickets may be cut; every runtime ticket waits for your GOFACTORY ([bootstrap](shared/cut-over.xml#bootstrap)).
 
-2. **Give GOFACTORY once R-03 is closed, with the system nodes built first after it?**
-   The book's cut-over says the store, clock, backups and code table come up "before GOFACTORY", but your HOLD says nothing new starts before it, so the book cannot do both.
-   Recommendation: give GOFACTORY right after closing R-03; the unlanded cleanup runs first as a dry-run listing you see before anything is deleted (your ruling on C57), then wave 1 is built dark and cut-over step 0 runs as soon as it merges.
+2. **Is one Raspberry Pi of the cluster free for the outside probe?**
+   Today nothing outside the WSL host notices when the host or the store is down, which is how the line once stayed dark for hours.
+   Recommendation: give one Pi to `coq-probe`, with its own ntfy topic and token; until you confirm one, the probe is designed and its proof is not-run ([availability](shared/outside-probe.xml#availability)).
 
-3. **Ship only the 260 high-confidence Krastor originals until the rest are confirmed?**
+3. **Create the coq-gate GitHub App?**
+   The gate status must be posted by a credential that can write statuses and checks and nothing else, and the required check on main names that App by its id.
+   Recommendation: create it with statuses and checks write only and record its app id; no other credential can post `coq/gate` ([GitHub App](shared/authority.xml#github-app)).
+
+4. **Turn WSL interop off and mount the Windows drives with umask 077?**
+   Separate users only isolate seats if a seat cannot start Windows programs or read the Windows drives; both settings change how you use the host yourself.
+   Recommendation: turn interop off and set the umask; GOFACTORY is refused while the host checks fail ([WSL host](shared/authority.xml#wsl-host)).
+
+5. **Which bootstrap merge path?**
+   Under the hold no machine merge happens, yet the cut-over's own pull requests must land before USERGO.
+   Recommendation: the default, where N-09 merges under the hold only pull requests of the current bootstrap step with a green gate and review.passed on the same head, and your break glass merges the few that come before the first gate; the alternative is your break glass for every one ([bootstrap merge](shared/cut-over.xml#bootstrap-merge)).
+
+6. **Accept the Kaniko pin to the maintained fork?**
+   The upstream Kaniko project is archived, so image builds need a maintained source pinned by digest.
+   Recommendation: accept the pinned fork with rootless BuildKit as the written fallback ([builder pin](shared/ci-capacity.xml#builder-pin)).
+
+7. **Ship only the 260 high-confidence Krastor originals until the rest are confirmed?**
    The art inventory found 766 Krastor originals, but only 260 have commit-level proof, and whether the LGPLv3 grant covers a public web page is a question for you or a lawyer.
    Recommendation: ship the 260 with the conservative notice and the license text, hold the 506 medium files until each is checked by eye, and draw belts, inserters, lamps and pipes as original art.
 
-4. **Accept a static map at map.gatehouse.click, with live state only over the tailnet, for now?**
+8. **Accept a static map at map.gatehouse.click, with live state only over the tailnet, for now?**
    Cluster pods cannot reach the host, so a live public map needs a cluster to host tunnel with your key's auth, which is a node of its own.
    Recommendation: accept; your phone already gets the live map anywhere through Tailscale, and the tunnel is cut as its own design later.
 
-5. **Which Google Drive folder gets the version-named copies of the book?**
+9. **Which Google Drive folder gets the version-named copies of the book?**
    The publisher needs a folder id and one browser consent for `rclone` with scope `drive.file`; until then the repository stays the truth and publishing simply waits.
    Recommendation: a new folder named "coq spec book", authorised once with scope `drive.file`, so the token can touch only what it created.
 

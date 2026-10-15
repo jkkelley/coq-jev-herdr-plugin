@@ -3,7 +3,7 @@
      Written 2026-10-14T05:00Z UTC by the spec-author seat for group G2, round 1, against brief C
      (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
      Every time in this volume is UTC. No em dash appears in this volume. Pointers are path plus anchor, never prose. -->
-<volume id="N-11" kind="node-spec" node="N-11" group="G2" title="Retry and backoff" version="1.0.0" issued="2026-10-14" timezone="UTC" author="spec-author seat, group G2, round 1">
+<volume id="N-11" kind="node-spec" node="N-11" group="G2" title="Retry and backoff" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" author="spec-author seat, group G2, round 1">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
@@ -262,8 +262,8 @@
     <source path="line/bin/route-retry.sh" anchor="header" use="only capacity refusals were retried; everything else was for a person: now every kind has a row"/>
     <source path="rebuild/factory-rebuild-plan.xml" anchor="failure-cases" use="bad-output: a fresh seat retries with the failure attached, never the seat that failed; three retries then blocked"/>
     <source path="~/.claude/CLAUDE.md" anchor="hard-rule-design-first-system-first-never-by-hand" use="every automated step retries up to 3 times, then recovers gracefully and reports, never loops and never fails silently"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md" anchor="top" use="recommend so a yes is one word"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/one-file-one-in-flight-ticket.md" anchor="top" use="a merge.conflict on code is a scheduling defect"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md" anchor="top" use="recommend so a yes is one word"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/one-file-one-in-flight-ticket.md" anchor="top" use="a merge.conflict on code is a scheduling defect"/>
   </sources>
 
   <rejected id="rejected">

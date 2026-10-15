@@ -23,7 +23,7 @@
   blocks the book now).
   Cost: a declared need is not a live pointer until shared/ lands.
 -->
-<volume id="N-18" node="N-18" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-14T05:04:00Z" timezone="UTC">
+<volume id="N-18" node="N-18" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
@@ -227,8 +227,8 @@
     <source href="specs/SPEC-17-orchestrator-and-agent-health.xml#n-cut">the cut checklist: files declared, test plan runs through a repository target, no overlap</source>
     <source href="specs/SPEC-03-dag-and-node-contract.xml#s-locks">dequeue refuses a ticket whose depends_on is not done; carried to N-03, with the acyclic check here</source>
     <source href="~/.claude/CLAUDE.md">tickets are small: one concern, a few files, a diff read in minutes; every node carries a checklist with proof</source>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/build-mode-rule.md">a node ships dark and goes live by its own ticket with a named proof</source>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/graph-sh-source-colon-truncation.md">the graph tool's defect; the dependency graph is now rows in the store</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/build-mode-rule.md">a node ships dark and goes live by its own ticket with a named proof</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/graph-sh-source-colon-truncation.md">the graph tool's defect; the dependency graph is now rows in the store</source>
     <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C48</source>
     <source href="~/.bearings/coq-stable/answers.jsonl">C35, C38, C39</source>
   </section>

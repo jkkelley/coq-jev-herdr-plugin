@@ -1,290 +1,374 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- N-01 State store. Node volume of the Factory Rebuild spec book, group G1 Store and leases.
-     Written 2026-10-14T04:34Z UTC by the G1 spec-author seat, round 1, against brief C
-     (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
-     Canonical by owner ruling C42; older specs cited below are sources, never authority (D14). -->
-<!-- N-01 round 2, 2026-10-14T05:01:33Z, by the G1 spec-author seat.
-     What broke: the R-03 review seat failed this volume on pointers (verdict in
-     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-01):
-     every shared pointer (five per volume, into the shared directory) pointed at a directory no author had written and at anchors no volume declared.
-     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
-     The fix: shared needs are declared in <shared-needs> by volume and anchor with no href, so nothing points at a file
-     that does not exist, and the principles this node obeys point at dag.md sections 7 and 8, which do exist.
-     Rejected: writing shared/ from this seat (the brief gives shared/ to one shared author; two authors on one file is the
-     one-file, one-in-flight-ticket collision the book forbids) and leaving the hrefs to resolve later (a failing volume blocks the book now).
-     Cost: a declared need is not a live pointer until shared/ lands; check.sh matches each need's volume and anchor against the
-     shared volumes when they land, so no hand edit happens here. Cross-group edges point at volumes that now exist, and at
-     index.xml#<node-id> for a node whose volume has not landed, because the index entry is the one anchor every node is guaranteed. -->
-<!-- N-01 round 3, 2026-10-14T05:20:00Z, by the G1 spec-author seat.
-     What broke: the R-03 review seat failed this volume on pointers again, at <mechanism><tables> (round 2 line 97):
-     prose named ../../shared/state-store-schema.xml#tables, a file no author writes (the shared volume is shared/state-store.xml)
-     and an anchor no need declares; a dead pointer left over from round 1.
-     Why it mattered: one unresolved pointer fails check.sh and the architect reads nothing until the book passes.
-     The fix: <tables> now carries the three table needs already declared in <shared-needs> (table-records, table-entities,
-     table-idempotency) as <table need="..."> children, and the entity columns are made identical in both places.
-     Rejected: deleting <tables> (the mechanism must name what this node owns) and adding an href into shared/ (it does not exist yet;
-     a need is the only pointer form that resolves once shared/ lands, see round 2 note above).
-     Cost: none; the volume grows by five lines and stays under the cap.
-     The round 2 verdict was attached to the seat task as data; the proofs file named in the round 2 note is written by the review seat. -->
-<volume id="N-01" kind="node-spec" node="N-01" group="G1" version="1.1.1" written="2026-10-14T05:20:00Z" timezone="UTC">
+     Written 2026-10-14T04:34Z UTC by the G1 spec-author seat, round 1, against brief C.
+     Canonical by owner ruling C42; older specs cited below are sources, never authority (D14).
+     Rounds 2 and 3 (2026-10-14) replaced dead shared pointers by declared needs; those needs now resolve. -->
+<!-- N-01 book 1.1.0, 2026-10-15T06:00:00Z.
+     What broke (review dispositions F01, F02, F04, F07, F14, F15; verification NF-A3, NF-A7, NF-A13, NF1):
+     the store authenticated nobody (envelope node and by were caller-supplied, socket 0600 same user, no 403 path);
+     one idempotency key served six effects and replays were never compared; the API wrote one record and one entity,
+     so no node could write its own tables in one transaction; the RPC list named calls the real proto does not have;
+     seq was called gapless and never reused while being a rowid; Snapshot ran VACUUM INTO on the writer; restore reissued
+     seqs and fencing tokens; and a store that could not open asked for a card through the store that could not open.
+     The fix: Commit is the one write (authenticate, idempotency with request hash, fence, preconditions, entity CAS,
+     owner-registered statements, records, outbox effects, COMMIT, notify), seq is AUTOINCREMENT inside an epoch,
+     Snapshot runs on a reader connection, restore starts a new held epoch, and store-down is seen from outside the host.
+     Every shared number is cited by anchor (shared/contracts.xml, shared/authority.xml, shared/outside-probe.xml), never restated. -->
+<volume id="N-01" kind="node-spec" node="N-01" group="G1" version="1.1.0" written="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
-    <entry ref="pointers">Pointers: parent, siblings, DAG and principles</entry>
-    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="pointers">Pointers: parent, siblings, DAG, principles and the shared contracts</entry>
+    <entry ref="shared-needs">Shared needs: the shared anchors this node relies on</entry>
     <entry ref="purpose">Purpose</entry>
-    <entry ref="input">Input record: record.put</entry>
-    <entry ref="output">Output record: record.committed or 409 conflict</entry>
-    <entry ref="mechanism">Mechanism: SQLite in the Go service behind one gRPC socket</entry>
+    <entry ref="input">Input: commit_request, one transaction per intended effect</entry>
+    <entry ref="output">Output: commit_reply and the records that report a refusal</entry>
+    <entry ref="api">API: the coq.store.v1.Store service, status mapping, deadlines, compatibility</entry>
+    <entry ref="mechanism">Mechanism: SQLite in the Go service, one writer, one authenticated socket</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
-    <entry ref="retries">Retries up to 3, then recover and report</entry>
+    <entry ref="retries">Retries, and who owns them</entry>
     <entry ref="many-agents">Many agents at once</entry>
     <entry ref="status-codes">Status codes this node emits</entry>
     <entry ref="state-paths">State paths and the cleanup script for each</entry>
     <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples (checked by C22)</entry>
     <entry ref="checklist">Checklist with proofs</entry>
-    <entry ref="permissions">Permissions</entry>
+    <entry ref="permissions">Permissions by principal</entry>
     <entry ref="monitoring">Monitoring</entry>
-    <entry ref="runbook">Runbook</entry>
+    <entry ref="runbook">Runbook, restore included</entry>
     <entry ref="rejected">Rejected with reason</entry>
     <entry ref="sources">Sources</entry>
   </contents>
 
   <pointers id="pointers">
     <parent href="../../index.xml#N-01"/>
-    <sibling href="record.schema.json" role="schema">JSON schema of record.put and record.committed</sibling>
+    <sibling href="record.schema.json" role="schema">JSON schema of commit_request, commit_reply and the N-01 records</sibling>
     <sibling href="../N-02/spec.xml#N-02" role="node">N-02 Lease service</sibling>
     <sibling href="../N-03/spec.xml#N-03" role="node">N-03 Ticket intake and readiness</sibling>
     <sibling href="../N-04/spec.xml#N-04" role="node">N-04 GitHub poll</sibling>
     <sibling href="../N-05/spec.xml#N-05" role="node">N-05 Backups</sibling>
-    <sibling href="../N-06/spec.xml#N-06" role="node">N-06 Service unit, clock and health</sibling>
+    <sibling href="../N-06/spec.xml#N-06" role="node">N-06 Service units, clock and health</sibling>
     <shared href="../../dag.md#3-every-node" role="dag"/>
     <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 4 (one store under the state root, every path with a cleanup script) and rule 3 (three attempts then report)</principle>
-    <principle href="../../dag.md#8-many-agents-at-once" role="principle">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, 409 that reports</principle>
-    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, conflicts that report</principle>
+    <shared href="../../shared/contracts.xml#batch" role="contract">Commit: the one transaction, its steps and its limits</shared>
+    <shared href="../../shared/contracts.xml#operation-keys" role="contract">Operation keys: node/operation/subject/r&lt;revision&gt;, request hash, replay and mismatch</shared>
+    <shared href="../../shared/contracts.xml#statements" role="contract">Owner-registered statements on node-owned tables</shared>
+    <shared href="../../shared/contracts.xml#fencing" role="contract">Fencing: lease key plus token current at commit, else 412</shared>
+    <shared href="../../shared/contracts.xml#terminal-report" role="contract">The one fenced write accepted after revoke or expiry</shared>
+    <shared href="../../shared/contracts.xml#entity-only" role="contract">Entity-only kinds: no record unless the state changes</shared>
+    <shared href="../../shared/contracts.xml#outbox" role="contract">Outbox effects written in the deciding transaction</shared>
+    <shared href="../../shared/contracts.xml#epoch-cursor" role="contract">Epoch, cursor and retention floor</shared>
+    <shared href="../../shared/contracts.xml#restore" role="contract">Restore: new epoch, held with flags off, tokens bumped, leases expired, reconcile</shared>
+    <shared href="../../shared/contracts.xml#retry-owner" role="contract">Who retries a store refusal</shared>
+    <shared href="../../shared/authority.xml#principals" role="authority">Unix users and the principals table</shared>
+    <shared href="../../shared/authority.xml#peer-credentials" role="authority">SO_PEERCRED on the store socket</shared>
+    <shared href="../../shared/authority.xml#role-derivation" role="authority">The server derives node, by and permitted kinds</shared>
+    <shared href="../../shared/outside-probe.xml#probe" role="probe">Store down is seen from outside the host</shared>
+    <shared href="../../shared/outside-probe.xml#journal" role="probe">The outage journal imported on recovery</shared>
     <shared href="../../shared/cut-over.xml#step-system" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
   </pointers>
+
   <shared-needs id="shared-needs">
-    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares. check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
-    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for store.opened 100; record.committed 200 (replayed) and 201; record.invalid 400; record.conflict 409; record.stale 412; store.corrupt 500; store.wal_large 500; store.busy 503; store.disk 503; store.unavailable 503; stream.slow 503. Owner-acts: store.corrupt, store.unavailable, store.disk after N-45 ran.</need>
-    <need kind="store-table" volume="shared/state-store.xml" anchor="table-records">records(seq INTEGER PRIMARY KEY, id UNIQUE, at, code, kind, node, ticket, attempt, body JSON, hash); append-only; seq strictly increasing.</need>
-    <need kind="store-table" volume="shared/state-store.xml" anchor="table-entities">entities(key PRIMARY KEY, kind, version, body JSON, updated_seq, updated_at); version grows by one per write; updated_seq is the seq of the record that last wrote it.</need>
-    <need kind="store-table" volume="shared/state-store.xml" anchor="table-idempotency">idempotency(key PRIMARY KEY, seq, response JSON, at); a seen key replays its response with code 200.</need>
-    <need kind="store-table" volume="shared/state-store.xml" anchor="migrations">The forward-only migration table and the rule that the node owning a table owns its migration.</need>
-    <need kind="store-rule" volume="shared/state-store.xml" anchor="envelope">The record envelope every kind carries: id, at (UTC 2006-01-02T15:04:05Z), code, kind, node, attempt where one applies; canonical JSON by RFC 8785 for the hash.</need>
-    <need kind="store-rule" volume="shared/state-store.xml" anchor="cas">Compare-and-swap: expected_version on an entity write; 409 with the current version on a miss; expected 0 inserts.</need>
-    <need kind="principle" volume="shared/principles.xml" anchor="one-store">One store, no broker, SQLite under the state root, never in the repository (D10 C34, D04 C35).</need>
-    <need kind="principle" volume="shared/principles.xml" anchor="multi-agent-first">Many agents at once from the first line: atomic writes, append-only records, leases with fencing tokens, compare-and-swap, idempotent retryable steps, conflicts that report.</need>
-    <need kind="principle" volume="shared/principles.xml" anchor="three-attempts">Every automated step retries up to 3 times with backoff, then recovers and reports as a record; a dead record becomes exactly one card.</need>
-    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="lease-token">Every Put a seat makes carries the lease token its launcher exported; the seat never sees another seat's token; a stale token is 412 and is logged.</need>
-    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="ctl-verbs">The ctl verbs a seat may call: record add (seat.result, heartbeat, note), record get, record list, ticket get, health; never the file or the socket directly.</need>
-    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="store-corrupt">quick_check not ok at open: NOT_SERVING, a prepared dry-run restore from the newest verified backup, one card; never an automatic restore over the live file.</need>
-    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="disk-full">Free space under store.min_free_mib: Puts refused 503 store.disk, N-45 cleanup first, then one card.</need>
+    <rule>Each need names the shared volume and anchor that holds the rule; check.sh resolves it. A number written in a shared contract is cited, never restated here.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for store.opened 100; record.committed 200 (replayed) and 201; record.invalid 400; record.refused 403; record.conflict 409 (version, id, idempotency_mismatch); record.stale 412 (stale_token, lease_not_current); store.restored 200; store.corrupt 500; store.wal_large 500; store.busy 503; store.disk 503; store.unavailable 503; stream.slow 503. Owner-acts: store.corrupt, store.unavailable, store.restored, store.disk after N-45 ran.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-records">records(seq INTEGER PRIMARY KEY AUTOINCREMENT, epoch, id UNIQUE, at, code, kind, node, by, ticket, attempt, body JSON, hash); append-only; seq strictly increasing and never reused, not gapless.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-entities">entities(key PRIMARY KEY, kind, version, body JSON, updated_seq, updated_at); version grows by one per write.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-idempotency">idempotency(operation_key PRIMARY KEY, kind, node, request_hash, reply JSON, epoch, seq, at).</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="migrations">The forward-only migration table; the node owning a table owns its migration and registers its statements.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="envelope">The record envelope; canonical JSON by RFC 8785 for the hash and the request hash.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="cas">Compare-and-swap on entity version; expected 0 inserts.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="one-store">One store, no broker, SQLite under the state root, never in the repository.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="multi-agent-first">Atomic writes, append-only records, fencing, compare-and-swap, idempotent steps, conflicts that report.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="three-attempts">Retry up to 3, then recover and report.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="store-corrupt">quick_check not ok at open: NOT_SERVING, a prepared dry-run restore, never an automatic restore over the live file.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="disk-full">Free space under store.min_free_mib: commits refused 503 store.disk, N-45 cleanup first.</need>
   </shared-needs>
 
   <purpose id="purpose">
-    <is>N-01 is the one durable store of the factory: every record any node writes, every entity any node claims or versions, lives in one SQLite file on the WSL host, owned by the Go service, reachable only through one gRPC socket.</is>
-    <is>It is the carrier of every edge in the DAG: an output record of any node is a Put here, and the sequence number it returns is what the push transport (N-31) fans out.</is>
-    <is-not>It is not a broker, a bus, a queue daemon or a second copy of anything: no broker (D10, C34), no records branch, no records tree in the repository (D04, C35, memory rule runtime-data-never-in-the-repo).</is-not>
-    <is-not>It does not decide anything: no routing, no retry policy, no verdict lives here; those are N-07, N-11 and the gate nodes.</is-not>
-    <decisions>D01 (Go service with gRPC owns state), D10 (one store, SQLite on the host, backups scheduled), D04 (tickets and all artifacts in the state root), D22 (the Go service on the WSL host).</decisions>
+    <is>N-01 is the one durable store of the factory: every record, entity and node-owned table lives in one SQLite file on the WSL host, owned by the service user coq-svc and reachable only through one authenticated gRPC socket or in-process by the service's own nodes.</is>
+    <is>It is the carrier of every edge in the DAG: an output of any node is a Commit here, and the (epoch, seq) it returns is the cursor the push transport (N-31) fans out.</is>
+    <is>It is the authority check of every write: the caller's Unix identity, not a field it sends, decides which node it is and which kinds and statements it may write (shared/authority.xml#role-derivation).</is>
+    <is-not>It is not a broker, a bus or a queue daemon (D10, C34); no records branch, no records tree in the repository (D04, C35).</is-not>
+    <is-not>It decides nothing about work: routing, retry policy and verdicts live in N-07, N-11 and the gate nodes; a statement's guard is its owner's rule, registered by its owner.</is-not>
+    <decisions>D01 (Go service with gRPC owns state), D10 (one store, SQLite on the host, backups scheduled), D04 (artifacts in the state root), D22 (the service on the WSL host); review dispositions F01, F02, F04, F07, F14, F15 (shared/review-dispositions.xml).</decisions>
   </purpose>
 
   <input id="input">
-    <record kind="record.put" schema="record.schema.json#/$defs/record_put">
-      <who>Any node of the Go service in-process, the ctl CLI run by the same user, a seat through the ctl CLI with its lease token, the push transport for acks.</who>
-      <field name="idempotency_key" required="true">Caller-chosen string, unique per intended effect: node id, colon, the input record id, colon, the step name. A second Put with the same key returns the first commit unchanged.</field>
-      <field name="record" required="true">The record body: id, at (UTC), code, kind, node, and the kind's own fields, valid against the kind's schema under its node directory.</field>
-      <field name="entity" required="false">An optional entity write in the same transaction: key, expected_version, body. Absent means append-only, no compare-and-swap.</field>
-      <field name="lease_token" required="false">Required when the caller holds a lease (N-02): the fencing token the lease granted. The store refuses a stale token (412).</field>
+    <record kind="commit_request" schema="../../shared/contracts.schema.json#/$defs/commit_request">
+      <who>Every node of the service in-process (Store.Do), the owner's ctl CLI and the launcher over the socket. Seats and pods have no socket and never call the store (shared/authority.xml#seat-isolation).</who>
+      <field name="operation_key" required="true">node/operation/subject/r&lt;revision&gt; per shared/contracts.xml#operation-keys; one key per intended effect; the node segment must equal the authenticated caller's node.</field>
+      <field name="lease" required="false">The lease reference {key, token} the writer acts under; fenced per shared/contracts.xml#fencing.</field>
+      <field name="preconditions" required="false">Entity versions that must hold at commit (0 means absent).</field>
+      <field name="entities" required="false">Entity compare-and-swap writes; null value deletes.</field>
+      <field name="statements" required="false">Owner-registered statements on node-owned tables (shared/contracts.xml#statements); no free SQL crosses the socket or the Tx.</field>
+      <field name="records" required="true">0 to 16 records; each validates against its kind's schema; node and by are set by the server, never trusted from the caller.</field>
+      <field name="effects" required="false">Outbox intents written with the deciding record (shared/contracts.xml#outbox).</field>
     </record>
-    <rule>A Put is one transaction: the record row, the entity row and the idempotency row commit together or not at all.</rule>
+    <rule>A Commit is one transaction: every write it names commits together or none does. The old Put is a Commit with one record (record.schema.json#/$defs/record_put).</rule>
+    <rule>Limits come from shared/contracts.xml#batch (entity writes, statement rows, records, the transaction budget, no I/O inside); over a limit is 400 reason limits before BEGIN.</rule>
   </input>
 
   <output id="output">
+    <record kind="commit_reply" schema="../../shared/contracts.schema.json#/$defs/commit_reply">
+      <field name="code">201 committed; 200 replayed (same operation key, same request hash); 403, 409, 412, 423, 429, 503 refusals; 400 invalid is answered as record.invalid.</field>
+      <field name="epoch, seqs">The store epoch and the seq of every record appended, in request order.</field>
+      <field name="versions">The entity versions after the write.</field>
+    </record>
     <record kind="record.committed" code="201" schema="record.schema.json#/$defs/record_committed">
-      <field name="seq">Monotonic store sequence, assigned at commit, never reused, the cursor of N-31 and of every List.</field>
-      <field name="id">The record id as the caller wrote it, form YYYYMMDDTHHMMSSZ-CODE-xxxxx (events/schema/event.schema.json#id).</field>
-      <field name="hash">sha256 of the canonical JSON body, so a replay can be compared byte for byte.</field>
-      <field name="version">The entity version after the write, when an entity was written; absent otherwise.</field>
-      <field name="replayed">true when the idempotency key was already committed and this answer is the stored one (code 200, not 201).</field>
+      <field name="seq">Assigned at commit by AUTOINCREMENT: strictly increasing and unique inside the store, never reused even after a delete, and not gapless (a rolled-back transaction or N-45 retention leaves gaps). A seq means something only with its epoch.</field>
+      <field name="epoch">The store epoch (entity store:epoch, shared/contracts.xml#epoch-cursor); a restore starts a new one.</field>
+      <field name="hash">sha256 of the canonical JSON record.</field>
+      <field name="replayed">true with code 200 when the operation key and request hash were already committed.</field>
+    </record>
+    <record kind="record.refused" code="403" schema="record.schema.json#/$defs/record_refused">
+      <field name="reason">unknown_principal, kind_not_permitted, principal_mismatch, capability_expired (shared/authority.xml#role-derivation).</field>
+      <field name="uid, principal">The peer uid and the principal it mapped to (none when unknown).</field>
+      <field name="operation_key, kind">What was attempted; no other part of the request is stored.</field>
     </record>
     <record kind="record.conflict" code="409" schema="record.schema.json#/$defs/record_conflict">
-      <field name="key">The entity key whose expected_version did not match.</field>
-      <field name="expected">What the caller expected.</field>
-      <field name="current">What the store holds, so the caller re-reads and decides.</field>
+      <field name="reason">version (an entity or precondition miss, with expected and current), id (a duplicate record id) or idempotency_mismatch (the operation key was committed with a different request hash).</field>
     </record>
-    <rule>A 409 is itself appended to the log as a record (kind record.conflict) so a collision is visible, never silent.</rule>
-    <rule>A Put that fails validation is 400 record.invalid with the failing path; nothing is written except the 400 record.</rule>
+    <record kind="record.stale" code="412" schema="record.schema.json#/$defs/record_stale">
+      <field name="reason">stale_token (the token is not the lease's) or lease_not_current (the lease is released, expired or revoked, or its key is unknown).</field>
+      <field name="lease_key, token_seen, token_current">Evidence; nothing else is written.</field>
+    </record>
+    <rule>Every refusal (400, 403, 409, 412) is appended as its own record in a separate transaction, so a refusal is visible, never silent; a storm of the same refusal from one principal is latched to one record per principal, reason and minute.</rule>
+    <rule>Entity-only kinds (ticks, health, heartbeats, page.state, watcher.alive; shared/contracts.xml#entity-only) are registered entity-only: their Commit writes the entity and appends no record unless the entity's state field changes.</rule>
   </output>
 
+  <api id="api">
+    <rule>The real proto today is scheduler/api/scheduler/v1/scheduler.proto: Executor{Run, Health} and Scheduler{Health, Status, Reload, Drain, Retry}; nothing streams. This book adds three services; none of them exists yet, each is a planned file.</rule>
+    <service name="coq.store.v1.Store" file="scheduler/api/store/v1/store.proto" planned="true" owner="N-01">
+      <rpc name="Commit" request="../../shared/contracts.schema.json#/$defs/commit_request" reply="../../shared/contracts.schema.json#/$defs/commit_reply">The one write; steps under #mechanism.</rpc>
+      <rpc name="Get">An entity by key or a record by id; a read on a pooled reader connection.</rpc>
+      <rpc name="List">Records after a cursor {epoch, seq}, filtered by kind, ticket or node, at most 1000 per page; next cursor returned.</rpc>
+      <rpc name="Tail">Server stream of frames {epoch, seq, kind, id} after a cursor (shared/contracts.schema.json#/$defs/cursor). It replaces the "Subscribe" stream older volumes name. A cursor from another epoch, below min_retained_seq or above the high-water seq is refused OUT_OF_RANGE reason cursor.expired; the client takes a snapshot and resumes. A client not reading within 1 s is closed UNAVAILABLE reason stream.slow; the only Tail clients are N-31 and the ctl CLI, and the browser drop rule belongs to N-31.</rpc>
+      <rpc name="Snapshot">VACUUM INTO a destination under STATE/backup/store/tmp/ on a dedicated reader connection; replies {epoch, high_water_seq, row_count, min_retained_seq, bytes} read from the copy, so the numbers describe exactly the image (N-05 verifies them).</rpc>
+      <rpc name="Health">grpc.health.v1; SERVING only when the file is open, quick_check passed and free space is above the floor.</rpc>
+    </service>
+    <service name="coq.lease.v1.Lease" file="scheduler/api/lease/v1/lease.proto" planned="true" owner="N-02">Start, Renew, Release for the launcher (nodes/N-02/spec.xml#api).</service>
+    <service name="coq.intake.v1.Intake" file="scheduler/api/intake/v1/intake.proto" planned="true" owner="N-29">Answer for the owner page and CLI.</service>
+    <status-map>
+      <map code="200" grpc="OK" note="reply code 200 reason replayed"/>
+      <map code="201" grpc="OK"/>
+      <map code="400" grpc="INVALID_ARGUMENT"/>
+      <map code="403" grpc="PERMISSION_DENIED"/>
+      <map code="409" grpc="ABORTED"/>
+      <map code="410" grpc="OUT_OF_RANGE" note="Tail and List: cursor.expired"/>
+      <map code="412" grpc="FAILED_PRECONDITION"/>
+      <map code="423" grpc="FAILED_PRECONDITION" note="a hold or a held lease guard"/>
+      <map code="429" grpc="RESOURCE_EXHAUSTED"/>
+      <map code="503" grpc="UNAVAILABLE"/>
+      <map code="504" grpc="DEADLINE_EXCEEDED"/>
+      <rule>Every error is a google.rpc.Status carrying google.rpc.ErrorInfo{reason, domain "coq.store.v1", metadata {code, operation_key}}; callers branch on the code and reason, never on message text.</rule>
+    </status-map>
+    <deadlines>Commit: client deadline 5 s (enqueue plus transaction); the transaction itself is bounded by shared/contracts.xml#batch. Get and List 2 s. Snapshot backup.snapshot_seconds (N-05). Tail has no deadline; it is closed by stream.slow or the client.</deadlines>
+    <compatibility>Fields are only added; a field number is never reused; `buf breaking` against main runs in the gate (planned check, scheduler/api/buf.yaml planned).</compatibility>
+  </api>
+
   <mechanism id="mechanism">
-    <component name="file">One SQLite database at the state root: STATE/store/coq.db with its -wal and -shm files. PRAGMA journal_mode=WAL, synchronous=FULL, busy_timeout=5000, foreign_keys=ON, wal_autocheckpoint=1000. Source: S03 section 8 item 6.</component>
-    <component name="package">Go package scheduler/internal/store in the small cut (D09, C41): Open, Put, Get, List, Tail, Snapshot, Close. Pure functions for canonical JSON and hashing; the clock is the core.Clock interface so tests set it (scheduler/internal/core/interfaces.go#Clock).</component>
-    <component name="socket">gRPC service coq.store.v1.Store on a unix socket XDG_RUNTIME_DIR/coq/store.sock, mode 0600, no TCP, same user only. RPCs: Put, Get, List, Tail (server stream to N-31 and the ctl CLI), Snapshot (N-05), Health (grpc.health.v1).</component>
-    <component name="writer">One writer goroutine owns every write transaction; callers queue on a bounded channel (store.put_queue 256). Readers use a pool of read connections; WAL lets them read while the writer writes.</component>
-    <tables>The table definitions live in the shared state-store volume, declared below as needs (shared need: shared/state-store.xml, anchors table-records, table-entities, table-idempotency); this node owns those three tables and their migrations.
-      <table need="table-records">records(seq INTEGER PRIMARY KEY, id UNIQUE, at, code, kind, node, ticket, attempt, body JSON, hash); append-only.</table>
+    <component name="file">One SQLite database: STATE/store/coq.db with its -wal and -shm. PRAGMA journal_mode=WAL, synchronous=FULL, busy_timeout=5000, foreign_keys=ON, wal_autocheckpoint=1000. STATE belongs to coq-svc, mode 0700 (shared/authority.xml#principals).</component>
+    <component name="package">Go package scheduler/internal/store: Open, Do, Commit, Get, List, Tail, Snapshot, Close. In-process callers use Store.Do(ctx, op, fn(*Tx)) with the same steps as Commit; Tx offers Get, CAS, Delete, Next(counter), Append, Exec(registered statement), Fence(lease key, token), Effect(intent), and no other way to touch the file. The clock is core.Clock.</component>
+    <component name="socket">gRPC on /run/coq/store.sock, owner coq-svc, group coq-store, mode 0660, no TCP (shared/authority.xml#peer-credentials). The group holds the owner and coq-launch; seats get no socket.</component>
+    <component name="writer">One writer goroutine owns every write transaction; callers queue on a bounded channel (store.put_queue 256). Readers use a pool of read connections; Snapshot uses its own reader connection.</component>
+    <tables>This node owns records, entities and idempotency (needs above), reads the principals table (shared/authority.xml#principals) and hosts the effects table (shared/contracts.xml#outbox). Other nodes own their tables and register their statements: leases (N-02), tickets and claims (N-03), forge (N-04), backups (N-05).
+      <table need="table-records">records(seq INTEGER PRIMARY KEY AUTOINCREMENT, epoch, id UNIQUE, at, code, kind, node, by, ticket, attempt, body JSON, hash); append-only.</table>
       <table need="table-entities">entities(key PRIMARY KEY, kind, version, body JSON, updated_seq, updated_at); compare-and-swap on version.</table>
-      <table need="table-idempotency">idempotency(key PRIMARY KEY, seq, response JSON, at); a seen key replays its response.</table>
-      <others>Other G1 nodes own leases (N-02), claims and tickets (N-03), forge (N-04), backups (N-05), ticks and health (N-06) rows in the same file; each declares its own table need in its own volume.</others>
+      <table need="table-idempotency">idempotency(operation_key PRIMARY KEY, kind, node, request_hash, reply JSON, epoch, seq, at).</table>
     </tables>
-    <mermaid id="m-put">sequenceDiagram
-  participant C as caller (node, ctl, seat with token)
+    <mermaid id="m-commit">sequenceDiagram
+  participant C as caller (node in-process, ctl, launcher)
   participant S as Store gRPC
   participant W as writer goroutine
   participant DB as coq.db (WAL)
-  C->>S: Put(idempotency_key, record, entity?, lease_token?)
-  S->>S: validate body against kind schema
+  C->>S: Commit(operation_key, lease?, preconditions, entities, statements, records, effects)
+  S->>S: 0 authenticate SO_PEERCRED uid, derive node, by, kinds (403)
+  S->>S: 1 validate shapes, kinds, limits (400)
   S->>W: enqueue (bounded, 5 s)
   W->>DB: BEGIN IMMEDIATE
-  W->>DB: SELECT seq FROM idempotency WHERE key=?
-  alt key seen
-    W-->>C: 200 record.committed replayed=true
+  W->>DB: 2 idempotency by operation_key
+  alt same request hash
+    W-->>C: 200 replayed, stored reply
+  else different hash
+    W-->>C: 409 idempotency_mismatch
   else new
-    W->>DB: check lease token current (412 if stale)
-    W->>DB: UPDATE entities SET version=version+1 WHERE key=? AND version=expected (409 if 0 rows)
-    W->>DB: INSERT records (seq assigned)
-    W->>DB: INSERT idempotency (key, seq, response)
+    W->>DB: 3 fence lease key and token (412)
+    W->>DB: 4 preconditions, 5 entity CAS (409)
+    W->>DB: 6 registered statements (owner guards)
+    W->>DB: 7 append records (seq AUTOINCREMENT, epoch, node, by)
+    W->>DB: 8 effects, 9 idempotency row
     W->>DB: COMMIT
-    W-->>C: 201 record.committed (seq, hash, version)
-    W->>S: notify Tail streams (seq)
+    W-->>C: 201 epoch, seqs, versions
+    W->>S: 10 notify Tail
   end</mermaid>
-    <step n="1">Validate: envelope fields present, at is UTC form, code is in the shared map, kind has a schema; else 400.</step>
-    <step n="2">Idempotency: a committed key returns its stored response with code 200 and replayed true; the log gets no new row.</step>
-    <step n="3">Fencing: when lease_token is present, the leases table must hold that token for the record's ticket and attempt; else 412 record.stale, and the 412 is logged with the token seen.</step>
-    <step n="4">Compare-and-swap: when entity is present, UPDATE ... WHERE key AND version = expected; zero rows means 409 with the current version; a missing key with expected 0 is an insert.</step>
-    <step n="5">Append: INSERT the record; seq is the rowid of the records table, strictly increasing; hash computed over canonical JSON (sorted keys, no spaces).</step>
-    <step n="6">Commit with synchronous FULL, then notify Tail streams with the new seq; a stream that is not reading within 1 s is dropped and must reconnect with a full re-read (D21).</step>
-    <canonical>Canonical JSON: RFC 8785 ordering, UTF-8, no insignificant whitespace; the same function serves the hash, the backup checksum (N-05) and the replay comparison.</canonical>
-    <ids>Record id as today: UTC stamp, code, five-character suffix (events/schema/event.schema.json#id). The id is unique per writer; the store refuses a duplicate id with 409 record.conflict key=id.</ids>
+    <step n="0">Authenticate (shared/authority.xml#peer-credentials, #role-derivation): read SO_PEERCRED on the connection; map the uid through the principals table; unknown uid is 403 unknown_principal. The server derives node, by and the permitted kinds and statements of that principal; a record whose node or by disagrees, or an operation key whose node segment is not the derived node, is 403 principal_mismatch; a kind or statement outside the set is 403 kind_not_permitted; a launcher capability past its expiry is 403 capability_expired. In-process, the principal is coq-svc and the node is the one the op names; the same set check applies, so a node cannot write another node's kinds.</step>
+    <step n="1">Validate: commit_request shape, each record against its kind's schema, codes in the live code table, the limits of shared/contracts.xml#batch; any failure is 400 record.invalid with the JSON pointer, before BEGIN.</step>
+    <step n="2">Idempotency (shared/contracts.xml#operation-keys): request_hash is sha256 of the RFC 8785 canonical request with id, at, seq and hash removed from every record. A committed key with the same hash returns the stored reply with code 200 and replayed true; with a different hash it is 409 record.conflict reason idempotency_mismatch, before any effect.</step>
+    <step n="3">Fence (shared/contracts.xml#fencing): when lease is present, the leases row for that key must be reserved or running, hold that token, and not be expired at commit; else 412 record.stale (stale_token or lease_not_current). The terminal-report exception of shared/contracts.xml#terminal-report is the only write accepted under a non-current token.</step>
+    <step n="4">Preconditions: every named entity is at its expected version (0 = absent); else 409 reason version with expected and current.</step>
+    <step n="5">Entity writes: compare-and-swap on version; a miss is 409 reason version; null deletes.</step>
+    <step n="6">Statements: each is a prepared statement its owning node registered for its own table (shared/contracts.xml#statements); its guard, when it fails, answers the code its owner registered (for example N-02's lease guards 412, 423 or 429, N-03's claim overlap 412 precondition). A statement may append its owner's record in the same transaction.</step>
+    <step n="7">Records: append each; seq from AUTOINCREMENT, epoch from store:epoch, node and by from step 0, hash over canonical JSON. An entity-only kind appends nothing unless its state changed (shared/contracts.xml#entity-only).</step>
+    <step n="8">Effects: insert each intent as an effects row in state intent (shared/contracts.xml#outbox).</step>
+    <step n="9">Write the idempotency row (operation_key, kind, node, request_hash, reply, epoch, seq), then COMMIT with synchronous FULL. A transaction over the budget of shared/contracts.xml#batch is rolled back and answered 503 store.busy reason limits.</step>
+    <step n="10">Notify Tail with (epoch, seq).</step>
+    <canonical>Canonical JSON: RFC 8785, UTF-8; the same function serves the record hash, the request hash and the backup checksum.</canonical>
+    <ids>Record id as today: UTC stamp, code, five-character suffix; unique per writer; a duplicate is 409 reason id.</ids>
+    <epoch>Entity store:epoch {epoch, started_at, cause, min_retained_seq} (shared/contracts.schema.json#/$defs/store_epoch). Epoch 1 is written at creation; N-45 retention advances min_retained_seq in the same transaction that deletes rows; a restore starts the next epoch (#runbook). Every record, Tail frame and cursor carries the epoch.</epoch>
+    <snapshot>Snapshot never takes the writer: VACUUM INTO runs on a dedicated reader connection as one read transaction, so the copy is one consistent image while commits continue; epoch, high_water_seq (max seq), row_count (count of records) and min_retained_seq are then read from the copy. Probe evidence at baseline (report D, a model of the store, not the built service): 293.7 MiB copied in 2.84 s with 9,788 writes committed and a maximum write latency of 184 ms. The built-service proof is not-run.</snapshot>
   </mechanism>
 
   <start id="start">
-    <rule>Nothing starts by an agent typing. The systemd user unit of N-06 starts the binary; the store is opened in the binary's start sequence before any tick, and READY=1 is not sent to systemd until the store answers Health SERVING.</rule>
-    <step n="1">Resolve the state root with bin/state-root.sh (COQ_STATE, else XDG state home, coq, repo name). A relative root is exit 3 and the unit fails loudly.</step>
-    <step n="2">Create STATE/store/ 0700 when absent; open coq.db; apply the schema migration table (shared need: shared/state-store.xml, anchor migrations) forward only.</step>
-    <step n="3">Run PRAGMA quick_check with a 60 s bound. ok starts the service; anything else goes to the recovery path in retries.</step>
-    <step n="4">Replay is automatic: WAL frames since the last checkpoint are applied by SQLite on open. The store records store.opened 100 with the top seq and the file size.</step>
-    <step n="5">Expose the socket; answer Health SERVING; N-06 then starts the ticks.</step>
+    <rule>Nothing starts by an agent typing. The system unit coq-svc.service (N-06) starts the binary as coq-svc; the store opens before any tick, and READY=1 is not sent until Health answers SERVING or the open has failed three times (then READY with NOT_SERVING, see retries).</rule>
+    <step n="1">Resolve the state root with bin/state-root.sh as coq-svc; a relative root is exit 3 and the unit fails loudly.</step>
+    <step n="2">Create STATE/store/ 0700 when absent; open coq.db; apply migrations forward only; write store:epoch epoch 1 cause created when absent.</step>
+    <step n="3">PRAGMA quick_check with a 60 s bound; ok starts serving; anything else is the corrupt path under retries.</step>
+    <step n="4">SQLite replays the WAL on open. Append store.opened 100 with epoch, high-water seq and file size.</step>
+    <step n="5">systemd creates /run/coq (RuntimeDirectory of coq-svc.service); listen on store.sock 0660 group coq-store; answer Health SERVING; N-06 starts the ticks.</step>
   </start>
 
   <waits id="waits">
     <wait name="busy" on="SQLite lock" timeout="5000 ms (busy_timeout)" fallback="503 store.busy to the caller; the caller retries per retries; no row is written"/>
     <wait name="put-queue" on="writer channel" timeout="5 s" fallback="503 store.busy; counter store.queue_full increments; health degrades at 3 in one minute"/>
+    <wait name="transaction" on="one Commit inside BEGIN IMMEDIATE" timeout="the budget of shared/contracts.xml#batch" fallback="rollback; 503 store.busy reason limits; the caller's op is retried by its owner, never split by the store"/>
     <wait name="quick-check" on="integrity at open" timeout="60 s" fallback="treated as a failed open; recovery path"/>
     <wait name="checkpoint" on="WAL checkpoint" timeout="every 1000 pages or 60 s, whichever first; PASSIVE, TRUNCATE at drain" fallback="a checkpoint that cannot complete 3 times in a row records store.wal_large 500 at 256 MiB"/>
-    <wait name="tail-send" on="a Tail stream reading" timeout="1 s per frame" fallback="the stream is closed with code 503 stream.slow; the client reconnects and re-reads from its last seq"/>
-    <wait name="disk" on="free space under STATE" timeout="checked every health tick" fallback="below store.min_free_mib 512 the store refuses Puts with 503 store.disk and health goes unhealthy"/>
-    <wait name="drain" on="in-flight transactions at SIGTERM" timeout="drain_seconds 30 (scheduler/config/scheduler.json#drain_seconds)" fallback="the process exits anyway; SQLite rolls back the open transaction on next open"/>
+    <wait name="tail-send" on="a Tail stream reading" timeout="1 s per frame" fallback="the stream is closed UNAVAILABLE stream.slow; the client reconnects from its cursor, or snapshots on cursor.expired"/>
+    <wait name="snapshot" on="VACUUM INTO on the reader connection" timeout="backup.snapshot_seconds (N-05)" fallback="the reader connection is cancelled and the temp removed; N-05 counts a failed attempt; the writer was never held"/>
+    <wait name="disk" on="free space under STATE" timeout="checked every health tick" fallback="below store.min_free_mib the store deletes STATE/run/store.reserve once (shared/outside-probe.xml#journal) so the reporting commits have room, then refuses other commits with 503 store.disk and health goes unhealthy"/>
+    <wait name="drain" on="in-flight transactions at SIGTERM" timeout="drain_seconds 30" fallback="the process exits anyway; SQLite rolls back the open transaction on next open"/>
   </waits>
 
   <retries id="retries">
-    <rule>Every automated step retries up to 3 times, then recovers and reports (principles no-cog, three-attempts).</rule>
-    <step name="caller-put">A 503 from the store is retried by the caller 3 times with 1, 2, 4 s backoff and the same idempotency key, so a retry can never double-write; the fourth failure is the caller's own failure record with reason store.</step>
-    <step name="open">Open failing (lock, io, schema) is retried 3 times 5 s apart; then the unit stays up, Health answers NOT_SERVING, store.unavailable 503 goes to the N-06 health record and the journal, and N-28 raises one card from the owner-acts code. The unit does not crash-loop on a bad file.</step>
-    <step name="corrupt">quick_check not ok: 3 attempts of PRAGMA integrity_check then VACUUM INTO a fresh file; still not ok means restore from the newest verified backup (N-05 runbook restore) is prepared as a dry-run listing, store.corrupt 500 is reported, and the owner's card carries the restore command. The store never restores over the live file on its own, because the newest records since the backup would be lost silently.</step>
-    <step name="conflict">A 409 is never retried blindly by the store; the caller re-reads the entity and decides. A node that retries a 409 does so at most 3 times with a fresh read each time, then writes its own failure record.</step>
+    <rule>Who retries a refusal is decided once, in shared/contracts.xml#retry-owner; the store never retries a caller's Commit and never splits one.</rule>
+    <step name="caller-commit">A 503 is retried by the caller with the same operation key and the same request, so a retry is a replay or a first commit, never a double write; the count and backoff are the caller's layer in shared/retry-budget.xml#layers.</step>
+    <step name="open">Open failing (lock, io, schema) is retried 3 times 5 s apart; then the unit stays up, Health answers NOT_SERVING and the /livez answer names reason store (shared/outside-probe.xml#probe). A store that cannot open cannot carry a card: the owner is told by the outside probe's alert (shared/outside-probe.xml#alerting), and store.unavailable is written to the outage journal STATE/run/emergency.jsonl, imported as a record on recovery (shared/outside-probe.xml#journal). The unit does not crash-loop on a bad file.</step>
+    <step name="corrupt">quick_check not ok: 3 attempts of integrity_check; still not ok means a dry-run restore listing from the newest verified backup is prepared at STATE/run/restore-plan.txt, store.corrupt 500 goes to the outage journal and the /livez reason, and the outside probe alerts. The store never restores over the live file on its own.</step>
+    <step name="conflict">A 409 is never retried by the store; the caller re-reads and re-decides, at most 3 times, then writes its own failure record.</step>
   </retries>
 
   <many-agents id="many-agents">
-    <reading>Twenty seats and every node read this volume and the store at once: reads are WAL snapshot reads on a pool of connections, never blocked by the writer; List and Get are pure reads keyed by seq or id, so N readers see one consistent version each.</reading>
-    <working>No agent touches coq.db. A seat writes only through the ctl CLI on the socket, with the lease token its run was given; a pod never reaches the host socket and reports through GitHub statuses (N-25) that N-04 reads.</working>
-    <collision name="same-record-twice">Two callers Put the same idempotency key: the writer serializes them; the first commits 201, the second gets the stored response with code 200 replayed true. No double row.</collision>
-    <collision name="same-entity-twice">Two callers write one entity with the same expected_version: the first commits and bumps the version; the second gets 409 with the current version and a logged record.conflict; it re-reads and re-decides.</collision>
-    <collision name="stale-holder">A seat whose lease expired and was re-granted to a fresh attempt still tries to write: its token is no longer current and the Put is 412 record.stale, logged, so the old run cannot overwrite the new one (fencing, T06).</collision>
-    <collision name="duplicate-id">Two writers mint the same record id in the same second: the UNIQUE index on id refuses the second with 409 key=id; the writer re-mints the suffix and retries, up to 3 times.</collision>
-    <collision name="reader-during-checkpoint">A reader holds a snapshot while a checkpoint runs: SQLite WAL guarantees the reader's view; the checkpoint is PASSIVE and simply does less work.</collision>
-    <test>Two processes (the service and the ctl CLI) and two goroutines Put 1000 records each with overlapping keys and entities; the proof is: exactly one row per key, every 409 logged, seq strictly increasing with no gap, hash recomputed equals stored.</test>
+    <reading>Every node and the ctl CLI read at once: WAL snapshot reads on a pool of connections, never blocked by the writer; List and Tail are keyed by (epoch, seq).</reading>
+    <working>No agent touches coq.db or the socket. Seats have neither; the launcher writes for them (shared/authority.xml#seat-isolation); a pod reports through GitHub statuses that N-04 reads.</working>
+    <collision name="same-operation-twice">Two callers Commit one operation key: the writer serializes them; the first commits 201; the second with the same request hash gets the stored reply 200 replayed; with a different hash it gets 409 idempotency_mismatch and nothing is written.</collision>
+    <collision name="six-effects-one-run">One run has six effects (bundle, workspace, result, push, PR, review): each has its own key from shared/contracts.xml#operation-keys, so none can be answered with another's reply.</collision>
+    <collision name="same-entity-twice">Two callers write one entity at one expected version: one commits; the other gets 409 reason version with the current version and re-reads.</collision>
+    <collision name="stale-holder">A run whose lease expired or was revoked writes again: its token is not current and the Commit is 412, except the one terminal report shared/contracts.xml#terminal-report admits.</collision>
+    <collision name="impersonation">A process in group coq-store sends records naming another node or by: step 0 derives node and by from its uid and answers 403 principal_mismatch; nothing is written.</collision>
+    <collision name="duplicate-id">Two writers mint one record id: the UNIQUE index refuses the second with 409 reason id; the writer re-mints and retries, up to 3 times.</collision>
+    <collision name="snapshot-during-commits">N-05 snapshots while nodes commit: the copy is one read transaction on its own connection; commits continue; the copy names its own high-water seq.</collision>
+    <test>Two processes and four goroutines Commit 1000 requests each with overlapping operation keys, entities and lease tokens: exactly one row set per key, every 409 and 412 logged, seq strictly increasing and unique (gaps allowed), no seq reused after a delete, hash recomputed equals stored.</test>
   </many-agents>
 
   <status-codes id="status-codes">
     <emits code="100" kind="store.opened" acts="nobody; monitoring reads it"/>
-    <emits code="200" kind="record.committed" note="replayed=true: the idempotency key was already committed" acts="the caller, which proceeds"/>
-    <emits code="201" kind="record.committed" acts="the caller and N-31, which fans the seq out"/>
-    <emits code="400" kind="record.invalid" acts="the caller fixes its record; a node that sends 3 invalid records in a minute is reported by N-06 health"/>
-    <emits code="409" kind="record.conflict" acts="the caller re-reads the entity and re-decides"/>
-    <emits code="412" kind="record.stale" acts="nobody for the old holder; N-12 already handled the stall; the record is evidence"/>
-    <emits code="500" kind="store.corrupt" acts="owner, through one card from N-28 that carries the prepared restore"/>
+    <emits code="200" kind="record.committed" note="replayed=true: the operation key and request hash were already committed" acts="the caller, which proceeds"/>
+    <emits code="201" kind="record.committed" acts="the caller and N-31, which fans the cursor out"/>
+    <emits code="400" kind="record.invalid" acts="the caller fixes its request; 3 in a minute from one node is reported by N-06 health"/>
+    <emits code="403" kind="record.refused" acts="nobody automatically; N-51 counts them and any from an unknown uid is an owner alert"/>
+    <emits code="409" kind="record.conflict" acts="the caller re-reads and re-decides"/>
+    <emits code="412" kind="record.stale" acts="nobody for the old holder; N-12 and N-11 already acted; the record is evidence"/>
+    <emits code="200" kind="store.restored" acts="owner: the line stays held until an owner ruling releases it (shared/contracts.xml#restore); every Tail client resnapshots"/>
+    <emits code="500" kind="store.corrupt" acts="owner, alerted by the outside probe; the prepared restore plan is in the runbook"/>
     <emits code="500" kind="store.wal_large" acts="N-06 health; the runbook checkpoint step"/>
     <emits code="503" kind="store.busy" acts="the caller retries"/>
     <emits code="503" kind="store.disk" acts="N-45 cleanup runs first; then the owner through a card"/>
-    <emits code="503" kind="store.unavailable" acts="owner, through one card; nothing else can run"/>
-    <emits code="503" kind="stream.slow" acts="the Tail client reconnects with a full re-read"/>
-    <rule>Every code above must exist in ../../shared/status-codes.xml#codes with the same meaning and actor; a code missing there fails check.sh.</rule>
+    <emits code="503" kind="store.unavailable" acts="owner, alerted by the outside probe (shared/outside-probe.xml#alerting); written to the outage journal and imported on recovery"/>
+    <emits code="503" kind="stream.slow" acts="the Tail client reconnects from its cursor"/>
+    <rule>Every code above must exist in ../../shared/status-codes.xml#codes with the same meaning and actor. cursor.expired (410) is a Tail and List reply, not a record.</rule>
   </status-codes>
 
   <state-paths id="state-paths">
-    <path id="N-01.store" class="store" p="STATE/store/coq.db" plus="coq.db-wal, coq.db-shm" writer="N-01 only" readme="STATE/store/README.md written at first open" cleanup="scheduler/host/bin/cleanup-store.sh" registry="N-45"/>
-    <path p="XDG_RUNTIME_DIR/coq/store.sock" writer="N-01 at start" cleanup="removed at drain; scheduler/host/bin/cleanup-run.sh removes a stale one when no pid holds it" registry="N-45"/>
-    <path p="STATE/logs/service/store.jsonl" writer="N-01 structured log, one line per Put over 100 ms and per non-2xx" cleanup="scheduler/host/bin/cleanup-logs.sh (keep_days from config)" registry="N-45"/>
-    <rule>STATE is the state root from bin/state-root.sh; nothing under it is ever committed. Every cleanup script defaults to dry-run and prints what it would delete; --apply deletes; both exit 0 on nothing to do, 3 when the unit is running and the path is live.</rule>
-    <rule>cleanup-store.sh refuses --apply unless the unit is stopped and N-05 lists a verified backup newer than the newest seq; it prints the backup path it checked.</rule>
+    <path id="N-01.store" class="store" p="STATE/store/coq.db" plus="coq.db-wal, coq.db-shm" writer="N-01 only, as coq-svc" readme="STATE/store/README.md written at first open" cleanup="scheduler/host/bin/cleanup-store.sh" registry="N-45" trigger="owner" acts="owner"/>
+    <path p="/run/coq/store.sock" writer="N-01 at start (RuntimeDirectory of coq-svc.service)" cleanup="systemd removes /run/coq at stop; scheduler/host/bin/cleanup-run.sh removes a stale socket when no pid holds it" registry="N-45" trigger="unit-stop" acts="system"/>
+    <path p="STATE/run/store.reserve" writer="N-01: a pre-allocated file of store.reserve_mib, deleted once under the free-space floor and re-created above floor plus reserve (shared/outside-probe.xml#journal)" retention="never" cleanup="never a cleanup target; listed so scheduler/host/bin/cleanup-run.sh skips it by name" registry="N-45" trigger="owner" acts="owner"/>
+    <path p="STATE/run/restore-plan.txt" writer="N-01 on the corrupt path" cleanup="scheduler/host/bin/cleanup-run.sh removes it after store.restored or a SERVING open" registry="N-45" trigger="timer" acts="system"/>
+    <path p="STATE/logs/service/store.jsonl" writer="N-01 structured log, one line per Commit over 100 ms and per non-2xx" cleanup="scheduler/host/bin/cleanup-logs.sh (keep_days from config)" registry="N-45" trigger="timer" acts="system"/>
+    <rule>STATE is the coq-svc state root; nothing under it is ever committed. Every cleanup script defaults to dry-run; --apply deletes; both exit 0 on nothing to do, 3 when the unit is running and the path is live.</rule>
+    <rule>cleanup-store.sh refuses --apply unless the unit is stopped and N-05 lists a verified backup whose epoch is the current epoch and whose high_water_seq is the store's.</rule>
   </state-paths>
 
-
   <edges id="edges">
-    <in from="any node" record="record.put" href="../../dag.md#2-the-dag">every output of every node is a Put; the return writes are not drawn</in>
-    <out to="N-02" record="record.committed on ticket.ready and lease rows" href="../N-02/spec.xml#input"/>
-    <out to="N-03" record="record.committed on ticket records" href="../N-03/spec.xml#input"/>
-    <out to="N-05" record="the live file through Snapshot" href="../N-05/spec.xml#input"/>
-    <out to="N-31" record="record.committed seq over Tail" href="../N-31/spec.xml#input"/>
+    <in from="any node" record="commit_request" href="../../dag.md#2-the-dag">every output of every node is a Commit; the return writes are not drawn</in>
+    <out to="N-02" record="committed lease rows and ticket.ready" href="../N-02/spec.xml#input"/>
+    <out to="N-03" record="committed ticket records" href="../N-03/spec.xml#input"/>
+    <out to="N-05" record="Snapshot reply on a reader connection" href="../N-05/spec.xml#input"/>
+    <out to="N-31" record="(epoch, seq) over Tail" href="../N-31/spec.xml#input"/>
   </edges>
 
+  <examples id="examples">
+    <example schema="record.schema.json#/$defs/commit_request">{"operation_key":"N-03/ticket.transition/WO-20261014-ab12@3/r1","preconditions":[{"entity":"ticket:WO-20261014-ab12","version":3}],"statements":[{"name":"claims.acquire","args":{"ticket":"WO-20261014-ab12","patterns":["scheduler/internal/store/"]}}],"records":[{"id":"20261014T062950Z-200-q8w2e","kind":"ticket.ready","code":200,"node":"N-03","ticket":"WO-20261014-ab12"}]}</example>
+    <example schema="record.schema.json#/$defs/commit_reply">{"code":201,"epoch":1,"seqs":[5100],"versions":{"ticket:WO-20261014-ab12":4}}</example>
+    <example schema="record.schema.json#/$defs/commit_reply">{"code":409,"reason":"idempotency_mismatch","epoch":1,"seqs":[]}</example>
+    <example schema="record.schema.json#/$defs/record_refused">{"id":"20261015T061000Z-403-u7c1x","at":"2026-10-15T06:10:00Z","kind":"record.refused","code":403,"node":"N-01","epoch":1,"seq":5300,"reason":"kind_not_permitted","uid":2105,"principal":"coq-launch","operation_key":"N-15/seat.result/d-20261015060000-a1b2c3/r1","attempted_kind":"merge"}</example>
+    <example schema="record.schema.json#/$defs/record_stale">{"id":"20261015T061500Z-412-m3n4b","at":"2026-10-15T06:15:00Z","kind":"record.stale","code":412,"node":"N-01","epoch":1,"seq":5310,"reason":"lease_not_current","lease_key":"WO-20261014-ab12:worker:1","token_seen":184,"operation_key":"N-15/seat.result/d-20261015060000-a1b2c3/r1"}</example>
+    <example schema="record.schema.json#/$defs/record_conflict">{"id":"20261015T061600Z-409-p0z9k","at":"2026-10-15T06:16:00Z","kind":"record.conflict","code":409,"node":"N-01","epoch":1,"seq":5311,"reason":"version","key":"ticket:WO-20261014-ab12","expected":3,"current":4,"operation_key":"N-11/attempt/WO-20261014-ab12:worker:2/r1"}</example>
+    <example schema="record.schema.json#/$defs/store_restored">{"id":"20261015T070000Z-200-r5t6y","at":"2026-10-15T07:00:00Z","kind":"store.restored","code":200,"node":"N-01","epoch":2,"seq":5402,"from_backup":"STATE/backup/store/2026/10/20261015T060000Z-coq.db.zst","backup_epoch":1,"backup_high_water_seq":5400,"lost_after_seq":5400,"token_floor":1048760,"leases_expired":4,"hold":true}</example>
+    <example schema="record.schema.json#/$defs/snapshot_reply">{"epoch":1,"high_water_seq":5400,"row_count":5398,"min_retained_seq":1,"bytes":307953664}</example>
+  </examples>
+
   <checklist id="checklist">
-    <item><check>coq.db opens in WAL mode with synchronous FULL and busy_timeout 5000.</check><proof>PRAGMA journal_mode, synchronous, busy_timeout printed by `scheduler ctl store pragmas` and saved in the test log.</proof></item>
-    <item><check>Put with a new idempotency key returns 201 with seq, hash and version.</check><proof>Go test store/put_test.go, golden response.</proof></item>
-    <item><check>Put with a seen key returns 200 replayed=true and adds no row.</check><proof>Go test, row count unchanged.</proof></item>
-    <item><check>Entity write with a wrong expected_version returns 409 and logs record.conflict.</check><proof>Go test, the 409 row exists in records.</proof></item>
-    <item><check>Put with a stale lease token returns 412.</check><proof>Go test with a lease re-granted to attempt 2.</proof></item>
-    <item><check>Two processes writing concurrently leave seq gapless and strictly increasing.</check><proof>scheduler/tests/store_concurrency.sh output: 2000 rows, max seq 2000.</proof></item>
-    <item><check>Tail delivers every committed seq in order; a slow client is dropped with 503 and re-reads.</check><proof>Go test with a blocked stream.</proof></item>
-    <item><check>quick_check runs at open within 60 s and a corrupt file leads to NOT_SERVING, not a crash loop.</check><proof>Test with a truncated file; journal shows one store.corrupt and the unit active.</proof></item>
-    <item><check>No path under the repository is written.</check><proof>`git status --porcelain` empty after the full test run, saved in the test log.</proof></item>
-    <item><check>Every state path above has its cleanup script, dry-run by default.</check><proof>Each script run with no flags prints a listing and exits 0; the N-45 registry lists them.</proof></item>
-    <item><check>Every emitted code is in the shared map.</check><proof>check.sh cross-reference passes.</proof></item>
+    <item><check>coq.db opens in WAL mode with synchronous FULL and busy_timeout 5000.</check><proof>PRAGMA values printed by `scheduler ctl store pragmas` in the test log (not-run).</proof></item>
+    <item><check>A Commit from an unknown uid is 403 unknown_principal; a record naming another node is 403 principal_mismatch; a launcher putting merge is 403 kind_not_permitted; each leaves one record.refused and nothing else.</check><proof>Go test with three socket peers under distinct uids (not-run).</proof></item>
+    <item><check>A new operation key returns 201 with epoch, seqs and versions; the same key and request returns 200 replayed and adds no row; the same key with a different request is 409 idempotency_mismatch before any effect.</check><proof>Go test store/commit_test.go, golden replies (not-run).</proof></item>
+    <item><check>A Commit carrying entities, statements, records and effects commits all or none; any failing step leaves the file unchanged.</check><proof>Go test injecting a failure at each step (not-run).</proof></item>
+    <item><check>A stale token is 412 stale_token; a released, expired or revoked lease is 412 lease_not_current; the terminal report is admitted once per run_id with fenced true.</check><proof>Go test with a lease swept and re-granted (not-run).</proof></item>
+    <item><check>seq is strictly increasing and unique; after deleting the top row the next seq is not reused; gaps are allowed and no check counts on gaplessness.</check><proof>scheduler/tests/store_concurrency.sh: 2000 rows, then delete and insert (not-run; report D probe P06 shows the rowid reuse this prevents).</proof></item>
+    <item><check>An entity-only kind written ten times with one state appends no record; a state change appends one.</check><proof>Go test (not-run).</proof></item>
+    <item><check>Snapshot does not hold the writer: commits continue during VACUUM INTO and the reply's numbers match the copy.</check><proof>Go test with a writer loop measuring latency during Snapshot (not-run; baseline probe numbers in #mechanism).</proof></item>
+    <item><check>Tail with a cursor of an older epoch or below min_retained_seq is OUT_OF_RANGE cursor.expired.</check><proof>Go test (not-run).</proof></item>
+    <item><check>A restore drill starts epoch n+1 held with flags off, every lease expired and counter:lease_token past every token issued before, and appends store.restored.</check><proof>Integration test: restore an older backup over a store with live leases (not-run).</proof></item>
+    <item><check>quick_check failure leads to NOT_SERVING, a restore plan file and a /livez reason, never a crash loop.</check><proof>Test with a truncated file (not-run).</proof></item>
+    <item><check>No path under the repository is written.</check><proof>`git status --porcelain` empty after the full test run (not-run).</proof></item>
+    <item><check>Every state path above has its cleanup script, dry-run by default; every emitted code is in the shared map.</check><proof>check.sh C14 and C18.</proof></item>
   </checklist>
 
   <permissions id="permissions">
-    <actor name="Go service (N-01 to N-12, N-28 to N-31, N-43 to N-51)" may="Put, Get, List, Tail, Snapshot in-process"/>
-    <actor name="ctl CLI, same user" may="Put, Get, List, Tail over the socket; Put of kinds the shared seat contract allows a seat (seat.result, heartbeat, note) only with a current lease token"/>
-    <actor name="seat (one-shot run)" may="only the ctl CLI verbs its rendered settings allow (N-13); never the file, never the socket directly"/>
+    <rule>Authority is the caller's Unix identity mapped by shared/authority.xml#principals and #role-derivation; no field a caller sends grants anything; COQ_SEAT is diagnostic only.</rule>
+    <actor name="service (coq-svc, nodes in-process)" may="Commit through Store.Do as the node the op names, only that node's kinds and registered statements; Get, List, Tail, Snapshot"/>
+    <actor name="launcher (coq-launch, socket)" may="Commit only the kinds and statements shared/authority.xml#role-derivation grants the launcher (seat.result, the seat heartbeat entity, the run entity, lease Start, Renew and Release through N-02's statements), each under the run's lease; Get of its own runs"/>
+    <actor name="seat (pool users coq-seat-01..16)" may="nothing: no socket, no file (shared/authority.xml#seat-isolation)"/>
     <actor name="pod" may="nothing here; reports through GitHub statuses"/>
-    <actor name="owner" may="everything, through the ctl CLI and the break-glass path; a direct sqlite3 session on the live file is break glass and is recorded by the runbook step"/>
-    <rule>The socket is mode 0600 under the owner's user; there is no TCP listener (scheduler/api/scheduler/v1/scheduler.proto header, h-proto-sockets).</rule>
+    <actor name="owner (socket, ctl CLI)" may="Get, List, Tail; Commit of owner-surface kinds; a direct sqlite3 session on the live file is break glass, with the unit stopped, recorded before and after"/>
+    <rule>The socket is 0660 coq-svc:coq-store under /run/coq; there is no TCP listener.</rule>
   </permissions>
 
   <monitoring id="monitoring">
-    <counter name="store.puts_total" by="code"/>
-    <counter name="store.conflicts_total"/>
+    <counter name="store.commits_total" by="code, reason"/>
+    <counter name="store.refused_total" by="reason, principal" alarm="any unknown_principal"/>
     <counter name="store.replayed_total"/>
-    <counter name="store.put_latency_ms" kind="histogram" alarm="p99 over 500 ms for 3 health ticks"/>
-    <gauge name="store.top_seq"/>
+    <counter name="store.commit_latency_ms" kind="histogram" alarm="p99 over 500 ms for 3 health ticks"/>
+    <gauge name="store.epoch"/>
+    <gauge name="store.high_water_seq"/>
+    <gauge name="store.min_retained_seq"/>
     <gauge name="store.db_bytes"/>
     <gauge name="store.wal_bytes" alarm="over 256 MiB"/>
     <gauge name="store.free_mib" alarm="under store.min_free_mib"/>
     <gauge name="store.tail_clients"/>
-    <check name="store.health" every="health tick (N-06)" ok="a SELECT 1 under 100 ms and free space above the floor" else="503 store.unavailable or store.disk, latched: one record per transition"/>
-    <surface>Counters appear in the Status answer (N-06), on the Stats screen (N-40) and as a machine panel (N-39) bound to the health entity; alerts reach the Alerts screen (N-41) through their codes.</surface>
+    <check name="store.health" every="health tick (N-06)" ok="SELECT 1 under 100 ms and free space above the floor" else="503 store.unavailable or store.disk, latched: one record per transition, journaled when the store cannot take it"/>
+    <surface>Counters appear in the Status answer (N-06), on Stats (N-40) and the Machine panel (N-39); store-down reaches the owner through the outside probe, not through the store.</surface>
   </monitoring>
 
   <runbook id="runbook">
-    <task name="inspect">`scheduler ctl store status` prints top seq, db and wal bytes, tail clients, last checkpoint. Read-only.</task>
-    <task name="read a record">`scheduler ctl record get ID` or `scheduler ctl record list --since SEQ --kind KIND`.</task>
-    <task name="checkpoint by hand">`scheduler ctl store checkpoint` (PASSIVE); only when store.wal_large fired; it is a break-glass-free action because it changes no data.</task>
-    <task name="restore">Stop the unit (`systemctl --user stop coq-service`), run `scheduler/host/bin/restore-store.sh --from BACKUP --dry-run`, read the listing, then `--apply`; it moves the live file aside with a UTC stamp, copies the backup, runs integrity_check, and starts the unit. The newest records after the backup are lost and the script prints the seq gap; that gap is the card's content.</task>
+    <task name="inspect">`scheduler ctl store status` prints epoch, high-water seq, min retained seq, db and wal bytes, tail clients, last checkpoint. Read-only.</task>
+    <task name="read a record">`scheduler ctl record get ID` or `scheduler ctl record list --after EPOCH:SEQ --kind KIND`.</task>
+    <task name="checkpoint by hand">`scheduler ctl store checkpoint` (PASSIVE); only when store.wal_large fired; it changes no data.</task>
+    <task name="restore">Follow shared/contracts.xml#restore step by step; this node's part: (1) stop coq-svc.service and coq-launch.service; (2) `scheduler/host/bin/restore-store.sh --from BACKUP --dry-run` prints the backup's epoch and high_water_seq and the live file's high-water seq, so the lost range is known before anything moves; (3) `--apply` moves the live file aside with a UTC stamp, copies the backup, runs integrity_check and starts the service in restore mode, where the socket admits only the owner; (4) the first Commit (N-01/store.restored/&lt;epoch&gt;/r1) starts the next epoch, sets the hold, turns build mode off, raises counter:lease_token by the margin of #restore and expires every reserved or running lease; (5) after reconciliation by N-04, N-09, N-23 and the outbox, store.restored 200 names the epoch, the backup and what was found; (6) only an owner ruling releases the hold.</task>
     <task name="cleanup">scheduler/host/bin/cleanup-store.sh, cleanup-run.sh, cleanup-logs.sh as listed in state-paths; dry-run first, always.</task>
-    <task name="break glass">A direct `sqlite3 STATE/store/coq.db` write session is owner-only, one time, recorded as break.glass before and after, with the unit stopped.</task>
+    <task name="break glass">A direct `sqlite3 STATE/store/coq.db` write session is owner-only, one time, as coq-svc with the units stopped, recorded as break.glass before and after.</task>
   </runbook>
 
   <rejected id="rejected">
     <item source="rebuild/investigation/03-DECISIONS.md#12-d10-durable-queue-or-broker" what="NATS JetStream as the store or wake bus" reason="C34 ruled no broker; the failure class was addressing, which a broker stores but does not fix (S03 F3)"/>
-    <item source="specs/scheduler/SPEC-16-scheduler-overview.xml#sh-state" what="one file per record and one file per job in the state root as the store" reason="a directory of files has no compare-and-swap, no sequence and no single-writer guarantee; the one-file-per-record log is kept as the record id form and the append-only principle (V01), the files are not"/>
-    <item source="specs/scheduler/SPEC-16-scheduler-overview.xml#l-writer" what="the scheduler never writes a record file itself; the executor runs events/bin/event.sh" reason="the store is the writer now; event.sh's validation (schema, code enum, exclusive create) moves into Put; event.sh becomes the ctl CLI's `record add` verb so the single-writer rule survives"/>
-    <item source="scheduler/api/scheduler/v1/scheduler.proto" what="no streaming call on the control plane (h-proto-stream)" reason="D21 (C52) rules push for everything; Tail is the one server stream, limited to seq fan-out, with full re-read on reconnect; the no-stream rule stays for every other RPC"/>
-    <item source="rebuild/investigation/L02-state-stores.md#3-where-it-lives" what="the repository copy of the record log (S2) and the three stranded roots (S11)" reason="two sources of truth (K07); N-49 reconciles them into this store once, then deletes"/>
-    <item source="rebuild/investigation/03-DECISIONS.md#12-d10-durable-queue-or-broker" what="PostgreSQL or Redis behind the service" reason="a second daemon on a host with eleven bugchecks; SQLite needs none and survives a process kill (S03 section 8 item 6)"/>
-    <item source="rebuild/investigation/L14-go-grpc-control-plane.md#45-drive-control_planeproto-bootstrap-with-agent-release-bwa-rel-2026-09-17-v010-status-proposed" what="the Drive control_plane.proto WorkOrderService as the store API" reason="its lease, version and receipt shapes are carried (N-02, this Put's expected_version); its fifteen WorkState values and four services are more than the small cut needs (D09)"/>
+    <item source="specs/scheduler/SPEC-16-scheduler-overview.xml#sh-state" what="one file per record and one file per job in the state root as the store" reason="a directory of files has no compare-and-swap, no sequence and no single-writer guarantee; the record id form and the append-only principle are kept (V01)"/>
+    <item source="specs/scheduler/SPEC-16-scheduler-overview.xml#l-writer" what="the executor runs events/bin/event.sh to write records" reason="the store is the writer; event.sh's validation moves into Commit; event.sh becomes the ctl CLI's `record add` verb"/>
+    <item source="scheduler/api/scheduler/v1/scheduler.proto" what="no streaming call on the control plane (h-proto-stream)" reason="D21 (C52) rules push; Tail is the one server stream, limited to cursor fan-out; the no-stream rule stays for every other RPC"/>
+    <item source="rebuild/investigation/L02-state-stores.md#3-where-it-lives" what="the repository copy of the record log and the three stranded roots" reason="two sources of truth (K07); N-49 reconciles them into this store once, then deletes"/>
+    <item source="rebuild/investigation/03-DECISIONS.md#12-d10-durable-queue-or-broker" what="PostgreSQL or Redis behind the service" reason="a second daemon on a host with eleven bugchecks; SQLite needs none and survives a process kill"/>
+    <item source="nodes/N-01/record.schema.json" what="Put with one record and one entity, keyed by a caller-chosen idempotency key compared by key only (book 1.0)" reason="no node could write its own tables atomically and six effects shared one key; Commit with operation keys and request hashes replaces it (F02, F04)"/>
+    <item source="nodes/N-01/spec.xml" what="a same-user 0600 socket and caller-supplied node and by (book 1.0)" reason="any process of the owner, a seat included, could write any kind as any node; SO_PEERCRED and server-derived identity replace it (F01)"/>
+    <item source="nodes/N-01/spec.xml" what="Snapshot by VACUUM INTO under the writer's turn (book 1.0)" reason="it blocks every commit for the copy's duration (report D: 2.82 s on 293.7 MiB); a reader connection copies the same image without holding the writer"/>
   </rejected>
 
   <sources id="sources">
@@ -301,15 +385,15 @@
     <source path="rebuild/investigation/01-ROOT-CAUSES.md" anchor="rc3-state-lives-in-many-copies-with-no-authority-joined-by-polling-and-by-hand"/>
     <source path="scheduler/internal/core/interfaces.go" anchor="Clock" note="injected clock, kept"/>
     <source path="scheduler/internal/core/record.go" anchor="AtLayout" note="UTC form of at, kept"/>
-    <source path="scheduler/api/scheduler/v1/scheduler.proto" anchor="h-proto-sockets" note="unix sockets 0600, no TCP, kept"/>
+    <source path="scheduler/api/scheduler/v1/scheduler.proto" anchor="h-proto-sockets" note="unix sockets, no TCP, kept; the real services Executor and Scheduler"/>
     <source path="events/schema/event.schema.json" anchor="/properties/id" note="record id form and code enum, kept"/>
     <source path="bin/state-root.sh" anchor="state" note="the one resolver, kept"/>
     <source path="specs/scheduler/SPEC-16-scheduler-overview.xml" anchor="l-state"/>
     <source path="rebuild/factory-rebuild-plan.xml" anchor="principles" note="no-cog, design-first"/>
-    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C34" note="no broker, one store; the catch answered: backups scheduled"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C34" note="no broker, one store; backups scheduled"/>
     <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C35" note="artifacts out of git, cleanup scripts"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md" note="one-page memory rule; no heading, so the pointer is the file"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/runtime-data-never-in-the-repo.md" note="one-page memory rule; no heading, so the pointer is the file"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/control-plane-go-grpc.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/multi-agent-first-design.md" note="one-page memory rule"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/runtime-data-never-in-the-repo.md" note="one-page memory rule"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/control-plane-go-grpc.md" note="one-page memory rule"/>
   </sources>
 </volume>

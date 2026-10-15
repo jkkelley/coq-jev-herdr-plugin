@@ -1,63 +1,119 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-44/record.schema.json",
-  "title": "N-44 Build-mode flag: input and output records",
-  "description": "Parent: ../../index.xml#N-44. Sibling: spec.xml. Envelope as in ../N-43/record.schema.json#/$defs/envelope until shared/state-store.xml#record-envelope lands.",
+  "title": "N-44 Flags (build mode and hold): input and output records",
+  "description": "Parent: ../../index.xml#N-44. Sibling: spec.xml. Book 1.1.0: N-44 is the single writer of the entities flag:build_mode and flag:hold (review NF-A9). It consumes the typed effects of an N-29 ruling (NF-A5): flag_effect is the one definition of build-mode.set, control.halt and control.resume, and N-29's effect def should $ref it. Envelope: the shared envelope through ../N-43/record.schema.json#/$defs/envelope.",
   "oneOf": [ { "$ref": "#/$defs/input" }, { "$ref": "#/$defs/output" } ],
   "$defs": {
-    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "utc": { "$ref": "../../shared/state-store.schema.json#/$defs/at" },
     "envelope": { "$ref": "../N-43/record.schema.json#/$defs/envelope" },
-    "scope": { "type": "string", "enum": ["rebuild", "all"] },
+    "scope": { "$ref": "../../shared/contracts.schema.json#/$defs/build_mode/properties/scope" },
+    "card_id": { "type": "string", "pattern": "^C-[0-9]{1,6}$" },
+    "build_mode_effect": {
+      "title": "effect build-mode.set inside an N-29 ruling",
+      "description": "state on needs scope and expires_at; state off turns build mode off early and needs neither",
+      "type": "object",
+      "required": ["kind", "state", "card_id"],
+      "properties": {
+        "kind": { "const": "build-mode.set" },
+        "state": { "enum": ["on", "off"] },
+        "scope": { "$ref": "#/$defs/scope" },
+        "expires_at": { "$ref": "#/$defs/utc" },
+        "card_id": { "$ref": "#/$defs/card_id" }
+      },
+      "additionalProperties": false,
+      "if": { "properties": { "state": { "const": "on" } } },
+      "then": { "required": ["scope", "expires_at"] }
+    },
+    "hold_effect": {
+      "title": "effect control.halt (USERHALT) or control.resume (USERGO) inside an N-29 ruling",
+      "type": "object",
+      "required": ["kind", "card_id"],
+      "properties": {
+        "kind": { "enum": ["control.halt", "control.resume"] },
+        "card_id": { "$ref": "#/$defs/card_id" },
+        "word": { "$ref": "../../shared/contracts.schema.json#/$defs/owner_word" }
+      },
+      "additionalProperties": false
+    },
+    "flag_effect": { "oneOf": [ { "$ref": "#/$defs/build_mode_effect" }, { "$ref": "#/$defs/hold_effect" } ] },
     "input": {
       "oneOf": [
         {
-          "title": "ruling (from N-29) with body.flag build-mode",
+          "title": "ruling (from N-29) carrying at least one flag effect",
           "allOf": [ { "$ref": "#/$defs/envelope" } ],
+          "type": "object",
+          "required": ["card", "source", "effects"],
           "properties": {
             "kind": { "const": "ruling" },
-            "body": {
-              "type": "object",
-              "required": ["flag", "state", "card_id"],
-              "properties": {
-                "flag": { "const": "build-mode" },
-                "state": { "type": "string", "enum": ["on", "off"] },
-                "scope": { "$ref": "#/$defs/scope" },
-                "expires_at": { "$ref": "#/$defs/utc", "description": "required when state is on" },
-                "card_id": { "type": "string", "minLength": 1 },
-                "words": { "type": "string", "maxLength": 240 },
-                "origin": { "type": "string", "enum": ["page", "chat-relay", "controls"] }
-              }
-            }
+            "node": { "const": "N-29" },
+            "card": { "$ref": "#/$defs/card_id" },
+            "source": { "type": "string", "description": "N-44 applies a flag effect only for source page, cli or controls from an owner principal; any other source is refused 403 (spec #authority)" },
+            "by": { "type": "string", "description": "server-derived from the authenticated principal (shared/authority.xml#role-derivation), never caller-supplied" },
+            "effects": { "type": "array", "maxItems": 4, "contains": { "$ref": "#/$defs/flag_effect" } }
           }
         },
         {
-          "title": "tick (from N-06)",
+          "title": "store.restored (shared/contracts.xml#restore): a restore starts a new epoch held",
           "allOf": [ { "$ref": "#/$defs/envelope" } ],
-          "properties": { "kind": { "const": "tick" }, "body": { "type": "object", "required": ["now"], "properties": { "now": { "$ref": "#/$defs/utc" }, "tick": { "type": "string", "enum": ["scheduler", "poll", "backup", "stall", "daily"] } } } }
+          "properties": { "kind": { "const": "store.restored" } }
+        },
+        {
+          "title": "tick or unit.start (from N-06)",
+          "allOf": [ { "$ref": "#/$defs/envelope" } ],
+          "properties": { "kind": { "enum": ["tick", "unit.start"] }, "node": { "const": "N-06" } }
         }
       ]
     },
-    "output": {
+    "build_mode_state": {
       "title": "build-mode.state",
       "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "type": "object",
+      "required": ["body"],
       "properties": {
         "kind": { "const": "build-mode.state" },
-        "code": { "enum": [200, 409] },
+        "node": { "const": "N-44" },
+        "code": { "enum": [200, 403, 409, 422] },
         "body": {
           "type": "object",
           "required": ["state", "scope", "reason"],
           "properties": {
-            "state": { "type": "string", "enum": ["on", "off"] },
+            "state": { "enum": ["on", "off"] },
             "scope": { "$ref": "#/$defs/scope" },
             "expires_at": { "$ref": "#/$defs/utc" },
-            "card_id": { "type": "string" },
+            "card_id": { "$ref": "#/$defs/card_id" },
             "ruling_id": { "type": "string" },
-            "reason": { "type": "string", "enum": ["ruling", "extend", "expired", "start-reconcile", "duplicate", "bad-expiry", "bad-scope", "race"] },
-            "open_rebuild_tickets": { "type": "integer", "minimum": 0, "description": "set on an expiry; greater than 0 makes the record owner-acts" },
+            "reason": { "enum": ["ruling", "extend", "ended-early", "expired", "start-reconcile", "restore", "bad-expiry", "bad-scope", "race", "not-owner"] },
+            "open_rebuild_tickets": { "type": "integer", "minimum": 0, "description": "set on an expiry; greater than 0 makes the record owner-acts (one card, no default)" },
+            "flag_version": { "type": "integer", "minimum": 0, "description": "version of entity flag:build_mode after the write; N-07 copies it into dispatch build_mode.version" }
+          }
+        }
+      }
+    },
+    "hold_state": {
+      "title": "hold.state",
+      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "type": "object",
+      "required": ["body"],
+      "properties": {
+        "kind": { "const": "hold.state" },
+        "node": { "const": "N-44" },
+        "code": { "enum": [200, 403, 412] },
+        "body": {
+          "type": "object",
+          "required": ["state", "reason"],
+          "properties": {
+            "state": { "enum": ["on", "off"] },
+            "waits_on": { "$ref": "../../shared/contracts.schema.json#/$defs/owner_word", "description": "the owner word the hold lamp names while state is on" },
+            "reason": { "enum": ["userhalt", "usergo", "restore", "bootstrap", "not-owner", "not-ready"] },
+            "card_id": { "$ref": "#/$defs/card_id" },
+            "ruling_id": { "type": "string" },
+            "missing_proofs": { "type": "array", "items": { "type": "string" }, "description": "on 412 not-ready: the bootstrap proofs USERGO still needs (shared/cut-over.xml#bootstrap)" },
             "flag_version": { "type": "integer", "minimum": 0 }
           }
         }
       }
-    }
+    },
+    "output": { "oneOf": [ { "$ref": "#/$defs/build_mode_state" }, { "$ref": "#/$defs/hold_state" } ] }
   }
 }

@@ -4,7 +4,13 @@
      revised 2026-10-14T06:40Z UTC by the round 3 spec-author seat against the round 2 review verdict (every reason named there is fixed in this revision)
      (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
      Every time in this volume is UTC. No em dash appears in this volume. Pointers are path plus anchor, never prose. -->
-<volume id="N-10" kind="node-spec" node="N-10" group="G2" title="Main verdict and hold" version="1.0.2" issued="2026-10-14" timezone="UTC" author="spec-author seat, group G2, round 3">
+<!-- N-10 book 1.1.0, 2026-10-15T06:00:00Z (review F13, C new 7, E NF-E5).
+     What broke: the input required merge_seq and suites and excluded 410, and N-26's output had none of them; the verify
+     bound (3600 s) was shorter than N-26's own run bound, so a run inside its budget was reported missing; merge_seq
+     ordering relied on linear history nothing asserted. The fix: the input by reference to N-26's output, 410 accepted,
+     the bound derived in shared/retry-budget.xml#deadlines, linear history read from N-04's protection.observed, and
+     verified as the only way a ticket reaches done (shared/contracts.xml#ticket-transitions). -->
+<volume id="N-10" kind="node-spec" node="N-10" group="G2" title="Main verdict and hold" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" author="spec-author seat, group G2, round 3; book 1.1.0 amendment">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
@@ -61,31 +67,32 @@
   </purpose>
 
   <input id="input">
-    <record kind="main.gate.status" code="201 422 500" from="N-26" schema="record.schema.json#/$defs/main_gate_status">
+    <record kind="main.gate.status" code="201 422 500 410" from="N-26" schema="../N-26/record.schema.json#/$defs/output">
       <field name="main_sha">The main sha the full suite set ran on (N-04's snapshot carries the raw status as main_gate; N-26 turns it into this record with the suites and the merge_seq).</field>
       <field name="merge_seq">The merge_seq of the merge record whose merge_sha equals main_sha (N-26 copies it); the order key.</field>
       <field name="state">success, failure or error (after N-24's ladder and N-25's three posts).</field>
       <field name="suites">Every suite with its exit code and log url; every suite runs even after one fails (verify-main.sh choice 1).</field>
-      <field name="superseded_by">Set when Jenkins aborted this run for a newer main sha (abortPrevious); then state is error and the newer sha's status covers this range.</field>
+      <field name="superseded_by">Set with code 410 when the run was coalesced away for a newer main sha (abortPrevious); state is error, this node writes nothing and the newer sha's status covers this range. With N-09's awaiting-verify step this happens only after a push outside the line.</field>
     </record>
-    <reads>Merge records ordered by merge_seq; the newest verified record; the current merge.hold record; the halt record.</reads>
-    <starts-when>A main.gate.status record is committed; the scheduler tick also re-examines any merge record older than verify.expected_seconds (default 3600) with no main.gate.status, and writes main.verify.missing 500 once (see waits).</starts-when>
+    <reads>Merge records ordered by merge_seq; the newest verified record; the current merge.hold record; the halt record; the newest protection.observed and protection.drift (N-04), which assert linear history on main.</reads>
+    <starts-when>A main.gate.status record is committed; the scheduler tick also re-examines any merge record older than verify.expected_seconds (d-verify of shared/retry-budget.xml#deadlines: N-26's run bound d-main-run plus the poll and 600 s) with no main.gate.status, and writes main.verify.missing 500 once (see waits).</starts-when>
   </input>
 
   <output id="output">
-    <record kind="verified" code="201" to="N-51 N-45 N-28" schema="record.schema.json#/$defs/verified">
-      <field name="idempotency_key">pr number, colon, merge_sha; one per pull request, ever.</field>
+    <record kind="verified" code="201" to="N-03 N-35 N-45 N-47 N-48 N-51 N-28" schema="record.schema.json#/$defs/verified">
+      <field name="idempotency_key">N-10/verified/&lt;pr&gt;@&lt;merge_sha&gt;/r1; one per pull request, ever.</field>
       <field name="pr, ticket, merge_sha">The pull request verified.</field>
       <field name="main_sha, merge_seq_range">The green main sha and the range of merge_seq it covers (coalescing: a green main verifies every merge since the last verified).</field>
+      <rule>verified is the trigger of everything that acts on main being good: N-03 moves the ticket merged to done (shared/contracts.xml#ticket-transitions), N-35 deploys the map, N-47 publishes the book and N-48 promotes stable, each reading the merge record's paths by merge_sha; none acts on a merge record alone (F13).</rule>
     </record>
     <record kind="rejected" code="422" to="N-28 N-41 N-02" schema="record.schema.json#/$defs/rejected">
-      <field name="idempotency_key">main_sha, colon, rejected; one per red sha (verify-main.sh choice 2: the sha is red, not a pull request).</field>
+      <field name="idempotency_key">N-10/rejected/&lt;main_sha&gt;/r1; one per red sha (verify-main.sh choice 2: the sha is red, not a pull request).</field>
       <field name="main_sha, merge_seq_range, prs">Every pull request in the range, each with its ticket; the fix ticket names them.</field>
       <field name="suites_red">The failing suites with their log urls.</field>
       <field name="fix_attempt">1 to 3: how many fix tickets this hold has spawned.</field>
     </record>
     <record kind="merge.hold" code="423" to="N-09 N-41 N-42" schema="record.schema.json#/$defs/merge_hold">
-      <field name="idempotency_key">main_sha, colon, hold; one per red sha.</field>
+      <field name="idempotency_key">N-10/merge.hold/&lt;main_sha&gt;/r1; one per red sha.</field>
       <field name="held_sha, held_merge_seq, reason, prs, suites_red, rejected_id">What the hold names.</field>
       <field name="lifted">false until a merge.hold.lifted names it; N-09 reads the newest hold and merges only when it is lifted.</field>
     </record>
@@ -95,14 +102,16 @@
     <record kind="main.verify.missing" code="500" to="N-28 N-41" schema="record.schema.json#/$defs/main_verify_missing">
       <field name="merge_sha, merge_seq, age_seconds">A merge with no main.gate.status past the bound; once per merge.</field>
     </record>
+    <example schema="record.schema.json#/$defs/verified">{"id":"20261014T093010Z-201-k3v9w","at":"2026-10-14T09:30:10Z","kind":"verified","code":201,"node":"N-10","epoch":1,"seq":5602,"idempotency_key":"N-10/verified/201@a71d0b4e2c9f8a6d5b3e1c7f9a2d4b6e8c0f1a3d/r1","pr":201,"ticket":"WO-20261014-ab12","merge_sha":"a71d0b4e2c9f8a6d5b3e1c7f9a2d4b6e8c0f1a3d","main_sha":"a71d0b4e2c9f8a6d5b3e1c7f9a2d4b6e8c0f1a3d","merge_seq_range":{"from":93,"to":93},"status_record_id":"20261014T093000Z-201-v8m2s"}</example>
+    <example schema="record.schema.json#/$defs/merge_hold">{"id":"20261014T111500Z-423-h2d6p","at":"2026-10-14T11:15:00Z","kind":"merge.hold","code":423,"node":"N-10","epoch":1,"seq":5700,"idempotency_key":"N-10/merge.hold/5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f/r1","held_sha":"5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f","held_merge_seq":94,"reason":"suites-red","prs":[{"pr":206,"ticket":"WO-20261014-ab34","merge_sha":"5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f","merge_seq":94}],"suites_red":[{"name":"herdr","exit_code":1}],"rejected_id":"20261014T111459Z-422-r5j1b","lifted":false,"generation":1}</example>
     <ends-when>Every merge in the range has a verified record, or the rejected and merge.hold records exist and the fix re-entry was written; a superseded status ends with no record.</ends-when>
   </output>
 
   <mechanism id="mechanism">
     <where>Go package verify inside the service; a port of line/bin/verify-main.sh's verdict and hold logic, with the suites moved to pods (N-26) and the hold moved from a file to a record.</where>
-    <step n="1" id="m-order">Load the main.gate.status and its merge_seq. Load the newest verified record's merge_seq (last_verified). The range is last_verified plus 1 to this merge_seq, as merge records. A status whose merge_seq is at or below last_verified is stale (an older run finishing late, verify-main.sh choice 3) and ends with no record.</step>
+    <step n="1" id="m-order">Load the main.gate.status and its merge_seq; a 410 (superseded_by set) ends here with no record. Load the newest verified record's merge_seq (last_verified). The range is last_verified plus 1 to this merge_seq, as merge records. A status whose merge_seq is at or below last_verified is stale (an older run finishing late, verify-main.sh choice 3) and ends with no record.</step>
     <step n="2" id="m-superseded">A status with superseded_by set ends with no record: the newer sha's status covers the range (ci/README.md abortPrevious; roadmap ruling 19:41Z: verify only the newest main sha, drop queued older runs).</step>
-    <step n="3" id="m-green">state success: for each merge record in the range write verified 201 (key pr:merge_sha). Then, if a merge.hold stands whose held_merge_seq is at or below this merge_seq, write merge.hold.lifted by green-main and compare-and-swap the hold's lifted field to true; an older green never lifts a newer red (verify-main.sh choice 3, with merge_seq in place of git ancestry because main has required_linear_history, L07 section 5 item 3).</step>
+    <step n="3" id="m-green">state success: for each merge record in the range write verified 201 (key pr:merge_sha). Then, if a merge.hold stands whose held_merge_seq is at or below this merge_seq, write merge.hold.lifted by green-main and compare-and-swap the hold's lifted field to true; an older green never lifts a newer red (verify-main.sh choice 3, with merge_seq in place of git ancestry because main has required linear history). Linear history is asserted, not assumed: merge_seq ordering is used only while the newest protection.observed (N-04, shared/authority.xml#github-app) says linear history is on and no protection.drift is newer; otherwise a green verifies only the merges N-26 listed by ancestry and lifts no hold, and a red is rejected with reason linear-history-unverified, so the safe side is the hold.</step>
     <step n="4" id="m-red">state failure, or error after N-25's three posts: write rejected 422 for the sha with every pull request in the range and the red suites; write merge.hold 423 unless a hold already stands (the first red holds; a second red while held updates nothing, because the hold is a fact until green). fix_attempt is the count of rejected records since the last verified plus one.</step>
     <step n="5" id="m-fix">Re-entry: with fix_attempt at or below 3, write a ticket.request (reason fix-for-hold, rejected_id, hold_id, request id fix-&lt;hold_id&gt;-&lt;fix_attempt&gt;) to N-03, which admits it as a cut request CR-&lt;request id&gt; at phase spec (nodes/N-03/spec.xml#input); N-02 leases it and N-07 dispatches a spec-author run (N-17) whose brief is the rejected record and the red logs, N-18 validates its fix ticket on main, N-03 readies it, and the normal worker, gate, review, merge path runs; the hold stands throughout, so the fix pull request's merge is the only merge N-09 allows under a hold (hold exception, ../N-09/spec.xml#m-hold: the fix ticket entity carries hold_id equal to the standing hold's hold_id, set by N-03 when it admits the ticket set cut from this request, and N-09's merge record carries fix_for_hold_id). With fix_attempt 4 the hold stays, no new fix is cut, and the rejected record maps to owner-acts so N-28 posts exactly one card with the sha, the suites, the three fix tickets and the recommendation.</step>
     <step n="6" id="m-unknown-sha">A main.gate.status whose main_sha matches no merge record (a hand push to main, a merge by hand) is written as rejected with reason unknown-sha and a hold: fail closed (verify-main.sh hold choice 1: the file existing is the hold whatever it holds). The card tells the owner what landed outside the line (D19 exit test counts it as an agent line operation if a seat did it).</step>
@@ -135,7 +144,7 @@
   </start>
 
   <waits id="waits">
-    <wait id="w-status" on="main.gate.status for a merge" timeout="verify.expected_seconds, default 3600 (the full suite budget of 30 minutes plus the ladder's 300 s rung and queueing)" fallback="main.verify.missing 500 once per merge to N-41 and N-28; the hold is not written, because the absence of a verdict is a system-lane fault, not a red main; N-26 re-requests the run through its own retry"/>
+    <wait id="w-status" on="main.gate.status for a merge" timeout="verify.expected_seconds, d-verify of shared/retry-budget.xml#deadlines (N-26's run bound d-main-run plus the poll plus 600 s), so a run inside its own bound is never reported missing" fallback="main.verify.missing 500 once per merge to N-41 and N-28; the hold is not written, because the absence of a verdict is a system-lane fault, not a red main; N-09 keeps every other merge held awaiting-verify meanwhile (fail closed)"/>
     <wait id="w-read" on="N-01 read of merges, verified, hold" timeout="5 s" fallback="end the traversal; the next status or tick retries; three in a row write store.unreachable 500 once"/>
     <wait id="w-write" on="N-01 writes of verified, rejected, hold, lifted" timeout="5 s" fallback="retry 1 s, 2 s, 4 s; then verify.write.failed 500 once per main_sha; the next traversal re-derives and rewrites (keys make it idempotent)"/>
     <wait id="w-fix" on="a fix ticket turning main green" timeout="3 fix attempts (N-11's count applies inside each ticket; this node counts tickets)" fallback="one owner card with the recommendation; the hold stands; product work is frozen by D19 in any case"/>
@@ -175,8 +184,8 @@
 
   <state-paths id="state-paths">
     <root>$COQ_STATE as in ../N-07/spec.xml#state-paths; path elements in N-45's generator form.</root>
-    <path id="N-10.store" glob="$COQ_STATE/store/coq.db" retention="owned by N-01" trigger="none here" cleanup="line/bin/cleanup.sh --entry N-01.store">Rows: verified, rejected, merge.hold, merge.hold.lifted, main.verify.missing. A standing hold is never pruned; lifted holds and verified records prune after retention (N-01's row).</path>
-    <path id="N-10.logs" glob="$COQ_STATE/logs/verify/*/*/*-main-*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-10.logs">One line per step with the range and the suites; suite logs themselves are N-24's paths.</path>
+    <path acts="owner" id="N-10.store" glob="$COQ_STATE/store/coq.db" retention="owned by N-01" trigger="owner" cleanup="line/bin/cleanup.sh --entry N-01.store">Rows: verified, rejected, merge.hold, merge.hold.lifted, main.verify.missing. A standing hold is never pruned; lifted holds and verified records prune after retention (N-01's row).</path>
+    <path acts="system" id="N-10.logs" glob="$COQ_STATE/logs/verify/*/*/*-main-*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-10.logs">One line per step with the range and the suites; suite logs themselves are N-24's paths.</path>
     <never>No merge-hold.json file (rejected item 1); no verify worktree (rejected item 2); no file under the repository.</never>
   </state-paths>
 
@@ -185,6 +194,9 @@
     <out to="N-28" record="rejected at fix_attempt 4, main.verify.missing" path="../N-28/spec.xml" anchor="input"/>
     <out to="N-41" record="rejected, merge.hold, merge.hold.lifted" path="../N-41/spec.xml" anchor="input"/>
     <out to="N-51" record="verified" path="../N-51/spec.xml" anchor="input"/>
+    <out to="N-03" record="verified (ticket merged to done)" path="../N-03/spec.xml" anchor="input" drawn="false"/>
+    <out to="N-35" record="verified for a merge touching tools/map/**" path="../N-35/spec.xml" anchor="input" drawn="false"/>
+    <out to="N-48" record="verified for a merge touching promotion.paths" path="../N-48/spec.xml" anchor="input" drawn="false"/>
     <out to="N-09" record="merge.hold, merge.hold.lifted" path="../N-09/spec.xml" anchor="input" note="read by N-09; drawn as N-10 to RE in dag.md"/>
     <re-entry record="rejected 422" enters="N-03" as="a ticket.request that N-03 admits as a spec-phase cut request, leased at N-02 and dispatched by N-07 to a spec-author run" bound="3 fix attempts then the owner's card" path="../../dag.md" anchor="4-re-entries"/>
     <in from="N-29" record="ruling (break glass lift)" path="../N-29/spec.xml" anchor="output" note="a control.action lift from N-42 recorded by N-29 writes merge.hold.lifted by break-glass through this node's lift step"/>
@@ -198,7 +210,9 @@
   <checklist id="checklist">
     <item id="c-range" proof="go test ./internal/verify -run TestRange: a green at seq 7 after last verified 4 writes verified for 5, 6, 7">A green main verifies the whole range.</item>
     <item id="c-order" proof="test TestOldGreenNewRed in both arrival orders leaves the hold standing">An old green never lifts a new red.</item>
-    <item id="c-superseded" proof="test TestSuperseded writes no record">A superseded status writes nothing.</item>
+    <item id="c-superseded" proof="test TestSuperseded: a 410 main.gate.status from N-26's schema writes no record">A superseded status writes nothing.</item>
+    <item id="c-linear" proof="test TestLinearHistoryUnverified: with a protection.drift newer than the observed record, a green lifts no hold and a red is rejected linear-history-unverified">merge_seq order is used only while linear history is asserted.</item>
+    <item id="c-deadline" proof="check deadline-nesting of shared/retry-budget.xml#deadlines: d-verify is at least d-main-run plus d-poll plus d-verify-slack; not-run">The verify bound is never shorter than N-26's run.</item>
     <item id="c-one-hold" proof="test TestTwoRedsOneHold writes one merge.hold and one 409">One hold per red sha.</item>
     <item id="c-fix" proof="test TestFixReentry: a red writes one ticket.request keyed by hold id and fix attempt; a fourth red writes none and marks owner-acts">Three fix attempts then one card.</item>
     <item id="c-unknown" proof="test TestUnknownSha writes rejected unknown-sha and a hold">A sha the store does not know fails closed.</item>

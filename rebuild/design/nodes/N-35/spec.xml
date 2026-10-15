@@ -203,11 +203,11 @@ flowchart LR
   </status-codes>
 
   <state-paths id="state-paths" cleanup-registry="../N-45/spec.xml#N-45">
-    <path p="$COQ_STATE/map/deploy/probe/YYYY/MM/&lt;sha&gt;-&lt;attempt&gt;.log" cleanup="tools/map/bin/cleanup.sh --deploy-logs --older-than 30d">Probe request and response log per attempt, written by the Go probe.</path>
-    <path p="$COQ_STATE/map/deploy/prereq/*.json" cleanup="tools/map/bin/cleanup.sh --prereq (refuses unless --force; prerequisites are long lived)">Proof files behind deploy.prereq records (dig and curl output).</path>
-    <path p="store table deploy_records" cleanup="N-45 retention class: keep the newest 50 per app, delete older by timer">Deploy records in the SQLite store (shared need: table).</path>
-    <path p="Jenkins home (Longhorn) build logs for job coq-map" cleanup="JCasC buildDiscarder set by N-20 (30 days or 200 builds per job); ci/bin/cleanup-cluster.sh --what jenkins-builds forces a sweep">Outside the state root; owned by N-20.</path>
-    <path p="ghcr.io/jkkelley/coq-map tags" cleanup="tools/map/bin/cleanup.sh --ghcr-tags --keep 20 --dry-run (deletion requires the owner's ghcr token, never run by a seat)">Image tags accumulate one per build.</path>
+    <path acts="system" trigger="timer" p="$COQ_STATE/map/deploy/probe/YYYY/MM/&lt;sha&gt;-&lt;attempt&gt;.log" cleanup="tools/map/bin/cleanup.sh --deploy-logs --older-than 30d">Probe request and response log per attempt, written by the Go probe.</path>
+    <path acts="system" trigger="timer" p="$COQ_STATE/map/deploy/prereq/*.json" cleanup="tools/map/bin/cleanup.sh --prereq (refuses unless --force; prerequisites are long lived)">Proof files behind deploy.prereq records (dig and curl output).</path>
+    <path acts="system" trigger="timer" p="store table deploy_records" cleanup="N-45 retention class: keep the newest 50 per app, delete older by timer">Deploy records in the SQLite store (shared need: table).</path>
+    <path acts="system" trigger="timer" p="Jenkins home (Longhorn) build logs for job coq-map" cleanup="JCasC buildDiscarder set by N-20 (30 days or 200 builds per job); ci/bin/cleanup-cluster.sh --what jenkins-builds forces a sweep">Outside the state root; owned by N-20.</path>
+    <path acts="owner" trigger="owner" p="ghcr.io/jkkelley/coq-map tags" cleanup="tools/map/bin/cleanup.sh --ghcr-tags --keep 20 --dry-run (deletion requires the owner's ghcr token, never run by a seat)">Image tags accumulate one per build.</path>
     <s>$COQ_STATE is ~/.local/state/coq/coq-jev-herdr-plugin. Every path above is listed in the cleanup registry (N-45) and documented in tools/map/README.md so cleanup commands exist (owner, C35).</s>
   </state-paths>
 

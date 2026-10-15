@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Node volume N-23 Suite planner. Written by the G4 spec-author seat, 2026-10-14T04:39Z UTC, against brief C and dag.md section 3 row N-23.
      Validated by rebuild/design/check.sh against rebuild/design/schema/ once the shared author lands them. -->
-<volume id="N-23" kind="node-spec" node="N-23" group="G4" name="Suite planner" version="1.0.0" issued="2026-10-14T04:39:00Z" timezone="UTC">
+<volume id="N-23" kind="node-spec" node="N-23" group="G4" name="Suite planner" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
@@ -37,6 +37,9 @@
     <shared href="../../shared/status-codes.xml#status-codes">Status code map</shared>
     <shared href="../../shared/principles.xml#no-cog">No cog principle</shared>
     <shared href="../../shared/state-store.xml#records">State store record envelope and tables</shared>
+    <shared href="../../shared/ci-capacity.xml#model">CI capacity: runs in flight</shared>
+    <shared href="../../shared/retry-budget.xml#layers">Retry layers: planner, gate-trigger, plan-attempt</shared>
+    <shared href="../../shared/contracts.xml#outbox">Outbox: the gate.run effect and its COQ_OP_ID lookup</shared>
     <shared href="../../shared/seat-contract.xml#roles">Seat contract: the tester role is retired, code does this</shared>
   </pointers>
 
@@ -44,7 +47,7 @@
     <s>N-23 turns a pull request head into the exact list of test units the gate must run, from the changed files and the data map factory/config/suites.json, and hands that list to Jenkins as one coq-gate build; it is the tester seat's job done by code (D11, ruling C39: the tester becomes code).</s>
     <s>It keeps the owner's proven rule: suites planned from the diff, rows union, an unmapped path plans the full set (V06; suites.sh breadcrumb items 1 and 2), so a gap costs time and never a missed suite.</s>
     <s>It removes the stalls of models polling a pane (ci-gate-design.md Problem: 9 to 14 minutes on a one-minute lint) and the plan pod that had to start before any status could be posted (coqGate.groovy breadcrumb item 2).</s>
-    <s>Input to output: a pr.opened record starts it; a suite.plan record ends it; the plan's entries are the inputs of N-24 (pods) and N-46 (spec book check).</s>
+    <s>Input to output: a pr.opened record starts it; a suite.plan record ends it; the plan's entries are the inputs of N-24 (pods), N-46 (spec book check) and N-36 (the art unit).</s>
   </section>
 
   <section id="input" title="Input record: pr.opened">
@@ -69,20 +72,23 @@
       <field name="changed_paths" type="array" required="true">The diff, renames split into delete and add.</field>
       <field name="map_sha" type="string" required="true">The main commit whose suites.json and tests.json were read (never the head's).</field>
       <field name="full_set" type="boolean" required="true">True when an unmapped path or a map change forced the full set.</field>
-      <field name="entries" type="array" required="true">One per unit: name (suite:case or suite), suite, image (name and manifest digest from N-22), workdir, cmd, budget_minutes, kind (pod or spec-check), skip false always, and records: the record kinds the unit may hand to the host through its artifact, with the node they are written for, copied from the suite's row in factory/config/suites.json (art: art.inventory and sprite.sheet for N-36; map: binding.record for N-37; spec-book: check.verdict for N-46; an acceptance case of a ticket: test.proof for the ticket), empty for every other unit; N-24 step 6 imports exactly these and refuses any other kind.</field>
+      <field name="plan_attempt" type="integer" required="true">1 or 2 (shared/retry-budget.xml#layers plan-attempt); also carried by every entry.</field>
+      <field name="op_id" type="string" required="true">The gate.run operation key N-23/gate.run/&lt;pr&gt;@&lt;head_sha&gt;@&lt;plan_attempt&gt;/r1 (shared/contracts.xml#operation-keys), sent to Jenkins as the build parameter COQ_OP_ID.</field>
+      <field name="entries" type="array" required="true">One per unit: name (suite:case or suite), suite, image (name and manifest digest from N-22), workdir, cmd, budget_minutes, kind (pod or spec-check), skip false always, plan_attempt, and records: typed rows {kind, for_node} (record.schema.json#/$defs/import_kind) copied from the suite's row in factory/config/suites.json (art: art.inventory and sprite.sheet for N-36; map: binding.record for N-37; spec-book: check.verdict for N-46; an acceptance case of a ticket: test.proof for N-24), empty for every other unit; N-24 step m-mirror imports exactly these, validates each line against the consumer def and refuses any other kind.</field>
       <field name="build" type="object" required="true">The Jenkins job, build number and URL the plan was handed to, filled when the trigger succeeded.</field>
     </record>
-    <s>Refusals end the node without a plan: plan.refused 412 for a fork head, for a suite without an image, or for a diff that could not be computed after the ladder; plan.blocked 423 when no job.registered, namespace.ready or image record exists.</s>
+    <s>Refusals end the node without a plan: plan.refused 412 for a fork head, for a suite without an image, or for a diff that could not be computed after the ladder; plan.blocked 423 when no job.registered, namespace.ready or image record exists, or when the ticket's pod budget is spent (reason budget, shared/retry-budget.xml#budgets, enforced by N-07).</s>
+    <example schema="record.schema.json#/$defs/output">{"id":"20261015T060500Z-100-p5q6r","at":"2026-10-15T06:05:00Z","seq":4050,"epoch":1,"kind":"suite.plan","code":100,"node":"N-23","head_sha":"89abcdef0123456789abcdef0123456789abcdef","pr":57,"plan_kind":"pr","plan_attempt":1,"op_id":"N-23/gate.run/57@89abcdef0123456789abcdef0123456789abcdef@1/r1","merge_base":"0123456789abcdef0123456789abcdef01234567","changed_paths":["rebuild/design/nodes/N-24/spec.xml"],"map_sha":"0123456789abcdef0123456789abcdef01234567","full_set":false,"entries":[{"name":"lint","suite":"lint","image":{"name":"coq-lint","digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222"},"workdir":"/repo","cmd":"bash lint/lint.sh /repo","budget_minutes":5,"budget_source":"suite.budget","kind":"pod","skip":false,"plan_attempt":1,"records":[]},{"name":"spec-book","suite":"spec-book","image":{"name":"coq-lint","digest":"sha256:2222222222222222222222222222222222222222222222222222222222222222"},"workdir":"/repo","cmd":"rebuild/design/check.sh","budget_minutes":5,"kind":"spec-check","skip":false,"plan_attempt":1,"records":[{"kind":"check.verdict","for_node":"N-46","schema":"nodes/N-46/record.schema.json#/$defs/output"}]}],"build":{"job":"coq-gate","number":412,"url":"https://jenkins.invalid/job/coq-gate/412/"},"plan_log":"$COQ_STATE/ci/plan/2026/10/89abcdef0123-1.json"}</example>
   </section>
 
   <section id="mechanism" title="Mechanism: the mirror, the map from main, the units, the budgets, the job trigger">
     <step n="1" id="m-pre">Preconditions read from the store: newest job.registered 201 (N-20), newest namespace.ready 201 (N-21), an image 201 for every image images.json names at map_sha (N-22); a missing one writes plan.blocked 423 (one card, deduped on the cause) and the pr.opened stays unplanned until the precondition appears, when the level-triggered tick plans it.</step>
     <step n="2" id="m-fork">Fork guard: head_repo must equal repo; otherwise plan.refused 412 with reason fork and no job is ever triggered; the Jenkinsfile's CHANGE_FORK refusal inside coqGate() stays as a second wall.</step>
-    <step n="3" id="m-mirror">The diff comes from a bare mirror on the host, $COQ_STATE/ci/mirror/repo.git, kept by git fetch --prune origin on every poll tick (N-04 owns the fetch; this node only reads); the planner fetches head_sha into the mirror if missing (git fetch origin &lt;sha&gt;), computes merge_base = git merge-base origin/main head_sha, and changed_paths = git diff --name-only --no-renames merge_base..head_sha.</step>
+    <step n="3" id="m-mirror">The diff comes from a bare mirror on the host, $COQ_STATE/ci/mirror/repo.git, which this node owns: every planner job first runs git fetch --prune origin main (and the daily tick runs it too), so no other node fetches it (review C new 9: N-04 polls the API and never fetched); the planner then fetches head_sha into the mirror if missing (git fetch origin &lt;sha&gt;), computes merge_base = git merge-base origin/main head_sha, and changed_paths = git diff --name-only --no-renames merge_base..head_sha.</step>
     <step n="4" id="m-map">The map is read from main, never from the head: git show origin/main:factory/config/suites.json and config/tests.json into an ephemeral detached worktree of main under $COQ_STATE/ci/plan/&lt;sha12&gt;-&lt;attempt&gt;/, and factory/bin/suites.sh plan --repo &lt;that worktree&gt; --base merge_base --head head_sha prints the commands (the script runs nothing); a diff that touches factory/config/suites.json, config/tests.json or ci/config/images.json plans the full set, because the map that would judge the change is the change.</step>
     <step n="5" id="m-units">ci/bin/plan-units.sh (the BEGIN-PLAN-SCRIPT block of coqGate.groovy, extracted into a tracked script with its existing test ci/tests/cases/02-gate-pipeline.test.sh) expands the commands into units: herdr and factory fan out to one unit per case file (a case audits /proc and kills processes, bin/test-cases.sh breadcrumb); every other command is one unit; a unit whose suite has no image in images.json is a refusal, never a skip; the lint unit's command is bash lint/lint.sh /repo in coq-lint (never make lint, which needs podman); sitrep and loop run their run.sh directly with their in-container flag; reindex runs the vendored skill copy in coq-lint; a change under rebuild/design/** adds the unit spec-book of kind spec-check (rebuild/design/check.sh in coq-lint), which N-46 consumes.</step>
     <step n="6" id="m-budget">Budgets: per suite, the newest suite.budget record (computed nightly by N-06's daily tick from the last 20 pod.run durations as p95 x 1.5, floor 5 minutes, cap 30 minutes) or, with fewer than 20 samples, config/tests.json per_suite budget or its default; the budget goes into each entry so the pod's timeout is data the gate cannot guess (L07 section 5 item 8; L10 section 7).</step>
-    <step n="7" id="m-trigger">Trigger: POST /job/coq-gate/buildWithParameters with SHA, PR, KIND=pr, ATTEMPT, PLAN_JSON (the entries, under 100 KiB; a larger plan is passed as a file parameter), IMAGES_JSON (name to digest); follow the queue item to the build number; write suite.plan with build filled; the Jenkinsfile ci/jenkins/gate.Jenkinsfile calls coqGate(plan: params.PLAN_JSON, sha: params.SHA, images: params.IMAGES_JSON) and nothing else.</step>
+    <step n="7" id="m-trigger">Trigger, through the outbox (shared/contracts.xml#outbox): the Commit that writes suite.plan with build number 0 also writes the effects row of operation gate.run (shared/retry-budget.xml#operations); the worker then looks for COQ_OP_ID in GET /queue/api/json and in the coq-gate builds list, and only when neither holds it does it POST /job/coq-gate/buildWithParameters with COQ_OP_ID, SHA, PR, KIND=pr, ATTEMPT (the plan_attempt), PLAN_JSON (the entries, under 100 KiB; a larger plan is passed as a file parameter), IMAGES_JSON (name to digest); follow the queue item to the build number (a queue URL expires 5 minutes after the build starts, so the builds list filtered by COQ_OP_ID is the identity); write the build number into the plan and move the effect to done; the Jenkinsfile ci/jenkins/gate.Jenkinsfile calls coqGate(plan: params.PLAN_JSON, sha: params.SHA, images: params.IMAGES_JSON) and nothing else.</step>
     <step n="8" id="m-superseded">Supersession: when forge.snapshot shows the pull request's head moved to a newer sha before this plan's run ended, N-07 marks this plan superseded (410), N-25 posts coq/gate error superseded on the old sha, and the Go service stops the old build (POST /job/coq-gate/N/stop); the newer head gets its own pr.opened and plan.</step>
     <mermaid>
 flowchart LR
@@ -105,31 +111,32 @@ flowchart LR
   <section id="start" title="How it starts without an agent typing">
     <s>A worker seat ends by pushing and opening the pull request; its seat.result carries the pr.opened record; the seat is gone before anything here runs.</s>
     <s>N-07 dispatches the planner as a system job with a lease (key node:N-23:repo:head_sha) on its tick when a pr.opened has no suite.plan, plan.refused or plan.blocked for its head_sha; the same comparison runs for every open pull request head in forge.snapshot, so a push to a branch is planned within one tick without any record from a seat.</s>
-    <s>At service start the comparison runs once; a planner lost to a crash is dispatched again; the trigger is idempotent because a coq-gate build already queued for SHA and ATTEMPT is found by the Go service before it posts (GET /job/coq-gate/api/json?tree=builds[number,actions[parameters[name,value]]] filtered by SHA), so a duplicate build is never queued.</s>
+    <s>At service start the comparison runs once; a planner lost to a crash is dispatched again; the trigger is idempotent because a build or queue item carrying the plan's COQ_OP_ID is found before any post (GET /queue/api/json and GET /job/coq-gate/api/json?tree=builds[number,actions[parameters[name,value]]] filtered by COQ_OP_ID, never by SHA, so attempt 2 never adopts attempt 1's build), so a duplicate build is never queued (review C, F16).</s>
   </section>
 
   <section id="waits" title="Every wait, its timeout and its fallback">
-    <wait id="w1"><on>git fetch origin head_sha into the mirror (a network call to GitHub).</on><timeout>120 s, 3 tries with 5 s, 15 s, 45 s between.</timeout><fallback>Attempt fails as infrastructure; the job-level ladder applies; after 3 attempts plan.refused 412 reason diff-unavailable and one card.</fallback></wait>
+    <wait id="w1"><on>git fetch origin head_sha into the mirror (a network call to GitHub).</on><timeout>120 s for the fetch.</timeout><fallback>The planner try fails as mirror-fetch (shared/retry-budget.xml#layers planner, the only layer that retries it); after its last try plan.refused 412 reason diff-unavailable and one card.</fallback></wait>
     <wait id="w2"><on>suites.sh plan and plan-units.sh (local, deterministic).</on><timeout>60 s.</timeout><fallback>A timeout here is a bug: plan.refused 412 reason planner-error with the stderr, one card, never retried beyond the ladder.</fallback></wait>
-    <wait id="w3"><on>The Jenkins queue item becoming a build.</on><timeout>PT10M polled every 10 s.</timeout><fallback>Cancel the queue item; attempt fails as infrastructure; ladder; after 3 attempts plan.blocked 423 reason jenkins-queue and one card.</fallback></wait>
+    <wait id="w3"><on>The Jenkins queue item becoming a build.</on><timeout>retry-budget.xml#deadlines d-queue, polled every 10 s.</timeout><fallback>Cancel the queue item; the try fails as jenkins-queue-timeout (planner layer); after its last try plan.blocked 423 reason jenkins-queue and one card.</fallback></wait>
     <wait id="w4" class="level-triggered"><on>Preconditions (job.registered, namespace.ready, images).</on><timeout>None inside this node: a missing precondition is plan.blocked 423 at once; the level-triggered tick re-plans when it appears; the card's dedupe key keeps it to one card per cause.</timeout><fallback>The card itself; the owner sees why the gate is dark.</fallback></wait>
-    <s>The planner job's stall bound under N-12 is PT15M; a stalled planner is killed, its lease revoked and the attempt counted.</s>
+    <s>The planner job's stall bound under N-12 is retry-budget.xml#deadlines d-planner; a stalled planner is killed, its lease revoked and the attempt counted.</s>
   </section>
 
   <section id="retries" title="Retries, recovery and the report">
-    <s>Infrastructure (fetch, Jenkins API, queue) climbs the ladder: 3 attempts with N-11 backoff, each a fresh job; results (fork, no image, planner error) are refusals written once with evidence and never retried.</s>
+    <s>Infrastructure (fetch, queue, stall) is retried by the planner layer and a lost or failed build post by the gate-trigger layer (shared/retry-budget.xml#layers), each failure class by exactly one of them; results (fork, no image, planner error, budget) are refusals written once with evidence and never retried.</s>
+    <s>A second plan attempt is asked for by N-25 (plan-attempt layer), not decided here; this node plans it with plan_attempt 2 and a new operation key.</s>
     <s>After the third infrastructure failure the node writes plan.refused 412 or plan.blocked 423 with the last error and N-28 posts one card; the pull request's coq/gate status is posted by N-25 as error with the same reason so the worker and reviewer see it where they look.</s>
     <s>The ephemeral worktree is removed on every exit path (trap), and the daily cleanup reaps leftovers.</s>
     <s>A refused plan is terminal for its head_sha; a new push re-enters with a new head.</s>
   </section>
 
   <section id="many-agents-at-once" title="Many agents at once">
-    <s>Many pull requests at once: every open head gets its own pr.opened and plan; the Go service keeps at most 2 gate runs (pull request or main) in flight, main first, then oldest pr.opened first, with the rest waiting in the store as planned-not-triggered (suite.plan with build empty and code 100), so the quota and the Jenkins cap are never hit by design and the map shows the queue depth.</s>
+    <s>Many pull requests at once: every open head gets its own pr.opened and plan; the Go service keeps at most runs-in-flight gate runs (gate.runs_in_flight_max, shared/ci-capacity.xml#model) in flight, main first, then oldest pr.opened first, with the rest waiting in the store as planned-not-triggered (suite.plan with build empty and code 100), so the quota and the Jenkins cap are never hit by design and the map shows the queue depth.</s>
     <s>Two heads of one pull request: only the newest is run; the older plan is superseded (410) and its build stopped; the status on the old sha says superseded.</s>
-    <s>Two writers of pr.opened for one head (a seat and the poll in the same tick): the key repo:head_sha makes the second put a no-op (same payload) or a 409 (different payload, logged); one plan results.</s>
-    <s>Two planner jobs for one head: one lease with a fencing token; the loser's writes are 409; the Jenkins duplicate check in section start makes even a double trigger harmless.</s>
+    <s>Two writers of pr.opened for one head (a seat and the poll in the same tick): the operation key on repo and head_sha makes the second commit a replay (same request hash) or 409 idempotency_mismatch (different payload, logged); one plan results.</s>
+    <s>Two planner jobs for one head: one lease with a fencing token; the loser's writes are 412 stale_token; the COQ_OP_ID lookup in section start makes even a double trigger harmless.</s>
     <s>Seats cannot plan: no seat holds the Jenkins token or the mirror; a reviewer reads the plan through gh pr checks and the record.</s>
-    <s>Collision answer in one line: key per head sha, one lease per plan, newest head wins, at most two runs in flight, duplicate trigger detected on the Jenkins side.</s>
+    <s>Collision answer in one line: key per head sha, one lease per plan, newest head wins, runs in flight from ci-capacity, duplicate trigger found by COQ_OP_ID.</s>
   </section>
 
   <section id="status-codes" title="Status codes this node emits">
@@ -137,7 +144,6 @@ flowchart LR
     <emits code="412" name="GATE_FAILED" kind="plan.refused">Fork, no image, planner error or diff unavailable: the worker lane acts (fix the ticket or the map); N-25 posts coq/gate error with the reason.</emits>
     <emits code="423" name="BLOCKED" kind="plan.blocked">A precondition is missing: one card per cause; the plan happens when it appears.</emits>
     <emits code="410" name="SUPERSEDED" kind="plan.superseded">Nobody acts; the newer head is planned.</emits>
-    <emits code="409" name="CONFLICT" kind="record.conflict">Nobody acts.</emits>
   </section>
 
   <section id="state-paths" title="State paths and the cleanup script for each">
@@ -153,6 +159,7 @@ flowchart LR
     <in from="N-04" href="../N-04/spec.xml#N-04" drawn="false">forge.snapshot heads synthesize pr.opened through N-07; the DAG draws N-16 as the named writer.</in>
     <out to="N-24" href="../N-24/spec.xml#N-24">One suite.plan entry per pod run.</out>
     <out to="N-46" href="../N-46/spec.xml#N-46">The spec-check entry when rebuild/design paths changed.</out>
+    <out to="N-36" href="../N-36/spec.xml#N-36">The art entry when tools/map/art/** changed; its records list carries art.inventory and sprite.sheet for N-36.</out>
   </section>
 
   <section id="checklist" title="Checklist with proofs">
@@ -162,12 +169,13 @@ flowchart LR
     <item><check>A suite without an image is a 412, never a skip.</check><proof>Scenario no-image asserts plan.refused reason no-image and no Jenkins call (the test's fake Jenkins records zero posts).</proof></item>
     <item><check>A fork head is refused before any network call to Jenkins.</check><proof>Scenario fork asserts plan.refused reason fork and zero Jenkins calls.</proof></item>
     <item><check>Budgets come from suite.budget records or tests.json, never from a Jenkinsfile literal.</check><proof>grep budgetMinutes ci/jenkins/gate.Jenkinsfile returns nothing; the entry's budget_minutes equals the fixture's p95 x 1.5.</proof></item>
-    <item><check>A duplicate trigger for the same SHA and ATTEMPT is never queued.</check><proof>Scenario double-dispatch with the fake Jenkins already holding a build for SHA asserts one build.</proof></item>
-    <item><check>The planner runs under a lease and writes nothing without its fencing token.</check><proof>Scenario stale-token asserts the store returns 409 and the planner exits 3 without a second write.</proof></item>
+    <item><check>A duplicate trigger for the same SHA and ATTEMPT is never queued.</check><proof>Scenario double-dispatch with the fake Jenkins already holding a queue item, then a build, carrying the COQ_OP_ID asserts one build; scenario attempt-2 with attempt 1's build present for the same SHA asserts a second build (not-run).</proof></item>
+    <item><check>The planner runs under a lease and writes nothing without its fencing token.</check><proof>Scenario stale-token asserts the store returns 412 stale_token and the planner exits 3 without a second write.</proof></item>
+    <item><check>Every entry's records rows are typed and the art entry lists N-36's kinds.</check><proof>The suite.plan example in section output validates against record.schema.json#/$defs/output (C22).</proof></item>
   </section>
 
   <section id="permissions" title="Permissions">
-    <s>The Go service: read of the mirror and write of the ephemeral worktree under $COQ_STATE; Jenkins Job/Build, Job/Read, Job/Cancel on coq-gate; GitHub read of pull requests (through N-04's snapshot, no extra call).</s>
+    <s>The Go service: owner of the mirror (git fetch over the public https URL, no credential) and of the ephemeral worktree under $COQ_STATE; credential jenkins-coq-reconciler (shared/authority.xml#credential-matrix) for Job/Build, Job/Read, Job/Cancel on coq-gate; GitHub pull request data only through N-04's snapshot.</s>
     <s>Seats: the worker's run ends at pr.opened; it may run factory/bin/suites.sh plan locally to see what will run (read-only script); no seat triggers Jenkins or reads the mirror.</s>
     <s>Reviewer: reads the suite.plan record and gh pr checks; may not change the plan.</s>
     <s>The map file factory/config/suites.json is edited only through a ticket that declares it; lint runs images.sh check and the case 19 row test on every pull request.</s>

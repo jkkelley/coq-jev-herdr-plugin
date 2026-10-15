@@ -172,7 +172,7 @@ sequenceDiagram
     <path id="N-48.screenshots" glob="$COQ_STATE/screenshots/&lt;tier&gt;/&lt;sha&gt;/*.png" retention="P90D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-48.screenshots">The pictures; the record names them; stable's are kept 365 days (a second entry N-48.screenshots-stable).</path>
     <path id="N-48.screenshots-stable" glob="$COQ_STATE/screenshots/stable/*/*.png" retention="P365D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-48.screenshots-stable">Stable pictures, the owner's history of the page.</path>
     <path id="N-48.log" glob="$COQ_STATE/logs/promote/*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-48.log">promote.sh and screenshot.sh output.</path>
-    <path id="N-48.units" glob="systemd user instances coq-bearings@&lt;project&gt;-dev-*.service and coq-bearings@&lt;project&gt;-uat-*.service (instances of the one template)" retention="P0D" trigger="merge" cleanup="line/bin/cleanup.sh --entry N-48.units (systemctl --user stop and disable the instance)" holds="the stable instance">Dev and uat unit instances; the template is installed by N-32's install-units.sh and lives in the repository under tools/bearings/units/.</path>
+    <path id="N-48.units" glob="systemd user instances coq-bearings@&lt;project&gt;-dev-*.service and coq-bearings@&lt;project&gt;-uat-*.service (instances of the one template)" retention="P0D" trigger="merge" cleanup="line/bin/cleanup.sh --entry N-48.units (systemctl --user stop the instance and reset-failed it)" holds="the stable instance">Dev and uat unit instances; the template is installed by N-32's install-units.sh and lives in the repository under tools/bearings/units/.</path>
   </state-paths>
 
   <edges id="edges">

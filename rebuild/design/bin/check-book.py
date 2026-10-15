@@ -40,7 +40,49 @@ Checks (ids match the N-46 spec where one exists):
                       attribute failed C06 without saying why. Cost: one more pass over every text node.
 
   C22 examples         bin/check-examples.py: every <example schema="..."> in a volume and every json block of DESIGN.md validates against
-                      its record.schema.json (schemas resolve through their $id); a JSON example with no schema attribute fails
+                      the one def it names (schema="file.json#/$defs/name"; a root link picks the def named after the kind, never the
+                      root oneOf); a JSON example with no schema attribute fails, an example with a schema whose text is not JSON fails,
+                      and a missing jsonschema module fails (C10 too)
+  C23 edge-fixtures   bin/check-examples.py: <edge-fixture producer="file.json#/$defs/a" consumer="file.json#/$defs/b"/> in any volume
+                      makes every example of the producer def validate against the consumer def too (and <example consumers="t1 t2">);
+                      a fixture whose producer has no example fails, so a fixture cannot pass by having nothing to test
+  C24 transitions     shared/contracts.xml, element id ticket-transitions: rows <transition from="s1 [s2 ...]" to="s" trigger="..."
+                      owner="N-xx"/>; every status is in contracts.schema.json#/$defs/ticket_status, every enum status is reachable
+                      from cut, every non-terminal status has a way out, the terminal statuses (done, dead, cancelled, refused) have
+                      no outgoing row except dead to waiting; no other <transition> row in the book moves between two ticket
+                      statuses unless it (or an ancestor) carries machine="..." naming another machine
+  C25 operation-keys  every <op-key example="N-xx/op/subject/rN" node="N-xx"/> in the book matches
+                      contracts.schema.json#/$defs/operation_key, its node segment equals @node, and no example repeats;
+                      shared/contracts.xml holds at least one
+  C26 capacity        shared/ci-capacity.xml: <container name pod="suite|canary" cpu mem-request mem-limit [cpu-limit]/> (also
+                      spelled cpu-request, memory-request, memory-limit; a <canary> carrying those attributes is the canary
+                      pod), optional <pod name .../> equal to the sum of its containers, <capacity runs-in-flight pods-per-run
+                      container-cap/> with container-cap = runs x pods, and <quota-row pods requests-cpu requests-memory
+                      limits-memory [limits-cpu]/> (or <quota> with those attributes, dotted or hyphenated) equal to
+                      container-cap x suite + canary for each resource, pods = container-cap + 1
+  C27 retry-budget    shared/retry-budget.xml: <layer id owner max parent retries-on="f1 f2" [chain="ci"]/> rows form one tree
+                      through parent (empty, absent or none for a root); a failure is retried by at most one layer; the layers
+                      with chain="ci" lie on one parent path and the product of their max is at most
+                      <budgets pods-per-unit-per-head="N"/>
+  C28 deadlines       every <deadline id value-seconds derived-from="a b"/> in the book: each derived-from id is a <deadline> and
+                      value-seconds is at least the sum of theirs
+  C29 dispositions    shared/review-dispositions.xml: one <finding id="Fnn" disposition="..."> for each of F01 to F26 (F27 onward
+                      allowed), ids unique, disposition one of accepted, accepted-partial, rejected, superseded, new; each has an
+                      <evidence> and a <resolution href="file#anchor"/> that resolves; <proof status="not-run|executed"/>, at
+                      least one unless the disposition is rejected or superseded
+  C30 no-pii          no home directory other than the $HOME forms, no -home-<user>- project slug, no tailnet (ts.net) or
+                      .local host name (the in-cluster svc.cluster.local is not a host name of the site), no IPv4 literal other
+                      than 127.0.0.1, 0.0.0.0, the documentation ranges (RFC 5737) and a network block of prefix 16 or shorter,
+                      in any .xml, .json or .md of the book or any file of bin/
+  C31 owner-words     shared/authority.xml: every <permit role="seat" kinds="k1 k2"/> (or <kind> children) names no ruling
+                      kind (ruling, *.ruling, ruling.*, owner.*, an owner word); no .xml or .md of the book says "HOLD or USERGO"
+                      or "HOLD or GOFACTORY" (a relayed, defaulted or seat-made message is never an owner word), and the lamp is
+                      called "the hold lamp" somewhere in the book
+  C16-edges           bin/dag-check.py: an edge a node spec declares (<in>/<out> under its edges or dag element, or <edge dir>)
+                      is drawn in dag.md or is a section 4 re-entry, unless the element carries drawn="false"; a dag.md edge
+                      is declared by one of its two node specs
+  C13 and C20 were widened in 1.1.0: a timeout with the word none anywhere needs the class; every <panel> of every node
+  volume needs a kind that binds.
 
 Pointer forms resolved by C06 (relative paths are tried against the volume's directory, the book root, then the repository root):
   href="file#anchor"             on any element
@@ -301,8 +343,9 @@ def check_volume(volfile, validator):
         wclass = w.attrib.get("class")
         if wclass is not None and wclass not in WAIT_CLASSES:
             fail("C13", path, "wait '%s' class '%s' is not one of %s" % (wid, wclass, ", ".join(WAIT_CLASSES)))
-        if timeout.strip().lower().startswith("none") and wclass not in ("level-triggered", "owner-decision"):
-            fail("C13", path, "wait '%s' has timeout none and no class level-triggered or owner-decision" % wid)
+        if re.search(r"\bnone\b", timeout, re.I) and wclass not in ("level-triggered", "owner-decision"):
+            # 1.1.0: "the policy's deadline, else none" is as unbounded as "none"; the word anywhere needs the class
+            fail("C13", path, "wait '%s' has timeout none (in '%s') and no class level-triggered or owner-decision" % (wid, timeout.strip()[:60]))
 
     # C19 input and output
     if kind == "node-spec" and not ({"input", "output"} <= ids):
@@ -422,7 +465,7 @@ def check_json_schemas():
         import jsonschema
         from jsonschema import Draft202012Validator
     except ImportError:
-        note("book", "jsonschema module missing; C10 skipped")
+        fail("C10", "book", "jsonschema module missing; C10 cannot run (uv run --with jsonschema, or check.sh)")
         return
     for f in sorted(glob.glob(os.path.join(BOOK, "nodes", "N-*", "*.schema.json")) + glob.glob(os.path.join(BOOK, "shared", "*.schema.json"))):
         path = rel(f)
@@ -510,7 +553,9 @@ def run_helpers():
         lines = [l for l in r.stdout.splitlines() if l.startswith("FAIL ")]
         for l in lines:
             parts = l.split(" ", 3)
-            fail(check, parts[2] if len(parts) > 2 else script, parts[3] if len(parts) > 3 else l)
+            # a helper may report a sub-check of its own (C16-edges, C23); keep the id it printed
+            cid = parts[1] if len(parts) > 1 and re.match(r"^C\d\d(-[\w-]+)?$", parts[1]) else check
+            fail(cid, parts[2] if len(parts) > 2 else script, parts[3] if len(parts) > 3 else l)
         if r.returncode != 0 and not lines:
             fail(check, "bin/" + script, "exit %d: %s" % (r.returncode, (r.stderr or r.stdout).strip()[:200]))
 
@@ -537,7 +582,9 @@ def check_codes():
 
 
 def check_bindings():
-    """C20: every panel kind is a record kind, a view (N-31 #views) or a static kind (N-37 #static-kinds)."""
+    """C20: every panel of every node volume binds a kind that is a record kind, a view (N-31 #views) or a static kind
+    (N-37 #static-kinds). 1.1.0: the scan was N-37 to N-42 under id panels only, so panels in N-49, N-50 and N-51 bound
+    nothing and nothing said so; a panel with no kind now fails too."""
     known = set()
     try:
         reg = ET.parse(os.path.join(BOOK, "shared", "record-kinds.xml")).getroot()
@@ -554,15 +601,501 @@ def check_bindings():
     if not static:
         fail("C20", "nodes/N-37/spec.xml", "no <static-kind name=...> under the element of id static-kinds")
     known |= views | static
-    for f in sorted(glob.glob(os.path.join(BOOK, "nodes", "N-3[7-9]", "spec.xml")) + glob.glob(os.path.join(BOOK, "nodes", "N-4[0-2]", "spec.xml"))):
-        root = ET.parse(f).getroot()
-        for sec in root.iter():
-            if sec.attrib.get("id") != "panels":
+    for f in sorted(glob.glob(os.path.join(BOOK, "nodes", "N-*", "*.xml"))):
+        try:
+            root = ET.parse(f).getroot()
+        except ET.ParseError:
+            continue  # C01 reports it
+        for p in root.iter("panel"):
+            k = p.attrib.get("kind")
+            pid = p.attrib.get("id") or p.attrib.get("screen") or "".join(p.itertext()).strip()[:40]
+            if not k:
+                fail("C20", rel(f), "panel '%s' has no kind attribute, so it binds nothing" % pid)
+            elif k not in known:
+                fail("C20", rel(f), "panel %s binds kind %s, which is no record kind, view or static kind" % (pid, k))
+
+
+# ---------- 1.1.0 semantic checks (C24 to C31) ----------
+TICKET_TERMINAL = ("done", "dead", "cancelled", "refused")
+TERMINAL_EXITS = {("dead", "waiting")}
+DISPOSITIONS = ("accepted", "accepted-partial", "rejected", "superseded", "new")
+PROOF_STATUSES = ("not-run", "executed")
+FINDINGS_REQUIRED = ["F%02d" % n for n in range(1, 27)]
+
+
+def shared_root(check, name):
+    """Parse shared/<name>; a missing or broken file is a FAIL of the check that needs it."""
+    f = os.path.join(BOOK, "shared", name)
+    if not os.path.exists(f):
+        fail(check, "shared/" + name, "missing shared/%s" % name)
+        return None, f
+    try:
+        return ET.parse(f).getroot(), f
+    except ET.ParseError as e:
+        fail(check, "shared/" + name, "not well-formed: %s" % e)
+        return None, f
+
+
+def contracts_defs(check):
+    f = os.path.join(BOOK, "shared", "contracts.schema.json")
+    try:
+        with open(f, encoding="utf-8") as fh:
+            return json.load(fh).get("$defs", {})
+    except (OSError, ValueError) as e:
+        fail(check, "shared/contracts.schema.json", "cannot read: %s" % e)
+        return None
+
+
+def parsed_volumes():
+    for f in volumes():
+        try:
+            yield f, ET.parse(f).getroot()
+        except ET.ParseError:
+            continue  # C01 reports it
+
+
+def parent_map(root):
+    return {c: p for p in root.iter() for c in p}
+
+
+def by_id(root, i):
+    return next((e for e in root.iter() if e.attrib.get("id") == i), None)
+
+
+def check_transitions():
+    """C24: the ticket transition table is complete, reachable, terminal-safe and the only one in the book."""
+    root, f = shared_root("C24", "contracts.xml")
+    defs = contracts_defs("C24")
+    if defs is None:
+        return
+    enum = (defs.get("ticket_status") or {}).get("enum")
+    if not enum:
+        fail("C24", "shared/contracts.schema.json", "no $defs.ticket_status.enum")
+        return
+    statuses = set(enum)
+    table = None
+    if root is not None:
+        table = by_id(root, "ticket-transitions")
+        if table is None:
+            fail("C24", "shared/contracts.xml", "no element of id ticket-transitions")
+    rows = list(table.iter("transition")) if table is not None else []
+    if table is not None and not rows:
+        fail("C24", "shared/contracts.xml", "ticket-transitions holds no <transition from to trigger owner/> row")
+    out = {s: set() for s in statuses}
+    seen = set()
+    for t in rows:
+        a = t.attrib
+        label = "transition %s -> %s" % (a.get("from"), a.get("to"))
+        for need in ("from", "to", "trigger", "owner"):
+            if not a.get(need, "").strip():
+                fail("C24", "shared/contracts.xml", "%s has no %s" % (label, need))
+        owners = a.get("owner", "").split()
+        if owners and not all(re.match(r"^N-\d\d$", o) for o in owners):
+            fail("C24", "shared/contracts.xml", "%s owner '%s' is not a node id (N-xx)" % (label, a.get("owner")))
+        to = a.get("to", "").strip()
+        if to and to not in statuses:
+            fail("C24", "shared/contracts.xml", "%s: '%s' is not in $defs.ticket_status" % (label, to))
+        for fr in a.get("from", "").split():
+            if fr not in statuses:
+                fail("C24", "shared/contracts.xml", "%s: '%s' is not in $defs.ticket_status" % (label, fr))
                 continue
-            for p in sec.iter("panel"):
-                k = p.attrib.get("kind")
-                if k and k not in known:
-                    fail("C20", rel(f), "panel %s binds kind %s, which is no record kind, view or static kind" % (p.attrib.get("id"), k))
+            key = (fr, to, a.get("trigger", ""))
+            if key in seen:
+                fail("C24", "shared/contracts.xml", "transition %s -> %s on %s is declared twice" % key)
+            seen.add(key)
+            if to in statuses:
+                out[fr].add(to)
+                if fr in TICKET_TERMINAL and (fr, to) not in TERMINAL_EXITS:
+                    fail("C24", "shared/contracts.xml", "terminal status %s has an outgoing row to %s (only dead -> waiting is allowed)" % (fr, to))
+    if rows:
+        if "cut" not in statuses:
+            fail("C24", "shared/contracts.schema.json", "ticket_status has no cut, the status every ticket starts in")
+        reached, todo = {"cut"}, ["cut"]
+        while todo:
+            for n in out.get(todo.pop(), ()):
+                if n not in reached:
+                    reached.add(n)
+                    todo.append(n)
+        for s in sorted(statuses - reached):
+            fail("C24", "shared/contracts.xml", "status %s is not reachable from cut" % s)
+        for s in sorted(statuses - set(TICKET_TERMINAL)):
+            if not out[s]:
+                fail("C24", "shared/contracts.xml", "non-terminal status %s has no outgoing row (a ticket there is stuck)" % s)
+    # the table lives in one place
+    for vf, vroot in parsed_volumes():
+        pm = parent_map(vroot)
+        own = by_id(vroot, "ticket-transitions") if os.path.abspath(vf) == os.path.abspath(f) else None
+        skip = set(map(id, own.iter("transition"))) if own is not None else set()
+        for t in vroot.iter("transition"):
+            if id(t) in skip:
+                continue
+            fr, to = t.attrib.get("from", "").split(), t.attrib.get("to", "").strip()
+            if not fr or to not in statuses or not all(x in statuses for x in fr):
+                continue
+            e, machine = t, None
+            while e is not None and machine is None:
+                machine = e.attrib.get("machine")
+                e = pm.get(e)
+            if machine in (None, "ticket"):
+                fail("C24", rel(vf), "<transition from=\"%s\" to=\"%s\"> moves a ticket outside shared/contracts.xml#ticket-transitions (cite that table, or name another machine with machine=)" % (" ".join(fr), to))
+
+
+def check_operation_keys():
+    """C25: operation key examples match the pattern, name their node and never repeat."""
+    root, f = shared_root("C25", "contracts.xml")
+    defs = contracts_defs("C25")
+    if defs is None:
+        return
+    pattern = (defs.get("operation_key") or {}).get("pattern")
+    if not pattern:
+        fail("C25", "shared/contracts.schema.json", "no $defs.operation_key.pattern")
+        return
+    rx = re.compile(pattern)
+    seen = {}
+    in_contracts = 0
+    for vf, vroot in parsed_volumes():
+        for k in vroot.iter("op-key"):
+            ex, node = k.attrib.get("example", ""), k.attrib.get("node", "")
+            if os.path.abspath(vf) == os.path.abspath(f):
+                in_contracts += 1
+            if not ex:
+                fail("C25", rel(vf), "<op-key> without example=")
+                continue
+            if not rx.search(ex):
+                fail("C25", rel(vf), "op-key '%s' does not match $defs.operation_key" % ex)
+            if ex.split("/")[0] != node:
+                fail("C25", rel(vf), "op-key '%s' node segment is not @node '%s'" % (ex, node))
+            if ex in seen:
+                fail("C25", rel(vf), "op-key '%s' repeats (first in %s)" % (ex, seen[ex]))
+            seen.setdefault(ex, rel(vf))
+    if root is not None and not in_contracts:
+        fail("C25", "shared/contracts.xml", "no <op-key example node/> row (operation-keys)")
+
+
+def cpu_milli(v):
+    v = v.strip()
+    return int(round(float(v[:-1]))) if v.endswith("m") else int(round(float(v) * 1000))
+
+
+MEM = {"Ki": 1.0 / 1024, "Mi": 1, "Gi": 1024, "Ti": 1024 * 1024}
+
+
+def mem_mi(v):
+    v = v.strip()
+    for suf, mult in MEM.items():
+        if v.endswith(suf):
+            return float(v[:-2]) * mult
+    return float(v) / (1024 * 1024)  # plain bytes
+
+
+# (quota key, container attribute spellings, parser, unit); the quota key may also be spelled with a hyphen (requests-cpu)
+RESOURCES = (("requests.cpu", ("cpu-request", "cpu"), cpu_milli, "m"), ("limits.cpu", ("cpu-limit",), cpu_milli, "m"),
+             ("requests.memory", ("memory-request", "mem-request"), mem_mi, "Mi"),
+             ("limits.memory", ("memory-limit", "mem-limit"), mem_mi, "Mi"))
+
+
+def res_attr(e, names):
+    """The first of the attribute spellings e carries, or None."""
+    return next((e.attrib[n] for n in names if n in e.attrib), None)
+
+
+def quota_attr(e, q):
+    return e.attrib.get(q, e.attrib.get(q.replace(".", "-")))
+
+
+def check_capacity():
+    """C26: the namespace quota is recomputed from the containers, the capacity row and the canary."""
+    root, f = shared_root("C26", "ci-capacity.xml")
+    if root is None:
+        return
+    P = "shared/ci-capacity.xml"
+    pods = {}
+    try:
+        for c in root.iter("container"):
+            pods.setdefault(c.attrib.get("pod", "suite"), []).append(c)
+        for c in root.iter("canary"):  # a <canary> carrying resource attributes is the canary pod's one container
+            if any(res_attr(c, names) for _, names, _, _ in RESOURCES):
+                pods.setdefault("canary", []).append(c)
+        totals = {}
+        for pod, cs in pods.items():
+            t = {}
+            for q, names, conv, _ in RESOURCES:
+                vals = [res_attr(c, names) for c in cs]
+                if any(vals):
+                    t[q] = sum(conv(v) for v in vals if v)
+            totals[pod] = t
+        for pe in root.iter("pod"):
+            name = pe.attrib.get("name")
+            for q, names, conv, unit in RESOURCES:
+                v = res_attr(pe, names)
+                if v and name in totals and abs(conv(v) - totals[name].get(q, 0)) > 0.001:
+                    fail("C26", P, "pod %s states %s %s but its containers sum to %g%s" % (name, q, v, totals[name].get(q, 0), unit))
+        if "suite" not in totals:
+            fail("C26", P, "no <container pod=\"suite\"> rows")
+            return
+        if "canary" not in totals:
+            fail("C26", P, "no canary row (<container pod=\"canary\"> or <canary> with resource attributes)")
+            return
+        cap = root.find(".//capacity")
+        if cap is None:
+            fail("C26", P, "no <capacity runs-in-flight pods-per-run container-cap/>")
+            return
+        ccap = int(cap.attrib["container-cap"])
+        if "runs-in-flight" in cap.attrib and "pods-per-run" in cap.attrib:
+            want = int(cap.attrib["runs-in-flight"]) * int(cap.attrib["pods-per-run"])
+            if want != ccap:
+                fail("C26", P, "container-cap %d is not runs-in-flight x pods-per-run = %d" % (ccap, want))
+                ccap = want
+        quota = root.find(".//quota-row")
+        if quota is None:
+            quota = root.find(".//quota")
+        if quota is None or quota_attr(quota, "pods") is None:
+            fail("C26", P, "no <quota-row pods requests-cpu requests-memory limits-memory/> (or <quota> with those attributes)")
+            return
+        if int(quota_attr(quota, "pods")) != ccap + 1:
+            fail("C26", P, "quota pods %s is not container-cap + 1 = %d" % (quota_attr(quota, "pods"), ccap + 1))
+        for q, _, conv, unit in RESOURCES:
+            if q not in totals["suite"]:
+                continue
+            want = ccap * totals["suite"][q] + totals["canary"].get(q, 0)
+            v = quota_attr(quota, q)
+            if v is None:
+                fail("C26", P, "quota has no %s (want %g%s)" % (q, want, unit))
+            elif abs(conv(v) - want) > 0.001:
+                fail("C26", P, "quota %s %s is not container-cap x suite + canary = %g%s" % (q, v, want, unit))
+    except (KeyError, ValueError) as e:
+        fail("C26", P, "a capacity row is missing or has an unreadable value: %s" % e)
+
+
+def check_retry_budget():
+    """C27: retry layers form one tree, each failure has one retrying layer, the CI chain fits the pod budget."""
+    root, f = shared_root("C27", "retry-budget.xml")
+    if root is None:
+        return
+    P = "shared/retry-budget.xml"
+    layers = {}
+    for l in root.iter("layer"):
+        i = l.attrib.get("id")
+        if not i:
+            fail("C27", P, "<layer> without id")
+            continue
+        if i in layers:
+            fail("C27", P, "layer %s declared twice" % i)
+        layers[i] = l
+    if not layers:
+        fail("C27", P, "no <layer id owner max parent retries-on/> rows")
+        return
+    parent, maxes = {}, {}
+    for i, l in layers.items():
+        p = l.attrib.get("parent", "").strip()
+        parent[i] = None if p in ("", "none", "null") else p
+        if parent[i] is not None and parent[i] not in layers:
+            fail("C27", P, "layer %s parent '%s' is no layer" % (i, p))
+            parent[i] = None
+        try:
+            maxes[i] = int(l.attrib["max"])
+            if maxes[i] < 1:
+                raise ValueError
+        except (KeyError, ValueError):
+            fail("C27", P, "layer %s max '%s' is not a positive integer" % (i, l.attrib.get("max")))
+            maxes[i] = 1
+        if not re.match(r"^N-\d\d$", l.attrib.get("owner", "")):
+            fail("C27", P, "layer %s owner '%s' is not a node id" % (i, l.attrib.get("owner", "")))
+    for i in layers:  # cycles
+        seen, cur = set(), i
+        while cur is not None and cur not in seen:
+            seen.add(cur)
+            cur = parent[cur]
+        if cur is not None:
+            fail("C27", P, "layer %s is on a parent cycle" % i)
+            return
+    owner_of = {}
+    for i, l in layers.items():
+        for fk in l.attrib.get("retries-on", "").split():
+            if fk in owner_of:
+                fail("C27", P, "failure %s is retried by two layers, %s and %s (only the innermost retries)" % (fk, owner_of[fk], i))
+            owner_of.setdefault(fk, i)
+    budgets = root.find(".//budgets")
+    if budgets is None or "pods-per-unit-per-head" not in budgets.attrib:
+        fail("C27", P, "no <budgets pods-per-unit-per-head=\"N\"/>")
+        return
+    budget = int(budgets.attrib["pods-per-unit-per-head"])
+    ci = [i for i, l in layers.items() if l.attrib.get("chain") == "ci"]
+    if not ci:
+        fail("C27", P, "no layer carries chain=\"ci\" (the pod ladder and the plan attempts)")
+        return
+
+    def path(i):
+        out = []
+        while i is not None:
+            out.append(i)
+            i = parent[i]
+        return out
+    deepest = max(ci, key=lambda i: len(path(i)))
+    line = path(deepest)
+    off = [i for i in ci if i not in line]
+    if off:
+        fail("C27", P, "chain=ci layers %s are not on the parent path of %s" % (" ".join(off), deepest))
+    product = 1
+    for i in ci:
+        product *= maxes[i]
+    if product > budget:
+        fail("C27", P, "CI chain %s multiplies to %d pods per unit per head, over the budget %d" % (" x ".join("%s %d" % (i, maxes[i]) for i in ci), product, budget))
+
+
+def check_deadlines():
+    """C28: a derived deadline is at least the sum of the deadlines it is derived from."""
+    root, f = shared_root("C28", "retry-budget.xml")
+    found = {}
+    for vf, vroot in parsed_volumes():
+        for d in vroot.iter("deadline"):
+            if d.attrib.get("id"):
+                found[d.attrib["id"]] = (vf, d)
+    if root is not None and not any(os.path.abspath(v) == os.path.abspath(f) for v, _ in found.values()):
+        fail("C28", "shared/retry-budget.xml", "no <deadline id value-seconds/> row (deadlines)")
+    for i, (vf, d) in sorted(found.items()):
+        try:
+            v = int(d.attrib["value-seconds"])
+        except (KeyError, ValueError):
+            fail("C28", rel(vf), "deadline %s value-seconds '%s' is not an integer" % (i, d.attrib.get("value-seconds")))
+            continue
+        refs = d.attrib.get("derived-from", "").split()
+        total, ok = 0, True
+        for r in refs:
+            if r not in found:
+                fail("C28", rel(vf), "deadline %s derived-from '%s' is no <deadline id>" % (i, r))
+                ok = False
+                continue
+            try:
+                total += int(found[r][1].attrib["value-seconds"])
+            except (KeyError, ValueError):
+                ok = False
+        if refs and ok and v < total:
+            fail("C28", rel(vf), "deadline %s is %d s but the deadlines it nests (%s) sum to %d s" % (i, v, " + ".join(refs), total))
+
+
+def check_dispositions():
+    """C29: every review finding has one disposition with evidence, a resolving resolution and an honest proof status."""
+    root, f = shared_root("C29", "review-dispositions.xml")
+    if root is None:
+        return
+    P = "shared/review-dispositions.xml"
+    ids = {}
+    for fe in root.iter("finding"):
+        i = fe.attrib.get("id", "")
+        if not re.match(r"^F\d{2,}$", i):
+            fail("C29", P, "finding id '%s' is not Fnn" % i)
+            continue
+        if i in ids:
+            fail("C29", P, "finding %s appears twice" % i)
+        ids[i] = fe
+        disp = fe.attrib.get("disposition")
+        if disp not in DISPOSITIONS:
+            fail("C29", P, "finding %s disposition '%s' is not one of %s" % (i, disp, ", ".join(DISPOSITIONS)))
+        if not any("".join(e.itertext()).strip() or e.attrib for e in fe.iter("evidence")):
+            fail("C29", P, "finding %s has no <evidence>" % i)
+        res = [r for r in fe.iter("resolution") if r.attrib.get("href")]
+        if not res:
+            fail("C29", P, "finding %s has no <resolution href=\"file#anchor\"/>" % i)
+        for r in res:
+            href = r.attrib["href"]
+            if href.startswith("#"):
+                if href[1:] not in {e.attrib.get("id") for e in root.iter()}:
+                    fail("C29", P, "finding %s resolution %s: local anchor not declared" % (i, href))
+                continue
+            if "planned" in r.attrib or "branch" in r.attrib:
+                continue
+            why = resolve(f, *split_target(href))
+            if why and why != "external":
+                fail("C29", P, "finding %s resolution %s %s" % (i, href, why))
+        proofs = list(fe.iter("proof"))
+        for pr in proofs:
+            if pr.attrib.get("status") not in PROOF_STATUSES:
+                fail("C29", P, "finding %s proof status '%s' is not not-run or executed" % (i, pr.attrib.get("status")))
+        if not proofs and disp not in ("rejected", "superseded"):
+            fail("C29", P, "finding %s (%s) has no <proof status=\"not-run|executed\"/>" % (i, disp))
+    for i in FINDINGS_REQUIRED:
+        if i not in ids:
+            fail("C29", P, "no <finding id=\"%s\">" % i)
+
+
+PII = (
+    ("a home directory", re.compile(r"/home/(?![<$])[A-Za-z0-9._-]+/?")),
+    ("a project slug", re.compile(r"(?<![\w-])-home-[a-z][a-z0-9_.]*-")),
+    ("a tailnet host", re.compile(r"\b(?:[A-Za-z0-9-]+\.)+ts\.net\b")),
+    ("a .local host", re.compile(r"\b(?:[A-Za-z0-9-]+\.)+local\b(?![\w.-])")),
+)
+IPV4 = re.compile(r"(?<![\w.])(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})(?![\w]|\.\d)(/\d{1,2})?")
+DOC_NETS = ((192, 0, 2), (198, 51, 100), (203, 0, 113))
+
+
+def ipv4_ok(m):
+    o = [int(x) for x in m.groups()[:4]]
+    if any(x > 255 for x in o):
+        return True  # not an address
+    if o in ([127, 0, 0, 1], [0, 0, 0, 0]) or tuple(o[:3]) in DOC_NETS:
+        return True
+    if m.group(5):  # a network block: generic when the prefix is 16 or shorter and the host bits are zero
+        bits = int(m.group(5)[1:])
+        n = (o[0] << 24) | (o[1] << 16) | (o[2] << 8) | o[3]
+        return bits <= 16 and n & ((1 << (32 - bits)) - 1) == 0
+    return False
+
+
+def check_pii():
+    """C30: no personal data (home paths, project slugs, private host names or addresses) in the book or bin/."""
+    files = set()
+    for pattern in ("**/*.xml", "**/*.json", "**/*.md"):
+        files |= set(glob.glob(os.path.join(BOOK, pattern), recursive=True))
+    files |= {f for f in glob.glob(os.path.join(BOOK, "bin", "*")) if os.path.isfile(f)}
+    for f in sorted(files):
+        if "__pycache__" in f:
+            continue
+        with open(f, encoding="utf-8", errors="replace") as fh:
+            for n, line in enumerate(fh, 1):
+                for what, rx in PII:
+                    for m in rx.finditer(line):
+                        if what == "a .local host" and m.group(0).endswith("svc.cluster.local"):
+                            continue
+                        fail("C30", rel(f), "line %d has %s '%s' (use $HOME, ${HOME_SLUG} or a ${SITE_...} placeholder)" % (n, what, m.group(0)))
+                for m in IPV4.finditer(line):
+                    if not ipv4_ok(m):
+                        fail("C30", rel(f), "line %d has an IPv4 literal '%s' (use a ${SITE_...} placeholder)" % (n, m.group(0)))
+
+
+RULING_KIND = re.compile(r"^(ruling(\..*)?|.*\.ruling|owner\..*|.*(gofactory|usergo|userhalt).*)$", re.I)
+OWNER_WORD_PHRASES = ("HOLD or USERGO", "HOLD or GOFACTORY")
+
+
+def check_owner_words():
+    """C31: a seat can never write a ruling; no text says the lamp offers an owner word; the lamp has one name."""
+    root, f = shared_root("C31", "authority.xml")
+    if root is not None:
+        permits = list(root.iter("permit"))
+        if not permits:
+            fail("C31", "shared/authority.xml", "no <permit role kinds/> rows")
+        for p in permits:
+            if p.attrib.get("role") != "seat":
+                continue
+            kinds = p.attrib.get("kinds", "").split()
+            kinds += [k.attrib.get("name") or "".join(k.itertext()).strip() for k in p.iter("kind")]
+            for k in kinds:
+                if RULING_KIND.match(k):
+                    fail("C31", "shared/authority.xml", "<permit role=\"seat\"> grants ruling kind %s; a seat-produced message is never an owner word" % k)
+    lamp = False
+    files = volumes() + sorted(glob.glob(os.path.join(BOOK, "*.md")))
+    for vf in files:
+        with open(vf, encoding="utf-8") as fh:
+            text = fh.read()
+        lamp = lamp or re.search(r"\b[Tt]he hold lamp\b", text) is not None
+        if rel(vf) == "shared/review-dispositions.xml":
+            continue  # it quotes the old wording as evidence of finding it disposes
+        for n, line in enumerate(text.splitlines(), 1):
+            for ph in OWNER_WORD_PHRASES:
+                if ph in line:
+                    fail("C31", rel(vf), "line %d says '%s'; the lamp is the hold lamp and names the owner word it waits on" % (n, ph))
+    if not lamp:
+        fail("C31", "book", "no volume calls the lamp 'the hold lamp'")
 
 
 def main():
@@ -579,6 +1112,14 @@ def main():
     run_helpers()
     check_codes()
     check_bindings()
+    check_transitions()
+    check_operation_keys()
+    check_capacity()
+    check_retry_budget()
+    check_deadlines()
+    check_dispositions()
+    check_pii()
+    check_owner_words()
     for check, path, detail in failures:
         print("FAIL %s %s %s" % (check, path, detail))
     if os.environ.get("COQ_CHECK_NOTES") == "1":

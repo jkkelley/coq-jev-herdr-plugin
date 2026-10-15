@@ -5,7 +5,7 @@
   (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
   No em dash appears in this file. Every time is UTC.
 -->
-<volume id="N-33" kind="node-spec" node="N-33" group="G5" version="1.0.0" issued="2026-10-14" timezone="UTC"
+<volume id="N-33" kind="node-spec" node="N-33" group="G5" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC"
         author="spec-author seat, group G5 Owner surface, round 1">
 
   <contents id="contents">
@@ -131,10 +131,10 @@
   </status-codes>
 
   <state-paths id="state-paths">
-    <path p="store rows plan.step, plan.side, ledger.row" what="in N-01; kept for the life of the store (the plan's history is the owner's record)" cleanup="registered with N-45 as store retention class owner-surface; a retired plan's rows are exported then removed by coq ledger retire --plan &lt;id&gt; --dry-run, then --yes"/>
-    <path p="${COQ_STATE}/rebuild/2026/10/plan/ledger.tsv, page.html, .approved (today)" what="the rail skill's outputs; ledger.tsv is imported once as ledger.row records (coq ledger import --dry-run then --yes, counts match), then the three files are cleanup targets" cleanup="rebuild/bin/cleanup-rail-state.sh [--dry-run]"/>
-    <path p="exports: coq ledger export writes where the caller says" retention="never" acts="owner" what="never under the repository; the caller's path" cleanup="kept on purpose: an export belongs to whoever asked for it (the owner's CLI); nothing of the system's lives there"/>
-    <path p="tools/bearings/config/plans.json, rebuild/plan.json, rebuild/side.html" class="tracked" retention="never" acts="owner" what="in the repository, not state" cleanup="none: tracked source, removed by a pull request"/>
+    <path trigger="owner" acts="owner" p="store rows plan.step, plan.side, ledger.row" what="in N-01; kept for the life of the store (the plan's history is the owner's record)" cleanup="registered with N-45 as store retention class owner-surface; a retired plan's rows are exported then removed by coq ledger retire --plan &lt;id&gt; --dry-run, then --yes"/>
+    <path trigger="timer" acts="system" p="${COQ_STATE}/rebuild/2026/10/plan/ledger.tsv, page.html, .approved (today)" what="the rail skill's outputs; ledger.tsv is imported once as ledger.row records (coq ledger import --dry-run then --yes, counts match), then the three files are cleanup targets" cleanup="rebuild/bin/cleanup-rail-state.sh [--dry-run]"/>
+    <path trigger="owner" p="exports: coq ledger export writes where the caller says" retention="never" acts="owner" what="never under the repository; the caller's path" cleanup="kept on purpose: an export belongs to whoever asked for it (the owner's CLI); nothing of the system's lives there"/>
+    <path trigger="owner" p="tools/bearings/config/plans.json, rebuild/plan.json, rebuild/side.html" class="tracked" retention="never" acts="owner" what="in the repository, not state" cleanup="none: tracked source, removed by a pull request"/>
   </state-paths>
 
   <edges id="edges">

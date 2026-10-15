@@ -16,13 +16,26 @@ Checks (each failure is one line "FAIL C16 dag.md <detail>"):
   - every edge names a declared node or the sink RE; no node is isolated;
   - Kahn's algorithm over the drawn edges orders every node (the graph is acyclic);
   - section 6 states the true node, edge (edges into the sink RE are not counted) and re-entry counts, and its topological order is a valid order of all nodes;
-  - every re-entry row of section 4 enters at a declared node.
+  - every re-entry row of section 4 enters at a declared node;
+  - C16-edges (1.1.0, verification NF-E6: 35 edges node specs declared were missing from dag.md and nothing compared
+    them): every edge a node spec declares is drawn in the Mermaid block or is a section 4 re-entry (source row, any node
+    named in its "Enters at" cell), unless the declaring element carries drawn="false"; and every drawn edge A --> B is
+    declared by A (an out) or by B (an in). Failures print as "FAIL C16-edges <spec file> <detail>".
+
+Edge declarations read from nodes/N-xx/*.xml, inside an element named edges or dag or carrying id="edges":
+  <in from="N-07" .../>  <out to="N-13" .../>              the other node is the first N-xx in from (in) or to (out)
+  <in node="N-43" .../>  <out node="N-38" .../>            the other node is @node
+  <in ref="../N-05/spec.xml#N-05"/>                         the other node is the N-xx in @ref
+  <edge dir="in" from="../N-07/spec.xml#N-07"/>  <edge dir="out" to="../N-15/spec.xml#N-15"/>
+A row naming no node (from="any node", ref="../../dag.md#2-the-dag", kind="source" with no node) is not an edge.
 
 Usage: bin/dag-check.py [--check]   (the flag is accepted for symmetry with the other generators; the script only checks)
 """
+import glob
 import os
 import re
 import sys
+import xml.etree.ElementTree as ET
 
 BOOK = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 DAG = os.path.join(BOOK, "dag.md")
@@ -31,6 +44,57 @@ DAG = os.path.join(BOOK, "dag.md")
 def section(text, number):
     m = re.search(r"^## %d\. .*?$(.*?)(?=^## \d+\. |\Z)" % number, text, re.M | re.S)
     return m.group(1) if m else ""
+
+
+NID = re.compile(r"N-\d\d")
+
+
+def spec_edges():
+    """{(a, b): [(file, drawn)]} for every edge a node volume declares."""
+    out = {}
+    for f in sorted(glob.glob(os.path.join(BOOK, "nodes", "N-*", "*.xml"))):
+        me = os.path.basename(os.path.dirname(f))
+        try:
+            root = ET.parse(f).getroot()
+        except ET.ParseError:
+            continue  # C01 reports it
+        for box in root.iter():
+            if not (box.tag in ("edges", "dag") or box.attrib.get("id") == "edges"):
+                continue
+            for e in box:
+                d = e.attrib.get("dir") if e.tag == "edge" else e.tag
+                if d not in ("in", "out"):
+                    continue
+                other = None
+                for attr in (("from" if d == "in" else "to"), "node", "ref"):
+                    v = e.attrib.get(attr)
+                    if v:
+                        m = NID.search(v)
+                        other = m.group(0) if m else None
+                        break
+                if other is None or other == me:
+                    continue
+                key = (other, me) if d == "in" else (me, other)
+                out.setdefault(key, []).append((os.path.relpath(f, BOOK), e.attrib.get("drawn") != "false", e.attrib.get("record", "")))
+    return out
+
+
+def edge_fails(edges, re_rows, nodes):
+    """C16-edges: dag.md and the node specs declare the same edges."""
+    drawn = {(a, b) for a, b in edges if a != "RE" and b != "RE"}
+    reentry = {(src, t) for src, enters in re_rows for t in NID.findall(enters)}
+    declared = spec_edges()
+    lines = []
+    for (a, b), rows in sorted(declared.items()):
+        if (a, b) in drawn or (a, b) in reentry:
+            continue
+        for f, is_drawn, record in rows:
+            if is_drawn:
+                lines.append((f, "declares edge %s --> %s%s that dag.md does not draw and section 4 does not list; draw it or mark the element drawn=\"false\"" % (a, b, " (" + record + ")" if record else "")))
+    for a, b in sorted(drawn):
+        if (a, b) not in declared and a in nodes and b in nodes:
+            lines.append(("dag.md", "edge %s --> %s is declared by neither nodes/%s (an out) nor nodes/%s (an in)" % (a, b, a, b)))
+    return lines
 
 
 def main():
@@ -109,9 +173,12 @@ def main():
             for a, b in real:
                 if a in pos and b in pos and pos[a] > pos[b]:
                     fails.append("section 6 topological order puts %s after %s, against edge %s --> %s" % (a, b, a, b))
+    efails = edge_fails(edges, re_rows, nodes)
     for f in fails:
         print("FAIL C16 dag.md %s" % f)
-    return 1 if fails else 0
+    for f, detail in efails:
+        print("FAIL C16-edges %s %s" % (f, detail))
+    return 1 if fails or efails else 0
 
 
 if __name__ == "__main__":

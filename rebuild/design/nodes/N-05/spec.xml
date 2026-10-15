@@ -14,7 +14,17 @@
      Cost: a declared need is not a live pointer until shared/ lands; check.sh matches each need's volume and anchor against the
      shared volumes when they land, so no hand edit happens here. Cross-group edges point at volumes that now exist, and at
      index.xml#<node-id> for a node whose volume has not landed, because the index entry is the one anchor every node is guaranteed. -->
-<volume id="N-05" kind="node-spec" node="N-05" group="G1" version="1.1.0" written="2026-10-14T05:01:33Z" timezone="UTC">
+<!-- N-05 book 1.1.0, 2026-10-15T06:00:00Z.
+     What broke (review dispositions F14, F15 side; verification NF-A10, NF-D1): the verifier compared count(*) with the top
+     seq, which fails the first time retention deletes a row, so every backup would have failed about a week after go-live;
+     the snapshot ran VACUUM INTO under the writer's turn and blocked every commit for its duration; the record named no
+     epoch, so a backup taken after a restore could not be told from one before it; the path, classes and floor disagreed
+     with the shared volume; nothing measured how old the newest copy off the host was; N-45 could not read the record.
+     The fix: Snapshot runs on N-01's reader connection and returns epoch, high_water_seq, row_count and min_retained_seq;
+     the verifier checks count = row_count, max = high_water_seq, min at or above min_retained_seq; one vocabulary
+     (shared/state-store.xml#table-backups, #config-keys); an off-host age gauge against backup.rpo_offhost_hours; the
+     backup record is $defs/backup, which N-45 $refs. -->
+<volume id="N-05" kind="node-spec" node="N-05" group="G1" version="1.1.0" written="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG and principles</entry>
@@ -22,7 +32,7 @@
     <entry ref="purpose">Purpose</entry>
     <entry ref="input">Input record: backup.tick</entry>
     <entry ref="output">Output record: backup or backup.failed</entry>
-    <entry ref="mechanism">Mechanism: online SQLite copy, verified, classed, mirrored</entry>
+    <entry ref="mechanism">Mechanism: reader-connection snapshot, verified, classed, mirrored off the host</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
     <entry ref="retries">Retries up to 3, then recover and report</entry>
@@ -30,6 +40,7 @@
     <entry ref="status-codes">Status codes this node emits</entry>
     <entry ref="state-paths">State paths and the cleanup script for each</entry>
     <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples (checked by C22)</entry>
     <entry ref="checklist">Checklist with proofs</entry>
     <entry ref="permissions">Permissions</entry>
     <entry ref="monitoring">Monitoring</entry>
@@ -50,21 +61,25 @@
     <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 4 (every state path has a cleanup script registered in N-45) and rule 3 (three attempts then one card)</principle>
     <principle href="../../dag.md#8-many-agents-at-once" role="principle">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, 409 that reports</principle>
     <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <shared href="../../shared/contracts.xml#epoch-cursor" role="contract">Epoch and min_retained_seq: what a backup names</shared>
+    <shared href="../../shared/contracts.xml#restore" role="contract">The restore a backup serves; restore.rto_minutes and backup.rpo_offhost_hours</shared>
+    <shared href="../../shared/contracts.xml#statements" role="contract">backups.append, the one write to the backups table</shared>
+    <shared href="../../shared/outside-probe.xml#availability" role="probe">The off-host target is an owner assumption, like the probe's Pi</shared>
     <shared href="../../shared/cut-over.xml#step-system" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
   </pointers>
   <shared-needs id="shared-needs">
     <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares. check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
     <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for backup.started 100; backup 201; backup.busy 423; backup.failed 500; backup.mirror_failed 500; backup.rotten 500; backup.disk 503. Owner-acts: backup.failed; backup.rotten; backup.disk after N-45 ran; backup.mirror_failed when it persists a day.</need>
-    <need kind="store-table" volume="shared/state-store.xml" anchor="table-backups">backups(id, at, class, path, bytes, checksum, inner_checksum, top_seq, verified, mirror_path, mirror_checksum, pruned_at); entities backup:latest (compare-and-swap) and backup:running (expected absent).</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-backups">backups(id, at, class, path, bytes, checksum, inner_checksum, epoch, high_water_seq, row_count, min_retained_seq, verified, mirror_path, mirror_checksum, pruned_at); entities backup:latest (compare-and-swap) and backup:running (expected absent); written only by the statement backups.append.</need>
     <need kind="principle" volume="shared/principles.xml" anchor="artifacts-out-of-repo">Backups, logs and state live under the state root with a README and a cleanup script each (C35); the hand backup tree is disposed of by N-49.</need>
     <need kind="principle" volume="shared/principles.xml" anchor="no-privileged-profile">No node selects the owner's privileged AWS profile; a cloud mirror is the owner's own user-initiated script (global hard rule).</need>
-    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">backup.interval_seconds 21600, backup.min_interval_seconds 60, backup.snapshot_seconds 300, backup.verify_seconds 600, backup.mirror_seconds 600, backup.min_free_mib 2048, backup.retention {tick 48h, daily 30d, monthly 12mo, manual until card}, backup.mirror_dir optional.</need>
+    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">backup.interval_seconds, backup.min_interval_seconds, backup.snapshot_seconds, backup.verify_seconds, backup.mirror_seconds, backup.min_free_mib, backup.retention, backup.rpo_offhost_hours, backup.mirror_dir; the defaults are the shared config-key rows, cited, never restated.</need>
     <need kind="failure-case" volume="shared/failure-cases.xml" anchor="crash">The service restarts mid-run: temps under tmp/ removed at start, backup:running cleared, a due backup runs at once; nothing is lost because the live store is never the thing being written.</need>
-    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="disk-full">Free space under backup.min_free_mib: backup.disk 503 once, run skipped, N-45 cleanup, then one card if still under.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="disk-full">Free space under backup.min_free_mib (default 2048 MiB, the one floor): backup.disk 503 once, run skipped, N-45 cleanup, then one card if still under.</need>
   </shared-needs>
 
   <purpose id="purpose">
-    <is>N-05 is the answer to the catch the owner asked about on C34 ("whats the catch here?"): one store on one host is one box, so the store is copied on a schedule, verified, classed for retention, mirrored off the box when a mirror is configured, and every copy is a record.</is>
+    <is>N-05 is the answer to the catch the owner asked about on C34 ("whats the catch here?"): one store on one host is one box, so the store is copied on a schedule, verified, classed for retention, mirrored off the host, and every copy is a record; how old the newest off-host copy is, is a gauge with an alarm (backup.rpo_offhost_hours).</is>
     <is>It is the only path by which N-01's restore runbook gets a file to restore from, and it is what cleanup-store.sh checks before it may delete the live file.</is>
     <is-not>It does not prune (N-45 does, from the retention class on each backup record), does not back up the repository (git is its own backup), and never uses the owner's privileged AWS profile or any credential the owner did not place in the unit's environment.</is-not>
     <decisions>D10 (C34: one store, backups scheduled per the catch), D04 (C35: artifacts in the state root with cleanup scripts), D22 (the host's crash history: eleven bugchecks in seven weeks, L10 section 5.3).</decisions>
@@ -75,31 +90,33 @@
       <field name="class">tick (every backup.interval_seconds 21600), daily (the first tick after 03:00Z), monthly (the first daily of a UTC month). The class is decided by N-06's schedule, not here, so the retention class is data on the tick.</field>
     </record>
     <also kind="backup.now" from="N-50 before cut-over records, N-49 before each unlanded cleanup step (04-UNLANDED section 12 step 1), the restore runbook, and the ctl CLI" note="an extra backup of class manual; bounded by backup.min_interval_seconds 60"/>
-    <also kind="the live store" from="N-01 Snapshot RPC" note="the source; the backup never opens coq.db as a second writer"/>
+    <also kind="the live store" from="N-01 Snapshot RPC" schema="../N-01/record.schema.json#/$defs/snapshot_reply" note="the source: a copy made on N-01's reader connection with its epoch, high_water_seq, row_count and min_retained_seq; the backup never opens coq.db and never holds the writer"/>
   </input>
 
   <output id="output">
     <record kind="backup" code="201" schema="record.schema.json#/$defs/backup">
+      <field name="consumer">N-45 reads this record by $ref to record.schema.json#/$defs/backup (NF-D1); the shape is defined here once.</field>
       <field name="path">STATE/backup/store/YYYY/MM/YYYYMMDDTHHMMSSZ-coq.db.zst</field>
       <field name="checksum">sha256 of the compressed file; a second sha256 of the uncompressed database file inside.</field>
       <field name="bytes">Compressed size.</field>
-      <field name="top_seq">The store's top seq at the moment of the snapshot, so a restore knows exactly which records it loses.</field>
+      <field name="epoch, high_water_seq, row_count, min_retained_seq">From the Snapshot reply: the store epoch, the highest seq in the copy, the number of records in it and the retention floor at copy time. seq is strictly increasing but not gapless, so the counts are compared with row_count, never with the seq (shared/contracts.xml#epoch-cursor). A restore knows exactly which records it loses: those of the epoch after high_water_seq.</field>
       <field name="retention_class">tick, daily, monthly, manual; N-45 keeps tick 48 h, daily 30 d, monthly 12 months, manual until the owner's cleanup card (backup.retention in config).</field>
-      <field name="verified">true: the copy was opened read-only, PRAGMA integrity_check returned ok, and its records count equals top_seq.</field>
-      <field name="mirror">The mirror path and its checksum when backup.mirror_dir is configured, else absent; a failed mirror is backup.mirror_failed 500 and the local backup still counts.</field>
+      <field name="verified">true: the decompressed copy was opened read-only, PRAGMA integrity_check returned ok, count(*) of records equals row_count, max(seq) equals high_water_seq, min(seq) is at or above min_retained_seq, and store:epoch in the copy equals epoch.</field>
+      <field name="mirror">The off-host path and its checksum when the mirror succeeded, else absent; a failed mirror is backup.mirror_failed 500 and the local backup still counts, but the off-host age keeps growing.</field>
     </record>
     <record kind="backup.failed" code="500" schema="record.schema.json#/$defs/backup_failed">After 3 attempts: the stage that failed (snapshot, compress, verify, write), the error, the attempts; one card through N-28 because a store with no fresh backup is an owner-acts state.</record>
   </output>
 
   <mechanism id="mechanism">
-    <component name="package">Go package scheduler/internal/backup: Run(class), Verify(path), Prune is not here. It calls N-01's Snapshot, which runs VACUUM INTO on a temp path inside the store directory (same filesystem, so the rename is atomic), under the writer's turn so the copy is one transaction-consistent image.</component>
+    <component name="package">Go package scheduler/internal/backup: Run(class), Verify(path), Prune is not here. It calls N-01's Snapshot, which runs VACUUM INTO a temp path under STATE/backup/store/tmp/ on N-01's dedicated reader connection: one read transaction, so the copy is one consistent image while commits continue (nodes/N-01/spec.xml#mechanism). The writer is never held.</component>
     <component name="compression">zstd level 3 (the Go zstd library pinned in the module; no shelling out), streaming, so a 1 GiB file needs no 1 GiB of memory.</component>
     <component name="layout">STATE/backup/store/YYYY/MM/ by the UTC day of the snapshot; one file per backup; a README.md at STATE/backup/store/ names the writer, the classes, the retention and the cleanup script (owner, C35: cleanup scripts for every artifact).</component>
-    <component name="mirror">backup.mirror_dir, optional: a second directory on another filesystem (a Windows drive under /mnt, a network share, a USB disk). Copy then checksum compare; never the primary. No cloud target is built in: the owner's S3 bucket needs the privileged profile and that is user-initiated only (global hard rule), so a cloud mirror is a later owner-run script, not this node.</component>
+    <component name="mirror">backup.mirror_dir: a directory on another host (a share of the owner's NAS or a Pi of the cluster mounted over the tailnet; Windows mounts of the same machine do not count, because they die with it). Copy, read back, checksum compare; never the primary. Which host is an owner decision not yet made (as with shared/outside-probe.xml#availability); until it is set the off-host age is unbounded and its alarm stands as one card. No cloud target is built in: the owner's S3 bucket needs the privileged profile, which is user-initiated only (global hard rule).</component>
+    <component name="offhost">The gauge backup.offhost_age_hours is the age of the newest verified backup whose mirror read back equal. Over backup.rpo_offhost_hours it is owner-acts once per transition (one card through N-28), and the restore bound of shared/contracts.xml#restore names it as the data-loss bound for a host loss.</component>
     <mermaid id="m-backup">flowchart LR
-  T[backup tick, class] --> S[N-01 Snapshot: VACUUM INTO tmp]
+  T[backup tick, class] --> S[N-01 Snapshot on its reader connection: VACUUM INTO tmp]
   S --> Z[zstd stream to tmp.zst]
-  Z --> V[open tmp.zst read-only, integrity_check, count = top_seq]
+  Z --> V[decompress, integrity_check, count = row_count, max = high_water_seq, min ge min_retained_seq]
   V -- ok --> R[rename to final path, fsync dir]
   V -- not ok --> F[attempt + 1, up to 3]
   R --> C[sha256 both, write README if absent]
@@ -108,12 +125,12 @@
   M -- no --> B
   Y --> B[append backup 201]
   F --> B2[backup.failed 500 after 3]</mermaid>
-    <step n="1">Ask N-01 for Snapshot(tmp): the writer goroutine runs VACUUM INTO tmp between two transactions; the snapshot's top_seq is returned with it.</step>
+    <step n="1">Ask N-01 for Snapshot(tmp) under the maintenance lease backup:store (allowed under hold, shared/contracts.xml#lease-machine); the reply carries epoch, high_water_seq, row_count, min_retained_seq and bytes.</step>
     <step n="2">Compress to tmp.zst; compute sha256 of the raw file while reading it.</step>
-    <step n="3">Verify: decompress to a second temp file, open read-only, PRAGMA integrity_check must be exactly ok, SELECT count(*) FROM records must equal top_seq, SELECT max(seq) must equal top_seq. Any difference is a failed attempt.</step>
+    <step n="3">Verify: decompress to a second temp file, open read-only, PRAGMA integrity_check must be exactly ok, SELECT count(*) FROM records must equal row_count, SELECT max(seq) must equal high_water_seq, SELECT min(seq) must be at or above min_retained_seq, and store:epoch must equal epoch. Any difference is a failed attempt.</step>
     <step n="4">Rename tmp.zst to the final path; fsync the directory; sha256 the compressed file.</step>
     <step n="5">Mirror when configured: copy to mirror_dir with the same relative path, read it back, compare sha256; a mismatch deletes the mirror copy and reports backup.mirror_failed 500 (3 attempts); the primary record is still 201.</step>
-    <step n="6">Write the backups table row and append backup 201 with everything above; the entity backup:latest is CAS-updated so cleanup-store.sh and N-01's restore have one place to look.</step>
+    <step n="6">One Commit with operation key N-05/backup/&lt;class&gt;@&lt;tick_n&gt;/r1: backups.append writes the row and appends backup 201 with everything above; the entity backup:latest is CAS-updated so cleanup-store.sh and the restore have one place to look.</step>
     <step n="7">Delete every temp file in STATE/backup/store/tmp/ older than one hour at the start of every run (a crashed run leaves temps; this is their cleanup).</step>
     <restore-drill>On the daily class, after the backup, run Verify on the newest backup of the previous day as well, so a backup that rotted on disk is found within a day and reported as backup.rotten 500.</restore-drill>
   </mechanism>
@@ -144,7 +161,8 @@
     <reading>Any node and the owner read the backups table and backup:latest; a seat never needs a backup; the restore runbook (N-01) reads the latest verified row.</reading>
     <working>One backup runs at a time: the run takes the entity flag backup:running by CAS (expected absent) and releases it at the end; a backup.now while one runs returns backup.busy 423 and is not queued, because the next tick will cover it.</working>
     <collision name="tick-vs-now">A scheduled tick and a backup.now in the same minute: the flag admits one; the other is 423; the one that ran is of the class that won; a manual class is never downgraded, so if the manual one lost, N-50 or N-49 retries after backup.min_interval_seconds and gets its manual copy.</collision>
-    <collision name="backup-vs-writes">The snapshot is one consistent image while Puts continue: VACUUM INTO in WAL mode reads a snapshot; writers are not blocked beyond the writer's single turn to start it; top_seq names the boundary exactly.</collision>
+    <collision name="backup-vs-writes">The snapshot is one consistent image while commits continue: VACUUM INTO runs on N-01's reader connection in one read transaction and never takes the writer; high_water_seq names the boundary exactly. Probe evidence at baseline: 9,788 writes committed during a 2.84 s copy, worst write 184 ms (report D, a model of the store; the built proof is not-run).</collision>
+    <collision name="backup-vs-retention">N-45 deletes old records while a backup runs: the copy is one read transaction, so it holds the rows as of its start; min_retained_seq in the copy is the floor at that moment, and the verifier's min check uses it.</collision>
     <collision name="backup-vs-cleanup">N-45 prunes while a backup writes: the new file is under tmp/ until rename, and N-45 prunes only rows in the backups table with a past retention date, so an in-progress backup is invisible to it.</collision>
     <collision name="restart-mid-backup">The service restarts mid-run: the temp files are removed at the next start (step 7 of the mechanism), the flag backup:running is cleared by the start sequence, and the due check runs a backup at once.</collision>
     <test>With the fake clock: 10 days of ticks with Puts between them, one backup.now storm of 5 calls, one injected verify failure and one injected disk-full: every record's class is right, exactly one run at a time, the failure retried 3 times and reported once, the disk-full skipped with one 503, and every surviving file verifies.</test>
@@ -152,20 +170,20 @@
 
   <status-codes id="status-codes">
     <emits code="100" kind="backup.started" acts="nobody; monitoring"/>
-    <emits code="201" kind="backup" acts="N-45 (retention), N-01 runbook (restore), cleanup-store.sh (precondition)"/>
+    <emits code="201" kind="backup" acts="N-45 (retention, by $ref to $defs/backup), N-01 runbook (restore), cleanup-store.sh (precondition)"/>
     <emits code="423" kind="backup.busy" acts="the caller of backup.now, which may retry after min_interval"/>
     <emits code="500" kind="backup.failed" acts="owner, one card from N-28"/>
-    <emits code="500" kind="backup.mirror_failed" acts="N-41 alert; owner card only when it persists a day"/>
+    <emits code="500" kind="backup.mirror_failed" acts="N-41 alert; the owner card comes from the off-host age passing backup.rpo_offhost_hours"/>
     <emits code="500" kind="backup.rotten" acts="owner, one card: a stored backup fails verification"/>
     <emits code="503" kind="backup.disk" acts="N-45 cleanup, then owner through a card"/>
     <rule>Every code above must exist in ../../shared/status-codes.xml#codes with the same meaning and actor.</rule>
   </status-codes>
 
   <state-paths id="state-paths">
-    <path p="STATE/backup/store/YYYY/MM/*.zst" writer="N-05" readme="STATE/backup/store/README.md" cleanup="scheduler/host/bin/cleanup-backups.sh: --dry-run lists files whose backups row is past its retention class and files with no row (orphans); --apply deletes them and marks the rows pruned; it never deletes the newest verified backup of any class, whatever its age" registry="N-45"/>
-    <path p="STATE/backup/store/tmp/" writer="N-05" cleanup="removed by the run itself at start; cleanup-backups.sh --apply removes anything left over an hour old" registry="N-45"/>
-    <path p="backup.mirror_dir/store/YYYY/MM/*.zst (optional)" writer="N-05" cleanup="cleanup-backups.sh --mirror applies the same retention to the mirror; it refuses when the mirror is not mounted" registry="N-45"/>
-    <path p="STATE/store/coq.db (table backups, entities backup:latest, backup:running)" writer="N-05 through N-01" cleanup="rows are pruned with their files by cleanup-backups.sh" registry="N-45"/>
+    <path p="STATE/backup/store/YYYY/MM/*.zst" writer="N-05" readme="STATE/backup/store/README.md" cleanup="scheduler/host/bin/cleanup-backups.sh: --dry-run lists files whose backups row is past its retention class and files with no row (orphans); --apply deletes them and marks the rows pruned; it never deletes the newest verified backup of any class, whatever its age" registry="N-45" trigger="backup" acts="system"/>
+    <path p="STATE/backup/store/tmp/" writer="N-05" cleanup="removed by the run itself at start; scheduler/host/bin/cleanup-backups.sh --apply removes anything left over an hour old" registry="N-45" trigger="timer" acts="system"/>
+    <path p="backup.mirror_dir/store/YYYY/MM/*.zst (off-host)" writer="N-05" cleanup="scheduler/host/bin/cleanup-backups.sh --mirror applies the same retention to the mirror; it refuses when the mirror is not mounted" registry="N-45" trigger="backup" acts="system"/>
+    <path p="STATE/store/coq.db (table backups, entities backup:latest, backup:running)" writer="N-05 through N-01" cleanup="rows are pruned with their files by cleanup-backups.sh" registry="N-45" trigger="owner" acts="owner"/>
     <rule>The hand backups under STATE/backup/2026/10/ (L02 S19) are a different tree: N-49 disposes of them; this node never writes there.</rule>
   </state-paths>
 
@@ -177,9 +195,16 @@
     <re-entry from="N-49, N-50" note="backup.now of class manual before each cleanup or cut-over step" href="../../dag.md#4-re-entries"/>
   </edges>
 
+  <examples id="examples">
+    <example schema="record.schema.json#/$defs/backup">{"id":"20261015T060012Z-201-b7k2m","at":"2026-10-15T06:00:12Z","kind":"backup","code":201,"node":"N-05","epoch":1,"path":"STATE/backup/store/2026/10/20261015T060000Z-coq.db.zst","checksum":"5d41402abc4b2a76b9719d911017c592ae2f1e3b2c6d0e4f8a9b7c6d5e4f3a2b","checksum_raw":"7c211433f02071597741e6ff5a8ea34789abbf43f5f1e4a2b6c8d9e0f1a2b3c4","bytes":61203456,"high_water_seq":5400,"row_count":5398,"min_retained_seq":1,"retention_class":"daily","verified":true,"snapshot_at":"2026-10-15T06:00:00Z","run_seconds":12,"mirror":{"path":"backup.mirror_dir/store/2026/10/20261015T060000Z-coq.db.zst","checksum":"5d41402abc4b2a76b9719d911017c592ae2f1e3b2c6d0e4f8a9b7c6d5e4f3a2b"}}</example>
+    <example schema="record.schema.json#/$defs/backup_failed">{"id":"20261015T061500Z-500-f3k8s","at":"2026-10-15T06:15:00Z","kind":"backup.failed","code":500,"node":"N-05","epoch":1,"stage":"verify","reason":"count(*) 5397 is not row_count 5398","attempts":3,"retention_class":"tick","newest_verified_at":"2026-10-15T00:00:12Z"}</example>
+  </examples>
+
   <checklist id="checklist">
-    <item><check>A tick-class run produces a .zst whose decompressed database passes integrity_check and whose counts equal top_seq.</check><proof>Go test backup/run_test.go against a store with 1000 records.</proof></item>
-    <item><check>The record carries path, both checksums, bytes, top_seq, retention_class and verified true.</check><proof>Golden record in the test.</proof></item>
+    <item><check>A tick-class run produces a .zst whose decompressed database passes integrity_check, count = row_count, max = high_water_seq, min at or above min_retained_seq.</check><proof>Go test backup/run_test.go against a store with 1000 records of which 300 were deleted by retention (not-run; report D probe P05 shows the count = top seq check this replaces failing).</proof></item>
+    <item><check>Commits continue during the snapshot; no commit waits on it.</check><proof>Go test with a writer loop during Snapshot (not-run).</proof></item>
+    <item><check>The record carries path, both checksums, bytes, epoch, high_water_seq, row_count, min_retained_seq, retention_class and verified true, and validates against the N-45 input def.</check><proof>Golden record in the test; C22 on #examples.</proof></item>
+    <item><check>With no mirror configured, or a mirror failing past backup.rpo_offhost_hours, the off-host gauge alarms once.</check><proof>Go test with the fake clock (not-run).</proof></item>
     <item><check>A verify failure is retried 3 times then reported once as backup.failed with the stage.</check><proof>Go test with an injected corrupt copy.</proof></item>
     <item><check>Two runs cannot overlap: the second is 423.</check><proof>Go test with two goroutines.</proof></item>
     <item><check>A restart mid-run leaves no temp file and runs a due backup at once.</check><proof>Test with a prepared tmp/ and a stale backups row.</proof></item>
@@ -187,7 +212,7 @@
     <item><check>Mirror copies compare equal; a mismatch deletes the mirror copy and reports once.</check><proof>Go test with a mirror dir on a tmpfs.</proof></item>
     <item><check>cleanup-backups.sh never deletes the newest verified backup of any class.</check><proof>Script test in scheduler/host/tests.</proof></item>
     <item><check>No credential and no cloud call exist in the package.</check><proof>grep for aws, s3, http in scheduler/internal/backup returns nothing.</proof></item>
-    <item><check>The restore runbook in N-01 restores from the newest record and prints the seq gap.</check><proof>Integration test: write 100 records after a backup, restore, assert the gap printed is 100.</proof></item>
+    <item><check>The restore runbook in N-01 restores from the newest record and prints the seq gap.</check><proof>Integration test: write 100 records after a backup, restore, assert the lost range printed is high_water_seq plus 1 onward in the old epoch, and the restored store is in the next epoch (not-run).</proof></item>
   </checklist>
 
   <permissions id="permissions">
@@ -199,21 +224,22 @@
 
   <monitoring id="monitoring">
     <gauge name="backup.age_seconds" alarm="over 2 x backup.interval_seconds"/>
-    <gauge name="backup.newest_verified_top_seq" note="compared with store.top_seq gives records at risk"/>
+    <gauge name="backup.newest_verified_high_water_seq" note="compared with store.high_water_seq in the same epoch gives the records at risk"/>
+    <gauge name="backup.offhost_age_hours" alarm="over backup.rpo_offhost_hours: one card per transition"/>
     <gauge name="backup.bytes_total" by="class"/>
     <gauge name="backup.free_mib" alarm="under backup.min_free_mib"/>
     <counter name="backup.runs_total" by="class, result"/>
     <counter name="backup.run_seconds" kind="histogram"/>
-    <gauge name="backup.mirror_ok" note="1 when the last mirror matched, 0 otherwise"/>
+    <gauge name="backup.mirror_ok" note="1 when the last off-host copy read back equal, 0 otherwise"/>
     <surface>Map screen (N-38) shows the backup machine with a lamp (fresh, due, failed); Stats (N-40) shows age and bytes; Alerts (N-41) shows backup.failed and backup.rotten; the Controls screen (N-42) has the backup-now button, which is an owner control.action through N-29.</surface>
   </monitoring>
 
   <runbook id="runbook">
-    <task name="list backups">`scheduler ctl backup list` prints every row with class, verified, top_seq, bytes, path, pruned.</task>
+    <task name="list backups">`scheduler ctl backup list` prints every row with class, verified, epoch, high_water_seq, row_count, bytes, path, mirror, pruned.</task>
     <task name="backup now">`scheduler ctl backup now` (class manual); 423 means one is running; wait a minute.</task>
     <task name="verify one">`scheduler ctl backup verify PATH` runs the same Verify as the run.</task>
     <task name="restore">See ../N-01/spec.xml#runbook restore; it takes the path from `backup list`.</task>
-    <task name="configure a mirror">Set backup.mirror_dir in scheduler/config/scheduler.json through a ticket to a mounted directory on another device; `scheduler ctl reload`; the next run mirrors.</task>
+    <task name="configure a mirror">Set backup.mirror_dir through a ticket to a directory mounted from another host; `scheduler ctl reload`; the next run mirrors and the off-host gauge resets.</task>
     <task name="cleanup">scheduler/host/bin/cleanup-backups.sh --dry-run, then --apply; --mirror for the mirror.</task>
   </runbook>
 
@@ -222,7 +248,9 @@
     <item source="~/.claude/skills/backup-home" what="the backup-home skill: tar of HOME to S3 with the minecraft-admin profile" reason="the profile is privileged and user-initiated only (global hard rule); a factory node may never select it; a cloud mirror is the owner's own script"/>
     <item source="rebuild/investigation/L10-cluster-and-gitops.md#53-jenkins-is-the-one-platform-piece-that-is-not-gitops-and-is-tied-to-the-desktop" what="the suspended jenkins-backup CronJob and the SMB-mounted JENKINS_HOME as the pattern" reason="that is Jenkins' home (N-20 Longhorn home); the factory store is on the host and its backup is this node; a CronJob cannot reach the host file"/>
     <item source="scheduler/config/scheduler.json" what="housekeeping.prune_seconds and jobs.keep_days as retention" reason="retention lives on each backup record as a class and N-45 prunes by it; one place, data, not two timers"/>
-    <item source="rebuild/investigation/S03-make-and-durable-queues.md#8-what-to-carry-forward" what="sqlite3 .backup through a shell" reason="no shelling out from the service; VACUUM INTO through the store's own connection is transaction-consistent and needs no second binary"/>
+    <item source="rebuild/investigation/S03-make-and-durable-queues.md#8-what-to-carry-forward" what="sqlite3 .backup through a shell" reason="no shelling out from the service; VACUUM INTO on the store's reader connection is transaction-consistent and needs no second binary"/>
+    <item source="nodes/N-05/spec.xml" what="VACUUM INTO under the writer's turn and a verifier comparing count with the top seq (book 1.0)" reason="the first blocks every commit for the copy (2.82 s on 293.7 MiB, report D), the second fails as soon as retention deletes a row (F14)"/>
+    <item source="shared/state-store.xml" what="daily, weekly, monthly classes, STATE/backups/ and a 1024 MiB floor (book 1.0)" reason="two vocabularies for one table; tick, daily, monthly, manual under STATE/backup/store/ with the 2048 MiB floor is the one (NF-A10)"/>
   </rejected>
 
   <sources id="sources">
@@ -238,7 +266,7 @@
     <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C34" note="whats the catch here?"/>
     <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C35" note="cleanup scripts for that shit"/>
     <source path="~/.claude/CLAUDE.md" anchor="hard-rule-owner-aliases-and-privileged-aws-profile"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/runtime-data-never-in-the-repo.md" note="one-page memory rule; no heading, so the pointer is the file"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/scripts-live-in-the-project.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/runtime-data-never-in-the-repo.md" note="one-page memory rule"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/scripts-live-in-the-project.md" note="one-page memory rule"/>
   </sources>
 </volume>

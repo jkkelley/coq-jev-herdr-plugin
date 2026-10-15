@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-43/record.schema.json",
   "title": "N-43 Status code map loader: input and output records",
-  "description": "Parent: ../../index.xml#N-43. Sibling: spec.xml. Envelope fields are the shared record envelope (shared/state-store.xml#record-envelope); this file repeats them in $defs.envelope until the shared schema lands.",
+  "description": "Parent: ../../index.xml#N-43. Sibling: spec.xml. Book 1.1.0: $defs.envelope is a $ref to the shared envelope (shared/state-store.schema.json#/$defs/envelope); the r- id form and the required key, by and attempt fields are gone (review NF-A12).",
   "oneOf": [
     { "$ref": "#/$defs/input" },
     { "$ref": "#/$defs/output" }
@@ -12,20 +12,8 @@
     "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "envelope": {
-      "type": "object",
-      "required": ["id", "at", "kind", "code", "by", "node", "attempt", "key"],
-      "properties": {
-        "id": { "type": "string", "pattern": "^r-[0-9A-Za-z]{10,32}$" },
-        "at": { "$ref": "#/$defs/utc" },
-        "kind": { "type": "string" },
-        "code": { "type": "integer", "enum": [100, 200, 201, 204, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
-        "by": { "type": "string", "description": "node id or seat id that wrote the record" },
-        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
-        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
-        "key": { "type": "string", "description": "idempotency key; a second put with the same key returns the first record" },
-        "version": { "type": "integer", "minimum": 0, "description": "expected version for compare-and-swap puts" },
-        "seq": { "type": "integer", "minimum": 1, "description": "store sequence, assigned by N-01" }
-      }
+      "$ref": "../../shared/state-store.schema.json#/$defs/envelope",
+      "description": "The one shared envelope (shared/state-store.xml#envelope): UTC-stamp id, no r- ids; the operation key, the fencing token and the expected version ride on the Commit request (shared/contracts.schema.json#/$defs/commit_request), never on the record. Every G7 schema (N-43 to N-51) reaches the envelope through this def."
     },
     "input": {
       "oneOf": [

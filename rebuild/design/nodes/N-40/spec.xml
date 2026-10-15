@@ -16,7 +16,7 @@
      Rejected: writing shared/ from this seat (one shared author owns it; two authors on one file is the collision the book forbids)
      and leaving the hrefs to resolve later (a failing volume blocks the book now).
      Cost: a need is not a live pointer until shared/ lands; check.sh matches each need against the shared volumes then. -->
-<volume id="N-40" kind="node-spec" node="N-40" group="G6" version="1.1.0" issued="2026-10-14" written="2026-10-14T05:09:51Z" timezone="UTC">
+<volume id="N-40" kind="node-spec" node="N-40" group="G6" version="1.1.0" issued="2026-10-15T06:00:00Z" written="2026-10-14T05:09:51Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG edges</entry>
@@ -53,6 +53,7 @@
     <sibling href="../N-41/spec.xml#N-41">N-41 Alerts screen</sibling>
     <sibling href="../N-42/spec.xml#N-42">N-42 Controls screen</sibling>
     <shared href="../../dag.md#3-every-node" role="dag"/>
+    <shared href="../../shared/retry-budget.xml#budgets" role="budgets">The spend and pod-minute caps the cost panel draws as lines</shared>
     <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 3 and rule 4; the counters view runs on the Go tick, no agent sums anything</principle>
     <principle href="../../dag.md#8-many-agents-at-once" role="principle">Single writer keyed by window plus tick minute; overlapping instance 409 dropped and logged</principle>
     <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
@@ -101,7 +102,7 @@
     <panel id="stats.seat-bringup" kind="counters.frame" staleness="60" frame="wf-map/stats/default">Median and p95 seat bring-up with the design bound as a dashed line and a sparkline of the last 12 seats.</panel>
     <panel id="stats.stalls-per-node" kind="counters.frame" staleness="60" frame="wf-map/stats/default">Horizontal bars of stall records per node in the window; tap a bar opens that machine.</panel>
     <panel id="stats.counters" kind="counters.frame" staleness="60" frame="wf-map/stats/default">Records, jobs, wakes, seats, pods in the window with the previous window beside each.</panel>
-    <panel id="stats.cost" kind="counters.frame" staleness="60" frame="wf-map/stats/default">Cost in the window: seat cost (subscription seats show turns and tokens, pod seats show the API cost, D03), pod minutes; the owner's spend cap when one exists (N-07 config) as a line.</panel>
+    <panel id="stats.cost" kind="counters.frame" staleness="60" frame="wf-map/stats/default">Cost in the window: seat cost (subscription seats show turns and tokens, pod seats show the API cost, D03), pod minutes; the spend caps as lines: the per-ticket budget and the daily caps budget.daily_seat_usd and budget.daily_pod_minutes that N-07 enforces (shared/retry-budget.xml#budgets).</panel>
     <panel id="stats.rail-progress" kind="rail.panel" staleness="300" frame="wf-map/stats/default">Steps done of total from the rail panel (N-33), ten cells, with the current step name.</panel>
   </panels>
 
@@ -179,9 +180,9 @@ flowchart LR
   </status-codes>
 
   <state-paths id="state-paths" cleanup-registry="../N-45/spec.xml#N-45">
-    <path p="store table counters_frames" cleanup="N-45 retention class: keep 30 days of frames, then daily aggregates">Counters frames.</path>
-    <path p="store table frame_reports" cleanup="N-45 retention class: keep 7 days">Client frame reports (shared with N-38).</path>
-    <path p="browser localStorage key coq-map-window" class="client" retention="never" acts="owner" cleanup="lives in the owner's browser, not on the host; Reset view in the stamp menu clears it">The chosen window per client.</path>
+    <path trigger="timer" acts="system" p="store table counters_frames" cleanup="N-45 retention class: keep 30 days of frames, then daily aggregates">Counters frames.</path>
+    <path trigger="timer" acts="system" p="store table frame_reports" cleanup="N-45 retention class: keep 7 days">Client frame reports (shared with N-38).</path>
+    <path trigger="owner" p="browser localStorage key coq-map-window" class="client" retention="never" acts="owner" cleanup="lives in the owner's browser, not on the host; Reset view in the stamp menu clears it">The chosen window per client.</path>
   </state-paths>
 
   <look id="look" requirement="owner 04:45Z all views carry the Krastorio look; command-center-visual-bar: the production stats GUI reproduced">
@@ -221,7 +222,7 @@ flowchart LR
     <src href="rebuild/factory-rebuild-plan.xml#steps">R-06 bring-up bound measured against the design; R-09 ten tickets without a stall.</src>
     <src href="tools/bearings/AGENTS.md">SITREP: build from records, check, send; never type the figures.</src>
     <src href="rebuild/investigation/03-DECISIONS.md#22-d20-one-owner-surface-or-two-bearings-and-the-execution-rail">D20: the rail's plan, ledger and step model become a bearings panel (N-33) that this screen shows.</src>
-    <src href="rebuild/investigation/00-INVENTORY.md">J23 capacity and cost limits: a spend cap as reconciler config, drawn here as a line.</src>
+    <src href="rebuild/investigation/00-INVENTORY.md">J23 capacity and cost limits: a spend cap as reconciler config (now shared/retry-budget.xml#budgets), drawn here as a line.</src>
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md#5-sprite-groups-for-the-five-screens">5.3 Stats sprite groups and chart colours.</src>
   </sources>
 

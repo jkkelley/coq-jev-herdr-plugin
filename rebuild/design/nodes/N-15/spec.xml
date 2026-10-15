@@ -42,7 +42,7 @@
   Cost: an adopted run reports exit_code null because a non-child cannot be waited on; the envelope carries the
   outcome, and a kill of an adopted run records no_result when the envelope was never written.
 -->
-<volume id="N-15" node="N-15" kind="node-spec" group="G3" version="1.2.0" issued="2026-10-14T05:30:00Z" timezone="UTC">
+<volume id="N-15" node="N-15" kind="node-spec" group="G3" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
@@ -293,8 +293,8 @@
     <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C49</source>
     <source href="~/.bearings/coq-stable/answers.jsonl">C36, C37, C38, C39</source>
     <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md">rulings 20, 21, 24</source>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/herdr-crash-restart-order.md">a herdr core dump killed all seats: every seat is now its own process under the service</source>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/arm-herdr-idle-watch-on-every-resume.md">idle watches flooded the architect; retired</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/herdr-crash-restart-order.md">a herdr core dump killed all seats: every seat is now its own process under the service</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/arm-herdr-idle-watch-on-every-resume.md">idle watches flooded the architect; retired</source>
   </section>
 
   <rejected id="rejected">

@@ -5,7 +5,7 @@
   (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
   No em dash appears in this file. Every time is UTC.
 -->
-<volume id="N-28" kind="node-spec" node="N-28" group="G5" version="1.0.0" issued="2026-10-14" timezone="UTC"
+<volume id="N-28" kind="node-spec" node="N-28" group="G5" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC"
         author="spec-author seat, group G5 Owner surface, round 1">
 
   <contents id="contents">
@@ -15,6 +15,7 @@
     <entry ref="output">Output record</entry>
     <entry ref="mechanism">Mechanism: code table, template, checker, lamp gate, post</entry>
     <entry ref="card-shape">The card shape and the prose standard</entry>
+    <entry ref="standing-cards">Standing cards: the owner words and the Controls levers</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
     <entry ref="retries">Retries, recovery and report</entry>
@@ -47,6 +48,8 @@
     <shared href="../../shared/status-codes.xml#owner-acts">The owner-acts column of the status code map</shared>
     <shared href="../../shared/state-store.xml#envelope">Record envelope</shared>
     <shared href="../../shared/principles.xml#no-cog">No cog</shared>
+    <shared href="../../shared/authority.xml#relayable-rulings">Owner-only cards carry no default and no deadline</shared>
+    <shared href="../../shared/contracts.xml#operation-keys">Operation keys of the post and the merge</shared>
     <shared href="../../shared/cut-over.xml#step-owner-surface" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
   </pointers>
 
@@ -78,8 +81,10 @@
       <field name="options">2 to 4 of {label (1 to 4 words), then (what happens, 8 words or fewer)}</field>
       <field name="rec">index of the recommended option</field>
       <field name="ticket">id and full title when the cause names a ticket</field>
-      <field name="deadline">UTC when a standing policy row names one; absent otherwise</field>
-      <field name="default">index applied at the deadline by policy.applied 200; absent otherwise</field>
+      <field name="deadline">UTC when a standing policy row names one and the card is relayable; always absent on an owner-only card (shared/authority.xml#relayable-rulings)</field>
+      <field name="default">index applied at the deadline by policy.applied 200; same rule: never on an owner-only card</field>
+      <field name="owner_only">true when any option's effect is not none or ticket.unblock; such a card has no deadline and no default, and escalates once by alert.aged</field>
+      <field name="standing">the lever name on a standing card (halt, resume, gofactory, build-mode); absent on an ordinary card</field>
       <field name="watcher">the lease generation that was alive at post time</field>
       <field name="posted_at">UTC</field>
     </record>
@@ -104,12 +109,12 @@
 
   <mechanism id="mechanism">
     <where>Go service (D01), package internal/owner/cards, inside coq.service; one goroutine driven by the scheduler tick (N-07 shape: list, compare, act). Templates in the repository at tools/bearings/config/cards.template.json, validated by tools/bearings/config/cards.template.schema.json at make lint, loaded with Reload (N-43 shape) so a text change is a pull request and a reload, never a restart.</where>
-    <step n="1">On each tick, query the store for records with acts=owner in the loaded code table (N-43 code.table) that have no card, card.refused or card.unwatched naming them as cause, and no card.held with retry_at in the future. Bounded: the query is by seq since the builder's own watermark (an upsert record cards.watermark, compare-and-swap), so the tick does a small scan.</step>
-    <step n="2">Dedupe: one card per (ticket, kind, code) open at a time (owner.mjs rule carried forward). A second dead record for the same ticket while its card is open adds a line to the open card's about count, not a new card; the second cause is recorded as card.merged 100 naming the open card.</step>
-    <step n="3">Build the card from the template row keyed (kind, code): about, decide, options and rec with placeholders filled from the record (ticket id plus full title from the ticket record in the store, attempt, reason, sha short, the tier). A template row with a policy ref sets deadline and default from the standing policies table (V17; shared/seat-contract.xml#standing-policies).</step>
+    <step n="1">On each tick, select causes by query, not by a watermark: records with acts=owner in the loaded code table (N-43 code.table) that have no card and no card.merged naming them as cause. A cause whose last outcome is card.held is selected again once its retry_at has passed; a cause with card.unwatched is selected again on every tick (the post goes up on the first tick a lamp is alive); a cause with card.refused is selected again when the template table's version is newer than the one the refusal names. Terminal is only card and card.merged; refused and unwatched are retryable states, so a fixed template or a returning lamp posts the card with no hand step. Bounded: the query uses the index on (kind, code) of the open causes, and the per-tick cap applies.</step>
+    <step n="2">Dedupe: one card per (ticket, kind, code) open at a time (owner.mjs rule carried forward). A second dead record for the same ticket while its card is open adds a line to the open card's about count, not a new card; the second cause is recorded as card.merged 100 naming the open card, committed with operation key N-28/card.merged/merged:&lt;cause id&gt;/r1, so a re-run of the tick replays it and the cause is never re-selected.</step>
+    <step n="3">Build the card from the template row keyed (kind, code): about, decide, options and rec with placeholders filled from the record (ticket id plus full title from the ticket record in the store, attempt, reason, sha short, the tier). A template row with a policy ref sets deadline and default from the standing policies table (V17; shared/seat-contract.xml#standing-policies) only when every option's effect is none or ticket.unblock; a row whose options carry any other effect is owner-only (owner_only true) and gets no deadline and no default, and make lint refuses a policy ref on such a row (shared/authority.xml#relayable-rulings).</step>
     <step n="4">Run the card checker (internal/owner/cardcheck, the same rules as tools/bearings/scripts/sitrep-check.mjs for prose, plus the card rules below). A violation writes card.refused 400 and an alert (a system defect: the template is wrong) and the record is not carded until the template is fixed and reloaded; the cause stays listed so it cards after the fix.</step>
     <step n="5">Gate: read watcher.alive for the target page; state alive and beat age under 15 s. Otherwise write card.held 423 with attempt n and retry_at = now plus 10 s times 2 to the power (n minus 1), capped at 5 min (the N-11 backoff), and stop for this cause. At attempt 3 held, write card.unwatched 500 instead, which is an alert to N-41 and, once live, a phone push (N-52), and the cause stays listed so the card posts on the first tick after a lamp returns.</step>
-    <step n="6">Post: Store.Put the card record with idempotency key cause:&lt;source id&gt; and the card number from the store sequence card_number (a transactional counter in N-01). A 409 means another builder instance already posted it (see many agents); read it back and stop.</step>
+    <step n="6">Post: one Store.Commit of the card record with operation key N-28/card.post/&lt;cause id&gt;/r1 and the card number from the counter card_number taken in the same transaction (N-01). A replay returns the card already posted (see many agents); stop.</step>
     <step n="7">Delivered: the first card.shown 200 for the card on its tier (N-31, the page's ack carries the card ids it drew) stamps delivered_at on the card entity, which the deck and the Controls open-cards panel show; nothing waits on it. Close: when a ruling record (N-29) or a policy.applied 200 names the card, write card.done 200 with the ruling id. The page removes it from the deck on the push; the phone bridge sends nothing more.</step>
     <text>Why the builder never asks what the table does not name: no-bureaucracy-creep. Everything that can be a rule is a rule; the architect decides what a careful colleague would; the owner's cards are the few that change the build or stop the line. Adding a card kind is a row in shared/status-codes.xml with acts=owner and a template row, reviewed as a pull request.</text>
     <text>Why posted to a tier and not to "the page": uat tiers carry the promotion confirm card (N-48) for a page change; stable carries everything else; a dev tier carries test cards only. The tier field keeps a confirm card for a dev page off the owner's stable deck.</text>
@@ -123,8 +128,18 @@
     <rule n="5">No record id, pid, pane id or path in the text; those stay in the cause record the page links to behind a fold.</rule>
     <rule n="6">No em dash; UTC; ids never reused once shown.</rule>
     <rule n="7">Bad news first, plainly, in the same voice as good news.</rule>
+    <rule n="8">An owner-only card (owner_only true) carries no deadline, no default and no option labelled with an owner word as a suggestion; the card asks, the owner answers.</rule>
     <checker>internal/owner/cardcheck returns one VIOLATION line per broken rule and the builder refuses on any; make lint runs the checker over every template row with sample data so a bad template never reaches a tick.</checker>
   </card-shape>
+
+  <standing-cards id="standing-cards">
+    <s>What broke (review NF-D2, 2026-10-15): neither halt path produced a ruling; the inbox forwarded USERHALT as source controls, which N-29 accepted only from the page service, and the Controls screen posted its own card per action under a card id N-29 could not parse.</s>
+    <s>The rule: at bring-up (bootstrap B1, shared/cut-over.xml#bootstrap) this node posts one standing card per lever, once, with operation key N-28/card.standing/&lt;lever&gt;/r1: halt (USERHALT, effect control.halt), resume (USERGO, control.resume), gofactory (GOFACTORY, gofactory) and build-mode (build-mode.set on or off). Each is owner_only, has no deadline and no default, and never gets card.done; its id is the entity standing:&lt;lever&gt; that N-30 and N-42 read.</s>
+    <s>A standing card is answered once per action (N-29: one ruling per card and action id): the Controls lever (N-42) answers with its client action id, the inbox (N-30) with the owner.message id; nothing else may answer it. The deck draws standing cards as the lever row, not as open decisions.</s>
+    <example schema="record.schema.json#/$defs/card">{"id":"20261015T060000Z-300-s1d2f","kind":"card","code":300,"at":"2026-10-15T06:00:00Z","node":"N-28","card":"C-3","tier":"stable","cause":"20261015T055959Z-100-b1b1b","about":"Halt lever - stops every dispatch","decide":"Halt the line now?","options":[{"label":"Halt","then":"no new seats start"},{"label":"Not now","then":"nothing changes"}],"rec":1,"owner_only":true,"standing":"halt","watcher":7,"posted_at":"2026-10-15T06:00:00Z","idempotency_key":"N-28/card.standing/halt/r1"}</example>
+    <example schema="record.schema.json#/$defs/card.merged">{"id":"20261015T081700Z-100-m2m3m","kind":"card.merged","code":100,"at":"2026-10-15T08:17:00Z","node":"N-28","cause":"20261015T081655Z-500-d9d8d","card":"C-60","idempotency_key":"N-28/card.merged/merged:20261015T081655Z-500-d9d8d/r1"}</example>
+    <s>Rejected: a card per action posted by the screen itself (two card writers, and an id N-29 could not parse); answering a pseudo card whose id is the action id (no card record behind it, so nothing proves the lever was offered).</s>
+  </standing-cards>
 
   <start id="start">
     <text>The builder is a goroutine of coq.service (N-06 unit.start); it has no unit of its own and nothing to type. It is live when coq.service is live and its code table is loaded; it stays dark (build mode, N-44) until its own go-live ticket flips cards.enabled in the service config with the named proof: one real dead record carded on stable while the old make ask path still exists, then make ask retired.</text>
@@ -134,21 +149,21 @@
     <wait what="store list on tick" timeout="2 s" fallback="skip this tick, count builder_tick_skipped, next tick retries; 3 skips in a row is an unhealthy record from N-06"/>
     <wait what="template reload" timeout="2 s" fallback="keep the last good table; write code.table.reload.failed 500 (N-43 kind); the tick continues with the old table"/>
     <wait what="watcher lamp read" timeout="1 s" fallback="treat as not alive: card.held 423 (never post unwatched on a doubt)"/>
-    <wait what="Store.Put of the card" timeout="3 s" fallback="retry 3 times (1, 2, 4 s); then card.post.failed 500 alert; the cause stays listed for the next tick"/>
+    <wait what="Store.Commit of the card" timeout="3 s" fallback="retry 3 times (1, 2, 4 s); then card.post.failed 500 alert; the cause stays listed for the next tick"/>
     <wait what="a lamp returning while a card is held" class="level-triggered" timeout="none needed: the backoff is bounded at 5 min and the third hold is an alert" fallback="card.unwatched 500 reaches the owner through the alerts screen and the phone bridge, and systemd is restarting the watcher meanwhile (N-27)"/>
-    <wait what="the owner's answer" timeout="a deadline only when a standing policy row names one; the card waits otherwise and nothing else in the line waits with it" fallback="policy.applied 200 with the default option, which N-29 records as a ruling with by=policy; the owner may overturn with a later answer only through a new card the ruling re-opens (one answer per card id)"/>
+    <wait what="the owner's answer" class="owner-decision" timeout="a deadline only when a standing policy row names one on a relayable card; an owner-only card has none and escalates once by alert.aged; nothing else in the line waits with it" fallback="relayable card: policy.applied 200 with the default option, which N-29 records as a ruling with source policy (effects none or ticket.unblock only); the owner may overturn through a fresh card when the ruling is reopenable. Owner-only card: no default ever; one alert.aged escalation, then it waits"/>
     <no-cog>The cog that could stall this node is a missing watcher. Timeout: three held attempts. Fallback: the alert path that needs no lamp (N-41 draws alerts from records, N-52 pushes to the phone) and systemd bringing the watcher back. A second cog is the owner himself: a card with no policy row waits, but the line does not; merge.hold, build-mode and the exit test carry on by their own rules.</no-cog>
   </waits>
 
   <retries id="retries">
     <rule>Every store call retries 3 times with backoff then writes a 500 record and continues; the level-triggered tick is the recovery for everything the builder dropped, because a cause with no card is found again next tick.</rule>
-    <rule>A dead record becomes exactly one card, never a repeat (dag.md rule 3): the idempotency key cause:&lt;id&gt; and the (ticket, kind, code) dedupe make a retry after a crash a no-op.</rule>
+    <rule>A dead record becomes exactly one card, never a repeat (dag.md rule 3): the operation key N-28/card.post/&lt;cause id&gt;/r1 and the (ticket, kind, code) dedupe make a retry after a crash a no-op.</rule>
   </retries>
 
   <many-agents-at-once id="many-agents-at-once">
     <readers>Any number of seats read this volume; the template file is edited by one ticket at a time (one file, one in-flight ticket) and reviewed as a pull request with make lint running the checker.</readers>
     <workers>Build tickets from this node touch internal/owner/cards, internal/owner/cardcheck, tools/bearings/config/cards.template.json and its schema; the page (N-32), the intake (N-29) and the lamp (N-27) own different files.</workers>
-    <collision what="two builder instances (a second coq.service during an upgrade)">Store.Put with idempotency key cause:&lt;id&gt; commits once; the loser reads 409 and takes the winner's card. The card number comes from a transactional counter in N-01, so two posts can never share or skip a number.</collision>
+    <collision what="two builder instances (a second coq.service during an upgrade)">The commit under N-28/card.post/&lt;cause id&gt;/r1 lands once; the loser's commit replays (200) and returns the winner's card. The card number comes from a transactional counter in N-01, so two posts can never share or skip a number.</collision>
     <collision what="a cause record and its ruling land in the same tick">The ruling names a card id; if the card is not yet posted the ruling is refused by N-29 as answer.rejected 400 (unknown card), which cannot happen for a page answer (the page only shows posted cards) and is correct for a relayed answer that raced the post.</collision>
     <collision what="twenty records with acts=owner in one tick (a crash storm)">The dedupe per (ticket, kind, code) and a per-tick cap (config cards.max_per_tick, default 5) keep the deck readable; the rest card on later ticks in cause order; the cap and the backlog depth are counters on the health line so a storm is visible, not hidden.</collision>
     <collision what="the owner answers a card on two devices at once">That is N-29's compare-and-swap: one ruling, the second gets an ack saying already answered.</collision>
@@ -157,17 +172,17 @@
 
   <status-codes id="status-codes">
     <emits kind="card" code="300" acts="owner, through N-32 and N-52">a decision posted to a tier</emits>
-    <emits kind="card.held" code="423" acts="the system retries by backoff">no live lamp on the tier</emits>
-    <emits kind="card.unwatched" code="500" acts="N-41 alert, N-52 push, N-27 restart">held three times</emits>
-    <emits kind="card.refused" code="400" acts="N-41 alert; a template fix ticket">checker violation (system defect)</emits>
-    <emits kind="card.merged" code="100" acts="nobody">a second cause folded into an open card</emits>
+    <emits kind="card.held" code="423" acts="the system re-selects the cause after retry_at">no live lamp on the tier</emits>
+    <emits kind="card.unwatched" code="500" acts="N-41 alert, N-52 push, N-27 restart; the cause is re-selected every tick">held three times</emits>
+    <emits kind="card.refused" code="400" acts="N-41 alert; a template fix ticket; the cause is re-selected after a template reload">checker violation (system defect)</emits>
+    <emits kind="card.merged" code="100" acts="nobody">a second cause folded into an open card; terminal for that cause</emits>
     <emits kind="card.post.failed" code="500" acts="N-41 alert">store unreachable after 3 tries</emits>
     <emits kind="card.done" code="200" acts="N-32 removes, N-52 stops">closed by a ruling or a policy default</emits>
     <consumes>every (kind, code) row with acts=owner in shared/status-codes.xml; the initial rows are listed in the input section and the shared author owns the column</consumes>
   </status-codes>
 
   <state-paths id="state-paths">
-    <path p="store rows card, card.held, card.unwatched, card.refused, card.merged, card.done, cards.watermark and the counter card_number" what="in N-01; cards are kept for the life of the store (they are the owner's record); held and merged rows retention 30 days" cleanup="registered with N-45 as store retention class owner-surface"/>
+    <path p="store rows card, card.held, card.unwatched, card.refused, card.merged, card.done, the entities standing:&lt;lever&gt; and the counter card_number" what="in N-01; cards and card.merged are kept for the life of the store (they are the owner's record and a merged cause must never be re-selected); held rows retention 30 days" cleanup="registered with N-45 as store retention class owner-surface"/>
     <path p="tools/bearings/config/cards.template.json" class="tracked" retention="never" acts="owner" what="in the repository, not state" cleanup="none: tracked source, removed by a pull request"/>
     <path p="journal of coq.service, lines prefixed cards:" what="one line per post, hold, refuse" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
     <text>The old files ~/.bearings/&lt;page&gt;/questions.json and answers.jsonl are migrated once into the store by N-32's cut-over step and then fall under tools/bearings/bin/cleanup-tier.sh.</text>
@@ -196,14 +211,16 @@
     <item proof="test: the same cause again yields no second card and no error; a second dead on the same ticket yields card.merged">One card per cause; dedupe per ticket, kind, code</item>
     <item proof="test: no watcher.alive yields card.held 423 with retry_at; after 3 holds card.unwatched 500; a lamp returning posts the card on the next tick">The lamp gates the post and the fallback alerts</item>
     <item proof="make lint fails on a template row with a 16-word sentence or 5 options">The checker guards the templates</item>
-    <item proof="test: a policy row with a deadline yields policy.applied 200 and card.done at the fake clock's deadline">Standing policies default the card</item>
+    <item proof="test: a policy row with a deadline on a ticket.unblock card yields policy.applied 200 and card.done at the fake clock's deadline; make lint refuses a policy ref on the GOFACTORY, resume, break-glass and build-mode rows; the built owner-only card has no deadline and no default">Standing policies default only relayable cards</item>
+    <item proof="test: a card.refused cause posts on the first tick after the template table reloads with a fix; a card.unwatched cause posts on the first tick its lamp is alive; a card.merged cause is never selected again">Refused and unwatched are retried by query, merged is terminal</item>
+    <item proof="test: bring-up posts four standing cards once; a second bring-up replays; none ever gets card.done">Standing cards exist before any lever is pulled</item>
     <item proof="stable: one real card posted by the builder, answered by the owner on the page, card.done written; then make ask removed from the Makefile in the same ticket set">Go-live proof</item>
     <item proof="screenshots of a card of each cause class on dev, sent to the owner">The card looks right</item>
     <item proof="shared/status-codes.xml carries acts=owner on every initial row named in the input section">The code table is the only list</item>
   </checklist>
 
   <permissions id="permissions">
-    <runs-as>inside coq.service as the owner user</runs-as>
+    <runs-as>inside coq-service as the service user coq-svc (shared/authority.xml#principals)</runs-as>
     <may>read every record; write card and its sibling kinds; read the code table and templates; read the ticket record for a title</may>
     <may-not>write a ruling, reply to the owner, post to a tier whose lamp is not alive, call an LLM, or edit a template at run time</may-not>
     <who-may-add-a-card-kind>a pull request touching shared/status-codes.xml and cards.template.json, reviewed under the normal gate; never a seat at run time</who-may-add-a-card-kind>
@@ -242,8 +259,8 @@
     <source path="specs/SPEC-17-orchestrator-and-agent-health.xml" anchor="s-owner">what becomes a card: a second 423, break glass, a design to accept, a halt or resume, an irreversible action</source>
     <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep">V17 standing policies with deadline and default</source>
     <source path="rebuild/factory-rebuild-plan.xml" anchor="status-codes">blocked: the system posts exactly one card to the owner with the reason</source>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md" anchor="rule">bundle the mechanical, ask only what changes the build, recommend</source>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/reply-to-bearings-messages-on-the-page.md" anchor="how-to-apply">card shape: about one line, decide one question, options 2 to 3, labels 1 to 4 words</source>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md" anchor="rule">bundle the mechanical, ask only what changes the build, recommend</source>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/reply-to-bearings-messages-on-the-page.md" anchor="how-to-apply">card shape: about one line, decide one question, options 2 to 3, labels 1 to 4 words</source>
     <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="defect-found-2026-10-14-0410z">make ask refuses unless a wait is alive</source>
     <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md" anchor="4-4-panel-definitions-orange-header-and-dark-steel-panel">frame, caption and button values</source>
   </sources>

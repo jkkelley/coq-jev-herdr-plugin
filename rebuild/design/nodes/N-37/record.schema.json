@@ -2,119 +2,125 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-37/record.schema.json",
   "title": "N-37 Panel binding registry: input and output records",
-  "description": "Input screen.spec (materialised from the screen volumes) and output binding.record. Shared envelope per shared/state-store.xml#record-envelope. UTC everywhere.",
+  "description": "Input screen.spec (materialised from the screen volumes) and output binding.record. Shared envelope: $defs.envelope is a $ref to shared/state-store.schema.json#/$defs/envelope (book 1.1.0). UTC everywhere.",
   "$defs": {
-    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
-    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-    "nodeId": { "type": "string", "pattern": "^N-[0-9]{2}$" },
-    "panelId": { "type": "string", "pattern": "^(nav|stamp|state|map|machine|stats|alerts|controls)\\.[a-z0-9-]+$" },
-    "screenId": { "enum": ["map", "machine", "stats", "alerts", "controls", "common"] },
+    "utc": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "nodeId": {"type": "string", "pattern": "^N-[0-9]{2}$"},
+    "panelId": {"type": "string", "pattern": "^(nav|stamp|state|map|machine|stats|alerts|controls)\\.[a-z0-9-]+$"},
+    "screenId": {"enum": ["map", "machine", "stats", "alerts", "controls", "common"]},
     "envelope": {
-      "type": "object",
-      "required": ["kind", "id", "at", "node", "status", "seq", "version", "idempotency_key"],
-      "properties": {
-        "kind": { "type": "string" },
-        "id": { "type": "string", "minLength": 8 },
-        "at": { "$ref": "#/$defs/utc" },
-        "node": { "$ref": "#/$defs/nodeId" },
-        "status": { "type": "integer", "minimum": 100, "maximum": 599 },
-        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
-        "seq": { "type": "integer", "minimum": 1 },
-        "version": { "type": "integer", "minimum": 1 },
-        "idempotency_key": { "type": "string", "minLength": 8 },
-        "by": { "type": "string" }
-      }
+      "$ref": "../../shared/state-store.schema.json#/$defs/envelope",
+      "description": "The one shared envelope (shared/state-store.xml#envelope): the status code field is code; the operation key, expected version and lease token ride on the Commit request, never on the record; seq is added by N-01 at commit (book 1.1.0)."
     },
     "panelSpec": {
       "type": "object",
       "required": ["id", "screen", "kind", "fields", "staleness_seconds", "texts", "frame"],
       "properties": {
-        "id": { "$ref": "#/$defs/panelId" },
-        "screen": { "$ref": "#/$defs/screenId" },
-        "kind": { "type": "string", "description": "A record kind declared in shared/state-store.xml#record-kinds" },
-        "fields": { "type": "array", "minItems": 1, "items": { "type": "string" } },
-        "staleness_seconds": { "type": "integer", "minimum": 1, "maximum": 86400 },
+        "id": {"$ref": "#/$defs/panelId"},
+        "screen": {"$ref": "#/$defs/screenId"},
+        "kind": {"type": "string", "description": "A record kind declared in shared/state-store.xml#record-kinds"},
+        "fields": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+        "staleness_seconds": {"type": "integer", "minimum": 1, "maximum": 86400},
         "texts": {
           "type": "object",
           "required": ["empty", "loading", "error", "offline"],
           "properties": {
-            "empty": { "type": "string" },
-            "loading": { "type": "string" },
+            "empty": {"type": "string"},
+            "loading": {"type": "string"},
             "error": {
               "type": "object",
               "required": ["not-found", "timeout", "validation"],
-              "properties": { "not-found": { "type": "string" }, "timeout": { "type": "string" }, "validation": { "type": "string" } }
+              "properties": {"not-found": {"type": "string"}, "timeout": {"type": "string"}, "validation": {"type": "string"}}
             },
-            "offline": { "type": "string" }
+            "offline": {"type": "string"}
           }
         },
-        "frame": { "type": "string", "pattern": "^wf-map/(map|machine|stats|alerts|controls)/(default|empty|loading|error|offline)$" }
+        "frame": {"type": "string", "pattern": "^wf-map/(map|machine|stats|alerts|controls)/(default|empty|loading|error|offline)$"}
       }
     },
     "machineSpec": {
       "type": "object",
       "required": ["node", "name", "group", "cell", "sprite", "belts_out", "input_kind", "output_kind", "spec_anchor", "runbook_anchor"],
       "properties": {
-        "node": { "$ref": "#/$defs/nodeId" },
-        "name": { "type": "string" },
-        "group": { "type": "string", "pattern": "^G[1-7]$" },
-        "cell": { "type": "object", "required": ["col", "row"], "properties": { "col": { "type": "integer", "minimum": 0 }, "row": { "type": "integer", "minimum": 0 } } },
-        "sprite": { "type": "string" },
-        "belts_out": { "type": "array", "items": { "$ref": "#/$defs/nodeId" } },
-        "input_kind": { "type": "string" },
-        "output_kind": { "type": "string" },
-        "spec_anchor": { "type": "string", "pattern": "^rebuild/design/nodes/N-[0-9]{2}/spec\\.xml#" },
-        "runbook_anchor": { "type": "string", "pattern": "^rebuild/design/nodes/N-[0-9]{2}/(spec|runbook)\\.xml#" }
+        "node": {"$ref": "#/$defs/nodeId"},
+        "name": {"type": "string"},
+        "group": {"type": "string", "pattern": "^G[1-7]$"},
+        "cell": {
+          "type": "object",
+          "required": ["col", "row"],
+          "properties": {"col": {"type": "integer", "minimum": 0}, "row": {"type": "integer", "minimum": 0}}
+        },
+        "sprite": {"type": "string"},
+        "belts_out": {"type": "array", "items": {"$ref": "#/$defs/nodeId"}},
+        "input_kind": {"type": "string"},
+        "output_kind": {"type": "string"},
+        "spec_anchor": {"type": "string", "pattern": "^rebuild/design/nodes/N-[0-9]{2}/spec\\.xml#"},
+        "runbook_anchor": {"type": "string", "pattern": "^rebuild/design/nodes/N-[0-9]{2}/(spec|runbook)\\.xml#"}
       }
     },
     "screen.spec": {
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "type": "object",
       "required": ["sha", "panels", "nodes", "code_table_sha256", "atlas_sha256", "store_schema_sha256"],
       "properties": {
-        "kind": { "const": "screen.spec" },
-        "node": { "const": "N-37" },
-        "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-        "panels": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/panelSpec" } },
-        "nodes": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/nodeId" } },
-        "code_table_sha256": { "$ref": "#/$defs/sha256" },
-        "atlas_sha256": { "$ref": "#/$defs/sha256" },
-        "store_schema_sha256": { "$ref": "#/$defs/sha256" }
+        "kind": {"const": "screen.spec"},
+        "node": {"const": "N-37"},
+        "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "panels": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/panelSpec"}},
+        "nodes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/nodeId"}},
+        "code_table_sha256": {"$ref": "#/$defs/sha256"},
+        "atlas_sha256": {"$ref": "#/$defs/sha256"},
+        "store_schema_sha256": {"$ref": "#/$defs/sha256"}
       }
     },
     "binding.record": {
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "type": "object",
       "required": ["sha", "bindings", "machines", "code_table_sha256", "atlas_sha256", "failures", "check_log"],
       "properties": {
-        "kind": { "const": "binding.record" },
-        "node": { "const": "N-37" },
-        "status": { "enum": [201, 422, 500] },
-        "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-        "bindings": { "type": "array", "items": { "type": "object", "required": ["panel", "kind"], "properties": { "panel": { "$ref": "#/$defs/panelId" }, "kind": { "type": "string" } } } },
-        "machines": { "type": "array", "items": { "$ref": "#/$defs/machineSpec" } },
-        "code_table_sha256": { "$ref": "#/$defs/sha256" },
-        "atlas_sha256": { "$ref": "#/$defs/sha256" },
+        "kind": {"const": "binding.record"},
+        "node": {"const": "N-37"},
+        "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+        "bindings": {
+          "type": "array",
+          "items": {"type": "object", "required": ["panel", "kind"], "properties": {"panel": {"$ref": "#/$defs/panelId"}, "kind": {"type": "string"}}}
+        },
+        "machines": {"type": "array", "items": {"$ref": "#/$defs/machineSpec"}},
+        "code_table_sha256": {"$ref": "#/$defs/sha256"},
+        "atlas_sha256": {"$ref": "#/$defs/sha256"},
         "failures": {
           "type": "array",
           "items": {
             "type": "object",
             "required": ["rule", "subject", "message"],
             "properties": {
-              "rule": { "enum": ["generated-equals-committed", "panel-unbound", "panel-unused", "kind-missing", "node-machine", "sprite-missing", "code-missing", "hash-mismatch", "look-token", "schema-missing", "atlas-missing"] },
-              "subject": { "type": "string" },
-              "message": { "type": "string" }
+              "rule": {
+                "enum": [
+                  "generated-equals-committed",
+                  "panel-unbound",
+                  "panel-unused",
+                  "kind-missing",
+                  "node-machine",
+                  "sprite-missing",
+                  "code-missing",
+                  "hash-mismatch",
+                  "look-token",
+                  "schema-missing",
+                  "atlas-missing"
+                ]
+              },
+              "subject": {"type": "string"},
+              "message": {"type": "string"}
             }
           }
         },
-        "check_log": { "type": "string", "pattern": "^\\$COQ_STATE/map/registry/check/" }
+        "check_log": {"type": "string", "pattern": "^\\$COQ_STATE/map/registry/check/"},
+        "code": {"enum": [201, 422, 500]}
       },
-      "if": { "properties": { "status": { "const": 422 } } },
-      "then": { "properties": { "failures": { "minItems": 1 } } }
+      "if": {"properties": {"code": {"const": 422}}},
+      "then": {"properties": {"failures": {"minItems": 1}}}
     }
   },
-  "oneOf": [
-    { "$ref": "#/$defs/screen.spec" },
-    { "$ref": "#/$defs/binding.record" }
-  ]
+  "oneOf": [{"$ref": "#/$defs/screen.spec"}, {"$ref": "#/$defs/binding.record"}]
 }

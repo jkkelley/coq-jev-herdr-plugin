@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-52/record.schema.json",
   "title": "N-52 Phone push bridge: input and output records",
-  "description": "Input is the card record (schema ../N-28/record.schema.json) or a configured owner-acts alert. Outputs: push.receipt, push.failed, push.skipped, push.refused, push.folded, push.token.set. Envelope per shared/state-store.xml#envelope. No record carries the topic name, the token or the page key.",
+  "description": "Input is the card record (schema ../N-28/record.schema.json) or a configured owner-acts alert. Outputs: push.receipt (the provider accepted), push.observed (the owner saw it), push.failed, push.skipped, push.refused, push.folded, push.token.set. Envelope per shared/state-store.xml#envelope. No record carries the topic name, the token or the page key.",
   "$defs": {
     "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
     "recordId": { "type": "string", "minLength": 8, "maxLength": 64 },
@@ -21,11 +21,9 @@
         "idempotency_key": { "type": "string", "maxLength": 128 },
         "attempt": { "type": "integer", "minimum": 1, "maximum": 3 }
       },
-      "not": { "anyOf": [{ "required": ["key"] }, { "required": ["token"] }, { "required": ["topic"] }] }
-    }
-  },
-  "oneOf": [
-    {
+      "not": { "anyOf": [{"required": ["key"]}, {"required": ["token"]}, {"required": ["topic"]}] }
+    },
+    "card": {
       "title": "card (input; owned by N-28)",
       "type": "object",
       "required": ["kind", "code", "card", "tier", "about", "decide", "options", "rec"],
@@ -41,9 +39,9 @@
         "rec": { "type": "integer" }
       }
     },
-    {
+    "push.receipt": {
       "title": "push.receipt (output, one per card)",
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
         "kind": { "const": "push.receipt" },
         "code": { "const": 200 },
@@ -55,13 +53,29 @@
         "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
         "priority": { "enum": ["low", "default", "high"] },
         "folded": { "type": "boolean" },
-        "idempotency_key": { "type": "string", "pattern": "^push:" }
+        "idempotency_key": {
+          "type": "string",
+          "pattern": "^N-52/push\\.send/",
+          "description": "the operation key N-52/push.send/<card>/r1 (shared/contracts.xml#operation-keys)"
+        }
       },
       "required": ["card", "provider", "provider_id", "topic_hash", "sent_at", "attempt", "priority", "idempotency_key"]
     },
-    {
+    "push.observed": {
+      "title": "push.observed (output, once per card: the owner opened the push or the page drew the card after it)",
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": { "const": "push.observed" },
+        "code": { "const": 200 },
+        "card": { "$ref": "#/$defs/cardOrAlert" },
+        "receipt": { "$ref": "#/$defs/recordId", "description": "the push.receipt this observation follows" },
+        "via": { "enum": ["click", "card.shown"] }
+      },
+      "required": ["card", "receipt", "via"]
+    },
+    "push.failed": {
       "title": "push.failed (output, alert)",
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
         "kind": { "const": "push.failed" },
         "code": { "const": 500 },
@@ -72,31 +86,40 @@
       },
       "required": ["card", "attempts", "reason", "error"]
     },
-    {
+    "push.skipped": {
       "title": "push.skipped (output)",
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
         "kind": { "const": "push.skipped" },
         "code": { "const": 100 },
         "card": { "$ref": "#/$defs/cardOrAlert" },
-        "reason": { "enum": ["dark", "tier", "quiet-hours", "done", "duplicate", "shadow"] }
+        "reason": {
+          "enum": ["dark", "tier", "quiet-hours", "done", "seen", "duplicate", "shadow"],
+          "description": "quiet-hours is not terminal: the scan re-evaluates the card when the window ends (spec.xml mechanism step 7)"
+        },
+        "until": {
+          "$ref": "#/$defs/utc",
+          "description": "quiet-hours only: the end of the quiet window, when the scan revisits the card"
+        }
       },
-      "required": ["card", "reason"]
+      "required": ["card", "reason"],
+      "if": { "properties": {"reason": {"const": "quiet-hours"}} },
+      "then": { "required": ["until"] }
     },
-    {
+    "push.refused": {
       "title": "push.refused (output, system defect)",
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
         "kind": { "const": "push.refused" },
         "code": { "const": 400 },
         "card": { "$ref": "#/$defs/cardOrAlert" },
-        "violations": { "type": "array", "minItems": 1, "maxItems": 20, "items": { "type": "string", "maxLength": 240 } }
+        "violations": { "type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "string", "maxLength": 240} }
       },
       "required": ["card", "violations"]
     },
-    {
+    "push.folded": {
       "title": "push.folded (output)",
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
         "kind": { "const": "push.folded" },
         "code": { "const": 100 },
@@ -105,9 +128,9 @@
       },
       "required": ["card", "summary"]
     },
-    {
+    "push.token.set": {
       "title": "push.token.set (output; carries no token)",
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
         "kind": { "const": "push.token.set" },
         "code": { "const": 100 },
@@ -116,5 +139,15 @@
       },
       "required": ["by", "path"]
     }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/card" },
+    { "$ref": "#/$defs/push.receipt" },
+    { "$ref": "#/$defs/push.observed" },
+    { "$ref": "#/$defs/push.failed" },
+    { "$ref": "#/$defs/push.skipped" },
+    { "$ref": "#/$defs/push.refused" },
+    { "$ref": "#/$defs/push.folded" },
+    { "$ref": "#/$defs/push.token.set" }
   ]
 }
