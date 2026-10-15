@@ -255,7 +255,7 @@ Depth: [state store](shared/state-store.xml#purpose), [seat contract](shared/sea
 Every node turns one input record into one output record; a seat or a process on a node exists only between the two.
 An edge means the output record of the source is the input record of the target.
 The store (N-01) carries every record and the push transport (N-31) carries every page-bound record; their return edges are not drawn, because they would make every node a cycle through the store.
-Time loops (a retry, a phase change, an owner answer) are re-entries into the sink `RE` with a counter that only grows, so the graph stays acyclic: 52 nodes, 129 drawn edges, 12 re-entries, checked by Kahn's algorithm in [`bin/dag-check.py`](bin/dag-check.py) (check C16).
+Time loops (a retry, a phase change, an owner answer) are re-entries into the sink `RE` with a counter that only grows, so the graph stays acyclic: 52 nodes, 130 drawn edges, 12 re-entries, checked by Kahn's algorithm in [`bin/dag-check.py`](bin/dag-check.py) (check C16).
 Since 1.1.0 the same check compares the drawing with the edges every node volume declares, so a node cannot name an input the DAG does not show ([dag.md section 2.1](dag.md#21-declared-edges-that-are-not-drawn)).
 The acyclic drawing does not prove that the loops end: the [retry owner](shared/contracts.xml#retry-owner) and the [budgets](shared/retry-budget.xml#budgets) do, and the loops themselves are drawn as state machines in [section 8.4](#84-runtime-state-machines).
 
@@ -374,6 +374,7 @@ flowchart LR
   N-09 --> N-48
   N-09 --> N-50
   N-10 --> N-28
+  N-10 --> N-35
   N-10 --> N-41
   N-10 --> N-51
   N-10 --> RE

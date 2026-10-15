@@ -153,10 +153,10 @@ flowchart LR
   </section>
 
   <section id="state-paths" title="State paths and the cleanup script for each">
-    <path p="$COQ_STATE/ci/logs/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;/units/&lt;name&gt;.log" cleanup="ci/bin/cleanup-ci-state.sh --what gate-logs --older-than 30d [--apply]">Host copies of unit logs; the record's log.host path.</path>
-    <path p="$COQ_STATE/ci/logs/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;/gate-result.jsonl" cleanup="ci/bin/cleanup-ci-state.sh --what gate-logs --older-than 30d (the unit logs' entry; one flag removes both)">The result file as fetched.</path>
-    <path p="Jenkins artifacts of coq-gate builds" cleanup="JCasC buildDiscarder 30 days or 200 builds; ci/bin/cleanup-cluster.sh --what jenkins-builds --older-than 30d [--apply]">Jenkins' own retention; the script forces a sweep.</path>
-    <path p="cluster: pods app.kubernetes.io/part-of=coq-ci in coq-factory" cleanup="ci/bin/cleanup-cluster.sh --what factory-pods --older-than 2h [--apply]">The plugin deletes its pods; the script reaps stuck ones.</path>
+    <path p="$COQ_STATE/ci/logs/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;/units/&lt;name&gt;.log" cleanup="ci/bin/cleanup-ci-state.sh --what gate-logs --older-than 30d [--apply]" trigger="timer" acts="system">Host copies of unit logs; the record's log.host path.</path>
+    <path p="$COQ_STATE/ci/logs/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;/gate-result.jsonl" cleanup="ci/bin/cleanup-ci-state.sh --what gate-logs --older-than 30d (the unit logs' entry; one flag removes both)" trigger="timer" acts="system">The result file as fetched.</path>
+    <path p="Jenkins artifacts of coq-gate builds" cleanup="JCasC buildDiscarder 30 days or 200 builds; ci/bin/cleanup-cluster.sh --what jenkins-builds --older-than 30d [--apply]" trigger="timer" acts="system">Jenkins' own retention; the script forces a sweep.</path>
+    <path p="cluster: pods app.kubernetes.io/part-of=coq-ci in coq-factory" cleanup="ci/bin/cleanup-cluster.sh --what factory-pods --older-than 2h [--apply]" trigger="timer" acts="system">The plugin deletes its pods; the script reaps stuck ones.</path>
     <s>Every script dry-runs by default, acts with --apply, retries each deletion 3 times and exits 4 listing what remains; N-45 registers them.</s>
   </section>
 

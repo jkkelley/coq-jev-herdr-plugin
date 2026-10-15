@@ -94,7 +94,7 @@
       "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
         "kind": { "const": "watcher.refused" },
-        "code": { "const": 423 },
+        "code": { "const": 412 },
         "page": { "$ref": "#/$defs/page" },
         "holder": { "type": "string", "description": "unit:pid of the live lease holder; a hold never causes this refusal" }
       },

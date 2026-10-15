@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-41/record.schema.json",
   "title": "N-41 Alerts screen: input and output records",
-  "description": "Input alert (the alert view N-31 pushes, joined by the Go service) and output alert.ack. Shared envelope per shared/state-store.xml#record-envelope. UTC everywhere.",
+  "description": "Input alert (the alert view N-31 pushes, joined by the Go service) and output alert.ack. Shared envelope per shared/state-store.xml#record-envelope. UTC everywhere. An alert resolves only on a 2xx record whose recovery_of names it ($defs/recovery_of).",
   "$defs": {
     "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
     "nodeId": { "type": "string", "pattern": "^N-[0-9]{2}$" },
@@ -24,9 +24,20 @@
       }
     },
     "alert": {
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "type": "object",
-      "required": ["alert_id", "source_record_id", "source_node", "lamp", "code_name", "since", "cause", "retries", "system_did", "acts"],
+      "required": [
+        "alert_id",
+        "source_record_id",
+        "source_node",
+        "lamp",
+        "code_name",
+        "since",
+        "cause",
+        "retries",
+        "system_did",
+        "acts"
+      ],
       "properties": {
         "kind": { "const": "alert" },
         "node": { "const": "N-31" },
@@ -44,28 +55,28 @@
         "retries": { "type": "integer", "minimum": 0, "maximum": 3 },
         "system_did": { "type": "string", "maxLength": 300 },
         "card_id": { "type": "string" },
-        "resolved_at": { "$ref": "#/$defs/utc" },
-        "resolved_by_record": { "type": "string" },
+        "resolved_at": { "$ref": "#/$defs/utc", "description": "at of the resolving record" },
+        "resolved_by_record": { "type": "string", "minLength": 8, "description": "id of the 2xx record whose recovery_of equals alert_id" },
         "escalation_bound_s": { "type": "integer", "minimum": 60 },
         "ack": {
           "type": "object",
           "required": ["by", "at", "version"],
-          "properties": {
-            "by": { "const": "owner" },
-            "at": { "$ref": "#/$defs/utc" },
-            "version": { "type": "integer", "minimum": 1 }
-          }
+          "properties": { "by": {"const": "owner"}, "at": {"$ref": "#/$defs/utc"}, "version": {"type": "integer", "minimum": 1} }
         }
-      }
+      },
+      "dependentRequired": { "resolved_at": ["resolved_by_record"], "resolved_by_record": ["resolved_at"] }
     },
     "alert.ack": {
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "type": "object",
       "required": ["alert_id", "expected_version", "client_id"],
       "properties": {
         "kind": { "const": "alert.ack" },
         "node": { "const": "N-41" },
-        "status": { "enum": [201, 202, 409] },
+        "status": {
+          "enum": [200, 201, 409],
+          "description": "201 first ack; 200 a retried send with the same client_id and counter replays the first result; 409 a version conflict (another device acked or the alert changed)"
+        },
         "by": { "const": "owner" },
         "alert_id": { "type": "string" },
         "expected_version": { "type": "integer", "minimum": 1 },
@@ -82,7 +93,7 @@
           }
         }
       },
-      "if": { "properties": { "status": { "const": 409 } } },
+      "if": { "properties": {"status": {"const": 409}} },
       "then": { "required": ["conflict"] }
     },
     "alerts.frame": {
@@ -101,11 +112,13 @@
         "resolved_7d": { "type": "integer", "minimum": 0 },
         "queued_acks": { "type": "integer", "minimum": 0 }
       }
+    },
+    "recovery_of": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 64,
+      "description": "Carried by the resolving record (any node's 2xx record): the alert_id (source record id) it closes. An alert resolves only on a record naming it here; a later 2xx on the same node and ticket without recovery_of resolves nothing (book 1.1.0, report D F20)."
     }
   },
-  "oneOf": [
-    { "$ref": "#/$defs/alert" },
-    { "$ref": "#/$defs/alert.ack" },
-    { "$ref": "#/$defs/alerts.frame" }
-  ]
+  "oneOf": [{"$ref": "#/$defs/alert"}, {"$ref": "#/$defs/alert.ack"}, {"$ref": "#/$defs/alerts.frame"}]
 }

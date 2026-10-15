@@ -77,10 +77,10 @@
         "watcher": { "type": "integer", "minimum": 1, "description": "lease generation alive at post time" },
         "posted_at": { "$ref": "#/$defs/utc" },
         "owner_only": { "type": "boolean", "description": "an option carries an effect other than none or ticket.unblock (shared/authority.xml#relayable-rulings); absent means false" },
-        "standing": { "enum": ["halt", "resume", "gofactory", "build-mode"], "description": "standing cards only (spec.xml#standing-cards)" },
+        "standing": { "enum": ["halt", "resume", "gofactory", "build-mode", "kill"], "description": "standing cards only (spec.xml#standing-cards)" },
         "idempotency_key": {
           "type": "string",
-          "pattern": "^N-28/card\\.(post/.+|standing/(halt|resume|gofactory|build-mode))/r[0-9]{1,4}$",
+          "pattern": "^N-28/card\\.(post/.+|standing/(halt|resume|gofactory|build-mode|kill))/r[0-9]{1,4}$",
           "description": "N-28/card.post/<cause id>/r1, or N-28/card.standing/<lever>/r1 (shared/contracts.xml#operation-keys)"
         }
       },
@@ -88,7 +88,7 @@
       "dependentRequired": { "deadline": ["default"], "default": ["deadline"], "standing": ["owner_only"] },
       "allOf": [
         { "$ref": "#/$defs/envelope" },
-        { "if": { "properties": { "owner_only": { "const": true } } }, "then": { "not": { "anyOf": [{ "required": ["deadline"] }, { "required": ["default"] }] } } },
+        { "if": { "properties": { "owner_only": { "const": true } }, "required": ["owner_only"] }, "then": { "not": { "anyOf": [{ "required": ["deadline"] }, { "required": ["default"] }] } } },
         { "if": { "required": ["standing"] }, "then": { "properties": { "owner_only": { "const": true } } } }
       ]
     },

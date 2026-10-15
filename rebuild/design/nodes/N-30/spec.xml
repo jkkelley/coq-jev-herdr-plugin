@@ -179,10 +179,10 @@
   </status-codes>
 
   <state-paths id="state-paths">
-    <path p="store rows owner.message, routed.message, ack, reply, and the architect lane items" what="in N-01; messages and replies kept for the life of the store (the owner's record); acks and lane items 90 days" cleanup="registered with N-45 as store retention class owner-surface"/>
-    <path p="tools/bearings/config/inbox-rules.json and tools/bearings/tests/inbox/" class="tracked" retention="never" acts="owner" what="in the repository, not state" cleanup="none: tracked source, removed by a pull request"/>
-    <path p="journal of coq.service, lines prefixed inbox:" what="one line per route, stale, refusal" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
-    <path p="~/.bearings/coq-stable/messages.jsonl and delivered.json (today)" what="migrated once by N-32's cut-over step (owner lines to owner.message with ack answered where a reply_to exists, agent lines to reply); then cleanup" cleanup="tools/bearings/bin/cleanup-tier.sh coq-stable --legacy [--dry-run]"/>
+    <path trigger="timer" acts="system" p="store rows owner.message, routed.message, ack, reply, and the architect lane items" what="in N-01; messages and replies kept for the life of the store (the owner's record); acks and lane items 90 days" cleanup="registered with N-45 as store retention class owner-surface"/>
+    <path trigger="merge" acts="owner" p="tools/bearings/config/inbox-rules.json and tools/bearings/tests/inbox/" class="tracked" retention="never" what="in the repository, not state" cleanup="none: tracked source, removed by a pull request"/>
+    <path trigger="timer" acts="system" p="journal of coq.service, lines prefixed inbox:" what="one line per route, stale, refusal" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
+    <path trigger="owner" acts="owner" p="~/.bearings/coq-stable/messages.jsonl and delivered.json (today)" what="migrated once by N-32's cut-over step (owner lines to owner.message with ack answered where a reply_to exists, agent lines to reply); then cleanup" cleanup="tools/bearings/bin/cleanup-tier.sh coq-stable --legacy [--dry-run]"/>
   </state-paths>
 
   <edges id="edges">

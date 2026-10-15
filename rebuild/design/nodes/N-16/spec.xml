@@ -27,13 +27,13 @@
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
-    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="shared-needs">Shared anchors this volume cites</entry>
     <entry ref="purpose">Purpose</entry>
     <entry ref="input">Input: the worker brief inside a seat run</entry>
-    <entry ref="output">Output record: pr.opened, or seat.result blocked</entry>
+    <entry ref="output">Output record: pr.opened, or phase.failed</entry>
     <entry ref="mechanism">Mechanism: the brief, the run, the close-out by code</entry>
-    <entry ref="closeout">Close-out: push, pull request, pr.opened</entry>
-    <entry ref="rework">Rework on attempt n+1: resume by session id</entry>
+    <entry ref="closeout">Close-out: outbox push and pull request, pr.opened</entry>
+    <entry ref="rework">Rework on attempt n+1</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
     <entry ref="retries">Retries up to 3, then recover and report</entry>
@@ -45,6 +45,7 @@
     <entry ref="monitoring">Monitoring</entry>
     <entry ref="runbook">Runbook</entry>
     <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples</entry>
     <entry ref="sources">Sources cited</entry>
     <entry ref="rejected">Rejected, with the reason</entry>
   </contents>
@@ -54,8 +55,8 @@
     <dag href="../../dag.md#3-every-node">The DAG row of this node: input record and output record</dag>
     <principle href="../../dag.md#7-rules-every-node-obeys">Rules 1 to 9: input to output, no cog, three attempts, one store, code does mechanical jobs, the verdict the agent cannot edit, herdr is the owner's window, build mode, ships dark</principle>
     <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, timed-out stalls, a 409 that reports</principle>
-    <needs href="spec.xml#shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
-    <sibling href="record.schema.json" kind="schema">JSON schema of worker.result (the seat's structured output) and pr.opened</sibling>
+    <needs href="spec.xml#shared-needs">The shared anchors this volume cites</needs>
+    <sibling href="record.schema.json" kind="schema">JSON schema of worker.result (the seat's structured output) and pr.opened (also N-23's input shape)</sibling>
     <sibling href="../N-13/spec.xml#N-13">Seat layer render: the brief template and the fence</sibling>
     <sibling href="../N-14/spec.xml#N-14">Workspace provision: the branch wo/&lt;ticket&gt;</sibling>
     <sibling href="../N-15/spec.xml#N-15">One-shot seat launcher: the process and the post step</sibling>
@@ -67,16 +68,21 @@
   </pointers>
 
   <shared-needs id="shared-needs">
-    <text>Declared, not linked: the shared author writes these volumes and anchors; check.sh matches each need against shared/ when it lands. Nothing below points at a file that does not exist in this pull request.</text>
-    <need volume="../../shared/status-codes.xml" anchor="code-100" kind="status-code">100 exists or in progress: seat.bundle, workspace, seat.heartbeat, pr.opened, ticket-set.draft; acts: the next node on the edge</need>
-    <need volume="../../shared/status-codes.xml" anchor="code-423" kind="status-code">423 blocked: seat.result outcome blocked with a terminal_reason from the reason table; acts: N-11 by reason</need>
-    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">500 failed after 3 or a defect: seat.bundle.failed, workspace.failed, phase.failed, validator.failed, launcher.defect; acts: N-11, or N-06 health then N-28 for a defect</need>
-    <need volume="../../shared/seat-contract.xml" anchor="llm-only-for-judgement" kind="seat-contract">an LLM appears only in N-16 (write code), N-17 (cut tickets as data) and N-19 (judge a diff); every mechanical step around it is code</need>
-    <need volume="../../shared/seat-contract.xml" anchor="brief-shape" kind="seat-contract">brief.md sections in order: ticket, input and output, files, acceptance with observed exits, steps, rules, verdict on a retry, limits once as information</need>
-    <need volume="../../shared/seat-contract.xml" anchor="structured-output" kind="seat-contract">every phase returns structured output against the node's record.schema.json through --json-schema; an optional blocked object carries reason, observations and repro</need>
-    <need volume="../../shared/principles.xml" anchor="one-file-one-ticket" kind="principle">no file is ever touched by two open pull requests: declared at cut (N-18), checked at readiness (N-03), checked and recorded at start (N-14), enforced by the fence (N-13) and the diff check (N-16)</need>
-    <need volume="../../shared/principles.xml" anchor="breadcrumb-at-the-fix-site" kind="principle">every change carries its reason as a comment next to the change: what broke, why it mattered, why this fix, what it costs</need>
-    <need volume="../../shared/state-store.xml" anchor="table-tickets" kind="store-table">tickets: the whole ticket as a record (files, acceptance with observed_exit_on_main, depends_on, status, set_id); retention by N-45</need>
+    <text>Every shared anchor below is live in book 1.1.0; this volume cites them and restates none of their numbers.</text>
+    <need volume="../../shared/contracts.xml" anchor="outbox" kind="contract">push and PR are effects rows, sent and read back before pr.opened</need>
+    <need volume="../../shared/contracts.xml" anchor="operation-keys" kind="contract">N-16/branch.push and N-16/pr.open</need>
+    <need volume="../../shared/contracts.xml" anchor="ticket-transitions" kind="contract">in_flight to pr_open on pr.opened, owner N-16</need>
+    <need volume="../../shared/contracts.xml" anchor="run-states" kind="contract">result_committed to closed_out by the phase owner</need>
+    <need volume="../../shared/contracts.xml" anchor="retry-owner" kind="contract">phase.failed: owner N-16, three close-out passes, then N-11 charges once with session new</need>
+    <need volume="../../shared/contracts.xml" anchor="fencing" kind="contract">the close-out Commits carry the worker lease</need>
+    <need volume="../../shared/authority.xml" anchor="credential-matrix" kind="authority">forge-pr, held by coq-svc, used by N-16 only</need>
+    <need volume="../../shared/seat-contract.xml" anchor="llm-only-for-judgement" kind="seat-contract">an LLM writes code; everything mechanical around it is code</need>
+    <need volume="../../shared/seat-contract.xml" anchor="brief-shape" kind="seat-contract">brief.md sections in order</need>
+    <need volume="../../shared/seat-contract.xml" anchor="structured-output" kind="seat-contract">worker.result through --json-schema</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-100" kind="status-code">pr.opened</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">phase.failed</need>
+    <need volume="../../shared/principles.xml" anchor="one-file-one-ticket" kind="principle">the diff stays inside the ticket's claims</need>
+    <need volume="../../shared/principles.xml" anchor="breadcrumb-at-the-fix-site" kind="principle">every change carries its reason at the fix site</need>
   </shared-needs>
 
   <section id="purpose" title="Purpose">
@@ -97,92 +103,90 @@
     <text>The workspace is cwd, on branch wo/&lt;ticket&gt; at origin/main (attempt 1) or at origin/wo/&lt;ticket&gt; (attempt n+1), clean.</text>
   </section>
 
-  <section id="output" title="Output record: pr.opened, or seat.result blocked">
-    <text>The seat's structured output, worker.result (record.schema.json#/$defs/worker.result): ready (true), commit_sha (the branch head the worker left), summary (one paragraph for the pull request body), evidence (one entry per acceptance criterion: criterion id, command, observed exit, note), files_changed (as the worker sees them; checked by code), or blocked (reason, observations, repro) when the worker cannot finish inside its files.</text>
-    <text>The node's output record, pr.opened, code 100, written by the launcher's close-out: ticket, run_id, attempt, branch, pr (number), head_sha, base_sha (origin/main at push), files (from git diff --name-only base..head), evidence (copied from worker.result), url. idempotency_key = run_id. Or seat.result blocked 423 from N-15 with reason seat_blocked, output_rejected (closeout detail) or any launcher reason.</text>
+  <section id="output" title="Output record: pr.opened, or phase.failed">
+    <text>The seat's structured output, worker.result (record.schema.json#/$defs/worker.result): ready with commit_sha, summary, evidence per criterion and files_changed, or blocked with reason, observations and repro.</text>
+    <text>pr.opened (record.schema.json#/$defs/pr.opened), code 100, on the shared committed envelope, written by the close-out only after the PR is read back at the pushed head: ticket, run_id, attempt, lease, repo, base_ref main, head_repo, source seat, branch, pr, head_sha, base_sha, files, evidence, url, effects. It is also N-23's input shape. Same Commit: tickets.transition in_flight to pr_open (../../shared/contracts.xml#ticket-transitions), Lease.Release, and run:RUN_ID to closed_out with phase_record_ref.</text>
+    <text>phase.failed (../N-15/record.schema.json#/$defs/phase.failed, node N-16) carries failure_body: after a diff check refusal it is failure_kind output_rejected with step diff_check (the seat.result is already committed and records are append-only, so the refusal is its own record); after three failed close-out passes it is failure_kind phase.failed. N-11 charges either once with session new.</text>
   </section>
 
   <section id="mechanism" title="Mechanism: the brief, the run, the close-out by code">
     <mermaid>flowchart LR
   B[bundle brief.md plus workspace on wo/ticket] --> R[claude -p run: edit inside declared files, run host acceptance, commit]
   R --> O{structured output worker.result}
-  O -- ready --> C[close-out by code: diff check, push, gh pr create or find, verify head, pr.opened 100]
-  O -- blocked --> X[seat.result 423 seat_blocked with observations]
-  C -- check fails --> Y[seat.result 423 output_rejected with detail]
-  C -- push or gh fails 3 times --> Z[phase.failed 500; the branch keeps the commit]</mermaid>
+  O -- ready --> C[close-out in the service: diff check, effects intent, push, PR find or create, read back, pr.opened 100]
+  O -- blocked --> X[seat.result 423 seat_blocked, from N-15]
+  C -- diff check fails --> Y[phase.failed output_rejected]
+  C -- three failed passes --> Z[phase.failed 500; the slot keeps the commit]</mermaid>
     <step n="1">The run. The worker reads the brief and the files it names; it edits only inside them (a write outside is a recorded permission denial, not a prompt); it runs the acceptance commands marked host (lint, unit tests runnable without the cluster) through the repository's make targets; it fixes until they pass or until its limits end the run; it commits with the message "&lt;ticket id&gt; - &lt;title&gt;" plus a body naming the breadcrumb; it returns worker.result. A worker that cannot finish inside its files returns blocked with observations (path, line, saw, expected) and a repro command; a blocked output with no observation is refused by the launcher as output_rejected no_observations (kickback without evidence is prose, specs/SPEC-03-dag-and-node-contract.xml#s-records).</step>
-    <step n="2">The fence (N-13): Write and Edit only under the declared files; Bash allows make *, the acceptance commands, and git status|diff|log|add|commit|rev-parse|branch --show-current; git push, gh, podman, herdr, treehouse and rm -rf outside the workspace are denied. make targets that would touch the cluster are not allowed in the worker's Bash list; the pods run them.</step>
-    <step n="3">Commit identity: GIT_AUTHOR_NAME and GIT_COMMITTER_NAME from seats.json git identity (the owner's git user); the trailer is the session link the harness names, rendered by the launcher into the commit through a commit template, never typed by the worker (L11 F14: the hard-coded trailer named one old session; the launcher writes the run's own session id).</step>
+    <step n="2">The fence (N-13) and the slot ACL (N-14): Write and Edit only under the declared files; Bash allows make *, the acceptance commands, and git status|diff|log|add|commit|rev-parse|branch --show-current; git push, gh, podman, herdr, treehouse and rm -rf outside the workspace are denied. make targets that would touch the cluster are not allowed in the worker's Bash list; the pods run them.</step>
+    <step n="3">Commit identity: user.name and user.email come from the mirror's config that N-14 sets (seats.json git identity); the environment holds nothing else (../../shared/seat-contract.xml#launch-flags); the session trailer is rendered into the commit template by N-13, never typed by the worker (L11 F14).</step>
     <step n="4">Close-out, section closeout.</step>
   </section>
 
-  <section id="closeout" title="Close-out: push, pull request, pr.opened">
-    <text>Function closeout(run, worker.result) in scheduler/internal/launcher/worker.go, run by N-15 after seat.result done. Every step is idempotent so a retry after a crash finishes what the previous pass began.</text>
-    <step n="1">Diff check. git -C ws diff --name-only origin/main...HEAD; every path must match a declared file pattern (the claims rule of N-14) and none may be an aggregate or a runtime file (events/, logs, CHANGELOG.md, INDEX.md, CONTEXT_STATE.md); HEAD must equal worker.result.commit_sha; the tree must be clean. A failure is seat.result blocked 423 output_rejected with the stray paths, and attempt n+1 gets them in its brief. This is factory/bin/gate.sh pr-files moved to the moment before the push.</step>
-    <step n="2">Push. git -C ws push origin wo/&lt;ticket&gt; (never --force; a rework attempt is on the same branch and fast-forwards). A non-fast-forward rejection means something else pushed this branch: blocked push_rejected and a defect record, because N-02 should have fenced it.</step>
-    <step n="3">Pull request. gh pr list --head wo/&lt;ticket&gt; --json number,headRefOid; if one exists, reuse it; else gh pr create --base main --head wo/&lt;ticket&gt; --title "&lt;ticket id&gt; - &lt;title&gt;" --body-file (the summary, the acceptance evidence table, the ticket anchor, and the session link line). The title format is the ticket id and its full title (global rule: never a ticket without its title).</step>
-    <step n="4">Verify. gh pr view N --json headRefOid,state; headRefOid must equal the pushed head; state open. Then pr.opened 100 with idempotency_key run_id. The branch stays checked out in the slot until N-45 releases it on merge or dead; nothing else holds wo/&lt;ticket&gt; because every workspace is its own worktree from the mirror, so the old "release the branch before pr.opened" defect cannot recur (memory release-branch-before-pr-opened).</step>
-    <text>gh runs with the host user's gh auth (owner-initiated once, like the Claude login); the token is never given to the seat. The close-out log is runs/&lt;run_id&gt;/closeout.log.</text>
+  <section id="closeout" title="Close-out: outbox push and pull request, pr.opened">
+    <text>Function closeout(run) in scheduler/internal/closeout/worker.go, run in the service as principal coq-svc acting as N-16 (../../shared/authority.xml#credential-matrix row forge-pr), level-triggered on run entities in result_committed with a done worker seat.result. The seat never pushes and never calls the forge. Every step is idempotent, and every Commit carries the worker lease.</text>
+    <step n="1">Diff check, in the service against the slot's worktree: git diff --name-only origin/main...HEAD; every path inside the ticket's live claims (../../shared/contracts.xml#claims), none an aggregate or runtime file; HEAD equals worker.result.commit_sha; the tree is clean. A failure is phase.failed step diff_check with failure_kind output_rejected and the stray paths; no push happens.</step>
+    <step n="2">Decide. One Commit with key N-16/branch.push/TICKET@HEAD_SHA/r1 writing two effects rows in state intent (../../shared/contracts.xml#outbox): the push of wo/TICKET at HEAD_SHA (provider github, action branch.push) and the PR open (action pr.open, op id N-16/pr.open/TICKET@ATTEMPT/r1). Nothing calls GitHub before this Commit.</step>
+    <step n="3">Push. git push from the mirror with forge-pr (never --force); effects.advance intent to sent to accepted; read back the remote head of wo/TICKET; equal to HEAD_SHA is done. A non-fast-forward rejection is phase.failed step branch.push reason push_rejected and a defect record, because fencing should have prevented a second writer.</step>
+    <step n="4">Pull request. Look up an open PR by head branch first (the outbox lookup key); reuse it, else create it with base main, title the ticket id and full title, and the summary and evidence table as body; effects.advance to accepted.</step>
+    <step n="5">Read back and record. GET the PR: head sha equals HEAD_SHA and state open. Then one Commit with key N-16/pr.open/TICKET@ATTEMPT/r1: effects.advance pr.open to done, the pr.opened record, tickets.transition in_flight to pr_open, Lease.Release, run:RUN_ID to closed_out with phase_record_ref. No record claims the PR before this read back.</step>
+    <text>The branch stays in the slot until N-45 releases it on merge or dead; nothing else holds wo/TICKET because every workspace is its own worktree (memory release-branch-before-pr-opened).</text>
   </section>
 
-  <section id="rework" title="Rework on attempt n+1: resume by session id">
-    <text>A review.changes 422, a merge.conflict 409 or a red coq/gate on the head sha is a failure record to N-11, which dispatches attempt n+1 with target.verdict_ref. N-14 cuts the workspace from origin/wo/&lt;ticket&gt; (the branch has the prior commit); N-13 renders the brief with the verdict verbatim and sets session_id to the prior run's session when the prior run ended done (its context is worth keeping) and to a fresh UUID when the prior run was blocked or crashed (a broken context is not resumed). N-15 launches with --resume when the bundle says so. The worker fixes, commits, and the close-out pushes the same branch; the pull request is reused; a new head sha starts a new gate and a new review. There is no fourth attempt: after attempt 3 the ticket is dead and the owner sees one card.</text>
-    <text>A merge.conflict: the brief says "merge origin/main into wo/&lt;ticket&gt;, resolve inside your declared files, keep the deletion of gitignored aggregates" (specs/SPEC-17-orchestrator-and-agent-health.xml#n-merge). A conflict outside the declared files is a scheduling defect, not a worker task (memory one-file-one-in-flight-ticket): the worker returns blocked conflict_outside_files and N-11 reports it as a defect card rather than retrying.</text>
+  <section id="rework" title="Rework on attempt n+1">
+    <text>review.changes, gate.red and merge.conflict (including a branch behind main) are failures N-11 charges to the worker phase, attempt n plus 1, session resume-if-done (../../shared/contracts.xml#retry-owner). N-14 cuts the workspace from origin/wo/TICKET; N-13 renders the brief with the failure records verbatim and the session the attempt names. The worker fixes, and for a merge.conflict or behind it merges origin/main into wo/TICKET and resolves inside its files; the close-out pushes the same branch and reuses the PR; a new head sha starts a new gate and a new review.</text>
+    <text>A conflict outside the declared files is a scheduling defect (memory one-file-one-in-flight-ticket): the worker returns blocked conflict_outside_files, N-11 charges it, and the dead card after the third says so.</text>
   </section>
 
   <section id="start" title="How it starts without an agent typing">
-    <text>A worker exists only inside an N-15 run that was started from a dispatch; the dispatch came from a lease on a ticket.ready record (N-02, N-07). The brief is an argument of the process, never a typed prompt. The close-out runs in the same launcher call. No person and no agent starts, wakes, nudges or ends a worker.</text>
+    <text>A worker exists only inside an N-15 run started from a dispatch; the close-out is a service controller level-triggered on run entities. No person and no agent starts, wakes, nudges or ends a worker.</text>
   </section>
 
   <section id="waits" title="Every wait, its timeout and its fallback">
-    <wait what="the run" timeout="wall clock 5400 s, stall 600 s, max turns 300, budget 15 USD (seats.json worker defaults)" attempts="1 per run" fallback="N-15 kills and records blocked; N-11 counts the attempt"/>
-    <wait what="a host acceptance command inside the run" timeout="the command's own, bounded by the run's limits; the brief tells the worker which commands are host-runnable" attempts="the worker's judgement inside its limits" fallback="the run ends by stall or wall clock; the gate runs the suites anyway"/>
-    <wait what="git push" timeout="60 s" attempts="3, backoff 5 s, 15 s, 45 s" fallback="phase.failed 500 push; the commit is on the branch locally; attempt n+1 workspace is cut from origin/wo/ticket if the push landed or from origin/main plus the slot's branch is pushed first by the recovery pass"/>
-    <wait what="gh pr create or list or view" timeout="30 s" attempts="3" fallback="phase.failed 500 pr; the branch is pushed, so the recovery pass finds the pull request by head or creates it"/>
-    <wait what="pr.opened put" timeout="5 s" attempts="3" fallback="the recovery pass re-puts from closeout.log; idempotent by run_id"/>
-    <text>The worker never waits for the gate, the reviewer or the merge. Those are new traversals that the records start.</text>
+    <wait what="the run" timeout="the unit's RuntimeMaxSec (run.deadline_seconds.worker) and N-12's stall bound (stall.seconds.worker), ../../shared/contracts.xml#timing" attempts="1 per run" fallback="the run ends blocked; N-11 charges it"/>
+    <wait what="git push from the mirror" timeout="60 s" attempts="3 passes, backoff 5 s, 15 s, 45 s; an unknown outcome is looked up by the remote head before any resend" fallback="phase.failed step branch.push; the commit stays in the slot"/>
+    <wait what="the forge PR lookup, create and read back" timeout="30 s" attempts="3 passes; lookup by head branch before any create" fallback="phase.failed step pr.open or pr.verify"/>
+    <wait what="the close-out Commits" timeout="5 s" attempts="3, same operation key" fallback="the next pass resends the same key; a replay is harmless"/>
+    <wait what="the worker lease during close-out" timeout="lease.ttl_seconds" attempts="renewed by the close-out while it works" fallback="a 412 lease_not_current stops the close-out; N-12 and N-11 handle the expiry"/>
+    <text>The worker never waits for the gate, the reviewer or the merge.</text>
   </section>
 
   <section id="retries" title="Retries up to 3, then recover and report">
-    <text>Inside the run the worker's own fix loop is bounded by the launcher's limits, not by a sentence. Across runs N-11 counts attempts to 3, with backoff min(10 s times 2 to the n minus 1, 5 min), then dead and one card. The close-out's mechanical steps retry 3 times each; a phase.failed leaves the branch intact and the recovery pass (every tick, level-triggered: runs with seat.result done and no pr.opened and no phase.failed younger than its backoff) finishes the close-out without a new LLM run. A phase.failed three times is a defect record on the infrastructure (GitHub or git), and N-28 posts one card.</text>
+    <text>Inner layer: the close-out recovery in code, three passes, no model (../../shared/contracts.xml#retry-owner row phase.failed). After the third failed pass, phase.failed with failure_body (failure_kind phase.failed, passes 3) goes to N-11, which charges once with session new. A diff_check refusal is not retried: it is phase.failed with failure_kind output_rejected at once. Outer layer: N-11's three worker attempts, then dead and one card.</text>
   </section>
 
   <section id="many-agents" title="Many agents at once">
-    <text>Many workers run at once, one per ticket, each in its own slot and branch; they never share a file because claims are disjoint (N-14) and the fence denies writes outside them (N-13). A worker cannot see another worker's workspace or run directory.</text>
-    <text>Collision 1, two workers on one ticket: impossible by the lease (N-02 fencing) and by the claims rows (N-14 ticket_in_flight); if both exist anyway, the second's heartbeat renewal is refused and it kills itself (N-15), and the close-out's non-fast-forward push refusal catches the last case.</text>
-    <text>Collision 2, main moves while the worker works: the worker's branch is from origin/main at provision time; the merge (N-09) handles a clean rebase or returns merge.conflict 409 for attempt n+1; disjoint files make a textual conflict rare, and one outside the declared files is a defect card, not a retry.</text>
-    <text>Collision 3, the reviewer and a rework worker at the same head: the reviewer is detached at the head sha; the worker pushes a new head; the review on the old head is discarded by N-19 as head_moved and the new head gets its own gate and review. Records are keyed by head sha, so nothing is overwritten.</text>
-    <text>Collision 4, two close-out passes for one run (crash during close-out, then recovery): push is idempotent, gh pr list finds the existing pull request, pr.opened is idempotent by run_id; the second pass commits nothing new.</text>
-    <text>Collision 5, the owner's break glass on a worker's branch: a hand push to wo/&lt;ticket&gt; makes the close-out's push non-fast-forward; it is recorded as push_rejected and the ticket goes to N-11; the hand push is visible as a defect, never silently merged into.</text>
+    <text>Many workers run at once, one per ticket, each in its own slot and branch; claims are disjoint (N-03) and the slot ACL plus the fence deny writes elsewhere.</text>
+    <text>Two workers on one ticket: impossible past GrantDispatch; a stale run cannot Commit (412), and a non-fast-forward push catches the last case.</text>
+    <text>Main moves while the worker works: the merge (N-09) either merges the PR or returns merge.conflict (or behind) as a failure; N-11 sends it back to the worker as attempt n plus 1. N-09 never rebases a branch itself.</text>
+    <text>The reviewer and a rework worker at one head: the reviewer is detached at its dispatched head; a new push is a new head with its own gate and review.</text>
+    <text>Two close-out passes for one run: both use the same operation keys; the effects rows are looked up before any resend; pr.opened is one Commit.</text>
   </section>
 
   <section id="codes" title="Status codes this node emits">
-    <code value="100" kind="pr.opened">The pull request exists at the head sha. Acts: N-23 plans the suites; N-48 when the diff touches an owner surface.</code>
-    <code value="423" kind="seat.result">Blocked: seat_blocked with observations, output_rejected (stray files, dirty tree, no observations, conflict_outside_files, push_rejected), or any launcher reason. Acts: N-11.</code>
-    <code value="500" kind="phase.failed">Close-out infrastructure failed 3 times; the branch keeps the commit. Acts: the recovery pass, then N-11, then a card.</code>
+    <code value="100" kind="pr.opened">The PR exists at the head sha, read back. Acts: N-23 plans the suites; N-48 when the diff touches an owner surface; N-07 grants the reviewer and gate phases on pr_open.</code>
+    <code value="500" kind="phase.failed">Close-out failed three passes, or the diff check refused. Acts: N-11 charges once.</code>
   </section>
 
   <section id="state-paths" title="State paths and the cleanup script for each">
-    <path dir="$COQ_STATE/seats/runs/&lt;run_id&gt;/closeout.log" writes="argv and results of diff check, push, gh" cleanup="scheduler/host/bin/cleanup-seat-runs.sh (N-15)" retention="7 days, 30 for a dead ticket"/>
-    <path dir="$COQ_CACHE/ws/&lt;slot&gt;/" writes="the worker's edits and commit" cleanup="scheduler/host/bin/cleanup-workspaces.sh (N-14)" retention="until merge, dead or cancel; a slot with unpushed commits is kept and reported"/>
-    <path dir="origin wo/&lt;ticket&gt;" writes="the pushed branch" cleanup="N-45 branch delete on merge or dead (scheduler/host/bin/cleanup-branches.sh, dry run then --apply, never a branch with an open pull request)" retention="until merge or dead"/>
-    <text>Nothing is written into the repository on main by this node; the pull request is the only path (AGENTS.md#law-runtime-data-never-lives-in-git, GOOD line).</text>
+    <path id="N-16.closeout" dir="$COQ_STATE/seats/closeout/&lt;run_id&gt;.log" writes="argv and results of the diff check, push and forge calls (no token)" cleanup="scheduler/host/bin/cleanup-seat-runs.sh" retention="7 days, 30 for a dead ticket" trigger="timer" acts="system"/>
+    <path id="N-16.branch" dir="origin wo/&lt;ticket&gt;" writes="the pushed branch" cleanup="scheduler/host/bin/cleanup-branches.sh" retention="until merge or dead; never a branch with an open pull request" trigger="merge" acts="system"/>
+    <text>The slot is N-14's path. Nothing is written into the repository on main by this node; the pull request is the only path.</text>
   </section>
 
   <section id="permissions" title="Permissions">
-    <text>The worker seat (from N-13): Read, Grep, Glob, Write, Edit, Bash; writes only inside declared files; Bash: make *, the acceptance commands, git status|diff|log|add|commit|rev-parse|branch --show-current; denied: Agent, Task, git push, gh *, podman *, herdr *, treehouse *, rm -rf outside the workspace, any path under $COQ_STATE except its own run directory for reading the brief. Model: roles/worker.json model.claude (claude-sonnet-5-5), effort high.</text>
-    <text>The close-out (code, host user): git push through the mirror remote with the host credential helper; gh with the host's gh auth; gRPC to the store. No cluster access.</text>
+    <text>The worker seat (N-13): writes only inside its claims in its rwX slot; Bash make, the acceptance commands and git read and commit verbs; denied git push, gh, podman, herdr, treehouse, Agent, Task. No forge credential, no network but the Anthropic API.</text>
+    <text>The close-out: principal coq-svc acting as N-16; credential forge-pr from STATE/secrets (../../shared/authority.xml#credential-matrix), used only for the push and the PR; effects rows and the Commits above. No cluster access.</text>
   </section>
 
   <section id="checklist" title="Checklist with proof">
-    <item proof="go test ./internal/launcher -run TestCloseoutStrayFile: a fixture branch with a change outside the declared files yields seat.result 423 output_rejected naming the path and no push">The diff check refuses a stray path before the push.</item>
-    <item proof="go test TestCloseoutIdempotent: closeout run twice against a fake gh and git yields one push, one pull request, one pr.opened">Close-out is idempotent.</item>
-    <item proof="go test TestCloseoutVerifiesHead: a fake gh returning a different headRefOid yields 423 output_rejected pr_head_mismatch">pr.opened is written only after the head is verified.</item>
-    <item proof="probe: a worker seat whose brief asks it to run gh pr create ends with a permission denial naming gh and the close-out still opens the pull request">The worker cannot push or open a pull request; code does.</item>
-    <item proof="probe: a worker seat on a fixture ticket with one acceptance command produces a commit whose message starts with the ticket id and full title and whose diff carries a breadcrumb comment at the fix site; the pull request title equals the commit subject">Title and breadcrumb rules hold.</item>
-    <item proof="go test TestReworkResumes: attempt 2 after review.changes renders a bundle with the prior session id and a brief containing the observations verbatim; attempt 2 after crashed renders a fresh session id">Rework resumes only a done session and carries the verdict.</item>
-    <item proof="go test TestBlockedNeedsObservations: a worker.result with blocked and no observations yields 423 output_rejected no_observations">Blocked without evidence is refused.</item>
-    <item proof="go test TestNoFourthAttempt (N-11 fixture): the third seat.result blocked yields a dead record and exactly one card">Attempts stop at 3.</item>
+    <item proof="go test ./internal/closeout -run TestStrayFile: a change outside the claims yields phase.failed step diff_check, failure_kind output_rejected, and no effects row">The diff check refuses a stray path before any effect.</item>
+    <item proof="go test TestOutboxBeforeForge: a fake forge records no call before the branch.push Commit; a crash after the push leaves the effect unknown and the next pass looks up the remote head before resending">No forge call before the intent Commit.</item>
+    <item proof="go test TestCloseoutIdempotent: two passes yield one push, one PR, one pr.opened">Close-out is idempotent.</item>
+    <item proof="go test TestReadBackBeforeRecord: a fake forge returning another head yields phase.failed step pr.verify and no pr.opened">pr.opened only after read back.</item>
+    <item proof="go test TestPrOpenedIsN23Input: every pr.opened example validates against ../N-23/record.schema.json#/$defs/input">One pr.opened shape.</item>
+    <item proof="host probe: a worker seat running git push or gh is denied and the close-out still opens the PR as coq-svc">The seat cannot push; the service does.</item>
+    <item proof="go test TestThreePassesThenN11: three failed pushes yield one phase.failed with passes 3 and one N-11 attempt">Close-out recovery is bounded.</item>
   </section>
 
   <section id="monitoring" title="Monitoring">
@@ -190,18 +194,26 @@
   </section>
 
   <section id="runbook" title="Runbook">
-    <text>See a worker's work: the pull request on GitHub (title is the ticket id and title); the transcript in runs/&lt;run_id&gt;/transcript.jsonl; closeout.log for the push and gh steps.</text>
-    <text>A phase.failed on push or gh: the recovery pass retries each tick; if GitHub is down for longer than the backoff schedule, N-06 health shows it and nothing is lost because the commit is on the slot's branch. Never push a worker's branch by hand; if it happens, the close-out records push_rejected and N-11 continues.</text>
-    <text>A dead ticket after three blocked runs: the card (N-28) carries the three reasons and the last observations; the owner's options are re-cut (a spec-author run against the same anchor), split, or cancel; never "try again" without a change, because the third attempt already was that.</text>
-    <text>Cleanup: the run directory by cleanup-seat-runs.sh (N-15), the slot by cleanup-workspaces.sh (N-14), the branch by cleanup-branches.sh (N-45); all dry-run first and registered.</text>
+    <text>See a worker's work: the PR on GitHub (title is the ticket id and title); ctl run RUN_ID for the run entity, seat.result and effects rows; the close-out log for the push and forge steps.</text>
+    <text>A phase.failed on push or PR: the effects rows say which step and whether the outcome was unknown; nothing is lost because the commit is in the slot. Never push a worker's branch by hand: a hand push makes the next close-out non-fast-forward and a defect.</text>
+    <text>A dead ticket after three charged failures: the card (N-28) carries the reasons and the last observations; the owner's options are re-cut, split or cancel.</text>
+    <text>Cleanup: the close-out log by cleanup-seat-runs.sh, the slot by cleanup-workspaces.sh (N-14), the branch by cleanup-branches.sh (N-45); all dry-run first and registered.</text>
   </section>
 
   <section id="edges" title="DAG edges in and out">
-    <edge dir="in" from="../N-15/spec.xml#N-15" record="the worker brief inside a seat run (bundle plus workspace)"/>
+    <edge dir="in" from="../N-15/spec.xml#N-15" record="seat.result done for a worker run (the brief ran inside the launcher's unit)"/>
     <edge dir="out" to="../N-23/spec.xml#N-23" record="pr.opened"/>
     <edge dir="out" to="../N-48/spec.xml#N-48" record="pr.opened touching tools/bearings or the map app"/>
-    <edge dir="out" to="../N-11/spec.xml#N-11" record="seat.result blocked 423, phase.failed 500 (failure records, written by N-15 on this node's behalf)"/>
-    <edge dir="re-entry" to="../N-02/spec.xml#N-02" record="attempt n+1 after review.changes, merge.conflict or a red gate re-enters as a fresh claim (../../dag.md#4-re-entries)"/>
+    <edge dir="out" to="../N-11/spec.xml#N-11" record="phase.failed 500 (failure_body)"/>
+    <edge dir="re-entry" to="../N-07/spec.xml#N-07" record="attempt n+1 after review.changes, merge.conflict or a red gate: ticket retry_wait to ready, then a new grant (../../dag.md#4-re-entries)"/>
+  </section>
+
+  <section id="examples" title="Examples">
+    <example schema="record.schema.json#/$defs/pr.opened">{"id":"20261014T075000Z-100-p9q1r","at":"2026-10-14T07:50:00Z","kind":"pr.opened","code":100,"node":"N-16","seq":5530,"epoch":1,"ticket":"WO-20261014-ab12","run_id":"d-20261014063000-p2m7dq","attempt":1,"lease":{"key":"WO-20261014-ab12:worker:1","token":184,"generation":1},"repo":"jkkelley/coq-jev-herdr-plugin","base_ref":"main","head_repo":"jkkelley/coq-jev-herdr-plugin","source":"seat","branch":"wo/WO-20261014-ab12","pr":57,"head_sha":"89abcdef0123456789abcdef0123456789abcdef","base_sha":"0123456789abcdef0123456789abcdef01234567","files":["scheduler/internal/sched/tick.go"],"evidence":[{"criterion":"a1","command":"go test ./internal/sched","observed_exit":0,"runs_in":"host"}],"url":"https://github.com/jkkelley/coq-jev-herdr-plugin/pull/57","effects":["N-16/branch.push/WO-20261014-ab12@89abcdef0123456789abcdef0123456789abcdef/r1","N-16/pr.open/WO-20261014-ab12@1/r1"]}</example>
+    <example schema="../N-23/record.schema.json#/$defs/input">{"id":"20261014T075000Z-100-p9q1r","at":"2026-10-14T07:50:00Z","kind":"pr.opened","code":100,"node":"N-16","seq":5530,"epoch":1,"ticket":"WO-20261014-ab12","run_id":"d-20261014063000-p2m7dq","attempt":1,"lease":{"key":"WO-20261014-ab12:worker:1","token":184,"generation":1},"repo":"jkkelley/coq-jev-herdr-plugin","base_ref":"main","head_repo":"jkkelley/coq-jev-herdr-plugin","source":"seat","branch":"wo/WO-20261014-ab12","pr":57,"head_sha":"89abcdef0123456789abcdef0123456789abcdef","base_sha":"0123456789abcdef0123456789abcdef01234567","files":["scheduler/internal/sched/tick.go"],"evidence":[{"criterion":"a1","command":"go test ./internal/sched","observed_exit":0,"runs_in":"host"}],"url":"https://github.com/jkkelley/coq-jev-herdr-plugin/pull/57","effects":["N-16/branch.push/WO-20261014-ab12@89abcdef0123456789abcdef0123456789abcdef/r1","N-16/pr.open/WO-20261014-ab12@1/r1"]}</example>
+    <example schema="../N-15/record.schema.json#/$defs/phase.failed">{"id":"20261014T075500Z-500-s2t3u","at":"2026-10-14T07:55:00Z","kind":"phase.failed","code":500,"node":"N-16","seq":5540,"epoch":1,"ticket":"WO-20261014-cd34","phase":"worker","attempt":1,"outcome":"failed","failure_kind":"phase.failed","run_id":"d-20261014063250-k3l4mn","dispatch_id":"d-20261014063250-k3l4mn","lease":{"key":"WO-20261014-cd34:worker:1","token":187},"step":"branch.push","reason":"github 502 three passes; remote head unchanged","passes":3}</example>
+    <example schema="../N-15/record.schema.json#/$defs/phase.failed">{"id":"20261014T075600Z-500-v4w5x","at":"2026-10-14T07:56:00Z","kind":"phase.failed","code":500,"node":"N-16","seq":5541,"epoch":1,"ticket":"WO-20261014-ef56","phase":"worker","attempt":2,"outcome":"failed","failure_kind":"output_rejected","run_id":"d-20261014070500-y6z7ab","lease":{"key":"WO-20261014-ef56:worker:2","token":190},"step":"diff_check","reason":"stray path herdr/bin/seat.sh outside claims","passes":1}</example>
+    <example schema="record.schema.json#/$defs/worker.result">{"ready":true,"commit_sha":"89abcdef0123456789abcdef0123456789abcdef","summary":"Split the tick loop so Tick is pure over its snapshot.","evidence":[{"criterion":"a1","command":"go test ./internal/sched","observed_exit":0,"runs_in":"host"}],"files_changed":["scheduler/internal/sched/tick.go"]}</example>
   </section>
 
   <section id="sources" title="Sources cited">

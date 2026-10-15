@@ -8,9 +8,9 @@
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
     <entry ref="purpose">Purpose and the one sentence</entry>
-    <entry ref="input">Input record: failure</entry>
-    <entry ref="output">Output records: attempt and dead</entry>
-    <entry ref="mechanism">Mechanism: the retry table and the backoff arithmetic</entry>
+    <entry ref="input">Input: any failure record (failure_body) and a start-grace expiry</entry>
+    <entry ref="output">Output records: attempt, regrant, dead and the failure.handled entity</entry>
+    <entry ref="mechanism">Mechanism: the retry-owner rows and the backoff arithmetic</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
     <entry ref="retries">Retries of the retry node itself</entry>
@@ -18,7 +18,7 @@
     <entry ref="status-codes">Status codes this node emits</entry>
     <entry ref="state-paths">State paths written and the cleanup script for each</entry>
     <entry ref="edges">DAG edges in and out</entry>
-    <entry ref="schema">Schema: record.schema.json</entry>
+    <entry ref="schema">Schema: record.schema.json and examples</entry>
     <entry ref="checklist">Checklist with proof per item</entry>
     <entry ref="permissions">Permissions</entry>
     <entry ref="monitoring">Monitoring</entry>
@@ -31,23 +31,28 @@
     <parent path="../../index.xml" anchor="N-11"/>
     <dag path="../../dag.md" anchor="4-re-entries"/>
     <sibling node="N-07" path="../N-07/spec.xml" anchor="contents"/>
-    <sibling node="N-08" path="../N-08/spec.xml" anchor="contents"/>
-    <sibling node="N-09" path="../N-09/spec.xml" anchor="contents"/>
-    <sibling node="N-10" path="../N-10/spec.xml" anchor="contents"/>
     <sibling node="N-12" path="../N-12/spec.xml" anchor="contents"/>
+    <sibling node="N-15" path="../N-15/spec.xml" anchor="contents"/>
+    <sibling node="N-16" path="../N-16/spec.xml" anchor="contents"/>
+    <sibling node="N-19" path="../N-19/spec.xml" anchor="contents"/>
     <schema path="record.schema.json" anchor="/$defs/attempt"/>
+    <shared path="../../shared/contracts.xml" anchor="retry-owner"/>
+    <shared path="../../shared/contracts.xml" anchor="terminal-report"/>
+    <shared path="../../shared/contracts.xml" anchor="ticket-transitions"/>
+    <shared path="../../shared/contracts.xml" anchor="statements"/>
+    <shared path="../../shared/contracts.xml" anchor="operation-keys"/>
+    <shared path="../../shared/contracts.xml" anchor="lease-machine"/>
+    <shared path="../../shared/contracts.xml" anchor="timing"/>
+    <shared path="../../shared/retry-budget.xml" anchor="layers"/>
+    <shared path="../../shared/retry-budget.xml" anchor="seat-attempt"/>
+    <shared path="../../shared/retry-budget.xml" anchor="main-fix"/>
+    <shared path="../../shared/retry-budget.xml" anchor="gate-phase"/>
     <shared path="../../shared/status-codes.xml" anchor="code-100"/>
-    <shared path="../../shared/status-codes.xml" anchor="code-409"/>
-    <shared path="../../shared/status-codes.xml" anchor="code-412"/>
-    <shared path="../../shared/status-codes.xml" anchor="code-422"/>
-    <shared path="../../shared/status-codes.xml" anchor="code-423"/>
     <shared path="../../shared/status-codes.xml" anchor="code-500"/>
     <shared path="../../shared/status-codes.xml" anchor="owner-acts"/>
     <shared path="../../shared/principles.xml" anchor="three-attempts"/>
     <shared path="../../shared/principles.xml" anchor="no-cog"/>
     <shared path="../../shared/state-store.xml" anchor="table-attempts"/>
-    <shared path="../../shared/state-store.xml" anchor="cas"/>
-    <shared path="../../shared/seat-contract.xml" anchor="seat-result"/>
     <shared path="../../shared/seat-contract.xml" anchor="fresh-seat"/>
     <shared path="../../shared/failure-cases.xml" anchor="bad-output"/>
     <shared path="../../shared/failure-cases.xml" anchor="stall"/>
@@ -55,187 +60,191 @@
   </pointers>
 
   <purpose id="purpose">
-    <sentence>Every failure record of a ticket's phase becomes exactly one attempt record n plus 1 with a backoff of min(10 s x 2^(n-1), 5 min), or, after the third attempt, exactly one dead record that maps to owner-acts so the owner sees one card, and nothing loops and nothing is silent.</sentence>
-    <is>The one owner of retry in the factory: no seat, no script and no other node decides whether to try again (RC2: no system-owned retry; D01 B: bounded retry with backoff and one escalation record).</is>
-    <is>A table, not a judgement: the failure kind names the phase and role of the next attempt; the arithmetic is a pure function of n (Symphony SPEC.md lines 797 to 801; SPEC-16.D d-backoff-pure).</is>
-    <is-not>Not a re-prompt of the same seat: a retry is a fresh one-shot seat with the failure record attached (plan failure-cases bad-output: a fresh seat retries with the failure attached, never the seat that failed).</is-not>
-    <is-not>Not an architect hop: the third failure used to route as 423 to the architect for a split or re-scope (SPEC-03 s-retry); here it is a dead record and one owner card, because the architect lane is retired into cards (D11, D12).</is-not>
+    <sentence>Every failure record routed here becomes exactly one action by the row of ../../shared/contracts.xml#retry-owner: a charged attempt n plus 1 after a backoff, a free regrant of the same attempt, a wait with one card, or, after the third charged failure of a phase, one dead record that the owner sees as one card; nothing loops and nothing is silent.</sentence>
+    <is>The owner of the seat-phase retry layer only (../../shared/retry-budget.xml#seat-attempt, #main-fix and #gate-phase): worker, reviewer and spec-author attempts and the free regrants. Inner layers (N-16 close-out, N-18 validator, N-24 pod ladder, N-25 plan attempts, N-01 store commits) retry their own failures and reach this node only when they give up (../../shared/retry-budget.xml#layers).</is>
+    <is>A table, not a judgement: failure_kind selects the row; the arithmetic is a pure function of n (Symphony SPEC.md lines 797 to 801).</is>
+    <is-not>Not a re-prompt of the same seat: session is new, or resume only where the row says resume-if-done (../../shared/contracts.xml#retry-owner).</is-not>
+    <is-not>Not an architect hop: the third failure is a dead record and one owner card (D11, D12).</is-not>
     <decisions>D01, D02 (C36), D11 (C39), D12 (C40), D17 (C49), T02, V17 (standing policies carry the dead card's default).</decisions>
   </purpose>
 
   <input id="input">
-    <record kind="failure (several kinds)" from="N-15 N-19 N-09 N-12 N-18 N-08 N-07" schema="record.schema.json#/$defs/failure">
-      <field name="kind">seat.result blocked 423 with its terminal_reason (N-15: a seat result is done 200 or blocked 423, never anything else; a dead run yields blocked with terminal_reason crashed or no_result); phase.failed 423 (N-15 and N-19: the phase's structured output was rejected); review.changes 422 (N-19); merge.conflict 409 and merge.failed 500 (N-09); stall 500 (N-12); validator.refused 412 and validator.failed 423 (N-18); gate.verdict red 422 or missing 500 (N-08); dispatch.refused 412 (N-07).</field>
-      <field name="ticket, phase, attempt">The ticket and the phase and attempt that failed; attempt comes from the dispatch the run belonged to (1 to 3), or 0 for a failure before any dispatch (dispatch.refused, gate missing on a first head).</field>
-      <field name="run_id, lease_key, lease_token, dispatch_id">The run that failed, when there was one (N-15 names it run_id); N-01 already refused a stale token, so a failure record here is from the live run.</field>
-      <field name="detail">The failure's own fields: review findings, red suites and gate url, conflict base, stall reason, the failing acceptance command; copied into the next attempt's brief by N-13.</field>
+    <record kind="failure (any kind carrying failure_body)" from="N-12 N-13 N-14 N-15 N-16 N-19 N-08 N-09 N-18 N-24" schema="record.schema.json#/$defs/failure">
+      <field name="failure_kind">Every value of ../../shared/contracts.schema.json#/$defs/failure_kind is accepted; the row of ../../shared/contracts.xml#retry-owner decides. Producers: stall (N-12), seat.bundle.failed (N-13), workspace.failed, workspace.refused, cap (N-14), crashed, no_result, schema_invalid, output_rejected, seat_blocked, error_max_turns, error_max_budget, harness_mismatch (N-15 seat.result), phase.failed (N-16, N-17 and N-19 close-out after its own three tries), review.changes (N-19), gate.red (N-08), merge.conflict (N-09), claim_overlap and files-claimed (N-03 at ready), admission-refused (N-24).</field>
+      <field name="ticket, phase, attempt, outcome, run_id, dispatch_id">From failure_body; run_id equals dispatch_id.</field>
+      <field name="fenced">true on a seat.result or phase.failed accepted under ../../shared/contracts.xml#terminal-report: an echo of a failure already charged by the stall or expiry path. It is marked handled with action echo and changes no ticket status.</field>
+      <field name="the producer's own fields">Copied as detail into the next brief by N-13 (review findings, red suites, conflict base, stall reason, failing acceptance command).</field>
     </record>
-    <starts-when>A failure record is committed. Level-triggered as well: the scheduler tick lists failure records with no attempt or dead record naming them (handled_by empty) and starts a traversal for each, so a lost traversal is caught within one tick.</starts-when>
+    <record kind="lease.expired" code="500" from="N-02" schema="../N-02/record.schema.json#/$defs/lease_expired">
+      <field name="end_reason">start-grace: a reserved lease never started (../../shared/contracts.xml#lease-machine Sweep row); a free regrant, no attempt charged. end_reason expired on a running lease is acted on through N-12's stall record, not here.</field>
+    </record>
+    <starts-when>A failure record is committed. Level-triggered as well: each scheduler tick lists failure records with no failure.handled:FAILURE_ID entity and starts a traversal for each, so a lost traversal is caught within one tick.</starts-when>
   </input>
 
   <output id="output">
-    <record kind="attempt" code="100" to="N-02" schema="record.schema.json#/$defs/attempt">
-      <field name="idempotency_key">ticket, colon, phase, colon, n plus 1; one per attempt, ever.</field>
-      <field name="ticket, phase, role, attempt">The next attempt: attempt equals n plus 1 (2 or 3); phase and role from the retry table.</field>
-      <field name="not_before">UTC second equal to now plus backoff plus jitter: backoff is min(10 x 2^(n-1), 300) seconds; jitter is a uniform fraction in plus or minus 0.2 of the backoff (scheduler.json retry.jitter 0.2, L01 section 6), passed in by the caller so tests pass zero.</field>
-      <field name="failure_id, failure_kind">The record this attempt answers; N-13 puts it in the brief.</field>
-      <field name="lane">Copied from the ticket.</field>
+    <record kind="attempt" code="100" to="N-07 N-13" schema="record.schema.json#/$defs/attempt">
+      <field name="ticket, phase, role, attempt">attempt n plus 1 (2 or 3). After review.changes, gate.red or merge.conflict the phase is worker. Operation key N-11/attempt/TICKET:PHASE:N/r1 with N the new attempt.</field>
+      <field name="not_before">now plus min(10 x 2^(n-1), retry.backoff_max_seconds) plus jitter (../../shared/retry-budget.xml#d-backoff); jitter is passed in so tests pass zero.</field>
+      <field name="session">new, or resume with the prior worker session id when the row is resume-if-done and that run ended done.</field>
+      <field name="failure_ids, failure_kind, lane">The failures this attempt answers; N-13 attaches each to the brief.</field>
+      <note>Same Commit: statement attempts.append, statement tickets.transition in_flight or pr_open to retry_wait (claims keep), entity failure.handled:FAILURE_ID with precondition absent. When not_before passes N-03 moves retry_wait to ready and N-07 grants the new key.</note>
+    </record>
+    <record kind="regrant" code="100" to="N-07" schema="record.schema.json#/$defs/regrant">
+      <field name="lease, attempt, failure_kind, not_before">A free regrant of the same attempt: workspace.refused, claim_overlap and files-claimed after retry.claim_seconds; cap on the next tick; a start-grace expiry at once. Operation key N-11/regrant/LEASE_KEY@TOKEN/r1, which is what lets GrantDispatch re-grant that key (../../shared/contracts.xml#lease-machine).</field>
+      <note>Same Commit: tickets.transition in_flight to ready (claims keep) and entity failure.handled:FAILURE_ID.</note>
     </record>
     <record kind="dead" code="500" to="N-28 N-41" schema="record.schema.json#/$defs/dead">
-      <field name="idempotency_key">ticket, colon, phase, colon, dead; one per ticket and phase, ever.</field>
-      <field name="ticket, phase, attempts">The three attempts with their failure ids and kinds, so the card reads once (SPEC-17 1.1.0 draft s-chain rule of climbing: the lower link attaches what it tried).</field>
-      <field name="owner_acts">true; the status code map maps dead to owner-acts and N-28 posts exactly one card keyed by this record id.</field>
-      <field name="recommendation">From the retry table per failure kind: split the ticket, re-scope, system-lane fault, or leave dead; the card's recommended option, so a yes is one word (memory no-bureaucracy-creep).</field>
-      <field name="policy_default, policy_deadline">The standing policy row for the failure kind, when one exists (V17): what happens if the owner does not answer by the deadline, applied by N-29's rule, so nothing waits for ever.</field>
+      <field name="ticket, phase, attempts">The charged failures with ids and kinds, so the card reads once.</field>
+      <field name="owner_acts, recommendation, policy_default, policy_deadline">owner_acts true; the recommendation from the table below; the standing policy row when one exists (V17).</field>
+      <note>Same Commit: tickets.transition to dead, claims.release, entity failure.handled:FAILURE_ID. Operation key N-11/attempt/TICKET:PHASE:N/r1 with N the attempt that would have followed (4 after exhaustion), so a dead and an attempt for one slot cannot both commit.</note>
     </record>
-    <ends-when>The failure record's handled_by field is set to the attempt or dead record id by compare-and-swap; the traversal is over. The attempt re-enters N-02 as a fresh claim with attempt n plus 1 and not_before (dag.md section 4).</ends-when>
+    <record kind="failure.handled" entity="failure.handled:FAILURE_ID" to="N-41" schema="record.schema.json#/$defs/failure_handled">
+      <field name="action, by_record">attempt, regrant, dead, echo (fenced) or not_mine (a row whose owner is another node: phase.failed before its owner gave up, admission-refused). Replaces the handled_by field of book 1.0.0: records are never edited.</field>
+    </record>
+    <ends-when>The failure.handled entity exists for the failure; the traversal is over.</ends-when>
   </output>
 
   <mechanism id="mechanism">
-    <where>Go package retry inside the service; Next(failure, history, now, jitterFraction, table) returns an attempt or dead intent; the engine writes it and compare-and-swaps the failure's handled_by.</where>
-    <step n="1" id="m-claim">Compare-and-swap the failure record's handled_by from empty to this traversal's id with its generation. Refused: another traversal has it; end.</step>
-    <step n="2" id="m-history">Load every attempt and dead record for the ticket and phase. n equals the failed attempt number (the dispatch's attempt; for a failure before dispatch, the count of attempt records plus the first implicit one).</step>
-    <step n="3" id="m-table">Look up the failure kind in the retry table (config retry.json, validated by schema; values below are the defaults and every one is a key):</step>
+    <where>Go package retry inside the service; Next(failure, history, now, jitterFraction) returns one intent; the engine sends it as one Store.Do (../../shared/contracts.xml#batch).</where>
+    <step n="1" id="m-history">Load the attempts rows for the ticket and phase and the ticket row. n equals the failed attempt.</step>
+    <step n="2" id="m-echo">fenced true: write only failure.handled with action echo; end. The kill that fenced the run was already charged (../../shared/contracts.xml#terminal-report).</step>
+    <step n="3" id="m-table">Select the row of ../../shared/contracts.xml#retry-owner by failure_kind. The table below adds only what is this node's: the recommendation on a dead card and the session rule applied.</step>
     <table id="m-retry-table">
-      <row failure="seat.result blocked 423, terminal_reason seat_blocked" next-phase="same" next-role="same" attach="seat.result (the question or observation the seat posted as blocked)" recommendation="re-scope or answer the question" policy="POL-blocked-land-it (factory/config/policies.json), deadline 1800 s, default: land on the criteria as written"/>
-      <row failure="seat.result blocked 423, terminal_reason error_max_turns, error_max_budget_usd, error_during_execution, error_max_structured_output_retries, output_rejected, schema_invalid" next-phase="same" next-role="same" attach="seat.result (terminal reason, cost, turns, result_path)" recommendation="split the ticket"/>
-      <row failure="seat.result blocked 423, terminal_reason killed_stall, killed_deadline, killed_lease_lost" next-phase="handled by the stall row" next-role="none" attach="none" recommendation="none" note="the launcher's echo of a stall record (N-12); the two-failures rule below marks it handled by the attempt the stall produced, so one kill is one attempt, never two"/>
-      <row failure="seat.result blocked 423, terminal_reason crashed, no_result, bundle_mismatch" next-phase="same" next-role="same" attach="the launcher's terminal reason and stderr_path" recommendation="system-lane fault"/>
-      <row failure="phase.failed 423" next-phase="same" next-role="same" attach="the rejected structured output and the validation error" recommendation="split the ticket"/>
-      <row failure="validator.failed 500 (the validator itself failed: store, workspace, podman, image)" next-phase="none: N-18's controller retries the same set on its next tick, up to 3 (nodes/N-18/spec.xml#retries); no seat is dispatched, because the validator is code, never a seat" next-role="none" attach="none" recommendation="system-lane fault"/>
-      <row failure="review.changes 422" next-phase="worker" next-role="worker" attach="the review findings and the head sha" recommendation="split the ticket" note="the reviewer's attempt counter is not spent; the worker's is (SPEC-03 s-retry: attempt counts a seat's tries on one ticket; routes.json row 7)"/>
-      <row failure="merge.conflict 409" next-phase="worker" next-role="worker" attach="merge-main instruction with base sha (routes.json row 10; PR 35 S2-078)" recommendation="rebase by hand is never needed; a third conflict is a scheduling defect (memory one-file-one-in-flight-ticket)"/>
-      <row failure="merge.failed 500" next-phase="merge" next-role="gate (code)" attach="the GitHub status and reason" recommendation="system-lane fault: token, branch rule or forge outage"/>
-      <row failure="stall 500" next-phase="same" next-role="same" attach="the stall record (reason, last heartbeat age)" recommendation="split the ticket or raise the role's stall bound"/>
-      <row failure="validator.refused 422 or 400" next-phase="spec (attempt n+1 on the same cut-request key)" next-role="spec-author" attach="the failing acceptance command and its exit code" recommendation="the design anchor is wrong or the command needs a fixture"/>
-      <row failure="gate.verdict red 422" next-phase="worker" next-role="worker" attach="gate url, gate page url, red suites" recommendation="split the ticket"/>
-      <row failure="gate.verdict missing 500" next-phase="gate" next-role="gate (code: re-post pr.opened for the head)" attach="head sha, last Jenkins url" recommendation="system-lane fault: Jenkins or pods"/>
-      <row failure="dispatch.refused 412" next-phase="same" next-role="same" attach="the refusal reason" recommendation="files-claimed: wait for the other ticket (no attempt is spent, see N-07 retries); role-unknown or brief-missing: system-lane fault"/>
+      <row failure="stall, crashed, no_result, seat.bundle.failed, workspace.failed" action="charge" session="new" recommendation="system-lane fault, or raise the role's stall bound"/>
+      <row failure="schema_invalid, output_rejected, error_max_turns, error_max_budget" action="charge" session="new" recommendation="split the ticket"/>
+      <row failure="seat_blocked" action="charge" session="new" recommendation="re-scope or answer the question" policy="POL-blocked-land-it (factory/config/policies.json), deadline 1800 s, default: land on the criteria as written"/>
+      <row failure="phase.failed" action="charge once (the owner N-16, N-17 or N-19 already spent its three close-out tries)" session="new" recommendation="system-lane fault"/>
+      <row failure="review.changes, gate.red" action="charge the worker phase" session="resume-if-done" recommendation="split the ticket"/>
+      <row failure="merge.conflict" action="charge the worker phase: the worker merges main into its branch; never a repeated merge" session="resume-if-done" recommendation="a third conflict is a scheduling defect (memory one-file-one-in-flight-ticket)"/>
+      <row failure="workspace.refused, claim_overlap, files-claimed, cap, start-grace" action="regrant, free" session="new" recommendation="none"/>
+      <row failure="harness_mismatch" action="wait, free: the ticket waits with one card until the harness pin matches" session="none" recommendation="update the pin or the harness"/>
+      <row failure="admission-refused" action="not_mine (N-24 owns it: defect record and one card)" session="none" recommendation="none"/>
     </table>
-    <step n="4" id="m-decide">If n is below 3: write attempt n plus 1 with not_before now plus backoff(n) plus jitter. If n equals 3: write dead with the three failure ids and the recommendation and policy from the table.</step>
-    <step n="5" id="m-no-charge">A dispatch.refused with reason files-claimed charges no attempt: the failure is handled by marking it with the next tick's re-examination (N-07 step 6 sees the lease again) and no attempt record is written; this is the one row with next-phase same and no attempt spent, so a ticket blocked by another's files cannot die of it.</step>
-    <step n="6" id="m-fix-ticket-count">Fix tickets cut from N-10's fix-for-hold ticket.request (a spec-phase cut request, nodes/N-03/spec.xml#input) count their attempts here like any ticket; the count of fix tickets per hold is N-10's own (three fix tickets), so the bound on a red main is three tickets of up to three attempts each per phase, every one a record.</step>
-    <step n="7" id="m-finish">Compare-and-swap the failure's handled_by from this traversal's id to the written record id. The attempt record is N-02's input: it grants a lease with attempt n plus 1, not_before and a new fencing token; N-07 dispatches it when not_before has passed.</step>
-    <invariant>One attempt record per (ticket, phase, n plus 1), one dead per (ticket, phase); never a fourth attempt (K10: limits are fields the system enforces, not prose the model counts).</invariant>
-    <invariant>backoff(n) equals min(10 x 2^(n-1), 300) seconds: 10 s after attempt 1, 20 s after attempt 2; the cap of 300 s is reached only for n at or above 6, which cannot occur, and stays in the formula so the table and the field's reference agree.</invariant>
+    <step n="4" id="m-decide">Charge with n below 3: attempt n plus 1. Charge with n equal to 3: dead. Regrant: regrant record. Wait: failure.handled with action not_mine and the card is N-15's harness_mismatch record (see the gap noted in many-agents). The gate phase is never re-dispatched after N-25 gave up (../../shared/retry-budget.xml#gate-phase): a gate.red charges the worker, never the gate.</step>
+    <step n="5" id="m-fix-ticket-count">Fix tickets for one red main are bounded by ../../shared/retry-budget.xml#main-fix, a layer this node owns: each fix ticket carries the red main sha in its source request; when the bound's last fix ticket goes dead, its dead record carries recommendation system-lane-fault and N-10 cuts no further fix for that sha. Each fix ticket also has its own seat attempts and the per-ticket budget N-07 enforces.</step>
+    <step n="6" id="m-commit">One Commit per intent with its operation key, the statements of the output section, and failure.handled:FAILURE_ID with precondition absent; 409 on that entity means another traversal already acted, which is read back and ends this one.</step>
+    <invariant>One attempt per (ticket, phase, n plus 1), one dead per (ticket, phase); never a fourth attempt (K10).</invariant>
+    <invariant>backoff(n) equals min(10 x 2^(n-1), retry.backoff_max_seconds) seconds.</invariant>
     <diagram format="mermaid">flowchart TD
-  F["failure record (kind, ticket, phase, attempt n)"] --> C{"CAS handled_by empty to mine?"}
-  C -- refused --> E["another traversal has it, end"]
-  C -- ok --> T["retry table row for the kind"]
-  T --> NC{"files-claimed?"}
-  NC -- yes --> Z["no attempt spent; next tick re-examines"]
-  NC -- no --> N{"n below 3?"}
-  N -- yes --> A["attempt n+1, not_before = now + min(10 x 2^(n-1), 300) s +/- 20%"]
-  N -- no --> D["dead 500: three failures attached, recommendation, policy default"]
-  A --> N02["N-02 fresh claim with attempt n+1"]
-  D --> N28["N-28 exactly one card"]
-  D --> N41["N-41 alerts"]
-  A --> W["CAS handled_by to the record id"]
-  D --> W</diagram>
+  F["failure record with failure_body"] --> H{"failure.handled exists?"}
+  H -- yes --> E["end"]
+  H -- no --> X{"fenced?"}
+  X -- yes --> EC["failure.handled echo"]
+  X -- no --> T["retry-owner row"]
+  T -- charge, n below 3 --> A["attempt n+1, retry_wait, not_before"]
+  T -- charge, n = 3 --> D["dead, claims released, one card"]
+  T -- free --> R["regrant: in_flight to ready"]
+  T -- other owner --> NM["failure.handled not_mine"]</diagram>
   </mechanism>
 
   <start id="start">
     <sentence>Nothing here starts by an agent typing.</sentence>
-    <by>The commit of a failure record starts a traversal; the scheduler tick (N-07) lists unhandled failure records every tick and starts the missing traversals, so no failure is forgotten after a crash or a lost commit event.</by>
-    <restart>After a crash a traversal that claimed handled_by and died leaves a claim older than retry.claim_seconds (default 60); the tick resets it to empty by compare-and-swap on generation and the traversal runs again; the idempotency keys make a half-written attempt a 409 that is read back.</restart>
+    <by>The commit of a failure record starts a traversal; the scheduler tick lists failures with no failure.handled entity and starts the missing traversals.</by>
+    <restart>A traversal that died before its Commit left nothing; the tick re-runs it, and the operation key makes a Commit that did land a replay.</restart>
   </start>
 
   <waits id="waits">
-    <wait id="w-claim" on="N-01 compare-and-swap of handled_by" timeout="5 s" fallback="end; the next tick retries; three in a row write store.unreachable 500 once"/>
-    <wait id="w-write" on="N-01 attempt or dead write" timeout="5 s" fallback="retry 1 s, 2 s, 4 s; then the claim is released and the next tick retries; retry.write.failed 500 once per failure id"/>
-    <wait id="w-backoff" on="not_before passing before N-07 dispatches attempt n plus 1" timeout="min(10 x 2^(n-1), 300) s plus jitter" fallback="none needed: the wait is a timestamp N-07 compares, not a sleep; a service restart loses nothing because not_before is in the store"/>
-    <wait id="w-owner" on="the owner answering a dead card" timeout="the standing policy's deadline when the failure kind has a row (1800 s for blocked), else none" fallback="the policy default is applied by N-29's rule and recorded as a ruling; a kind with no row stays dead and the card stays up, which is the owner's own choice (policies.json: a kind with no row waits for its answer without end; the card is on the page, not a cog in the line, because the ticket is dead and the line runs on)"/>
+    <wait id="w-write" on="N-01 Commit of the intent" timeout="5 s" fallback="resend with the same operation key 1 s, 2 s, 4 s; then retry.write.failed 500 once per failure id and the next tick retries"/>
+    <wait id="w-backoff" on="not_before passing before the ticket returns to ready" timeout="min(10 x 2^(n-1), retry.backoff_max_seconds) s plus jitter" fallback="none needed: a timestamp in the store, not a sleep"/>
+    <wait id="w-owner" class="owner-decision" on="the owner answering a dead card" timeout="the standing policy's deadline when the failure kind has a row (1800 s for seat_blocked), else none" fallback="the policy default is applied by N-29's rule and recorded as a ruling; a kind with no row stays dead with its card up; the line runs on"/>
     <rule>No sleep in this node; every backoff is a not_before timestamp.</rule>
   </waits>
 
   <retries id="retries">
-    <step name="claim and write" attempts="3" backoff="1 s, 2 s, 4 s" then="retry.write.failed 500 once per failure id; the next tick re-runs the traversal"/>
-    <step name="the work itself" attempts="3 per ticket and phase" backoff="10 s, 20 s" then="dead and one card"/>
-    <not-retried>A dead record is never retried by the system; only an owner ruling (N-29) that unblocks the ticket re-enters it at N-03 with attempt reset to 1 and a new phase traversal (dag.md section 4 re-entry from N-29); the Scheduler.Retry RPC of scheduler.proto is that ruling's mechanism and is never called by a seat.</not-retried>
+    <step name="Commit" attempts="3" backoff="1 s, 2 s, 4 s, same operation key" then="retry.write.failed 500 once per failure id; the next tick re-runs the traversal"/>
+    <step name="the seat phase itself" attempts="3 per ticket and phase (../../shared/retry-budget.xml#seat-attempt)" backoff="10 s, 20 s" then="dead and one card"/>
+    <not-retried>A dead record is never retried by the system; only an owner ruling (N-29) moves dead to waiting and resets the attempt counter (../../shared/contracts.xml#ticket-transitions).</not-retried>
     <report>Every then clause is a record; the dead record carries the whole history so the card is one read.</report>
   </retries>
 
   <many-agents id="many-agents">
-    <readers>Any seat reads attempt and dead records; a brief for attempt n plus 1 carries the failure record by id so the fresh seat reads what the last one hit.</readers>
-    <two-traversals>Two traversals for one failure (a commit event and a tick) both compare-and-swap handled_by; one wins; the loser ends. If the winner dies, the claim ages out and the tick re-runs it; a second attempt record cannot appear because the key ticket:phase:n+1 exists (409, read back).</two-traversals>
-    <two-failures>Two failure records for one attempt (a stall and the launcher's seat.result blocked killed_stall for the same run, or a review.changes and a gate red on the same head) each start a traversal; the first writes attempt n plus 1 and the second finds the key taken, reads it back and sets its own handled_by to that record, so one attempt answers both, which is right: one fresh seat gets both failures in its brief (N-13 attaches every failure the attempt handled).</two-failures>
-    <fresh-seat>A retry never resumes the failed seat's session: it is a fresh one-shot run with a fresh workspace (N-14) and the failure attached; a resumed session would carry the context that failed (K02).</fresh-seat>
-    <conflict-reports>Every refused compare-and-swap and every 409 is logged with the key and counted; never a silent overwrite.</conflict-reports>
-    <test>Test case two-failures-one-attempt: a stall and a review.changes on one attempt write one attempt record and both failures point at it (checklist c-two-failures).</test>
+    <readers>Any seat reads attempt and dead records; a brief for attempt n plus 1 carries the failures by id.</readers>
+    <two-traversals>Two traversals for one failure both Commit failure.handled:FAILURE_ID with precondition absent; one wins, the loser gets 409 version and ends.</two-traversals>
+    <two-failures>Two failures for one attempt (review.changes and gate.red on one head) both select attempt n plus 1; the operation key N-11/attempt/TICKET:PHASE:N makes the second a replay or 409 idempotency_mismatch; the loser reads the attempt back and Commits its own failure.handled pointing at it, so one attempt answers both. A stall and the fenced seat.result of the same run cannot double-charge: the second is an echo.</two-failures>
+    <harness-gap>harness_mismatch: ../../shared/contracts.xml#retry-owner says the ticket goes to waiting, but #ticket-transitions has no in_flight to waiting row; until the contracts volume adds it (owner N-11), this node writes only failure.handled not_mine and N-07 refuses to grant while the pin differs. Reported as an open item.</harness-gap>
+    <conflict-reports>Every refused Commit is logged with its operation key and counted; never a silent overwrite.</conflict-reports>
+    <test>Test case two-failures-one-attempt (checklist c-two-failures).</test>
   </many-agents>
 
   <status-codes id="status-codes">
-    <emits code="100" kind="attempt" acts="N-02 grants the next lease; N-07 dispatches when not_before passes" shared="../../shared/status-codes.xml#code-100"/>
+    <emits code="100" kind="attempt" acts="N-03 moves retry_wait to ready at not_before; N-07 grants the new key" shared="../../shared/status-codes.xml#code-100"/>
+    <emits code="100" kind="regrant" acts="N-07 grants the same attempt again" shared="../../shared/status-codes.xml#code-100"/>
     <emits code="500" kind="dead" acts="owner-acts: N-28 one card; N-41 alerts; N-29's ruling is the only way back" shared="../../shared/status-codes.xml#code-500"/>
     <emits code="500" kind="retry.write.failed" acts="N-28 one card; N-41" shared="../../shared/status-codes.xml#code-500"/>
-    <emits code="500" kind="store.unreachable" acts="N-28 one card; N-06 health" shared="../../shared/status-codes.xml#code-500"/>
-    <consumes code="422" kinds="review.changes, gate.verdict red" shared="../../shared/status-codes.xml#code-422"/>
-    <consumes code="423" kinds="seat.result blocked, phase.failed, validator.failed" shared="../../shared/status-codes.xml#code-423"/>
-    <consumes code="409" kinds="merge.conflict" shared="../../shared/status-codes.xml#code-409"/>
-    <consumes code="412" kinds="validator.refused, dispatch.refused" shared="../../shared/status-codes.xml#code-412"/>
-    <consumes code="500" kinds="stall, merge.failed, gate.verdict missing" shared="../../shared/status-codes.xml#code-500"/>
+    <consumes code="any" kinds="every record carrying failure_body; lease.expired start-grace" shared="../../shared/status-codes.xml#owner-acts"/>
   </status-codes>
 
   <state-paths id="state-paths">
     <root>$COQ_STATE as in ../N-07/spec.xml#state-paths; path elements in N-45's generator form.</root>
-    <path id="N-11.store" glob="$COQ_STATE/store/coq.db" retention="owned by N-01" trigger="none here" cleanup="line/bin/cleanup.sh --entry N-01.store">Rows: attempt and dead records; the handled_by field of failure records. Dead records of tickets with no ruling are never pruned; attempts prune after the ticket's verified record and retention (N-01's row).</path>
-    <path id="N-11.logs" glob="$COQ_STATE/logs/retry/*/*/*-WO-*-*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-11.logs">One line per decision with n, backoff and the key.</path>
-    <repo-file path="factory/config/retry.json" planned="created by the N-11 build ticket; not on main yet">The retry table, schema-validated by lint; a repository file, not a state path; the only table this node reads; values are keys, never literals in code (K10).</repo-file>
+    <path id="N-11.store" glob="$COQ_STATE/store/coq.db" retention="owned by N-01" trigger="owner" acts="owner" cleanup="line/bin/cleanup.sh --entry N-01.store">Rows: attempt, regrant and dead records, the attempts table, failure.handled entities. Dead records of tickets with no ruling are never pruned.</path>
+    <path id="N-11.logs" glob="$COQ_STATE/logs/retry/*/*/*-WO-*-*.jsonl" retention="P30D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-11.logs">One line per decision with n, backoff and the operation key.</path>
+    <repo-file path="factory/config/retry.json" planned="created by the N-11 build ticket; not on main yet">The recommendation and policy columns of m-retry-table; the charge and session columns are read from the contracts rows, never restated.</repo-file>
     <never>No file under the repository at run time; no counter in memory (the store holds n).</never>
   </state-paths>
 
   <edges id="edges">
-    <in from="N-15" record="seat.result blocked, phase.failed" path="../N-15/spec.xml" anchor="output"/>
-    <in from="N-19" record="review.changes" path="../N-19/spec.xml" anchor="output"/>
-    <in from="N-09" record="merge.conflict, merge.failed" path="../N-09/spec.xml" anchor="output"/>
+    <in from="N-15" record="seat.result (failure_body), phase.failed" path="../N-15/spec.xml" anchor="output"/>
     <in from="N-12" record="stall" path="../N-12/spec.xml" anchor="output"/>
-    <in from="N-18" record="validator.refused, validator.failed" path="../N-18/spec.xml" anchor="output"/>
-    <in from="N-08" record="gate.verdict red, missing" path="../N-08/spec.xml" anchor="output" note="not drawn in dag.md; enters by the failure input"/>
-    <in from="N-07" record="dispatch.refused" path="../N-07/spec.xml" anchor="output" note="not drawn in dag.md; enters by the failure input"/>
+    <in from="N-13" record="seat.bundle.refused, seat.bundle.failed" path="../N-13/spec.xml" anchor="output"/>
+    <in from="N-14" record="workspace.refused, workspace.failed" path="../N-14/spec.xml" anchor="output"/>
+    <in from="N-16" record="phase.failed" path="../N-16/spec.xml" anchor="output"/>
+    <in from="N-17" record="phase.failed" path="../N-17/spec.xml" anchor="output"/>
+    <in from="N-19" record="review.changes, phase.failed" path="../N-19/spec.xml" anchor="output"/>
+    <in from="N-09" record="merge.conflict" path="../N-09/spec.xml" anchor="output"/>
+    <in from="N-08" record="gate.red" path="../N-08/spec.xml" anchor="output"/>
+    <in from="N-18" record="validator.refused (failure_kind output_rejected)" path="../N-18/spec.xml" anchor="output"/>
+    <in from="N-02" record="lease.expired start-grace" path="../N-02/spec.xml" anchor="output" drawn="false"/>
+    <out to="N-07" record="attempt, regrant (through the ticket row)" path="../N-07/spec.xml" anchor="input"/>
     <out to="N-28" record="dead" path="../N-28/spec.xml" anchor="input"/>
     <out to="N-41" record="dead" path="../N-41/spec.xml" anchor="input"/>
-    <re-entry record="attempt n plus 1" enters="N-02" as="a fresh claim with attempt n plus 1 and not_before" bound="3 attempts then dead and one escalation" path="../../dag.md" anchor="4-re-entries"/>
-    <re-entry-in from="N-29" record="ruling that unblocks a dead ticket" enters="N-03" path="../N-29/spec.xml" anchor="output" note="the only way a dead ticket moves again; attempt resets to 1"/>
+    <re-entry record="attempt n plus 1" enters="N-07" as="ticket retry_wait to ready, then a GrantDispatch of the new key" bound="3 attempts then dead and one escalation" path="../../dag.md" anchor="4-re-entries"/>
+    <re-entry-in from="N-29" record="ruling that unblocks a dead ticket" enters="N-03" path="../N-29/spec.xml" anchor="output" note="dead to waiting; attempt resets to 1"/>
   </edges>
 
   <schema id="schema">
     <file path="record.schema.json"/>
-    <defs>failure (the common shape every input kind carries), attempt, dead; base as in N-07.</defs>
+    <defs>failure (committed envelope plus ../../shared/contracts.schema.json#/$defs/failure_body), attempt, regrant, dead, failure_handled; lease_expired is ../N-02's.</defs>
+    <example schema="record.schema.json#/$defs/failure">{"id":"20261014T074000Z-422-c4d5e","at":"2026-10-14T07:40:00Z","kind":"review.changes","code":422,"node":"N-19","seq":5500,"epoch":1,"ticket":"WO-20261014-ab12","phase":"reviewer","attempt":1,"outcome":"changes","failure_kind":"review.changes","run_id":"d-20261014070000-r8k2wa","dispatch_id":"d-20261014070000-r8k2wa"}</example>
+    <example schema="record.schema.json#/$defs/attempt">{"id":"20261014T074005Z-100-f6g7h","at":"2026-10-14T07:40:05Z","kind":"attempt","code":100,"node":"N-11","seq":5502,"epoch":1,"ticket":"WO-20261014-ab12","phase":"worker","role":"worker","attempt":2,"not_before":"2026-10-14T07:40:15Z","backoff_seconds":10,"jitter_seconds":0,"failure_ids":["20261014T074000Z-422-c4d5e"],"failure_kind":"review.changes","lane":"build","session":{"mode":"resume","session_id":"6f1c2a9e-0b7d-4e3a-9c55-2d8e1f0a7b31"}}</example>
+    <example schema="record.schema.json#/$defs/regrant">{"id":"20261014T063300Z-100-j8k9l","at":"2026-10-14T06:33:00Z","kind":"regrant","code":100,"node":"N-11","seq":5160,"epoch":1,"ticket":"WO-20261014-cd34","phase":"worker","attempt":1,"lease":{"key":"WO-20261014-cd34:worker:1","token":186},"failure_id":"20261014T063255Z-412-m1n2p","failure_kind":"workspace.refused","not_before":"2026-10-14T06:38:00Z"}</example>
+    <example schema="record.schema.json#/$defs/dead">{"id":"20261014T120000Z-500-q3r4s","at":"2026-10-14T12:00:00Z","kind":"dead","code":500,"node":"N-11","seq":7001,"epoch":1,"ticket":"WO-20261014-ef56","phase":"worker","attempts":[{"attempt":1,"failure_id":"20261014T090000Z-500-a1a1a","failure_kind":"stall","outcome":"killed","at":"2026-10-14T09:00:00Z"},{"attempt":2,"failure_id":"20261014T100000Z-500-b2b2b","failure_kind":"stall","outcome":"killed","at":"2026-10-14T10:00:00Z"},{"attempt":3,"failure_id":"20261014T115900Z-423-c3c3c","failure_kind":"error_max_turns","outcome":"blocked","at":"2026-10-14T11:59:00Z"}],"owner_acts":true,"recommendation":"split-the-ticket","lane":"build"}</example>
+    <example schema="record.schema.json#/$defs/failure_handled">{"entity":"failure.handled:20261014T074000Z-422-c4d5e","failure_id":"20261014T074000Z-422-c4d5e","failure_kind":"review.changes","action":"attempt","by_record":"20261014T074005Z-100-f6g7h","at":"2026-10-14T07:40:05Z","version":1}</example>
   </schema>
 
   <checklist id="checklist">
-    <item id="c-backoff" proof="go test ./internal/retry -run TestBackoff: n 1 gives 10 s, n 2 gives 20 s, n 6 gives 300 s; jitter 0 in tests">The arithmetic is min(10 x 2^(n-1), 300) s.</item>
-    <item id="c-three" proof="test TestThreeThenDead: three failures write attempts 2 and 3 then one dead with three failure ids">Three attempts then dead, never a fourth.</item>
-    <item id="c-table" proof="test TestTable covers every row of m-retry-table and lint validates factory/config/retry.json against its schema">Every failure kind has a row.</item>
+    <item id="c-backoff" proof="go test ./internal/retry -run TestBackoff: n 1 gives 10 s, n 2 gives 20 s, n 6 gives the retry.backoff_max_seconds cap; jitter 0 in tests">The arithmetic is min(10 x 2^(n-1), cap) s.</item>
+    <item id="c-three" proof="test TestThreeThenDead: three charged failures write attempts 2 and 3 then one dead">Three attempts then dead, never a fourth.</item>
+    <item id="c-table" proof="test TestEveryFailureKind iterates contracts.schema.json failure_kind and asserts one action per value, equal to the retry-owner row's charges and session">Every failure kind has a row.</item>
+    <item id="c-echo" proof="test TestFencedEcho: a stall then a fenced seat.result for the same run write one attempt and one echo">A fenced report never charges twice.</item>
     <item id="c-two-failures" proof="test TestTwoFailuresOneAttempt">Two failures on one attempt yield one attempt record.</item>
-    <item id="c-files-claimed" proof="test TestFilesClaimedNoCharge: a dispatch.refused files-claimed writes no attempt">A claim wait spends no attempt.</item>
-    <item id="c-fresh" proof="N-15 test shows attempt n plus 1 dispatches with a new session id and workspace">A retry is a fresh seat.</item>
+    <item id="c-free" proof="test TestFreeRegrant: workspace.refused, claim_overlap, files-claimed, cap and a start-grace expiry write regrant and no attempt">Free rows spend no attempt.</item>
+    <item id="c-merge-conflict" proof="test TestMergeConflictToWorker: merge.conflict writes worker attempt n+1, never a merge retry">A conflict goes back to the worker.</item>
     <item id="c-one-card" proof="N-28 test TestOneCardPerDead with two dead commits for one key posts one card">Exactly one escalation.</item>
     <item id="c-no-sleep" proof="grep of internal/retry finds no time.Sleep">Backoff is a timestamp, not a sleep.</item>
-    <item id="c-dark" proof="config key retry.enabled false until the go-live ticket; while false failure records accumulate unhandled and N-41 shows them">Ships dark.</item>
+    <item id="c-dark" proof="config key retry.enabled false until the go-live ticket; while false failures accumulate unhandled and N-41 shows them">Ships dark.</item>
   </checklist>
 
   <permissions id="permissions">
-    <process>The Go service user unit.</process>
-    <reads>failure records of the kinds listed, attempt and dead history, the retry table, the policies table.</reads>
-    <writes>attempt, dead, retry.write.failed, store.unreachable records; the handled_by field of failure records by compare-and-swap; the retry log.</writes>
-    <never>No seat start (N-07 and N-15 do that), no prompt, no pane, no GitHub, no edit of attempt or dead records once written.</never>
-    <seat>No seat can write attempt or dead (N-01 writer identity); a seat that wants another try posts its result and leaves; the system decides.</seat>
+    <process>The Go service, principal coq-svc acting as N-11 (../../shared/authority.xml#role-derivation).</process>
+    <reads>failure records, the attempts and tickets tables, the policies table.</reads>
+    <writes>attempt, regrant, dead, retry.write.failed, store.unreachable records; statements attempts.append, tickets.transition, claims.release; failure.handled entities; the retry log.</writes>
+    <never>No grant (N-07 does that), no prompt, no pane, no GitHub, no edit of any record once written.</never>
+    <seat>A seat has no store socket (../../shared/authority.xml#seat-isolation); a seat that wants another try posts its result and leaves.</seat>
   </permissions>
 
   <monitoring id="monitoring">
     <counter name="retry_attempt_total" from="attempt records, by failure_kind" screen="N-40"/>
     <counter name="retry_dead_total" from="dead records, by failure_kind" screen="N-40, N-41"/>
-    <gauge name="retry_waiting" from="attempt records whose not_before is in the future" screen="N-38 belt (a waiting inserter)"/>
-    <gauge name="failures_unhandled" from="failure records with empty handled_by older than one tick" screen="N-41"/>
+    <gauge name="retry_waiting" from="tickets in retry_wait" screen="N-38 belt (a waiting inserter)"/>
+    <gauge name="failures_unhandled" from="failure records with no failure.handled entity older than one tick" screen="N-41"/>
     <gauge name="dead_open" from="dead records with no ruling" screen="N-41, N-42"/>
     <lamp name="retry" green="failures_unhandled is 0" red="failures_unhandled above 0 for three ticks, or retry.write.failed open" screen="N-38, N-42"/>
     <alert kind="dead" code="500" to="N-41 and one card"/>
   </monitoring>
 
   <runbook id="runbook">
-    <bring-up>factory/config/retry.json present and lint-green; set retry.enabled true; proof: a failure record with handled_by set and its attempt record.</bring-up>
-    <read-status>Scheduler.Status lists attempts waiting with their not_before, dead tickets with their recommendation and whether a card is up; the Alerts screen shows dead_open.</read-status>
+    <bring-up>factory/config/retry.json present and lint-green; set retry.enabled true; proof: a failure record, its failure.handled entity and its attempt record.</bring-up>
+    <read-status>Scheduler.Status lists tickets in retry_wait with their not_before, dead tickets with their recommendation and whether a card is up; the Alerts screen shows dead_open.</read-status>
     <unblock-dead>Only a ruling on the card (N-29) moves a dead ticket; the Scheduler.Retry RPC runs under that ruling's id and never by hand.</unblock-dead>
     <change-a-bound>Edit factory/config/retry.json through a ticket; Scheduler.Reload loads it; no restart.</change-a-bound>
     <cleanup entry="N-11.logs" command="line/bin/cleanup.sh --entry N-11.logs" mode="dry-run first, then --apply"/>

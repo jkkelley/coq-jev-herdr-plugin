@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- N-46 Spec book check. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
      Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh. -->
-<volume id="N-46" kind="node-spec" node="N-46" group="G7" version="1.0.0" issued="2026-10-14" timezone="UTC">
+<volume id="N-46" kind="node-spec" node="N-46" group="G7" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, shared</entry>
@@ -36,6 +36,8 @@
     <shared href="../../schema/">The XSD family</shared>
     <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
     <shared href="../../dag.md#7-rules-every-node-obeys">Rules every node obeys</shared>
+    <shared href="../../shared/retry-budget.xml#layers">Retry layers: the spec-check unit retries nothing of its own</shared>
+    <shared href="../../shared/ci-capacity.xml#model">The spec-book unit is an ordinary suite pod</shared>
   </pointers>
 
   <purpose id="purpose">
@@ -53,8 +55,9 @@
   <output id="output">
     <record kind="check.verdict" code="201">Every check passed for the head sha; rows per volume with line counts; the generated-file hashes.</record>
     <record kind="check.verdict" code="422">At least one check failed; one row per failure with volume path, check id, line and message; nothing else changes.</record>
-    <record kind="check.verdict" code="503">The checker could not run (image, validator, clone); retried by the N-24 infrastructure ladder, then reported.</record>
+    <record kind="check.verdict" code="503">The checker could not run (exit 2: a validator or tool missing from the pinned image); a result like any exit code (nodes/N-24/spec.xml#m-ladder), never retried, because the image is pinned by digest and a retry runs the same image.</record>
     <schema href="record.schema.json#/$defs/output"/>
+    <example schema="record.schema.json#/$defs/output">{"id":"20261015T062000Z-422-k9l0m","at":"2026-10-15T06:20:00Z","seq":4150,"epoch":1,"kind":"check.verdict","code":422,"node":"N-46","by":"N-24","body":{"head_sha":"89abcdef0123456789abcdef0123456789abcdef","pr":57,"exit":1,"checks_run":["C01","C02","C03","C26","C28"],"failures":[{"volume":"rebuild/design/shared/ci-capacity.xml","check":"C26","message":"quota requests.cpu 4500m is not container-cap x suite + canary = 6700m"}],"log_path":"$COQ_STATE/ci/logs/gate/2026/10/89abcdef0123-1/units/spec-book.log","seconds":11.2}}</example>
     <reads>N-25 (folds the verdict into coq/gate with the gate page link), N-19 (the reviewer brief carries the rows), N-47 (publishes only a merge whose main sha has a 201).</reads>
   </output>
 
@@ -83,14 +86,14 @@
     <check id="C21" name="md-labels">A pointer into a Markdown file never uses a list label (V04, T02, K07) as its anchor, in an attribute or in prose, and a Markdown pointer (path, hash, anchor) written in prose resolves like any pointer (R-03 review note: G4 volumes cited 02-MAPPING list labels as if they were anchors).</check>
     <check id="C22" name="examples">Every JSON example validates against the schema it names: an &lt;example schema="file.json#/pointer"&gt; in a volume, and each json block of DESIGN.md against the record.schema.json link above it; schemas resolve through their $id, so a $ref between nodes that does not line up fails too (bin/check-examples.py; R-03 round 4: the envelope example failed N-02 and N-01, N-02 and N-07 required different envelopes).</check>
     <s>Judged by the review seat, not by the script: the no-cog and many-agents reading of each volume, the brief's source list cited or rejected (shared/rejected-with-reason.xml), Mermaid that renders (the checker image's mermaid CLI runs it in the pod as a lint row of its own).</s>
-    <exit>0 all pass; 1 any check failed (one line per failure: FAIL check volume detail); 2 the checker could not run (no XSD validator), which N-24 treats as infrastructure and retries.</exit>
+    <exit>0 all pass; 1 any check failed (one line per failure: FAIL check volume detail); 2 the checker could not run (no XSD validator). Every exit is a result of the unit (N-24: a command that ran is never retried): 0 is pass 201, 1 is fail 422, 2 is fail 422 with check.verdict 503, a defect of the pinned checker image.</exit>
   </checks>
 
   <mechanism id="mechanism">
     <where>rebuild/design/check.sh in the repository, run as one pod case by N-24 from a suite.plan row (D22: tests and lint run as pods). The suites.json row is paths rebuild/design/*, suites spec-book; an unmapped path plans the full set, so a missed row never skips the check (V06).</where>
     <step n="1">N-23 plans suite spec-book for the head sha; N-24 starts the pod from the pinned checker image (xmllint, python3 with xmlschema and jsonschema, the mermaid CLI, git), which fetches the repository by sha anonymously (public repo, A02).</step>
     <step n="2">The pod runs rebuild/design/check.sh; it runs C01 to C22 (#checks), never stopping at the first failure, and prints one line per failure and a final summary line with counts.</step>
-    <step n="3">N-24 writes pod.run with the exit code and log path; N-25 maps exit 0 to coq/gate success and exit 1 to failure for that case; the pod writes its check.verdict line to records/spec-book.jsonl and N-24's artifact import puts it in the store for this node (nodes/N-24/spec.xml#m-mirror; the spec-book suite entry lists check.verdict in its records, nodes/N-23/spec.xml#output).</step>
+    <step n="3">N-24 writes pod.run with the exit code and the log at N-24's host path ($COQ_STATE/ci/logs/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;/units/spec-book.log, nodes/N-24/spec.xml#state-paths); N-25 maps exit 0 to coq/gate success and exit 1 or 2 to failure for that case; the pod writes its check.verdict line to records/spec-book.jsonl and N-24's artifact import puts it in the store for this node (nodes/N-24/spec.xml#m-mirror; the spec-book suite entry lists check.verdict in its records, nodes/N-23/spec.xml#output).</step>
     <step n="4">On the host, the same script runs in make lint (always row) for the fast feedback a worker gets before pushing; the pod result is the verdict, the host run is advice.</step>
     <generated-files>index.xml (bin/make-index.py), shared/record-kinds.xml (bin/make-kinds.py) and shared/cleanup-registry.json (bin/registry.py) are generated; dag.md is checked by bin/dag-check.py; a ticket that changes a source regenerates and commits them in the same PR; the check refuses drift (C14, C15, C16, C17), so a hand edit to a generated file cannot merge.</generated-files>
     <diagram>
@@ -111,21 +114,21 @@ flowchart LR
   </start>
 
   <waits id="waits">
-    <wait id="w1" what="pod scheduling in the factory namespace" timeout="PT10M" fallback="N-24 ladder 10, 30, 90, 300 s for infrastructure; then pod.run error and coq/gate error, which the agent reads as not green"/>
-    <wait id="w2" what="check.sh run" timeout="PT5M (activeDeadlineSeconds)" fallback="killed; exit 2 is infrastructure and is retried; a run over 5 minutes on a book under 100 volumes is a checker defect and becomes a fix ticket request"/>
+    <wait id="w1" what="pod scheduling in the factory namespace" timeout="shared/retry-budget.xml#deadlines d-connect per rung" fallback="N-24's pod-ladder (5 rungs) then one more plan attempt (shared/retry-budget.xml#layers); then pod.run infra and coq/gate error, which the agent reads as not green"/>
+    <wait id="w2" what="check.sh run" timeout="the unit's budget_minutes from the plan (floor 5, suite.budget), inside the pod deadline d-pod" fallback="the timeout is a result, pod.run timeout 422, never retried; a run near its budget on a book under 100 volumes is a checker defect and becomes a fix ticket request"/>
     <wait id="w3" class="bounded" what="validator set-up inside the image" timeout="PT0S at run time: the tools are in the pinned image or the run is exit 2 at once" fallback="the image pins every tool by digest (images.json); check.sh never installs anything; a missing tool is exit 2"/>
     <cog-test>The cog that could stall this node is a human reading 50 volumes for shape. The script reads them in seconds and the forge refuses the merge without it.</cog-test>
   </waits>
 
   <retries id="retries">
-    <policy attempts="3" backoff="N-24 ladder">Infrastructure failures (exit 2, pod error) only; an exit 1 is never retried (V05: assertions never retried).</policy>
-    <recover>After the ladder, coq/gate carries error for the case and check.verdict 503 names the step; the next push re-plans.</recover>
+    <policy layer="spec-check" max="1" ref="shared/retry-budget.xml#layers">This node retries nothing; only a pod that never ran check.sh climbs N-24's pod-ladder and then the plan-attempt layer; exit 0, 1 and 2 are results (V05; NF-E3: book 1.0.0 retried exit 2 three times against N-24's five rungs).</policy>
+    <recover>After the ladder and the last plan attempt, coq/gate carries error for the case; an exit 2 is check.verdict 503 and a failure on coq/gate; the next push re-plans.</recover>
     <report>A 422 is not a card: the worker's next attempt (N-11) gets the rows in its brief; three failed attempts on one ticket follow N-11's dead path.</report>
   </retries>
 
   <many-agents id="many-agents">
     <readers>Every author reads this volume to know the rules; the rows in a 422 are addressed to the volume path, so seven group authors can read one verdict and each fix only their rows.</readers>
-    <writers>The check writes nothing in the repository; it writes check.verdict keyed by head sha, so two pods for two PRs never collide, and two pods for the same sha (a re-plan) write the same key and the second put returns the first record (idempotent).</writers>
+    <writers>The check writes nothing in the repository; its check.verdict reaches the store through N-24's artifact import under the operation key of the import (head sha, unit, plan attempt, line), so two pods for two PRs never collide and a replay of the same import returns the first record (idempotent).</writers>
     <collision>Seven authors pushing seven PRs that each touch index.xml or dag.md: the one-file, one-in-flight-ticket rule (N-14) refuses the overlap, so generated aggregates are regenerated by one ticket at a time; the group authors' node directories never overlap.</collision>
     <collision>A volume that points at a sibling in another group's PR not yet merged: C06 fails on the head sha, which is correct; the author points at the index entry instead (the index carries every node id from the DAG even before its volume exists, with status pending), and the sibling pointer is added by the later PR.</collision>
     <collision>Two spec-author seats on the same node (a retry after a failed verdict): N-14 refuses the second workspace; the retry starts after the first seat's seat.result.</collision>
@@ -134,13 +137,12 @@ flowchart LR
   <status-codes id="status-codes">
     <emits code="201" kind="check.verdict">Passed; system acts (gate status).</emits>
     <emits code="422" kind="check.verdict">Failed rows; seat acts on the next attempt (the worker or spec-author fixes).</emits>
-    <emits code="503" kind="check.verdict">Checker could not run; system acts (ladder, then error status).</emits>
+    <emits code="503" kind="check.verdict">Checker could not run (exit 2); a result, never retried; the image is fixed by a ticket (N-22) and coq/gate is a failure for the case.</emits>
   </status-codes>
 
   <state-paths id="state-paths">
-    <path id="N-46.host-run" glob="$COQ_STATE/tests/spec-book/*.jsonl" retention="P7D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-46.host-run">Output of make lint host runs of check.sh.</path>
-    <path id="N-46.pod-log" glob="$COQ_STATE/ci/pods/spec-book/*.log" retention="P14D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-46.pod-log">Pod logs copied by N-24; the gate page links them.</path>
-    <rule>Pods write nothing on the host; the log copy is N-24's.</rule>
+    <path id="N-46.host-run" glob="$COQ_STATE/tests/spec-book/*.jsonl" retention="P7D" cleanup="line/bin/cleanup.sh --entry N-46.host-run" trigger="timer" acts="system">Output of make lint host runs of check.sh.</path>
+        <rule>Pods write nothing on the host; the unit log is N-24's path and cleanup (nodes/N-24/spec.xml#state-paths), so this node registers no second path for it.</rule>
   </state-paths>
 
   <edges id="edges">
@@ -155,7 +157,7 @@ flowchart LR
     <item><check>A dangling pointer is refused.</check><proof>Fixture C06; row names the href.</proof></item>
     <item><check>Generated drift is refused.</check><proof>test-checks.py mutations C14, C15 and C17 (a stale registry, kinds file and index) and C16 (a dag.md table row with no Mermaid node); exit 1 each.</proof></item>
     <item><check>The suite row exists.</check><proof>factory/config/suites.json has a row with paths rebuild/design/* and suite spec-book; N-23 test plans it from a diff touching nodes/N-43/spec.xml.</proof></item>
-    <item><check>A missing tool is exit 2 and retried as infrastructure.</check><proof>A pod run with the image's xmllint removed; pod.run shows the ladder and coq/gate error.</proof></item>
+    <item><check>A missing tool is exit 2, a result that is never retried.</check><proof>A pod run with the image's xmllint removed: one pod, no rung, pod.run fail 422 exit 2, check.verdict 503 (not-run).</proof></item>
   </checklist>
 
   <permissions id="permissions">
@@ -174,10 +176,10 @@ flowchart LR
 
   <runbook id="runbook">
     <step n="1" when="a 422 on your PR">Read the rows; fix the named volume lines; push; the check re-runs on the new sha.</step>
-    <step n="2" when="a 503">Nothing to do by hand; the ladder retries; if coq/gate shows error after the ladder, the N-24 runbook applies (image digest, namespace quota).</step>
+    <step n="2" when="a 503">The pinned checker image lacks a tool: a ticket fixes the image (N-22) and the plan's next head runs it; a coq/gate error with no 503 is the pod infrastructure and the N-24 runbook applies.</step>
     <step n="3" when="adding a check">Add the C-row here, the fixture, and the row in check.sh in one ticket; the ticket declares rebuild/design/check.sh and this volume.</step>
     <step n="4" when="host advice">make lint runs check.sh; its output is under N-46.host-run.</step>
-    <cleanup>line/bin/cleanup.sh --entry N-46.host-run and --entry N-46.pod-log.</cleanup>
+    <cleanup>line/bin/cleanup.sh --entry N-46.host-run; the pod log is N-24's (ci/bin/cleanup-ci-state.sh --what gate-logs).</cleanup>
     <cold-start>Nothing to restore.</cold-start>
   </runbook>
 
@@ -191,8 +193,8 @@ flowchart LR
     <source path="rebuild/investigation/L07-ci-and-pods.md" anchor="#8-what-to-carry-forward">Data-driven planner, pod per case, digest pins, status on sha</source>
     <source path="rebuild/investigation/02-MAPPING.md" anchor="#2-validated-keep">V05 assertions never retried, V06 planner from the diff</source>
     <source path="rebuild/investigation/03-DECISIONS.md" anchor="#7-d05-where-a-gate-verdict-lives">The verdict the agent reads and cannot edit</source>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/spec-book-many-small-xml.md" anchor="Shape to apply in R-03 Design">The book is validated as a set</source>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md" anchor="How to apply">A reviewer rejects a shape with no answer for the collision</source>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/spec-book-many-small-xml.md" anchor="Shape to apply in R-03 Design">The book is validated as a set</source>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md" anchor="How to apply">A reviewer rejects a shape with no answer for the collision</source>
     <source path="specs/scheduler/bin/check.sh" anchor="file">The SPEC-16 per-domain checker: the pattern of a spec family with its own check script</source>
   </sources>
 

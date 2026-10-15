@@ -5,8 +5,8 @@
   (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
   No em dash appears in this file. Every time is UTC.
 -->
-<volume id="N-34" kind="node-spec" node="N-34" group="G5" version="1.0.0" issued="2026-10-14" timezone="UTC"
-        author="spec-author seat, group G5 Owner surface, round 1">
+<volume id="N-34" kind="node-spec" node="N-34" group="G5" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC"
+        author="spec-author seat, group G5 Owner surface, round 1; book 1.1.0 (F23, PII placeholders)">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, edges</entry>
@@ -39,6 +39,8 @@
     <sibling href="../N-06/spec.xml#N-06" relation="counts">Service unit and health: unit restarts and unclean exits</sibling>
     <shared href="../../shared/status-codes.xml#owner-surface">Status codes</shared>
     <shared href="../../shared/state-store.xml#envelope">Record envelope</shared>
+    <shared href="../N-32/spec.xml#web-security" role="web-security">Keys, sessions, cookies, roles and per-tier hosts</shared>
+    <shared href="../../shared/outside-probe.xml#probe" role="probe">The outside probe reaches the stable page through this door</shared>
     <shared href="../../shared/cut-over.xml#step-owner-surface" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
   </pointers>
 
@@ -70,7 +72,8 @@
       <field name="attempts">3</field>
       <field name="error">EADDRINUSE, EADDRNOTAVAIL (the Tailscale IP changed), or no bind address found</field>
     </record>
-    <record kind="front-door.refused" code="409"><field name="holder_pid">a second start while the lock names a live pid; exit 3</field></record>
+    <record kind="front-door.refused" code="412"><field name="holder_pid">a second start while the lock names a live pid; exit 4</field></record>
+    <example schema="record.schema.json#/$defs/front-door.refused">{"id":"20261015T060305Z-412-d2f6h","kind":"front-door.refused","code":412,"at":"2026-10-15T06:03:05Z","node":"N-34","seq":4141,"epoch":1,"tier":"stable","page":"coq-stable","holder_pid":31907,"exit":4}</example>
     <record kind="front-door.rebind" code="100"><field name="old_bind, new_bind">the Tailscale IP changed; the unit exits 0 to be restarted on the new address</field></record>
     <record kind="front-door.down" code="100 or 500"><field name="reason">stop (100) or crash (500, written by N-06)</field></record>
   </output>
@@ -78,9 +81,9 @@
   <mechanism id="mechanism">
     <where>Go subcommand coq-bearings front-door --page &lt;page&gt; in the control plane module (a port of tools/bearings/scripts/front-door.mjs, same behaviour, one language), run as the systemd user unit instance coq-front-door@&lt;page&gt;.service on the WSL host.</where>
     <step n="1">Resolve the tier and page from tools/bearings/config/bearings.json; read the target port from ${COQ_STATE}/bearings/&lt;page&gt;/server.json (or the tier's fixed port); find the bind address: --bind or BEARINGS_FRONT_DOOR_BIND, else tailscale ip -4 (5 s timeout), else config front_door.bind, else exit 3 with front-door.failed naming no bind address.</step>
-    <step n="2">Lock: ${COQ_STATE}/bearings/&lt;page&gt;/front-door.json {pid, bind, port, at}; a live pid in it is front-door.refused 409 and exit 3 (RestartPreventExitStatus=3); an unreadable lock is logged and ignored.</step>
+    <step n="2">Lock: ${COQ_STATE}/bearings/&lt;page&gt;/front-door.json {pid, bind, port, at}; a live pid in it is front-door.refused 412 and exit 4 (RestartPreventExitStatus=3 4); an unreadable lock is logged and ignored.</step>
     <step n="3">Wait for the back end: connect to 127.0.0.1:&lt;target_port&gt; with a 2 s timeout, up to 3 tries 2 s apart; if it never answers, exit 1 with front-door.failed reason backend, and systemd retries after RestartSec (the page unit is what is wrong, and BindsTo stops this unit when the page unit stops).</step>
-    <step n="4">Bind &lt;bind&gt;:&lt;port&gt;; 3 tries 2 s apart (retry_ms); then exit 4 with front-door.failed. On success write the lock, write front-door 100, log one line.</step>
+    <step n="4">Bind &lt;bind&gt;:&lt;port&gt;; 3 tries 2 s apart (retry_ms); then exit 1 with front-door.failed, so systemd retries. On success write the lock, write front-door 100, log one line.</step>
     <step n="5">Forward: for every accepted connection open a loopback connection and pipe both ways; errors on either side drop both; no byte is inspected or changed, so the phone's Host header reaches the page as sent and passes allowed_hosts (PR 186). Connections are counted for the health line.</step>
     <step n="6">IP watch: every 60 s run tailscale ip -4 (5 s timeout); if it differs from the bound address, write front-door.rebind 100 and exit 0 so systemd restarts the unit on the new address (Restart=always covers exit 0 too). This closes the cost noted in PR 187 (a restart when the Tailscale IP changes) with no human.</step>
     <step n="7">Stop: SIGTERM closes the listener, drops live connections after a 5 s drain, removes the lock, writes front-door.down 100, exit 0.</step>
@@ -90,7 +93,7 @@
   <start id="start">
     <unit name="coq-front-door@.service" rendered-from="tools/bearings/units/coq-front-door@.service" installed-by="tools/bearings/bin/install-units.sh">
       <line>[Unit] Description=coq bearings tailnet front door for %i; BindsTo=coq-bearings@%i.service; After=coq-bearings@%i.service tailscaled.service network-online.target; StartLimitIntervalSec=0</line>
-      <line>[Service] Type=simple; ExecStart=%h/.local/bin/coq-bearings front-door --page %i; Restart=always; RestartSec=10; RestartPreventExitStatus=3; MemoryMax=64M; Environment=COQ_STATE=%h/.local/state/coq/coq-jev-herdr-plugin</line>
+      <line>[Service] Type=simple; ExecStart=%h/.local/bin/coq-bearings front-door --page %i; Restart=always; RestartSec=10; RestartPreventExitStatus=3 4; MemoryMax=64M; Environment=COQ_STATE=%h/.local/state/coq/coq-jev-herdr-plugin</line>
       <line>[Install] WantedBy=coq-bearings@%i.service</line>
     </unit>
     <text>Enabled for stable once by the install script; BindsTo and WantedBy tie it to the page unit, so a tier that comes up gets its door and a tier that goes down loses it, with no verb to type. uat and dev tiers get a door only when tools/bearings/config/bearings.json tiers.&lt;tier&gt;.front_door is true (stable true, others false by default: the owner confirms uat pages from the desktop or by explicit config).</text>
@@ -99,7 +102,7 @@
   <waits id="waits">
     <wait what="tailscale ip -4" timeout="5 s" fallback="config front_door.bind; then exit 3 with the reason"/>
     <wait what="back end connect" timeout="2 s, 3 tries 2 s apart" fallback="exit 1 front-door.failed backend; systemd retries after 10 s; BindsTo stops it if the page unit is gone"/>
-    <wait what="bind" timeout="3 tries 2 s apart" fallback="exit 4 front-door.failed; systemd retries after 10 s; three failures in 5 min is an unhealthy record (N-06) and an alert on N-41, because the owner's phone cannot reach the page"/>
+    <wait what="bind" timeout="3 tries 2 s apart" fallback="exit 1 front-door.failed; systemd retries after 10 s; three failures in 5 min is an unhealthy record (N-06) and an alert on N-41, because the owner's phone cannot reach the page"/>
     <wait what="forwarding a connection" timeout="TCP keepalive 30 s idle; no application timeout (SSE streams are long-lived by design)" fallback="a dead peer is dropped by keepalive; the page's SSE client reconnects"/>
     <wait what="IP watch" timeout="5 s per check, every 60 s" fallback="a failed check keeps the current bind; three failed checks in a row log once; an address change restarts within 60 s"/>
     <wait what="shutdown drain" timeout="5 s" fallback="forced close"/>
@@ -113,27 +116,27 @@
   <many-agents-at-once id="many-agents-at-once">
     <readers>Any number of seats read this volume.</readers>
     <workers>Build tickets touch the front-door subcommand, tools/bearings/units/coq-front-door@.service and the install script; nothing else.</workers>
-    <collision what="two front doors for one tier">The lock file with a live pid refuses the second (409, exit 3), and the bind itself fails with EADDRINUSE for anything that slips past the lock; one door per tier is the kernel's rule as much as ours.</collision>
+    <collision what="two front doors for one tier">The lock file with a live pid refuses the second (412, exit 4), and the bind itself fails with EADDRINUSE for anything that slips past the lock; one door per tier is the kernel's rule as much as ours.</collision>
     <collision what="two tiers with front doors">Different ports, so one bind address carries both; the config says which tiers have a door.</collision>
     <collision what="the page restarts while the door is up">BindsTo restarts the door with the page; live phone connections drop and the phone's EventSource reconnects by itself (N-31), landing on the new page instance.</collision>
     <collision what="two devices on the tailnet at once">Each is its own forwarded connection; the door has no shared state per client.</collision>
-    <test>tests start two door processes for one page in the Podman harness with a fake tailscale binary: the second exits 3; a changed fake IP yields front-door.rebind and a new bind within one watch interval; a killed back end yields front-door.failed backend and a restart.</test>
+    <test>tests start two door processes for one page in the Podman harness with a fake tailscale binary: the second exits 4; a changed fake IP yields front-door.rebind and a new bind within one watch interval; a killed back end yields front-door.failed backend and a restart.</test>
   </many-agents-at-once>
 
   <status-codes id="status-codes">
     <emits kind="front-door" code="100" acts="N-52 may print the tailnet URL; N-42 shows the door lamp">bound and forwarding</emits>
     <emits kind="front-door.failed" code="500" acts="N-06 counts; N-41 alert; N-52 push when live">bind, back end or no address after the retries</emits>
-    <emits kind="front-door.refused" code="409" acts="nobody; countable">second instance</emits>
+    <emits kind="front-door.refused" code="412" acts="nobody; countable">second instance, exit 4</emits>
     <emits kind="front-door.rebind" code="100" acts="nobody; systemd restarts">Tailscale IP changed</emits>
     <emits kind="front-door.down" code="100" acts="N-42 lamp grey">clean stop</emits>
     <emits kind="front-door.down" code="500" acts="N-06 unhealthy after 3 in 5 min">unclean exit (written by N-06)</emits>
   </status-codes>
 
   <state-paths id="state-paths">
-    <path p="${COQ_STATE}/bearings/&lt;page&gt;/front-door.json" what="pid lock {pid, bind, port, at}; removed on clean exit" cleanup="tools/bearings/bin/cleanup-tier.sh &lt;page&gt; [--dry-run] (removes a lock whose pid is dead)"/>
-    <path p="~/.config/systemd/user/coq-front-door@.service" what="installed unit template" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
-    <path p="journal of coq-front-door@&lt;page&gt;" what="one line per start, stop, rebind, failure; never a key, never a URL with a key" cleanup="tools/bearings/bin/cleanup-journal.sh --unit 'coq-front-door@*' --older-than 30d [--dry-run]"/>
-    <path p="store rows front-door.*" what="in N-01; 90 days" cleanup="registered with N-45 as store retention class owner-surface"/>
+    <path trigger="unit-stop" acts="system" p="${COQ_STATE}/bearings/&lt;page&gt;/front-door.json" what="pid lock {pid, bind, port, at}; removed on clean exit" cleanup="tools/bearings/bin/cleanup-tier.sh &lt;page&gt; [--dry-run] (removes a lock whose pid is dead)"/>
+    <path trigger="owner" acts="owner" p="~/.config/systemd/user/coq-front-door@.service" what="installed unit template" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
+    <path trigger="timer" acts="system" p="journal of coq-front-door@&lt;page&gt;" what="one line per start, stop, rebind, failure; never a key, never a URL with a key" cleanup="tools/bearings/bin/cleanup-journal.sh --unit 'coq-front-door@*' --older-than 30d [--dry-run]"/>
+    <path trigger="timer" acts="system" p="store rows front-door.*" what="in N-01; 90 days" cleanup="registered with N-45 as store retention class owner-surface"/>
   </state-paths>
 
   <edges id="edges">
@@ -144,26 +147,27 @@
   </edges>
 
   <security id="security">
-    <rule>Plain HTTP between the phone and the box inside the WireGuard-encrypted tailnet; no TLS of its own; the page's key plus HttpOnly cookie is the auth, and the Host allow-list names the tailnet names and address only (whoadudette-1, whoadudette-1.tailef6830.ts.net, 100.122.200.108).</rule>
-    <rule>The key is never in a record, a log, a push or this volume; the phone URL with the key is printed by coq owner url to the operator's terminal only, and the owner's first open sets the cookie so later links carry no key (N-52 relies on this).</rule>
+    <rule>Plain HTTP between the phone and the box inside the WireGuard-encrypted tailnet; no TLS of its own; auth is the page's key, session cookie, roles and CSRF rules of nodes/N-32/spec.xml#web-security. The Host allow-list is per tier: stable answers ${SITE_TAILNET_HOST} (and its short name) only, uat and dev answer ${SITE_TAILNET_ADDR} only, so no two tiers share a host or a cookie jar on the phone.</rule>
+    <rule>The key is never in a record, a log, a push or this volume; the phone URL carries the key in the fragment, is printed by coq owner url to the owner's terminal only, and the first open posts it to /login and sets the session cookie, so later links carry no key (N-52 relies on this).</rule>
+    <risk>Plain HTTP means the session cookie cannot carry the Secure flag; the only transport protection is WireGuard between the owner's devices and the box. Recorded, not closed (nodes/N-32/spec.xml#web-security); the later fix is TLS on the tailnet name.</risk>
     <rule>The door listens on the Tailscale address only, never 0.0.0.0; a config bind outside 100.64.0.0/10 is refused with exit 3 (CGNAT range check), so a typo can never open the page to the LAN.</rule>
     <cost>One more process per tier with a door (about 8 MB); a 60 s window after an IP change; a restart of the door on every page restart.</cost>
     <later>With root once, sudo tailscale serve --bg --http=80 http://127.0.0.1:44900 gives port 80 and needs no door process; kept as the alternative, not taken, because the owner wants no sudo step (PR 187).</later>
   </security>
 
   <checklist id="checklist">
-    <item proof="systemctl --user is-active coq-front-door@coq-stable; store holds front-door 100 with bind 100.122.200.108 and port 44900">The door runs as a unit tied to the page</item>
-    <item proof="from the owner's phone on the tailnet, http://100.122.200.108:44900/ opens the page with the cookie; a screenshot from the phone sent to the owner">The phone reaches the page</item>
-    <item proof="test: a second door for the page exits 3 with front-door.refused 409">One door per tier</item>
+    <item proof="systemctl --user is-active coq-front-door@coq-stable; store holds front-door 100 with bind ${SITE_TAILNET_ADDR} and port 44900">The door runs as a unit tied to the page</item>
+    <item proof="from the owner's phone on the tailnet, http://${SITE_TAILNET_HOST}:44900/ opens the page with the session cookie; a screenshot from the phone sent to the owner">The phone reaches the page</item>
+    <item proof="test: a second door for the page exits 4 with front-door.refused 412">One door per tier</item>
     <item proof="test: fake tailscale returns a new IP; front-door.rebind within 60 s and a new front-door record with the new bind">IP change needs no human</item>
     <item proof="test: systemctl --user stop coq-bearings@coq-dev-x stops the door (BindsTo); start brings it back">Door follows the page</item>
-    <item proof="test: config bind 192.168.1.5 is refused with exit 3">Never the LAN</item>
+    <item proof="test: config bind ${SITE_CI_LAN_ADDR} (a LAN address) is refused with exit 3">Never the LAN</item>
     <item proof="test: 3 bind failures write front-door.failed 500 and N-06 counts an unhealthy after 3 in 5 min">Failure is reported</item>
     <item proof="cleanup-tier.sh --dry-run lists a dead lock; --yes removes it">Cleanup exists</item>
   </checklist>
 
   <permissions id="permissions">
-    <runs-as>the owner user, no sudo, MemoryMax 64M; may run tailscale ip -4 (read-only, no root needed)</runs-as>
+    <runs-as>the service user coq-svc (shared/authority.xml#principals), no sudo, MemoryMax 64M; may run tailscale ip -4 (read-only, no root needed)</runs-as>
     <may>bind the Tailscale address on the tier's port; connect to loopback; write its lock and its records</may>
     <may-not>read or alter traffic; bind any other address; touch the page's state beyond its own lock; run tailscale serve</may-not>
   </permissions>
@@ -176,7 +180,7 @@
   </monitoring>
 
   <runbook id="runbook">
-    <op name="phone url">coq owner url --page coq-stable --tailnet (prints the URL with the key to the terminal; never paste it into a record or a reply)</op>
+    <op name="phone url">coq owner url --page coq-stable --tailnet (prints the URL with the key in the fragment to the owner's terminal; owner uid only; never paste it into a record or a reply)</op>
     <op name="status">systemctl --user status coq-front-door@coq-stable; coq owner door --page coq-stable (last front-door record)</op>
     <op name="the phone cannot connect">read the last front-door.* record: failed names the cause; rebind means wait a minute; if the page is fine and the door is up, the phone is off the tailnet, which the Tailscale app shows</op>
     <op name="give a uat tier a door">set tiers.uat.front_door true in tools/bearings/config/bearings.json by pull request; N-48 starts the door with the tier</op>
@@ -191,8 +195,8 @@
     <source path="tools/bearings/config/bearings.json" anchor="/allowed_hosts">the tailnet names and address; front_door.bind</source>
     <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="checkpoint-2026-10-14t041830z">PR 186 and 187 are the current front door; pane wD3:p1WN; no root</source>
     <source path="rebuild/investigation/03-DECISIONS.md" anchor="10-d08-herdrs-role-and-version">a herdr pane is a window; the process gets its own unit</source>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md" anchor="why">the owner wants the factory in his pocket</source>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md" anchor="rule">a card sat on a page he could not reach</source>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md" anchor="why">the owner wants the factory in his pocket</source>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md" anchor="rule">a card sat on a page he could not reach</source>
   </sources>
 
   <rejected id="rejected">

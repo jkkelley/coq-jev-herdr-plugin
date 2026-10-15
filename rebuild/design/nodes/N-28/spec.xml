@@ -84,7 +84,7 @@
       <field name="deadline">UTC when a standing policy row names one and the card is relayable; always absent on an owner-only card (shared/authority.xml#relayable-rulings)</field>
       <field name="default">index applied at the deadline by policy.applied 200; same rule: never on an owner-only card</field>
       <field name="owner_only">true when any option's effect is not none or ticket.unblock; such a card has no deadline and no default, and escalates once by alert.aged</field>
-      <field name="standing">the lever name on a standing card (halt, resume, gofactory, build-mode); absent on an ordinary card</field>
+      <field name="standing">the lever name on a standing card (halt, resume, gofactory, build-mode, kill); absent on an ordinary card</field>
       <field name="watcher">the lease generation that was alive at post time</field>
       <field name="posted_at">UTC</field>
     </record>
@@ -134,7 +134,7 @@
 
   <standing-cards id="standing-cards">
     <s>What broke (review NF-D2, 2026-10-15): neither halt path produced a ruling; the inbox forwarded USERHALT as source controls, which N-29 accepted only from the page service, and the Controls screen posted its own card per action under a card id N-29 could not parse.</s>
-    <s>The rule: at bring-up (bootstrap B1, shared/cut-over.xml#bootstrap) this node posts one standing card per lever, once, with operation key N-28/card.standing/&lt;lever&gt;/r1: halt (USERHALT, effect control.halt), resume (USERGO, control.resume), gofactory (GOFACTORY, gofactory) and build-mode (build-mode.set on or off). Each is owner_only, has no deadline and no default, and never gets card.done; its id is the entity standing:&lt;lever&gt; that N-30 and N-42 read.</s>
+    <s>The rule: at bring-up (bootstrap B1, shared/cut-over.xml#bootstrap) this node posts one standing card per lever, once, with operation key N-28/card.standing/&lt;lever&gt;/r1: halt (USERHALT, effect control.halt), resume (USERGO, control.resume), gofactory (GOFACTORY, gofactory), build-mode (build-mode.set on or off) and kill (run.kill, the Controls kill of running seats; no owner word answers it, and USERHALT never kills). Each is owner_only, has no deadline and no default, and never gets card.done; its id is the entity standing:&lt;lever&gt; that N-30 and N-42 read.</s>
     <s>A standing card is answered once per action (N-29: one ruling per card and action id): the Controls lever (N-42) answers with its client action id, the inbox (N-30) with the owner.message id; nothing else may answer it. The deck draws standing cards as the lever row, not as open decisions.</s>
     <example schema="record.schema.json#/$defs/card">{"id":"20261015T060000Z-300-s1d2f","kind":"card","code":300,"at":"2026-10-15T06:00:00Z","node":"N-28","card":"C-3","tier":"stable","cause":"20261015T055959Z-100-b1b1b","about":"Halt lever - stops every dispatch","decide":"Halt the line now?","options":[{"label":"Halt","then":"no new seats start"},{"label":"Not now","then":"nothing changes"}],"rec":1,"owner_only":true,"standing":"halt","watcher":7,"posted_at":"2026-10-15T06:00:00Z","idempotency_key":"N-28/card.standing/halt/r1"}</example>
     <example schema="record.schema.json#/$defs/card.merged">{"id":"20261015T081700Z-100-m2m3m","kind":"card.merged","code":100,"at":"2026-10-15T08:17:00Z","node":"N-28","cause":"20261015T081655Z-500-d9d8d","card":"C-60","idempotency_key":"N-28/card.merged/merged:20261015T081655Z-500-d9d8d/r1"}</example>
@@ -182,9 +182,9 @@
   </status-codes>
 
   <state-paths id="state-paths">
-    <path p="store rows card, card.held, card.unwatched, card.refused, card.merged, card.done, the entities standing:&lt;lever&gt; and the counter card_number" what="in N-01; cards and card.merged are kept for the life of the store (they are the owner's record and a merged cause must never be re-selected); held rows retention 30 days" cleanup="registered with N-45 as store retention class owner-surface"/>
-    <path p="tools/bearings/config/cards.template.json" class="tracked" retention="never" acts="owner" what="in the repository, not state" cleanup="none: tracked source, removed by a pull request"/>
-    <path p="journal of coq.service, lines prefixed cards:" what="one line per post, hold, refuse" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
+    <path trigger="timer" acts="system" p="store rows card, card.held, card.unwatched, card.refused, card.merged, card.done, the entities standing:&lt;lever&gt; and the counter card_number" what="in N-01; cards and card.merged are kept for the life of the store (they are the owner's record and a merged cause must never be re-selected); held rows retention 30 days" cleanup="registered with N-45 as store retention class owner-surface"/>
+    <path trigger="merge" acts="owner" p="tools/bearings/config/cards.template.json" class="tracked" retention="never" what="in the repository, not state" cleanup="none: tracked source, removed by a pull request"/>
+    <path trigger="timer" acts="system" p="journal of coq.service, lines prefixed cards:" what="one line per post, hold, refuse" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
     <text>The old files ~/.bearings/&lt;page&gt;/questions.json and answers.jsonl are migrated once into the store by N-32's cut-over step and then fall under tools/bearings/bin/cleanup-tier.sh.</text>
   </state-paths>
 
@@ -213,7 +213,7 @@
     <item proof="make lint fails on a template row with a 16-word sentence or 5 options">The checker guards the templates</item>
     <item proof="test: a policy row with a deadline on a ticket.unblock card yields policy.applied 200 and card.done at the fake clock's deadline; make lint refuses a policy ref on the GOFACTORY, resume, break-glass and build-mode rows; the built owner-only card has no deadline and no default">Standing policies default only relayable cards</item>
     <item proof="test: a card.refused cause posts on the first tick after the template table reloads with a fix; a card.unwatched cause posts on the first tick its lamp is alive; a card.merged cause is never selected again">Refused and unwatched are retried by query, merged is terminal</item>
-    <item proof="test: bring-up posts four standing cards once; a second bring-up replays; none ever gets card.done">Standing cards exist before any lever is pulled</item>
+    <item proof="test: bring-up posts five standing cards once; a second bring-up replays; none ever gets card.done">Standing cards exist before any lever is pulled</item>
     <item proof="stable: one real card posted by the builder, answered by the owner on the page, card.done written; then make ask removed from the Makefile in the same ticket set">Go-live proof</item>
     <item proof="screenshots of a card of each cause class on dev, sent to the owner">The card looks right</item>
     <item proof="shared/status-codes.xml carries acts=owner on every initial row named in the input section">The code table is the only list</item>

@@ -26,10 +26,10 @@
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
-    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="shared-needs">Shared anchors this volume cites</entry>
     <entry ref="purpose">Purpose</entry>
     <entry ref="input">Input record: dispatch</entry>
-    <entry ref="output">Output record: seat.bundle</entry>
+    <entry ref="output">Output records: seat.bundle, seat.bundle.refused, seat.bundle.failed</entry>
     <entry ref="mechanism">Mechanism: the render in the Go service</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
@@ -42,6 +42,7 @@
     <entry ref="monitoring">Monitoring</entry>
     <entry ref="runbook">Runbook</entry>
     <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples</entry>
     <entry ref="sources">Sources cited</entry>
     <entry ref="rejected">Rejected, with the reason</entry>
   </contents>
@@ -51,8 +52,8 @@
     <dag href="../../dag.md#3-every-node">The DAG row of this node: input record and output record</dag>
     <principle href="../../dag.md#7-rules-every-node-obeys">Rules 1 to 9: input to output, no cog, three attempts, one store, code does mechanical jobs, the verdict the agent cannot edit, herdr is the owner's window, build mode, ships dark</principle>
     <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, timed-out stalls, a 409 that reports</principle>
-    <needs href="spec.xml#shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
-    <sibling href="record.schema.json" kind="schema">JSON schema of the dispatch and seat.bundle records</sibling>
+    <needs href="spec.xml#shared-needs">The shared anchors this volume cites</needs>
+    <sibling href="record.schema.json" kind="schema">JSON schema: dispatch ($ref to N-07), seat.bundle, seat.bundle.refused, seat.bundle.failed</sibling>
     <sibling href="../N-14/spec.xml#N-14">Workspace provision, the other consumer of the dispatch record</sibling>
     <sibling href="../N-15/spec.xml#N-15">One-shot seat launcher, the consumer of seat.bundle</sibling>
     <sibling href="../N-16/spec.xml#N-16">Worker run</sibling>
@@ -64,16 +65,23 @@
   </pointers>
 
   <shared-needs id="shared-needs">
-    <text>Declared, not linked: the shared author writes these volumes and anchors; check.sh matches each need against shared/ when it lands. Nothing below points at a file that does not exist in this pull request.</text>
-    <need volume="../../shared/status-codes.xml" anchor="code-100" kind="status-code">100 exists or in progress: seat.bundle, workspace, seat.heartbeat, pr.opened, ticket-set.draft; acts: the next node on the edge</need>
-    <need volume="../../shared/status-codes.xml" anchor="code-412" kind="status-code">412 precondition refused: seat.bundle.refused, workspace.refused (claim_overlap, aggregate, ticket_in_flight, head_moved), seat.result preflight (bundle_mismatch, workspace_mismatch, lease_expired); acts: N-11, or N-03 for claim_overlap without an attempt</need>
-    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">500 failed after 3 or a defect: seat.bundle.failed, workspace.failed, phase.failed, validator.failed, launcher.defect; acts: N-11, or N-06 health then N-28 for a defect</need>
-    <need volume="../../shared/seat-contract.xml" anchor="launch-flags" kind="seat-contract">the exact claude -p flag set of N-15 section command (settings, --setting-sources local, --strict-mcp-config, dontAsk, --max-turns, --max-budget-usd, --output-format json, --json-schema, --session-id or --resume); no --fallback-model, no bypassPermissions on the host</need>
-    <need volume="../../shared/seat-contract.xml" anchor="limits-are-fields" kind="seat-contract">max_turns, max_budget_usd, wall_clock_seconds, stall_seconds are role schema fields and launcher arguments, never prose the model counts</need>
-    <need volume="../../shared/principles.xml" anchor="no-cog" kind="principle">every wait has a timeout and a fallback; no agent is a gate; nothing starts by typing; the system drives (dag.md section 7 rule 2 until the shared volume lands)</need>
-    <need volume="../../shared/principles.xml" anchor="build-mode" kind="principle">build mode is a flag with an expiry (N-44) frozen into the dispatch and stamped on the bundle; it never applies to the rebuild's own governance except where a node volume says so</need>
-    <need volume="../../shared/state-store.xml" anchor="table-records" kind="store-table">records: the append-only record table with the envelope (id, kind, code, at, node, attempt, idempotency_key, version) and compare-and-swap on version</need>
-    <need volume="../../shared/state-store.xml" anchor="table-build-mode" kind="store-table">build_mode: the current flag state with expires_at, written by N-44, read by N-07 at dispatch</need>
+    <text>Every shared anchor below is live in book 1.1.0; this volume cites them and restates none of their numbers.</text>
+    <need volume="../../shared/contracts.xml" anchor="dispatch" kind="contract">the dispatch body this node reads, ../../shared/contracts.schema.json#/$defs/dispatch_body; run_id equals dispatch_id</need>
+    <need volume="../../shared/contracts.xml" anchor="roles" kind="contract">role gate is a code run: this node never renders it</need>
+    <need volume="../../shared/contracts.xml" anchor="operation-keys" kind="contract">N-13/seat.bundle/DISPATCH_ID/r1</need>
+    <need volume="../../shared/contracts.xml" anchor="fencing" kind="contract">the seat.bundle Commit carries the dispatch's lease</need>
+    <need volume="../../shared/contracts.xml" anchor="retry-owner" kind="contract">seat.bundle.failed is charged by N-11 with session new</need>
+    <need volume="../../shared/contracts.xml" anchor="timing" kind="contract">run.deadline_seconds.ROLE and stall.seconds.ROLE copied into limits</need>
+    <need volume="../../shared/authority.xml" anchor="seat-isolation" kind="authority">bundle directory ACL for the run's seat user only; environment list; no store socket</need>
+    <need volume="../../shared/authority.xml" anchor="credential-matrix" kind="authority">the paths the Read deny rules cover; the anthropic-seat apiKeyHelper is the only credential a seat touches</need>
+    <need volume="../../shared/seat-contract.xml" anchor="launch-flags" kind="seat-contract">the argv the launcher builds from these files; this node renders what the args name and never a flag</need>
+    <need volume="../../shared/seat-contract.xml" anchor="brief-shape" kind="seat-contract">the brief.md headings in order</need>
+    <need volume="../../shared/seat-contract.xml" anchor="limits-are-fields" kind="seat-contract">limits are fields, never prose</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-100" kind="status-code">seat.bundle</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-412" kind="status-code">seat.bundle.refused</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">seat.bundle.failed</need>
+    <need volume="../../shared/principles.xml" anchor="no-cog" kind="principle">every wait has a timeout and a fallback</need>
+    <need volume="../../shared/principles.xml" anchor="build-mode" kind="principle">build mode is frozen into the dispatch and stamped on the bundle</need>
   </shared-needs>
 
   <section id="purpose" title="Purpose">
@@ -83,119 +91,108 @@
   </section>
 
   <section id="input" title="Input record: dispatch">
-    <text>Kind dispatch, code 100, written by N-07. The fields this node reads:</text>
-    <field name="id">The dispatch id; it becomes run_id for every record of the run, so every step is idempotent by it.</field>
-    <field name="ticket">Ticket id, absent for a spec-author dispatch that works from a design anchor.</field>
-    <field name="role">worker, spec-author or reviewer. validator is never dispatched to a seat (N-18 is code).</field>
-    <field name="phase">worker, reviewer or spec-author; names which brief template renders.</field>
-    <field name="attempt">1 to 3, from N-11.</field>
-    <field name="deadline_at">UTC; the launcher kills the run at this time.</field>
-    <field name="lease">holder, token, generation, expires_at from N-02; copied into the bundle so the launcher's heartbeats carry the fencing token.</field>
-    <field name="repo">Repository slug and the origin URL.</field>
-    <field name="build_mode">on or off plus expires_at, read by N-07 from the build-mode.state record of N-44 at dispatch time and frozen into the dispatch.</field>
-    <field name="target">For a reviewer: pr number and head_sha. For a spec-author: design anchor, group, and verdict_ref (the validator.refused record id on a retry). For a worker on attempt n+1: the failure record id (review.changes, merge.conflict, seat.result blocked) to attach.</field>
-    <text>Schema: record.schema.json#/$defs/dispatch. The canonical envelope (id, kind, code, at, node, attempt, idempotency_key, version) is owned by the shared store volume; this schema repeats it so the volume is whole on its own.</text>
+    <text>Kind dispatch, code 100, written by N-07 in the GrantDispatch Commit. The shape is ../N-07/record.schema.json#/$defs/dispatch, which is the committed envelope plus ../../shared/contracts.schema.json#/$defs/dispatch_body; this node $refs it and has no projection of its own. Fields this node uses:</text>
+    <field name="dispatch_id">The run id of every record of the run (../../shared/contracts.xml#dispatch).</field>
+    <field name="ticket, phase, role, attempt">WO for worker and reviewer, CR for spec; role gate is skipped (a code run, ../../shared/contracts.xml#roles).</field>
+    <field name="lease">key and integer token; carried on the seat.bundle Commit (../../shared/contracts.xml#fencing).</field>
+    <field name="repo, repo_sha">The role file and templates are read at repo_sha, never at a moving ref.</field>
+    <field name="target">WO: ticket, and pr with head_sha for a reviewer, verdict_refs on a rework; CR: request, anchor, group, source_request.</field>
+    <field name="session">new or resume with session_id, decided by N-11 (../../shared/contracts.xml#retry-owner); copied, never minted here for a resume.</field>
+    <field name="build_mode, deadline_at, brief_path">Copied; brief_path names the file this node writes inside the bundle.</field>
   </section>
 
-  <section id="output" title="Output record: seat.bundle">
-    <text>Kind seat.bundle, code 100, idempotency_key equal to the dispatch id. Fields:</text>
-    <field name="run_id">Equals dispatch.id.</field>
-    <field name="role">As dispatched.</field>
-    <field name="bundle_dir">$COQ_STATE/seats/bundles/&lt;run_id&gt;/ (section state-paths).</field>
-    <field name="settings_path">bundle_dir/settings.json rendered from roles/&lt;role&gt;.json.</field>
-    <field name="mcp_path">bundle_dir/mcp.json, an empty server list unless the role names a repository-owned server.</field>
-    <field name="brief_path">bundle_dir/brief.md rendered from the ticket record or the design anchor, plus the attached verdict on a retry.</field>
-    <field name="schema_path">bundle_dir/output.schema.json, the structured output the seat must return (the role's output shape from N-16, N-17 or N-19).</field>
-    <field name="model">The role's model id from roles/&lt;role&gt;.json model.claude; never a seat's choice (memory right-size-agent-models).</field>
-    <field name="limits">max_turns, max_budget_usd, wall_clock_seconds, stall_seconds from scheduler/config/seats.json for the role; limits are launcher fields, never prose (rebuild/investigation/02-MAPPING.md#3-dropped-by-the-field-still-carried-here-kill K10).</field>
-    <field name="deny_paths">Every repository path outside the ticket's declared files, expressed as the allow list of the declared files plus a deny of the rest; for a reviewer every write is denied.</field>
-    <field name="build_mode">Copied from the dispatch; stamped so every downstream gate reads it from the record, not from a file.</field>
-    <field name="hashes">sha256 of settings.json, mcp.json, brief.md, output.schema.json, and bundle_hash over the four in that order.</field>
-    <field name="session_id">A UUID minted here so N-15 can resume a dead run by id (S04 section 8 item 8). On a rework attempt it is the prior run's session id when N-16 says so.</field>
-    <text>Schema: record.schema.json#/$defs/seat.bundle.</text>
+  <section id="output" title="Output records: seat.bundle, seat.bundle.refused, seat.bundle.failed">
+    <text>All three on the shared committed envelope; operation key N-13/seat.bundle/DISPATCH_ID/r1 on the Commit request (../../shared/contracts.xml#operation-keys), never in the record.</text>
+    <field name="seat.bundle: run_id, ticket, phase, role, attempt">From the dispatch.</field>
+    <field name="bundle_dir">STATE/seats/bundle/RUN_ID/, owned coq-svc:coq-launch 0750 with a read ACL for the run's seat user only (../../shared/authority.xml#seat-isolation).</field>
+    <field name="settings_path, mcp_path, brief_path, schema_path">settings.json (the fence and, on the host, apiKeyHelper), mcp.json, brief.md, output.schema.json; plus ticket.json (the ticket row as data, seat-contract.xml#ticket-shape).</field>
+    <field name="model, limits">The role file's model; limits max_turns, max_budget_usd, run_deadline_seconds and stall_seconds, the last two from ../../shared/contracts.xml#timing for the role.</field>
+    <field name="allow_paths">The ticket's declared files for a worker (at least one); empty for a reviewer and a spec-author, whose bundles carry no write rule at all.</field>
+    <field name="read_deny">Read deny rules for every role: STATE, COQ_CACHE outside the run's workspace, STATE/secrets and every stored path of ../../shared/authority.xml#credential-matrix, $HOME/.claude*, $HOME/.ssh, $HOME/.config, /etc/coq.</field>
+    <field name="build_mode, session, lease, deadline_at">Copied from the dispatch.</field>
+    <field name="hashes">sha256 of settings, mcp, brief and schema, and bundle over the four in that order; N-15 refuses a mismatch (bundle_mismatch).</field>
+    <field name="seat.bundle.refused 412">The repository is at fault: role_schema_invalid, no_files_declared (a worker ticket with no files), no_template_for_phase, ticket_missing. Carries failure_body with failure_kind seat.bundle.failed and outcome refused.</field>
+    <field name="seat.bundle.failed 500">An io or store step failed three times: role_unreadable, store_unreachable, bundle_io, hash_mismatch. failure_body with outcome failed.</field>
+    <text>Schemas: record.schema.json#/$defs/seat.bundle, #/$defs/seat.bundle.refused, #/$defs/seat.bundle.failed. Examples in section examples.</text>
   </section>
 
   <section id="mechanism" title="Mechanism: the render in the Go service">
-    <text>Package scheduler/internal/seatlayer in the small Go cut (D09). One function Render(ctx, dispatch) (seat.bundle, error), pure over its inputs: the dispatch record, the role file, the ticket record (or the design anchor text), the seats config and the build-mode state frozen in the dispatch. The same inputs always give the same bytes and the same bundle_hash, which is the proof the checklist asks for.</text>
+    <text>Package scheduler/internal/seatlayer in the small Go cut (D09). Render(ctx, dispatch) (seat.bundle, error) is pure over the dispatch, the role file and templates at repo_sha, the ticket row and the seats config: the same inputs give the same bytes and the same bundle hash.</text>
     <mermaid>sequenceDiagram
   participant S as Store N-01
   participant R as seatlayer.Render
-  participant F as roles/ and scheduler/config in the repo at origin/main
-  participant D as $COQ_STATE/seats/bundles/run_id
-  S-->>R: dispatch record (level-triggered list, no seat.bundle yet for run_id)
+  participant F as roles/ and templates at repo_sha
+  participant D as STATE/seats/bundle/run_id
+  S-->>R: dispatch with no seat.bundle for run_id (level-triggered list)
   R->>F: read roles/role.json, validate against roles/schema/role.schema.json
-  R->>F: read scheduler/config/seats.json limits for the role
-  R->>S: read ticket record (files, acceptance, title) or the design anchor text
-  R->>R: render settings.json, mcp.json, brief.md, output.schema.json
-  R->>D: write to bundles/.tmp-run_id-pid, fsync, rename to bundles/run_id
-  R->>S: put seat.bundle (idempotency_key = dispatch.id, expected version 0)
-  S-->>R: record.committed or 409 (already rendered by another pass: no-op)</mermaid>
-    <step n="1">Read roles/&lt;role&gt;.json from the repository at the sha the dispatch names (origin/main at dispatch time), validate it against roles/schema/role.schema.json. The role schema gains four optional keys by the ticket that builds this node: max_turns, max_budget_usd, wall_clock_seconds, stall_seconds; scheduler/config/seats.json carries the defaults and wins over the role file only when the role file omits a key.</step>
-    <step n="2">Render settings.json: permissions.allow from the role's allow.tools and allow.commands; permissions.deny from deny.tools, deny.commands, and Edit and Write rules for every path outside the ticket's declared files (claims semantics of factory/bin/claims.sh: a pattern is a bash glob where * crosses /, a bare directory means the subtree). permissions.defaultMode is dontAsk for every host seat, so an allow rule restricts and a miss is a denial, not a prompt (rebuild/investigation/S04-agent-frameworks-seat-contracts.md#8-what-to-carry-forward item 1). hooks is the role's hooks.line set, or hooks.build when build_mode is on; both are empty in slice one. No user layer is referenced.</step>
-    <step n="3">Render mcp.json with mcpServers {} unless the role names a repository-owned server; the launcher passes --strict-mcp-config so user-scope servers (kubernetes, jenkins, notion, github in ~/.claude.json, L11 F9) never attach.</step>
-    <step n="4">Render brief.md from the phase template under scheduler/templates/brief-&lt;phase&gt;.md: the ticket id and full title, the declared files, the acceptance commands with their observed exit on main (from N-18), the DAG input and output the ticket declares, the output schema the seat must return, and, on a retry, the verdict record attached verbatim (observations, repro). A brief never contains a rule the launcher enforces by flag; limits appear once as information with the sentence "the launcher enforces these".</step>
-    <step n="5">Render output.schema.json: the structured output of the phase (N-16 worker.result, N-17 ticket-set.draft, N-19 review.result), copied from that node's record.schema.json so the seat's --json-schema is the same contract the launcher validates.</step>
-    <step n="6">Write the four files to bundles/.tmp-&lt;run_id&gt;-&lt;pid&gt;/, fsync each, rename the directory to bundles/&lt;run_id&gt;/. A rename is atomic on one filesystem; a second renderer finds the final directory present and skips to step 7.</step>
-    <step n="7">Put seat.bundle with idempotency_key = dispatch.id and expected version 0. A 409 means another pass committed first; read it, compare bundle_hash, and if the hashes differ write a 500 defect record (two renders of one dispatch disagree) instead of overwriting.</step>
+  R->>S: read the ticket row (or the CR target)
+  R->>R: render settings.json, mcp.json, brief.md, output.schema.json, ticket.json
+  R->>D: write to bundle/.tmp-run_id, fsync, rename to bundle/run_id, set ACL
+  R->>S: Commit seat.bundle under the dispatch lease, key N-13/seat.bundle/run_id/r1
+  S-->>R: committed, or 200 replayed</mermaid>
+    <step n="1">Skip role gate. Read roles/ROLE.json at repo_sha and validate it; failure is seat.bundle.refused role_schema_invalid.</step>
+    <step n="2">Render settings.json: permissions.defaultMode dontAsk; allow from the role's tools and commands; Edit and Write allowed only on allow_paths for a worker, denied everywhere for a reviewer and a spec-author; Read deny on every read_deny path; Bash deny on git push, gh, podman, docker, herdr, treehouse, ssh, curl to any forge host, and every line-op verb (seat-contract.xml#line-ops) for every role; on the host, apiKeyHelper = coq-seat-exec key (../../shared/authority.xml#credential-matrix row anthropic-seat). No COQ_SEAT authority, no store path and no token is rendered anywhere.</step>
+    <step n="3">Render mcp.json with mcpServers {} unless the role names a repository-owned server; the launcher's argv (../../shared/seat-contract.xml#launch-flags) keeps every other server out.</step>
+    <step n="4">Render brief.md from scheduler/templates/brief-PHASE.md in the headings of ../../shared/seat-contract.xml#brief-shape; on a rework the failure records named by verdict_refs and the attempt's failure_ids are attached verbatim.</step>
+    <step n="5">Render output.schema.json from the phase's node schema (N-16 worker result, N-17 ticket-set.draft, N-19 review result), compact, refused over the size bound of #launch-flags.</step>
+    <step n="6">Write to bundle/.tmp-RUN_ID, fsync, rename to bundle/RUN_ID, then set the read ACL for the seat user the launcher bound (or leave the ACL to the launcher when no user is bound yet: the launcher sets it in its Start step).</step>
+    <step n="7">Commit seat.bundle with the dispatch lease and key N-13/seat.bundle/RUN_ID/r1. A replay returns the stored record; a 409 idempotency_mismatch (two renders disagree) is a defect 500, never an overwrite. A 412 stale_token or lease_not_current means the lease ended: stop, write nothing more.</step>
   </section>
 
   <section id="start" title="How it starts without an agent typing">
-    <text>The Go service (N-06 unit) runs a seat controller goroutine that is level-triggered on every scheduler tick (N-07): it lists dispatch records that have no seat.bundle and no seat.result for the same run_id, and renders each. A dispatch is the only trigger. No pane, no prompt, no herdr call, no human: D08 makes herdr the owner's window only, and the seat.sh bring-up DAG of specs/SPEC-04-herdr-seat-lifecycle.xml#s-seat is a source, not a mechanism (section rejected).</text>
-    <text>Because the list is recomputed each tick, a lost or duplicate event cannot strand a dispatch (rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal T03).</text>
+    <text>The Go service runs a seat controller goroutine level-triggered on every scheduler tick: it lists dispatches with phase not gate, a reserved or running lease, and no seat.bundle, and renders each. No pane, no prompt, no herdr call, no human.</text>
   </section>
 
   <section id="waits" title="Every wait, its timeout and its fallback">
-    <wait what="read role file and config from the repository mirror" timeout="5 s" attempts="3" fallback="seat.bundle.failed 500 with reason role_unreadable; N-11 counts the attempt"/>
-    <wait what="read ticket record from the store (gRPC)" timeout="5 s" attempts="3" fallback="seat.bundle.failed 500 with reason store_unreachable; the tick retries on the next pass, N-11 after 3"/>
-    <wait what="write and rename the bundle directory" timeout="10 s" attempts="3" fallback="seat.bundle.failed 500 with reason bundle_io; the temp directory is removed"/>
-    <wait what="put seat.bundle" timeout="5 s" attempts="3" fallback="the bundle directory stays with a bundle.pending marker; the next tick finds the directory, recomputes the hash and puts again (idempotent by dispatch.id); N-06 health reports a dispatch without a committed seat.bundle older than 75 s as a store outage, and N-28 posts one card when the marker survives 3 ticks"/>
-    <text>Total bound per dispatch: 75 s. No wait in this node depends on a person or an agent. The build-mode expiry is never waited on: it is read as frozen in the dispatch; N-44 clears the flag at expiry by itself.</text>
+    <wait what="read role file and templates from the repository mirror at repo_sha" timeout="5 s" attempts="3" fallback="seat.bundle.failed 500 reason role_unreadable"/>
+    <wait what="read the ticket row" timeout="5 s" attempts="3" fallback="seat.bundle.failed 500 reason store_unreachable"/>
+    <wait what="write and rename the bundle directory" timeout="10 s" attempts="3" fallback="seat.bundle.failed 500 reason bundle_io; the temp directory is removed"/>
+    <wait what="Commit seat.bundle" timeout="5 s" attempts="3" fallback="the operation key makes the resend safe; after three, seat.bundle.failed 500 reason store_unreachable; a reserved lease left unstarted expires at start grace and N-11 regrants it free"/>
+    <text>Total bound per dispatch: 75 s, well inside start.grace_seconds (../../shared/contracts.xml#timing). No wait depends on a person or an agent.</text>
   </section>
 
   <section id="retries" title="Retries up to 3, then recover and report">
-    <text>Each step retries 3 times with backoff 1 s, 2 s, 4 s. After the third failure the node writes seat.bundle.failed (code 500, run_id, step, reason, stderr tail) and stops touching that dispatch. N-11 reads it as a failure record: attempt n+1 gets a fresh dispatch and a fresh render; after attempt 3 it is a dead record and N-28 posts exactly one card. Recovery after a service restart: the tick re-lists dispatches without a bundle; a left-over .tmp directory older than 60 s is removed by the render itself before it writes.</text>
+    <text>Each step retries 3 times with backoff 1 s, 2 s, 4 s, then writes seat.bundle.failed with failure_body; N-11 charges it with session new (../../shared/contracts.xml#retry-owner). A refusal is not retried here: the repository is at fault and N-11 charges it the same way, so a broken template reaches dead and one card after three attempts. A left-over .tmp directory older than 60 s is removed by the render itself.</text>
   </section>
 
   <section id="many-agents" title="Many agents at once">
-    <text>Readers: any number of seats read this volume by its anchors; nothing here is per seat. Twenty dispatches in one tick are rendered by a worker pool of size seats.json render_workers (default 4); each has its own temp directory and its own idempotency key, so no two renders share a file.</text>
-    <text>Collision 1, two passes render the same dispatch (a restart mid-pass, or a second service instance against the rule): the directory rename is atomic, the seat.bundle put is compare-and-swap on version 0 with idempotency_key dispatch.id, so exactly one commits; the loser compares hashes and reports a 500 defect only if the bytes differ.</text>
-    <text>Collision 2, the role file changes on main while renders are in flight: the render reads the role file at the sha frozen in the dispatch (the mirror's origin/main at dispatch time), so every run of one dispatch sees one role file; a new sha reaches only new dispatches.</text>
-    <text>Collision 3, two tickets declare overlapping files: not this node's problem to refuse; N-18 refuses at cut and N-14 refuses at start with a store-level unique claim. This node renders the deny list from the ticket as declared.</text>
-    <text>Collision 4, the build-mode flag flips during a render: the flag is frozen in the dispatch; a run launched under build mode on stays on until it ends, and that is recorded in the bundle so the gate it reaches reads the same value.</text>
-    <text>Nothing in this node holds a lock a person can forget to release; the only lease is the ticket lease N-02 issued, whose token the bundle carries and never renews.</text>
+    <text>Twenty dispatches in one tick render in a pool of seats.json render_workers (default 4); each has its own temp directory and its own operation key.</text>
+    <text>Two passes render one dispatch: the rename is atomic and the operation key admits one Commit; the second is a replay, or a 409 idempotency_mismatch reported as a defect when the bytes differ.</text>
+    <text>The role file changes on main mid-render: the render reads at repo_sha, so one dispatch sees one role file.</text>
+    <text>Overlapping files: not this node's to refuse; N-03 acquires claims at ready and N-14 verifies the ticket holds them (../../shared/contracts.xml#claims).</text>
+    <text>The build-mode flag flips: the dispatch froze it with its entity version.</text>
   </section>
 
   <section id="codes" title="Status codes this node emits">
-    <code value="100" kind="seat.bundle">Rendered; the launcher may start. Acts: N-15 when the workspace record also exists.</code>
-    <code value="412" kind="seat.bundle.refused">The role file failed its schema, or the ticket declares no files, or the phase has no template. Acts: N-11 as a failure record, and a defect card after 3 because the fault is in the repository, not the run.</code>
-    <code value="500" kind="seat.bundle.failed">An io or store step failed 3 times. Acts: N-11.</code>
-    <text>Every code is a row in the shared status code map (section shared-needs); a code not in the map is refused by the store.</text>
+    <code value="100" kind="seat.bundle">Rendered; N-15 may start once the workspace record also exists.</code>
+    <code value="412" kind="seat.bundle.refused">Role file, template or ticket at fault; N-11 charges it (failure_kind seat.bundle.failed).</code>
+    <code value="500" kind="seat.bundle.failed">An io or store step failed 3 times; N-11 charges it.</code>
   </section>
 
   <section id="state-paths" title="State paths and the cleanup script for each">
-    <path dir="$COQ_STATE/seats/bundles/&lt;run_id&gt;/" writes="settings.json, mcp.json, brief.md, output.schema.json, bundle.pending (only until the seat.bundle put commits)" cleanup="scheduler/host/bin/cleanup-seat-bundles.sh" retention="7 days after the run's seat.result, or 1 day when no run ever started">Dry run by default, --apply deletes; registered in N-45 (scheduler/config/cleanup.json entry seat-bundles); never deletes a bundle whose run has no seat.result and whose dispatch is younger than its deadline.</path>
-    <path dir="$COQ_STATE/seats/bundles/.tmp-*" writes="in-flight renders" cleanup="the render itself (older than 60 s) and cleanup-seat-bundles.sh" retention="60 s"/>
-    <text>$COQ_STATE resolves through bin/state-root.sh (default ${XDG_STATE_HOME:-~/.local/state}/coq/coq-jev-herdr-plugin), the one resolver (rebuild/investigation/L01-line-scripts.md#8-what-to-carry-forward item 11). Nothing is written into the repository (C35).</text>
+    <path id="N-13.bundles" dir="$COQ_STATE/seats/bundle/&lt;run_id&gt;/" writes="settings.json, mcp.json, brief.md, output.schema.json, ticket.json" cleanup="scheduler/host/bin/cleanup-seat-bundles.sh" retention="7 days after the run reaches closed_out or failed_spawn" trigger="timer" acts="system">Dry run by default, --apply deletes; registered in N-45; never deletes a bundle whose run:RUN_ID entity is not closed_out or failed_spawn.</path>
+    <path id="N-13.tmp" dir="$COQ_STATE/seats/bundle/.tmp-*" writes="in-flight renders" cleanup="scheduler/host/bin/cleanup-seat-bundles.sh" retention="60 s" trigger="timer" acts="system">The render itself removes its own stale temp directories first; the script catches the rest.</path>
+    <text>$COQ_STATE resolves through bin/state-root.sh (default ${XDG_STATE_HOME:-$HOME/.local/state}/coq/coq-jev-herdr-plugin). Nothing is written into the repository (C35).</text>
   </section>
 
   <section id="permissions" title="Permissions">
-    <text>The Go service: read the repository mirror, read and write $COQ_STATE/seats/bundles, gRPC to the store. No GitHub token, no cluster access, no herdr socket.</text>
-    <text>What the rendered settings give a seat, by role, in slice one:</text>
-    <role name="worker" mode="dontAsk" tools="Read, Grep, Glob, Write, Edit, Bash" write="only the ticket's declared files" bash="make *, git status|diff|log|add|commit|rev-parse|branch --show-current, the acceptance commands of the ticket" deny="Agent, Task, git push, gh *, podman *, herdr *, treehouse *">The push and the pull request are done by code after the run (N-16); the git read verbs are allowed because their denial made seats conclude they had no shell (L11 F9).</role>
-    <role name="spec-author" mode="dontAsk" tools="Read, Grep, Glob, Bash" write="none in the repository; the output is data returned as structured output" bash="git log|show|grep, rg, make lint" deny="Write, Edit, Agent, Task, git push, gh *"/>
-    <role name="reviewer" mode="dontAsk" tools="Read, Grep, Glob, Bash" write="none" bash="git diff|log|show, gh pr diff|view" deny="Write, Edit, Agent, Task, make *, podman *, gh pr review|merge, git push">A reviewer runs nothing (roles/reviewer.json breadcrumb WO-20261013-b6f3).</role>
-    <text>Subagents (Agent, Task) stay denied in slice one for every role: the Agent SDK has no per-subagent wall-clock deadline, so a cap would be prose (S04 section 9 item 4). Lifting it per role is its own ticket with a measured cost.</text>
+    <text>The Go service, principal coq-svc acting as N-13 (../../shared/authority.xml#role-derivation): read the repository mirror, write STATE/seats/bundle, Commit the three kinds. No forge, cluster or herdr credential is read or rendered.</text>
+    <text>What the rendered settings give a seat, by role. Every role: defaultMode dontAsk; Read deny on read_deny; deny git push, gh, podman, docker, herdr, treehouse, ssh, Agent and Task. The ACL on the workspace (N-14), not settings alone, makes reviewer and spec-author read-only.</text>
+    <role name="worker" mode="dontAsk" tools="Read, Grep, Glob, Write, Edit, Bash" write="only allow_paths" bash="make *, git status|diff|log|add|commit|rev-parse|branch --show-current, the ticket's acceptance commands" deny="Agent, Task, git push, gh, podman, docker, herdr, treehouse, ssh">The push and the PR are done by the service after the run (N-16 close-out, credential forge-pr).</role>
+    <role name="spec-author" mode="dontAsk" tools="Read, Grep, Glob, Bash" write="none: the output is structured output" bash="git log|show|grep, rg, make lint" deny="Write, Edit, Agent, Task, git push, gh"/>
+    <role name="reviewer" mode="dontAsk" tools="Read, Grep, Glob, Bash" write="none" bash="git diff|log|show against the PR head in its read-only workspace" deny="Write, Edit, Agent, Task, make, podman, git push, gh">The diff and gate status come in the bundle; a reviewer calls no forge (no gh at all).</role>
   </section>
 
   <section id="checklist" title="Checklist with proof">
-    <item proof="go test ./internal/seatlayer -run TestRenderDeterministic: two renders of one fixture dispatch give equal bundle_hash">Render is pure and deterministic.</item>
-    <item proof="probe run: a user-level hook that writes a marker file is installed on the test host; a seat launched from a bundle with --setting-sources local never writes the marker; the test asserts the file is absent">No user layer loads.</item>
-    <item proof="probe run: ~/.claude.json lists a user MCP server; the seat's claude -p --output-format json reports no MCP server; the test asserts mcp_servers is empty">No user MCP server attaches.</item>
-    <item proof="go test TestDenyPathsFromClaims: ticket files herdr/bin/* yields deny rules for every top-level path except herdr/bin/, and an Edit outside is refused in a probe run (permission_denials names it)">Deny list comes from the declared files.</item>
-    <item proof="go test TestBuildModeFrozen: a dispatch with build_mode on yields a bundle with build_mode on even when the store flag is off at render time">Build mode is frozen in the dispatch.</item>
-    <item proof="go test TestIdempotentRender: two concurrent renders of one dispatch commit exactly one seat.bundle; the store shows one record, version 1">One bundle per dispatch under concurrency.</item>
-    <item proof="scheduler/host/bin/cleanup-seat-bundles.sh --dry-run lists the fixture bundle and --apply removes it; a bundle with a live dispatch is listed as kept">Cleanup script exists and respects liveness.</item>
-    <item proof="roles/schema/role.schema.json validates roles/worker.json with max_turns, max_budget_usd, wall_clock_seconds, stall_seconds present; make lint passes">Limits are fields in the role schema.</item>
+    <item proof="go test ./internal/seatlayer -run TestRenderDeterministic: two renders of one fixture dispatch give equal bundle hash">Render is pure and deterministic.</item>
+    <item proof="go test TestDispatchIsSharedDef: every example dispatch of ../N-07/spec.xml#schema validates against this node's dispatch def, which is a $ref">One dispatch shape.</item>
+    <item proof="go test TestSpecAuthorNoFiles: a CR dispatch renders with allow_paths empty and no Write rule; a WO worker with no files is refused no_files_declared">Spec-author bundles need no files.</item>
+    <item proof="go test TestNoPushNoGh: the rendered settings of every role deny git push and gh; a probe run's permission_denials names both">No seat pushes or calls the forge.</item>
+    <item proof="go test TestReadDeny: read_deny covers every stored path of authority.xml#credential-matrix; a probe Read of STATE/secrets is denied">Secrets are unreadable.</item>
+    <item proof="go test TestNoAuthorityInEnv: settings and mcp carry no token, no socket path, no COQ_STATE or COQ_CACHE">No store authority in the bundle.</item>
+    <item proof="go test TestBuildModeFrozen: a dispatch with build_mode on yields a bundle with build_mode on even when the flag entity is off at render time">Build mode is frozen in the dispatch.</item>
+    <item proof="go test TestIdempotentRender: two concurrent renders commit one seat.bundle and one replay">One bundle per dispatch under concurrency.</item>
+    <item proof="scheduler/host/bin/cleanup-seat-bundles.sh --dry-run lists the fixture bundle and --apply removes it; a bundle whose run is running is kept">Cleanup respects liveness.</item>
   </section>
 
   <section id="monitoring" title="Monitoring">
@@ -203,8 +200,8 @@
   </section>
 
   <section id="runbook" title="Runbook">
-    <text>Inspect a bundle: cat $COQ_STATE/seats/bundles/&lt;run_id&gt;/brief.md; sha256sum the four files and compare with the seat.bundle record's hashes.</text>
-    <text>A refused bundle (412): the fix is in the repository (role file or template); cut a ticket; N-11 already counted the attempt. Never hand-edit a bundle: the launcher checks bundle_hash before it starts and refuses a mismatch with 412.</text>
+    <text>Inspect a bundle (as the owner, through ctl, since STATE is 0700 coq-svc): cat $COQ_STATE/seats/bundle/&lt;run_id&gt;/brief.md; sha256sum the four files and compare with the seat.bundle record's hashes.</text>
+    <text>A refused bundle (412): the fix is in the repository (role file or template); cut a ticket; N-11 already charged the attempt. Never hand-edit a bundle: the launcher checks the bundle hash before it starts and refuses a mismatch with 412 bundle_mismatch.</text>
     <text>Cleanup: scheduler/host/bin/cleanup-seat-bundles.sh [--apply] [--older-than 7d]; registered in N-45 and run by its timer.</text>
     <text>Break glass: none in this node. A bundle is never rendered by hand; the owner's one-time break glass (N-42) can force a dispatch, which then renders by this node.</text>
   </section>
@@ -213,8 +210,19 @@
     <edge dir="in" from="../N-07/spec.xml#N-07" record="dispatch"/>
     <edge dir="in" from="../N-44/spec.xml#N-44" record="build-mode.state (frozen into the dispatch by N-07)"/>
     <edge dir="out" to="../N-15/spec.xml#N-15" record="seat.bundle"/>
-    <edge dir="out" to="../N-11/spec.xml#N-11" record="seat.bundle.refused 412, seat.bundle.failed 500 (failure records)"/>
+    <edge dir="out" to="../N-11/spec.xml#N-11" record="seat.bundle.refused 412, seat.bundle.failed 500 (failure records with failure_body)"/>
     <text>Return writes to N-01 are not drawn (../../dag.md#1-how-to-read-this-dag).</text>
+  </section>
+
+  <section id="examples" title="Examples">
+    <text>The dispatch examples are N-07's, validated here against this node's dispatch def (a $ref to the same def).</text>
+    <example schema="record.schema.json#/$defs/dispatch">{"id":"20261014T063000Z-100-g7h8j","at":"2026-10-14T06:30:00Z","kind":"dispatch","code":100,"node":"N-07","seq":5120,"epoch":1,"dispatch_id":"d-20261014063000-p2m7dq","ticket":"WO-20261014-ab12","phase":"worker","role":"worker","attempt":1,"lane":"build","lease":{"key":"WO-20261014-ab12:worker:1","token":184,"generation":1},"deadline_at":"2026-10-14T08:00:00Z","repo":{"slug":"jkkelley/coq-jev-herdr-plugin","origin":"git@github.com:jkkelley/coq-jev-herdr-plugin.git"},"repo_sha":"0123456789abcdef0123456789abcdef01234567","build_mode":{"on":false,"scope":"rebuild","version":3},"target":{"type":"wo","ticket":"WO-20261014-ab12"},"session":{"mode":"new"},"brief_path":"bundle/d-20261014063000-p2m7dq/brief.md"}</example>
+    <example schema="record.schema.json#/$defs/dispatch">{"id":"20261014T070000Z-100-k2l3m","at":"2026-10-14T07:00:00Z","kind":"dispatch","code":100,"node":"N-07","seq":5301,"epoch":1,"dispatch_id":"d-20261014070000-r8k2wa","ticket":"WO-20261014-ab12","phase":"reviewer","role":"reviewer","attempt":1,"lane":"verify","lease":{"key":"WO-20261014-ab12:reviewer:1","token":191,"generation":1},"deadline_at":"2026-10-14T07:20:00Z","repo":{"slug":"jkkelley/coq-jev-herdr-plugin","origin":"git@github.com:jkkelley/coq-jev-herdr-plugin.git"},"repo_sha":"89abcdef0123456789abcdef0123456789abcdef","build_mode":{"on":true,"scope":"rebuild","version":4,"expires_at":"2026-10-20T00:00:00Z","ruling_ref":"20261013T120000Z-200-q1w2e"},"target":{"type":"wo","ticket":"WO-20261014-ab12","pr":57,"head_sha":"89abcdef0123456789abcdef0123456789abcdef"},"session":{"mode":"new"},"brief_path":"bundle/d-20261014070000-r8k2wa/brief.md"}</example>
+    <example schema="record.schema.json#/$defs/dispatch">{"id":"20261014T071500Z-100-n4p5q","at":"2026-10-14T07:15:00Z","kind":"dispatch","code":100,"node":"N-07","seq":5388,"epoch":1,"dispatch_id":"d-20261014071500-s3c9vb","ticket":"CR-req-0042","phase":"spec","role":"spec-author","attempt":1,"lane":"build","lease":{"key":"CR-req-0042:spec:1","token":195,"generation":1},"deadline_at":"2026-10-14T08:45:00Z","repo":{"slug":"jkkelley/coq-jev-herdr-plugin","origin":"git@github.com:jkkelley/coq-jev-herdr-plugin.git"},"repo_sha":"89abcdef0123456789abcdef0123456789abcdef","build_mode":{"on":false,"scope":"rebuild","version":4},"target":{"type":"cr","request":"CR-req-0042","anchor":"nodes/N-38/spec.xml#frames","group":"G6","source_request":"20261014T071000Z-100-m4n5b"},"session":{"mode":"new"},"brief_path":"bundle/d-20261014071500-s3c9vb/brief.md"}</example>
+    <example schema="record.schema.json#/$defs/seat.bundle">{"id":"20261014T063004Z-100-b5c6d","at":"2026-10-14T06:30:04Z","kind":"seat.bundle","code":100,"node":"N-13","seq":5125,"epoch":1,"run_id":"d-20261014063000-p2m7dq","ticket":"WO-20261014-ab12","phase":"worker","role":"worker","attempt":1,"bundle_dir":"STATE/seats/bundle/d-20261014063000-p2m7dq/","settings_path":"settings.json","mcp_path":"mcp.json","brief_path":"bundle/d-20261014063000-p2m7dq/brief.md","schema_path":"output.schema.json","model":"claude-sonnet-5","limits":{"max_turns":60,"max_budget_usd":8,"run_deadline_seconds":5400,"stall_seconds":600},"allow_paths":["scheduler/internal/sched/*.go"],"read_deny":["STATE/**","STATE/secrets/**","/etc/coq/**","$HOME/.ssh/**"],"build_mode":{"on":false,"scope":"rebuild","version":3},"hashes":{"settings":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","mcp":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","brief":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","schema":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bundle":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},"session":{"mode":"new","session_id":"0b8e7a12-3c4d-4e5f-8a9b-1c2d3e4f5a6b"},"lease":{"key":"WO-20261014-ab12:worker:1","token":184,"generation":1},"deadline_at":"2026-10-14T08:00:00Z"}</example>
+    <example schema="record.schema.json#/$defs/seat.bundle">{"id":"20261014T071504Z-100-e7f8g","at":"2026-10-14T07:15:04Z","kind":"seat.bundle","code":100,"node":"N-13","seq":5390,"epoch":1,"run_id":"d-20261014071500-s3c9vb","ticket":"CR-req-0042","phase":"spec","role":"spec-author","attempt":1,"bundle_dir":"STATE/seats/bundle/d-20261014071500-s3c9vb/","settings_path":"settings.json","mcp_path":"mcp.json","brief_path":"bundle/d-20261014071500-s3c9vb/brief.md","schema_path":"output.schema.json","model":"claude-opus-5-5","limits":{"max_turns":80,"max_budget_usd":12,"run_deadline_seconds":5400,"stall_seconds":600},"allow_paths":[],"read_deny":["STATE/**","STATE/secrets/**","/etc/coq/**"],"build_mode":{"on":false,"scope":"rebuild","version":4},"hashes":{"settings":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","mcp":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","brief":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","schema":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","bundle":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},"session":{"mode":"new"},"lease":{"key":"CR-req-0042:spec:1","token":195},"deadline_at":"2026-10-14T08:45:00Z"}</example>
+    <example schema="record.schema.json#/$defs/seat.bundle.refused">{"id":"20261014T063004Z-412-h9j1k","at":"2026-10-14T06:30:04Z","kind":"seat.bundle.refused","code":412,"node":"N-13","seq":5126,"epoch":1,"run_id":"d-20261014063000-p2m7dq","dispatch_id":"d-20261014063000-p2m7dq","ticket":"WO-20261014-ab12","phase":"worker","attempt":1,"outcome":"refused","failure_kind":"seat.bundle.failed","reason":"no_files_declared","detail":"worker ticket declares no files"}</example>
+    <example schema="record.schema.json#/$defs/seat.bundle.failed">{"id":"20261014T063020Z-500-l2m3n","at":"2026-10-14T06:30:20Z","kind":"seat.bundle.failed","code":500,"node":"N-13","seq":5130,"epoch":1,"run_id":"d-20261014063000-p2m7dq","dispatch_id":"d-20261014063000-p2m7dq","ticket":"WO-20261014-ab12","phase":"worker","attempt":1,"outcome":"failed","failure_kind":"seat.bundle.failed","step":6,"reason":"bundle_io","stderr_tail":"rename: no space left on device"}</example>
   </section>
 
   <section id="sources" title="Sources cited">

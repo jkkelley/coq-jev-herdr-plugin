@@ -74,6 +74,7 @@
       <field name="canary" type="object" required="true">The results of shared/ci-capacity.xml#canary: dry_run (the two-container suite template admitted), dns, jenkins_agent, github_fetch, image_pull, example_blocked, duration_s.</field>
       <field name="check_log" type="string" required="true">The attempt's log path.</field>
     </record>
+    <example schema="record.schema.json#/$defs/output">{"id":"20261015T055500Z-201-h7i8j","at":"2026-10-15T05:55:00Z","seq":3950,"epoch":1,"kind":"namespace.ready","code":201,"node":"N-21","gitops_sha":"0123456789abcdef0123456789abcdef01234567","argo_revision":"0123456789abcdef0123456789abcdef01234567","quota":{"pods":7,"requests.cpu":"6700m","requests.memory":"3136Mi","limits.memory":"9344Mi"},"limit_range":{"default_request":{"cpu":"100m","memory":"64Mi"},"default_limit":{"memory":"256Mi"},"max":{"cpu":"1000m","memory":"1Gi"}},"priority_class":{"name":"coq-factory-low","value":-100},"service_account":{"name":"coq-pod","automount":false,"can_get_secrets":false,"bindings":0},"policies":["coq-factory-default-deny","coq-factory-egress-dns","coq-factory-egress-github","coq-factory-egress-jenkins"],"pull_secret":{"ready":true,"resource_version":"812345"},"canary":{"dry_run":"ok","dns":"ok","jenkins_agent":"ok","github_fetch":"ok","image_pull":"ok","example_blocked":"ok","duration_s":41},"check_log":"$COQ_STATE/ci/namespace-check/2026/10/0123456789ab-1.log"}</example>
     <s>On failure after the namespace-check layer's tries (a dry-run refusal or a failed probe at once, shared/retry-budget.xml#layers) the node writes namespace.unready (500) with the failed lines, and N-28 posts one card.</s>
   </section>
 
@@ -142,10 +143,10 @@ flowchart LR
   </section>
 
   <section id="state-paths" title="State paths and the cleanup script for each">
-    <path p="$COQ_STATE/ci/namespace-check/YYYY/MM/&lt;gitops_sha12&gt;-&lt;attempt&gt;.log" cleanup="ci/bin/cleanup-ci-state.sh --what namespace-check --older-than 30d [--apply]">One log per attempt with every assertion line and the canary output.</path>
-    <path p="cluster: namespace coq-factory, pods named coq-canary-*" cleanup="ci/bin/cleanup-cluster.sh --what factory-pods --older-than 2h [--apply]">Deletes finished or stuck pods older than the age in coq-factory; dry-run lists them.</path>
-    <path p="cluster: namespace coq-factory (the whole namespace)" cleanup="ci/bin/cleanup-cluster.sh --what factory-namespace [--apply]">Only for retiring the factory: deletes the Argo Application with the resources finalizer first, then the namespace, in that order (L10 section 8 item 8); refuses while any gate.run is in flight.</path>
-    <path p="homelab-gitops: apps/coq-factory/, argocd-apps/workloads/coq-factory.yaml" class="tracked" retention="never" acts="owner" cleanup="none: tracked source, removed by a pull request">The source of truth; not state.</path>
+    <path p="$COQ_STATE/ci/namespace-check/YYYY/MM/&lt;gitops_sha12&gt;-&lt;attempt&gt;.log" cleanup="ci/bin/cleanup-ci-state.sh --what namespace-check --older-than 30d [--apply]" trigger="timer" acts="system">One log per attempt with every assertion line and the canary output.</path>
+    <path p="cluster: namespace coq-factory, pods named coq-canary-*" cleanup="ci/bin/cleanup-cluster.sh --what factory-pods --older-than 2h [--apply]" trigger="timer" acts="system">Deletes finished or stuck pods older than the age in coq-factory; dry-run lists them.</path>
+    <path p="cluster: namespace coq-factory (the whole namespace)" cleanup="ci/bin/cleanup-cluster.sh --what factory-namespace [--apply]" trigger="owner" acts="owner">Only for retiring the factory: deletes the Argo Application with the resources finalizer first, then the namespace, in that order (L10 section 8 item 8); refuses while any gate.run is in flight.</path>
+    <path p="homelab-gitops: apps/coq-factory/, argocd-apps/workloads/coq-factory.yaml" class="tracked" retention="never" cleanup="none: tracked source, removed by a pull request" trigger="merge" acts="owner">The source of truth; not state.</path>
     <s>Every script prints its plan without --apply, acts only with --apply, retries each deletion 3 times and exits 4 listing what remains; N-45 registers them.</s>
   </section>
 

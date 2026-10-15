@@ -75,7 +75,7 @@
     <record kind="push.failed" code="500"><field name="card, attempts, error">after 3 attempts; an alert on N-41; the card is unaffected</field></record>
     <record kind="push.skipped" code="100"><field name="card, reason">dark (phone_push.enabled false), tier not pushed, done (card closed before the send), seen (card.shown on its tier), quiet-hours (config, owner-set; not terminal, step 7 re-evaluates), duplicate, or shadow (not the lease holder)</field></record>
     <record kind="push.observed" code="200"><field name="card, receipt, via">the owner opened the push's click URL (N-32 sees the receipt id in the URL fragment and writes it through the bridge) or the page drew the card after the receipt (card.shown); the evidence that the push reached a person, not only the provider</field></record>
-    <text>One receipt per card at most (operation key N-52/push.send/&lt;card&gt;/r1, shared/contracts.xml#operation-keys); a card that closes before the send is skipped; push.receipt says the provider accepted the message, push.observed says the owner saw it; delivery is at least once (#push-delivery).</text>
+    <text>One receipt per card at most (operation key N-52/push.send/&lt;card&gt;@ntfy/r1, shared/contracts.xml#operation-keys); a card that closes before the send is skipped; push.receipt says the provider accepted the message, push.observed says the owner saw it; delivery is at least once (#push-delivery).</text>
   </output>
 
   <mechanism id="mechanism">
@@ -83,8 +83,8 @@
     <step n="1">Hold the lease pushbridge from N-02 (ttl 15 s, renew every 5 s) so exactly one sender runs even if two service instances overlap during an upgrade; a non-holder subscribes and does nothing but count (shadow), ready to take the lease on expiry.</step>
     <step n="2">On a card record: check phone_push.enabled (dark flag), the tier, quiet hours, whether card.done already exists, and whether card.shown already exists for the card on its tier (the owner's page drew it, nodes/N-31/spec.xml#output); write push.skipped 100 with the reason (dark, tier, quiet-hours, done, seen, duplicate) when any says no; quiet-hours is the only reason step 7 revisits.</step>
     <step n="3">Compose the push (look section): title from about, body from decide with the recommended label, priority from the cause code (500 and 503 high, 422 and 423 default, 300 low), a click action to the tailnet page URL without the key (the phone holds the cookie from its first open; N-34 security), tags by kind. Run the comms checker (N-30's commscheck: sentences of 15 words or fewer, ticket ids with full titles, no key pattern, no em dash); a violation is a system defect written as push.refused 400 and an alert, and the push is not sent.</step>
-    <step n="4">The send is an outbox effect (shared/contracts.xml#outbox): the intent row commits with the decision, the sender POSTs to the provider with the publish token of #push-delivery from ${COQ_STATE}/owner/push/token (mode 0600) and a 10 s timeout; retries 3 (10, 30, 90 s, the coqGate ladder's first three rungs, V05) on a network or 5xx error; a 4xx is not retried (a bad token or topic is a config defect) and is push.failed at once with the reason.</step>
-    <step n="5">Store.Commit push.receipt 200 with operation key N-52/push.send/&lt;card&gt;/r1 and the provider's message id as the effect's external id (a replay returns the first receipt: the other instance sent it, stop). On failure after 3, push.failed 500.</step>
+    <step n="4">The send is an outbox effect (shared/contracts.xml#outbox): the intent row commits with the decision, the sender POSTs to the provider with the publish token of #push-delivery from STATE/secrets/ntfy-publish (mode 0600) and a 10 s timeout; retries 3 (10, 30, 90 s, the coqGate ladder's first three rungs, V05) on a network or 5xx error; a 4xx is not retried (a bad token or topic is a config defect) and is push.failed at once with the reason.</step>
+    <step n="5">Store.Commit push.receipt 200 with operation key N-52/push.send/&lt;card&gt;@ntfy/r1 and the provider's message id as the effect's external id (a replay returns the first receipt: the other instance sent it, stop). On failure after 3, push.failed 500.</step>
     <step n="6">On card.done within 60 s of the receipt (the owner answered quickly), nothing; the push is already delivered. No push is ever recalled or edited; the page is the truth. A click on the push or a card.shown after the receipt writes push.observed 200 once per card.</step>
     <step n="7">Scan, level-triggered every 60 s: list cards on pushed tiers that are still open and have no receipt, no failed record and no terminal skip older than 60 s, and send them; a card skipped only for quiet-hours is listed again when the quiet window ends and pushed then if it is still open and not seen, so quiet hours delay a push and never drop it.</step>
     <text>Why dark until the inbox is live: the owner's reply to a push is a message or an answer on the page, and without the inbox's acks he would be pushed toward a channel that still has one reader. The dark flag flips by the go-live ticket whose proof is N-30's ack ladder working on stable for a day.</text>
@@ -108,9 +108,9 @@
     <receipts>push.receipt 200 means the provider (the cluster ntfy) accepted the message and returned its id; push.observed 200 means the owner opened it or the page drew the card after it. Delivery is at least once: a lease handover or a replayed effect may send twice, never zero times while the provider answers; there is no exactly-once claim and no recall.</receipts>
     <probe>Probe alerts (shared/outside-probe.xml#alerting) use the same server and the phone's read token but their own topic and publish token; the bridge never publishes there and the probe never depends on the bridge.</probe>
     <proof state="not-run">Go-live proof: a real card on stable with the iPhone locked for 30 minutes shows the notification within 10 s on Wi-Fi and again on cellular; the notification opens the page; push.receipt and push.observed exist; with ntfy.sh blocked at the pod the server still accepts (receipt) and the phone shows the message when it next opens the app. Not run.</proof>
-    <example schema="record.schema.json">{"id":"20261015T101502Z-200-k3m9q","kind":"push.receipt","code":200,"at":"2026-10-15T10:15:02Z","node":"N-52","card":"C-58","provider":"ntfy","provider_id":"xE73Iyuabi","topic_hash":"9f2c4e1a0b7d3c6e5f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e","sent_at":"2026-10-15T10:15:02Z","attempt":1,"priority":"default","idempotency_key":"N-52/push.send/C-58/r1"}</example>
-    <example schema="record.schema.json">{"id":"20261015T101640Z-200-p0w2z","kind":"push.observed","code":200,"at":"2026-10-15T10:16:40Z","node":"N-52","card":"C-58","receipt":"20261015T101502Z-200-k3m9q","via":"click"}</example>
-    <example schema="record.schema.json">{"id":"20261015T230000Z-100-r7t1v","kind":"push.skipped","code":100,"at":"2026-10-15T23:00:00Z","node":"N-52","card":"C-59","reason":"quiet-hours","until":"2026-10-16T06:00:00Z"}</example>
+    <example schema="record.schema.json#/$defs/push.receipt">{"id":"20261015T101502Z-200-k3m9q","kind":"push.receipt","code":200,"at":"2026-10-15T10:15:02Z","node":"N-52","card":"C-58","provider":"ntfy","provider_id":"xE73Iyuabi","topic_hash":"9f2c4e1a0b7d3c6e5f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e","sent_at":"2026-10-15T10:15:02Z","attempt":1,"priority":"default","idempotency_key":"N-52/push.send/C-58@ntfy/r1"}</example>
+    <example schema="record.schema.json#/$defs/push.observed">{"id":"20261015T101640Z-200-p0w2z","kind":"push.observed","code":200,"at":"2026-10-15T10:16:40Z","node":"N-52","card":"C-58","receipt":"20261015T101502Z-200-k3m9q","via":"click"}</example>
+    <example schema="record.schema.json#/$defs/push.skipped">{"id":"20261015T230000Z-100-r7t1v","kind":"push.skipped","code":100,"at":"2026-10-15T23:00:00Z","node":"N-52","card":"C-59","reason":"quiet-hours","until":"2026-10-16T06:00:00Z"}</example>
   </push-delivery>
 
   <start id="start">
@@ -149,10 +149,10 @@
   </status-codes>
 
   <state-paths id="state-paths">
-    <path p="${COQ_STATE}/owner/push/token" what="the ntfy access token, mode 0600, written once by the owner through coq owner push-token (reads from a prompt, never from an argument that lands in shell history)" cleanup="tools/bearings/bin/cleanup-push.sh --token [--dry-run] (owner-only)"/>
-    <path p="store rows push.receipt, push.observed, push.failed, push.skipped, push.refused, push.folded" what="in N-01; receipts for the life of the card; others 30 days" cleanup="registered with N-45 as store retention class owner-surface"/>
-    <path p="journal of coq.service, lines prefixed push-bridge:" what="one line per send, failure, skip; never the topic, never the token" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
-    <path p="cluster: the ntfy deployment's cache volume" retention="never" acts="owner" what="owned by the gitops app, not this node; its retention is the ntfy config (cache-duration 12h)" cleanup="kept by its own system: ntfy expires the cache after 12 h; removing the volume is the owner's gitops change; named here so N-45 can list it"/>
+    <path trigger="owner" acts="owner" p="STATE/secrets/ntfy-publish" what="the ntfy access token, mode 0600, written once by the owner through coq owner push-token (reads from a prompt, never from an argument that lands in shell history)" cleanup="tools/bearings/bin/cleanup-push.sh --token [--dry-run] (owner-only)"/>
+    <path trigger="timer" acts="system" p="store rows push.receipt, push.observed, push.failed, push.skipped, push.refused, push.folded" what="in N-01; receipts for the life of the card; others 30 days" cleanup="registered with N-45 as store retention class owner-surface"/>
+    <path trigger="timer" acts="system" p="journal of coq.service, lines prefixed push-bridge:" what="one line per send, failure, skip; never the topic, never the token" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
+    <path trigger="owner" acts="owner" p="cluster: the ntfy deployment's cache volume" retention="never" what="owned by the gitops app, not this node; its retention is the ntfy config (cache-duration 12h)" cleanup="kept by its own system: ntfy expires the cache after 12 h; removing the volume is the owner's gitops change; named here so N-45 can list it"/>
   </state-paths>
 
   <edges id="edges">
@@ -200,7 +200,7 @@
   </monitoring>
 
   <runbook id="runbook">
-    <op name="store the token">coq owner push-token (prompts; writes ${COQ_STATE}/owner/push/token with mode 0600; writes push.token.set 100 with no token in it)</op>
+    <op name="store the token">coq owner push-token (prompts; writes STATE/secrets/ntfy-publish with mode 0600; writes push.token.set 100 with no token in it)</op>
     <op name="test the channel">coq owner push-test (sends "bearings test" to the topic; writes a receipt with card=test)</op>
     <op name="go live">flip phone_push.enabled in the service config by the go-live ticket after N-30's proof; coq reload</op>
     <op name="quiet hours">phone_push.quiet (UTC window) by the owner's ruling, set by pull request; a card in the window is pushed when it ends (mechanism step 7)</op>

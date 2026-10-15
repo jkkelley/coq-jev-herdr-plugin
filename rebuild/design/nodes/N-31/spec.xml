@@ -173,8 +173,8 @@
   </status-codes>
 
   <state-paths id="state-paths">
-    <path p="store entities push:&lt;client&gt; (one per live client) and push.* records" what="in N-01; watermarks of disconnected clients expire after 1 h; events 7 days" cleanup="registered with N-45 as store retention class owner-surface"/>
-    <path p="journal of coq.service, lines prefixed push:" what="connects, drops, stalls" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
+    <path trigger="timer" acts="system" p="store entities push:&lt;client&gt; (one per live client) and push.* records" what="in N-01; watermarks of disconnected clients expire after 1 h; events 7 days" cleanup="registered with N-45 as store retention class owner-surface"/>
+    <path trigger="timer" acts="system" p="journal of coq.service, lines prefixed push:" what="connects, drops, stalls" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
     <text>No file of its own; the transport is memory and the store.</text>
   </state-paths>
 

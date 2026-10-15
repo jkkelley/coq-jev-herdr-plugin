@@ -140,7 +140,7 @@
   U->>U: resolve STATE (state-root rule), load config (exit 3 on a missing key)
   U->>ST: open, quick_check, migrate (3 attempts)
   ST-->>U: SERVING or NOT_SERVING
-  U->>U: recover: N-02 leases, N-03 claims, N-05 temps, flag backup:running
+  U->>U: recover: N-02 leases, N-03 claims, N-05 temps (its backup:store lease is swept by N-02)
   U->>ST: replay STATE/run/emergency.jsonl, import the probe journal
   U->>T: start scheduler, poll, backup, stall, daily loops
   U->>H: serve control.sock, store.sock
@@ -220,9 +220,9 @@
     <path p="STATE/run/service.lock, STATE/run/launcher.lock, STATE/run/service.pid" writer="N-06 at start" cleanup="scheduler/host/bin/cleanup-run.sh removes them when no live pid holds the lock; refuses otherwise" registry="N-45" trigger="unit-stop" acts="system"/>
     <path p="STATE/run/emergency.jsonl" writer="any node whose Commit failed (shared/outside-probe.xml#journal)" cleanup="truncated by N-06's replay only after every line committed; scheduler/host/bin/cleanup-run.sh never touches it" registry="N-45" trigger="timer" acts="system"/>
     <path p="STATE/config/service.env" writer="the owner, once (secrets: forge tokens)" retention="never" cleanup="kept on purpose; listed in the README so cleanup-run.sh skips it by name; only the owner removes it, by break glass" registry="N-45" trigger="owner" acts="owner"/>
-    <path p="STATE/logs/service/unit.jsonl" writer="N-06 structured log (starts, ticks missed, health transitions, reloads)" cleanup="scheduler/host/bin/cleanup-logs.sh (logs.keep_days 14)" registry="N-45"/>
+    <path p="STATE/logs/service/unit.jsonl" writer="N-06 structured log (starts, ticks missed, health transitions, reloads)" cleanup="scheduler/host/bin/cleanup-logs.sh (logs.keep_days 14)" registry="N-45" trigger="timer" acts="system"/>
     <path p="/run/coq/control.sock" writer="N-06 at start (RuntimeDirectory of coq-svc.service)" cleanup="systemd removes /run/coq at stop; scheduler/host/bin/cleanup-run.sh removes a stale one" registry="N-45" trigger="unit-stop" acts="system"/>
-    <path p="STATE/store/coq.db (entities tick:*, health:service, table health_history)" writer="N-06 through N-01" cleanup="health_history rows older than health.keep_days 30 are pruned by scheduler/host/bin/cleanup-logs.sh --health" registry="N-45"/>
+    <path p="STATE/store/coq.db (entities tick:*, health:service, table health_history)" writer="N-06 through N-01" cleanup="the file is the owner's (N-01 owns it); health_history rows older than health.keep_days 30 are pruned on the daily tick by scheduler/host/bin/cleanup-logs.sh --health through a Commit" registry="N-45" trigger="owner" acts="owner"/>
     <path p="journald: `journalctl -u coq-svc -u coq-launch`" writer="systemd" cleanup="journald's own retention; `journalctl --vacuum-time=14d` is in scheduler/host/bin/cleanup-logs.sh --journal" registry="N-45" trigger="timer" acts="system"/>
   </state-paths>
 

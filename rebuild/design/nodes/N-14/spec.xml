@@ -26,11 +26,11 @@
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
-    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="shared-needs">Shared anchors this volume cites</entry>
     <entry ref="purpose">Purpose</entry>
     <entry ref="input">Input record: dispatch</entry>
-    <entry ref="output">Output record: workspace or workspace.refused</entry>
-    <entry ref="mechanism">Mechanism: mirror, worktree, claims, slot</entry>
+    <entry ref="output">Output records: workspace, workspace.refused, workspace.failed</entry>
+    <entry ref="mechanism">Mechanism: claims verified, slot, mirror, worktree, ACL</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
     <entry ref="retries">Retries up to 3, then recover and report</entry>
@@ -42,6 +42,7 @@
     <entry ref="monitoring">Monitoring</entry>
     <entry ref="runbook">Runbook</entry>
     <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples</entry>
     <entry ref="sources">Sources cited</entry>
     <entry ref="rejected">Rejected, with the reason</entry>
   </contents>
@@ -50,133 +51,138 @@
     <parent href="../../index.xml#N-14"/>
     <dag href="../../dag.md#3-every-node">The DAG row of this node: input record and output record</dag>
     <principle href="../../dag.md#7-rules-every-node-obeys">Rules 1 to 9: input to output, no cog, three attempts, one store, code does mechanical jobs, the verdict the agent cannot edit, herdr is the owner's window, build mode, ships dark</principle>
-    <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, timed-out stalls, a 409 that reports</principle>
-    <needs href="spec.xml#shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
-    <sibling href="record.schema.json" kind="schema">JSON schema of the workspace, workspace.refused and workspace.failed records; the dispatch input is defined in ../N-13/record.schema.json#/$defs/dispatch</sibling>
+    <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives</principle>
+    <needs href="spec.xml#shared-needs">The shared anchors this volume cites</needs>
+    <sibling href="record.schema.json" kind="schema">JSON schema: dispatch ($ref to N-07), workspace, workspace.refused, workspace.failed</sibling>
     <sibling href="../N-13/spec.xml#N-13">Seat layer render, the other consumer of the dispatch</sibling>
     <sibling href="../N-15/spec.xml#N-15">One-shot seat launcher, the consumer of the workspace record</sibling>
-    <sibling href="../N-16/spec.xml#N-16">Worker run</sibling>
-    <sibling href="../N-17/spec.xml#N-17">Spec-author run</sibling>
-    <sibling href="../N-18/spec.xml#N-18">Validator, which also provisions a verify workspace through this node</sibling>
+    <sibling href="../N-16/spec.xml#N-16">Worker close-out</sibling>
+    <sibling href="../N-18/spec.xml#N-18">Validator, which borrows a read-only workspace through this node</sibling>
     <sibling href="../N-19/spec.xml#N-19">Reviewer run</sibling>
     <upstream href="../N-07/spec.xml#N-07">Scheduler tick and dispatch</upstream>
-    <upstream href="../N-03/spec.xml#N-03">Ticket intake and readiness, the first claims check</upstream>
-    <downstream href="../N-45/spec.xml#N-45">Cleanup registry, which releases workspaces on merge</downstream>
+    <upstream href="../N-03/spec.xml#N-03">Ticket intake and readiness, the owner of the claims table</upstream>
+    <downstream href="../N-45/spec.xml#N-45">Cleanup registry and resource drains</downstream>
   </pointers>
 
   <shared-needs id="shared-needs">
-    <text>Declared, not linked: the shared author writes these volumes and anchors; check.sh matches each need against shared/ when it lands. Nothing below points at a file that does not exist in this pull request.</text>
-    <need volume="../../shared/status-codes.xml" anchor="code-100" kind="status-code">100 exists or in progress: seat.bundle, workspace, seat.heartbeat, pr.opened, ticket-set.draft; acts: the next node on the edge</need>
-    <need volume="../../shared/status-codes.xml" anchor="code-412" kind="status-code">412 precondition refused: seat.bundle.refused, workspace.refused (claim_overlap, aggregate, ticket_in_flight, head_moved), seat.result preflight (bundle_mismatch, workspace_mismatch, lease_expired); acts: N-11, or N-03 for claim_overlap without an attempt</need>
-    <need volume="../../shared/status-codes.xml" anchor="code-429" kind="status-code">429 no capacity: workspace.refused no_slot; acts: N-07 on a later tick, never a waiting loop</need>
-    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">500 failed after 3 or a defect: seat.bundle.failed, workspace.failed, phase.failed, validator.failed, launcher.defect; acts: N-11, or N-06 health then N-28 for a defect</need>
-    <need volume="../../shared/state-store.xml" anchor="table-file-claims" kind="store-table">file_claims: ticket, pattern, prefix, run_id, at; unique index on prefix for in-flight tickets; released by N-45 on merge, dead or cancel</need>
-    <need volume="../../shared/state-store.xml" anchor="table-slots" kind="store-table">slots: rows 1..workspace_slots with holder run_id, expires_at; compare-and-swap from null to holder; reclaimed by expiry plus seat.result</need>
-    <need volume="../../shared/principles.xml" anchor="one-file-one-ticket" kind="principle">no file is ever touched by two open pull requests: declared at cut (N-18), checked at readiness (N-03), checked and recorded at start (N-14), enforced by the fence (N-13) and the diff check (N-16)</need>
-    <need volume="../../shared/principles.xml" anchor="artifacts-out-of-the-repo" kind="principle">every state path lives under $COQ_STATE or $COQ_CACHE, never in the repository, with a registered cleanup script (owner C35)</need>
+    <text>Every shared anchor below is live in book 1.1.0; this volume cites them and restates none of their numbers.</text>
+    <need volume="../../shared/contracts.xml" anchor="dispatch" kind="contract">the dispatch body; run_id equals dispatch_id</need>
+    <need volume="../../shared/contracts.xml" anchor="claims" kind="contract">the one claims table, owned by N-03; this node only verifies (412 claim_missing)</need>
+    <need volume="../../shared/contracts.xml" anchor="operation-keys" kind="contract">N-14/workspace.provision/DISPATCH_ID/r1</need>
+    <need volume="../../shared/contracts.xml" anchor="statements" kind="contract">slots.take and slots.free</need>
+    <need volume="../../shared/contracts.xml" anchor="retry-owner" kind="contract">workspace.refused and cap are free regrants; workspace.failed is charged</need>
+    <need volume="../../shared/contracts.xml" anchor="timing" kind="contract">workspace_slots, kill.grace_seconds</need>
+    <need volume="../../shared/authority.xml" anchor="seat-isolation" kind="authority">one slot per pool user; rwX ACL for a worker, r-X for every other role; COQ_CACHE is 0700 coq-svc</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-100" kind="status-code">workspace</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-412" kind="status-code">workspace.refused claim_missing, head_moved</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-429" kind="status-code">workspace.refused no_slot</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">workspace.failed</need>
+    <need volume="../../shared/principles.xml" anchor="one-file-one-ticket" kind="principle">no file is touched by two open pull requests</need>
+    <need volume="../../shared/principles.xml" anchor="artifacts-out-of-the-repo" kind="principle">every state path under STATE or COQ_CACHE with a registered cleanup</need>
   </shared-needs>
 
   <section id="purpose" title="Purpose">
-    <text>N-14 gives a run a place to work: a git worktree cut from origin/main (or from the ticket's existing branch on a later attempt, or detached at a pull request head for a reviewer) in a numbered slot under the cache root, with the ticket's file claims checked and recorded in the store before the seat starts.</text>
-    <text>It replaces three things that broke: branches cut from whatever the checkout held (memory work-order-start-branches-from-checkout-head: six branches cut from the records branch on 2026-10-11), a start path that dirtied the main checkout and refused 132 seats a day because status was a file on a branch (rebuild/investigation/01-ROOT-CAUSES.md#3-root-causes RC3), and a slot pool whose lease nothing enforced (a 30 hour lease against a 4 hour TTL, rebuild/investigation/L02-state-stores.md section 5 item 7). The main checkout at ~/projects/coq-jev-herdr-plugin is never touched by this node or any other.</text>
-    <text>The file claim is the mechanical form of the owner's rule that no file is ever touched by two open pull requests (AGENTS.md#law-no-file-is-ever-touched-by-two-open-prs; memory one-file-one-in-flight-ticket): declared at cut (N-18), checked at readiness (N-03), and checked again and recorded here, at the last moment before a seat can write.</text>
+    <text>N-14 gives a run a place to work: a git worktree in the numbered slot that belongs to one pool user, cut from origin/main (or from the ticket's branch on a later attempt, or detached at a pull request head for a reviewer), opened to that user by ACL, after verifying that the ticket holds live claims covering its files.</text>
+    <text>It replaces branches cut from whatever the checkout held (memory work-order-start-branches-from-checkout-head), a start path that dirtied the main checkout (rebuild/investigation/01-ROOT-CAUSES.md#3-root-causes RC3), and a slot pool whose lease nothing enforced (L02 section 5 item 7). The owner's main checkout is never touched.</text>
+    <text>Claims are acquired once, by N-03 at ready, in the one claims table (../../shared/contracts.xml#claims); the file_claims table of book 1.0.0 is deleted. This node is the last check before a seat can write: the ticket must still hold its claims.</text>
   </section>
 
   <section id="input" title="Input record: dispatch">
-    <text>Kind dispatch, code 100, from N-07; schema ../N-13/record.schema.json#/$defs/dispatch. Fields this node reads: id (becomes run_id), ticket, role, phase, attempt, repo, repo_sha, lease, target.pr and target.head_sha for a reviewer. The validator (N-18) calls the same Provision function with role validator and no ticket to get a detached read-only workspace at origin/main; that call is in-process, not a dispatch, and is recorded as a workspace record with role validator.</text>
+    <text>Kind dispatch, code 100, from N-07; schema ../N-07/record.schema.json#/$defs/dispatch ($ref'd as this node's dispatch def). Fields used: dispatch_id (the run id), ticket, phase, role (gate is skipped), attempt, lease, repo, repo_sha, target (pr and head_sha for a reviewer). The validator (N-18) calls Provision in process with role validator and run id v-SET_ID for a read-only borrow at origin/main.</text>
   </section>
 
-  <section id="output" title="Output record: workspace or workspace.refused">
-    <text>Kind workspace, code 100, idempotency_key = dispatch.id. Fields: run_id, ticket, role, path ($COQ_CACHE/ws/&lt;slot&gt;/), slot (integer), branch (wo/&lt;ticket-id&gt; for a worker; none for a reviewer, spec-author or validator), base_sha (the commit the worktree was created at), base_ref (origin/main, origin/wo/&lt;ticket&gt;, or refs/pull/&lt;n&gt;/head), mode (write or read-only), claims (the declared file patterns recorded in the store for this ticket, with the claim row id), mirror_sha (origin/main of the mirror at provision time).</text>
-    <text>Kind workspace.refused, code 412 for an overlap (reason claim_overlap, with the overlapping patterns and the holding ticket id) or 429 for no free slot (reason no_slot, with the pool size and the holders). Kind workspace.failed, code 500 for a git or io failure after 3 attempts (reason fetch_failed, worktree_failed, io).</text>
-    <text>Schema: record.schema.json#/$defs/workspace, workspace.refused, workspace.failed.</text>
+  <section id="output" title="Output records: workspace, workspace.refused, workspace.failed">
+    <text>All on the shared committed envelope; operation key N-14/workspace.provision/DISPATCH_ID/r1 on the Commit request; the Commit carries the dispatch lease.</text>
+    <field name="workspace">run_id, ticket, role, path (CACHE/ws/SLOT/), slot, seat_user (coq-seat-NN, the only user that may hold slot NN), branch (wo/TICKET for a worker), base_sha, base_ref, mode (write for a worker, read-only otherwise, enforced by ACL), mirror_sha, claims_verified (the claim rows read in the provision transaction; at least one for a worker, none for other roles), expires_at.</field>
+    <field name="workspace.refused">412 claim_missing (the ticket holds no live claim for a declared pattern; failure_kind workspace.refused) or head_moved (the PR head no longer equals target.head_sha); 429 no_slot (failure_kind cap, also when the slot pool is under a live drain lease). All are free regrants by N-11 (../../shared/contracts.xml#retry-owner).</field>
+    <field name="workspace.failed">500 after three tries of a step: store_unreachable, mirror_locked, fetch_failed, clone_failed, acl_failed, io; charged by N-11 with session new.</field>
+    <text>Schemas: record.schema.json#/$defs/workspace, #/$defs/workspace.refused, #/$defs/workspace.failed. Examples in section examples.</text>
   </section>
 
-  <section id="mechanism" title="Mechanism: mirror, worktree, claims, slot">
-    <text>Package scheduler/internal/workspace in the small Go cut. One function Provision(ctx, dispatch) (workspace, error). Git is run as a child process (git binary, no library) with a timeout per call; every call's argv, exit and stderr tail go to the run's provision.log.</text>
+  <section id="mechanism" title="Mechanism: claims verified, slot, mirror, worktree, ACL">
+    <text>Package scheduler/internal/workspace. Provision(ctx, dispatch) (workspace, error). Git runs as a child process with a timeout per call; every argv, exit and stderr tail goes to the run's provision.log.</text>
     <mermaid>flowchart TD
-  D[dispatch record, no workspace yet for run_id] --> C{claims: insert file_claims rows for the ticket in one transaction}
-  C -- unique index conflict --> R412[workspace.refused 412 claim_overlap]
-  C -- ok or already held by this ticket --> S{slot: CAS a free row in slots to run_id}
-  S -- none free --> R429[workspace.refused 429 no_slot, claims kept]
-  S -- slot n --> F[fetch in the bare mirror under a flock, timeout 60 s]
-  F --> W[git worktree add --detach ws/n base_ref, then git switch -c or -C branch for a worker]
-  W --> V[verify: git -C ws/n rev-parse HEAD equals base_sha; status clean]
-  V --> P[put workspace 100, idempotency_key = dispatch.id]
-  F -- 3 failures --> R500[workspace.failed 500, slot released, claims kept]
-  W -- 3 failures --> R500</mermaid>
-    <step n="1">Claims. Read the ticket record's files (declared at cut by N-18). In one store transaction insert one row per pattern into file_claims (ticket, pattern, prefix, run_id, at). The table has a unique index on prefix for rows whose ticket is in flight (status started, pr open, or awaiting review), where prefix is the literal prefix of the glob before its first wildcard, with a trailing slash meaning the subtree; two patterns overlap when either matches the other's literal prefix (factory/bin/claims.sh header rule). A conflict with another ticket's row is workspace.refused 412 with the holder named; a conflict with this ticket's own rows (attempt n+1) is fine, the rows are reused. A reviewer or validator workspace claims nothing. Aggregates (CHANGELOG.md, INDEX.md, CONTEXT_STATE.md) cannot be claimed: the insert refuses them with 412 reason aggregate.</step>
-    <step n="2">Slot. The slots table holds rows 1..N where N is scheduler/config/seats.json workspace_slots (default 16, shared/state-store.xml#config-keys, equal to the N-07 caps.max_seats default). Compare-and-swap one row from holder null to holder run_id with expires_at = dispatch.deadline_at plus 600 s. None free is 429 no_slot; N-07 is level-triggered and will dispatch again when a slot frees, so no one waits in a loop. An expired holder whose run has a seat.result is reclaimed in the same pass (section many-agents).</step>
-    <step n="3">Mirror. One bare mirror per repository at $COQ_CACHE/git/&lt;slug&gt;.git. Under flock on mirror.lock (wait 30 s), run git fetch --prune origin with a 60 s timeout; the fetch refspecs include +refs/heads/*:refs/remotes/origin/* and +refs/pull/*/head:refs/pull/*/head so a reviewer's head is local. Record mirror_sha = origin/main after the fetch.</step>
-    <step n="4">Worktree. Remove any leftover at ws/&lt;slot&gt; (git worktree remove --force, then rm -rf, then git worktree prune in the mirror). Then git --git-dir mirror worktree add --detach ws/&lt;slot&gt; base_ref where base_ref is: for a worker on attempt 1, origin/main; for a worker on attempt n+1 whose branch exists on origin, origin/wo/&lt;ticket&gt;; for a reviewer, refs/pull/&lt;pr&gt;/head and it must resolve to target.head_sha or the result is 412 head_moved; for a spec-author or validator, origin/main. For a worker, git switch -C wo/&lt;ticket&gt; so the branch is local and tracks origin/wo/&lt;ticket&gt; when it exists. The mirror's push URL is origin; the worktree pushes through the mirror's remote config.</step>
-    <step n="5">Verify and record. rev-parse HEAD equals base_sha; git status --porcelain is empty; the worktree contains no .claude/settings.local.json (the bundle is outside the tree). Write provision.json beside the worktree (outside it, at $COQ_CACHE/ws/&lt;slot&gt;.json) and put the workspace record with idempotency_key dispatch.id.</step>
-    <text>Mode. A worker workspace is write; a reviewer, spec-author or validator workspace is read-only: the settings deny Write and Edit (N-13) and the directory is created with the files read-only for the seat's user is not attempted (same user); the proof is the permission denial in the result, not a filesystem bit.</text>
-    <text>Branch names. wo/&lt;ticket-id&gt;, one branch per ticket for all its attempts, never a slug (slugs made the old queue search for feat/&lt;slug&gt; by file name, line/bin/seat-queue.sh). Rebuild tickets are plain branches off main with plain pull requests (memory build-mode-rule).</text>
+  D[dispatch, phase not gate, no workspace for run_id] --> C{ticket holds live claims covering its files?}
+  C -- no --> R412[workspace.refused 412 claim_missing]
+  C -- yes --> S{slots.take: a free slot, no live drain lease}
+  S -- none --> R429[workspace.refused 429 no_slot]
+  S -- slot n --> F[fetch in the bare mirror under a flock]
+  F --> W[worktree add at base_ref; worker switches to wo/TICKET]
+  W --> A[setfacl: coq-seat-n rwX for a worker, r-X otherwise]
+  A --> V[verify HEAD, clean status, ACL read back]
+  V --> P[Commit workspace with N-14/workspace.provision/run_id/r1]
+  F -- 3 failures --> R500[workspace.failed 500, slots.free]</mermaid>
+    <step n="1">Claims verified. In one read transaction, list the live claims rows of the ticket (released_at null) and check each declared pattern of the ticket row has one. A missing row is 412 claim_missing with the missing patterns: N-03 re-acquires at the next ready and N-11 regrants free. A reviewer, spec-author or validator claims nothing and verifies nothing. No row is written here.</step>
+    <step n="2">Slot. Refuse 429 no_slot while a live drain lease (system lease key drain:workspace) is held, so N-45 can empty the pool. Otherwise statement slots.take: one free row of workspace_slots (../../shared/contracts.xml#timing) to holder run_id with expires_at the dispatch deadline_at plus kill.grace_seconds plus 600 s. Slot n is only ever used by pool user coq-seat-n, so the slot number names the seat user N-15 binds.</step>
+    <step n="3">Mirror. One bare mirror per repository at CACHE/git/SLUG.git, owned by coq-svc. Under a flock (30 s) run git fetch --prune with refspecs for heads and refs/pull/*/head; record mirror_sha.</step>
+    <step n="4">Worktree. Remove any leftover at ws/n, then worktree add --detach at base_ref: origin/main for a worker on attempt 1, a spec-author and the validator; origin/wo/TICKET for a worker on a later attempt whose branch exists; refs/pull/PR/head for a reviewer, which must equal target.head_sha or the result is 412 head_moved. A worker switches to wo/TICKET.</step>
+    <step n="5">ACL. ws/n stays owned by coq-svc; setfacl gives coq-seat-n rwX plus a matching default ACL for a worker, r-X for every other role (../../shared/authority.xml#seat-isolation). A reviewer or spec-author therefore cannot change a file whatever its settings say; the deny rules of N-13 are a second fence, not the first.</step>
+    <step n="6">Verify and record. HEAD equals base_sha; status is clean; getfacl reads back the intended entries. Commit the workspace record under the dispatch lease. A 412 stale_token or lease_not_current means the lease ended: slots.free and stop.</step>
+    <text>Branch names: wo/TICKET, one branch per ticket for all its attempts. The worktree has no remote push credential: pushes are N-16's, from the mirror, as coq-svc with forge-pr.</text>
   </section>
 
   <section id="start" title="How it starts without an agent typing">
-    <text>The seat controller goroutine (N-06 unit, N-07 tick) lists dispatch records with no workspace, workspace.refused or seat.result for the run_id and calls Provision for each, in parallel with the render of N-13; both are children of the same dispatch. A reviewer dispatch arrives only after gate.verdict green (N-08 re-entry), so the head sha it names is the one the gate passed. Nothing in this node is started by a prompt, a pane, a Makefile target typed by hand, or a person.</text>
+    <text>The seat controller goroutine lists dispatches with phase not gate, a reserved or running lease and no workspace record, and calls Provision for each, in parallel with N-13. Nothing here is started by a prompt, a pane or a person.</text>
   </section>
 
   <section id="waits" title="Every wait, its timeout and its fallback">
-    <wait what="store transaction for claims and slot" timeout="5 s" attempts="3" fallback="workspace.failed 500 store_unreachable"/>
-    <wait what="flock on the mirror lock" timeout="30 s" attempts="3" fallback="workspace.failed 500 mirror_locked; the holder's pid is written in the lock file for the runbook"/>
-    <wait what="git fetch in the mirror" timeout="60 s" attempts="3, backoff 5 s, 15 s, 45 s" fallback="workspace.failed 500 fetch_failed; the slot is released; the claims stay (the ticket still owns its files)"/>
-    <wait what="git worktree add, switch, rev-parse, status" timeout="60 s" attempts="3" fallback="workspace.failed 500 worktree_failed; the slot directory is removed and the slot released"/>
-    <wait what="a free slot" class="level-triggered" timeout="none, no wait" attempts="n/a" fallback="workspace.refused 429 immediately; the next tick tries again; a dispatch older than its deadline with no workspace is a failure record to N-11"/>
-    <text>Bound per dispatch: about 7 minutes in the worst case of three slow fetches; no wait depends on a person or an agent.</text>
+    <wait what="store read of claims and slots.take" timeout="5 s" attempts="3" fallback="workspace.failed 500 store_unreachable"/>
+    <wait what="flock on the mirror lock" timeout="30 s" attempts="3" fallback="workspace.failed 500 mirror_locked; the holder's pid is in the lock file"/>
+    <wait what="git fetch in the mirror" timeout="60 s" attempts="3, backoff 5 s, 15 s, 45 s" fallback="workspace.failed 500 fetch_failed; slots.free"/>
+    <wait what="git worktree add, switch, setfacl, verify" timeout="60 s" attempts="3" fallback="workspace.failed 500 clone_failed or acl_failed; the slot directory is removed and slots.free"/>
+    <wait what="a free slot" class="level-triggered" timeout="none, no wait" attempts="n/a" fallback="workspace.refused 429 at once; N-11 regrants on the next tick with capacity"/>
+    <text>Bound per dispatch about 7 minutes in the worst case of three slow fetches; a reserved lease that outlives start.grace_seconds expires and N-11 regrants it free.</text>
   </section>
 
   <section id="retries" title="Retries up to 3, then recover and report">
-    <text>Git steps retry 3 times with the backoff above. After the third failure the node writes workspace.failed 500 with the step, reason and stderr tail, releases the slot, keeps the claims, and stops. N-11 counts the attempt; a dead record after 3 attempts becomes one owner card (N-28). On service restart the controller re-lists dispatches without a workspace; a slot row whose holder has no live run and no seat.result older than its expires_at is reclaimed with its directory removed. A claims row whose ticket reached merged, dead or cancelled is released by N-45 on the merge or dead record, never by this node.</text>
+    <text>Git and ACL steps retry 3 times with the backoff above, then workspace.failed 500 with failure_body, slots.free, and stop; N-11 charges it with session new. Refusals are not retried here: N-11 regrants them free. On restart the controller re-lists dispatches without a workspace; a slot whose holder's run:RUN_ID is closed_out or failed_spawn, or whose expires_at passed with no live lease, is reclaimed with slots.free and its directory removed. Claims are never released by this node.</text>
   </section>
 
   <section id="many-agents" title="Many agents at once">
-    <text>Readers: twenty seats can be provisioned in one tick; the controller runs Provision in a pool of seats.json provision_workers (default 4), bounded by the mirror lock on the fetch only; worktree creation runs in parallel because each slot is its own directory.</text>
-    <text>Collision 1, two tickets declare overlapping files: the unique index on file_claims.prefix for in-flight tickets makes the second insert fail inside its transaction; it is refused 412 and the ticket returns to waiting in N-03. Both cannot hold the same prefix, by the database, not by a script reading gh pr list (factory/bin/claims.sh read GitHub and a worktree list, which a seat on another machine made invisible; the store is the one authority, D04 and D10).</text>
-    <text>Collision 2, two passes provision the same dispatch: the slot CAS admits one holder per slot, the workspace put is idempotent by dispatch.id, and the loser's worktree is removed by the cleanup of unrecorded slots in the next pass.</text>
-    <text>Collision 3, the same ticket is dispatched twice with different run ids (a lease fencing failure upstream): the claims rows carry run_id; the second insert for the same ticket updates run_id only if the first run has a seat.result; otherwise it is refused 412 reason ticket_in_flight and reported as a defect record, because N-02 should have prevented it.</text>
-    <text>Collision 4, two fetches at once: the flock serializes them; a fetch that finds the mirror already fresh (origin/main unchanged within 10 s) is skipped.</text>
-    <text>Collision 5, a reviewer workspace while the worker's branch moves: the reviewer is detached at the head sha the gate passed; a new push makes a new head sha, a new gate.verdict and a new reviewer dispatch; the old review result is discarded by N-19 as head_moved.</text>
-    <text>Collision 6, cleanup (N-45) and a live run on one slot: cleanup removes only a slot whose run has a seat.result and whose branch is merged or whose ticket is dead; a slot with a live holder is never touched, by a CAS on the slot row before any rm.</text>
+    <text>Twenty provisions in one tick run in a pool of seats.json provision_workers (default 4), serialized only on the mirror fetch.</text>
+    <text>Overlapping files: impossible at this point, because N-03 acquires claims with the two-way prefix check inside the ready transition (../../shared/contracts.xml#claims); this node verifies they are still held.</text>
+    <text>Two passes provision one dispatch: the operation key admits one Commit; slots.take is keyed by run_id, so the loser gets the same slot back or a replay; an unrecorded leftover directory is removed on the next pass.</text>
+    <text>Two fetches at once: the flock serializes them; a mirror fetched within 10 s is not fetched again.</text>
+    <text>A reviewer while the worker's branch moves: the reviewer is detached at the head sha in its dispatch; a new head is a new gate and a new reviewer dispatch; a moved head at provision is 412 head_moved.</text>
+    <text>Cleanup and a live run on one slot: N-45 removes a slot only after slots.free succeeds, which refuses a slot whose holder's lease is reserved or running.</text>
   </section>
 
   <section id="codes" title="Status codes this node emits">
     <code value="100" kind="workspace">Provisioned. Acts: N-15 when the seat.bundle also exists.</code>
-    <code value="412" kind="workspace.refused">claim_overlap, aggregate, ticket_in_flight, head_moved. Acts: N-11 as a failure record; claim_overlap returns the ticket to N-03 waiting without counting an attempt (the ticket did nothing wrong; it is a scheduling order), the others count.</code>
-    <code value="429" kind="workspace.refused">no_slot. Acts: N-07 retries on a later tick; never a seat waiting in a loop; a dispatch past its deadline with no workspace is a failure record.</code>
-    <code value="500" kind="workspace.failed">fetch_failed, worktree_failed, mirror_locked, store_unreachable, io. Acts: N-11.</code>
+    <code value="412" kind="workspace.refused">claim_missing, head_moved. Acts: N-11 free regrant after retry.claim_seconds.</code>
+    <code value="429" kind="workspace.refused">no_slot (failure_kind cap). Acts: N-11 free regrant on the next tick with capacity.</code>
+    <code value="500" kind="workspace.failed">store_unreachable, mirror_locked, fetch_failed, clone_failed, acl_failed, io. Acts: N-11 charges it.</code>
   </section>
 
   <section id="state-paths" title="State paths and the cleanup script for each">
-    <path dir="$COQ_CACHE/git/&lt;slug&gt;.git" writes="bare mirror, mirror.lock" cleanup="scheduler/host/bin/cleanup-git-mirror.sh" retention="kept; git gc --prune weekly; worktree prune every run">Dry run by default; --apply runs gc and prune; never deletes the mirror while any slot row has a holder.</path>
-    <path id="N-14.workspace" dir="$COQ_CACHE/ws/&lt;slot&gt;/ and $COQ_CACHE/ws/&lt;slot&gt;.json" writes="the worktree and its provision record" cleanup="scheduler/host/bin/cleanup-workspaces.sh" retention="removed on merge, dead or cancel (N-45 trigger), or 24 h after the run's seat.result when no record triggered">Dry run lists slot, holder, run, branch, dirty state; --apply removes only slots whose CAS from holder to null succeeds; a dirty worktree with unpushed commits is listed as kept and reported as a record (never deleted silently, specs/SPEC-04-herdr-seat-lifecycle.xml#s-cleanup rule carried forward).</path>
-    <path dir="$COQ_STATE/seats/runs/&lt;run_id&gt;/provision.log" writes="git argv, exit codes, stderr tails" cleanup="scheduler/host/bin/cleanup-seat-runs.sh (N-15)" retention="7 days"/>
-    <text>$COQ_CACHE resolves through bin/state-root.sh (default ${XDG_CACHE_HOME:-~/.cache}/coq/coq-jev-herdr-plugin). Both scripts are registered in N-45's scheduler/config/cleanup.json. The repository holds the scripts; nothing under $COQ_CACHE or $COQ_STATE is ever committed (C35; AGENTS.md#law-runtime-data-never-lives-in-git).</text>
+    <path id="N-14.mirror" dir="$COQ_CACHE/git/&lt;slug&gt;.git" writes="bare mirror, mirror.lock" cleanup="scheduler/host/bin/cleanup-git-mirror.sh" retention="kept; git gc --prune weekly; worktree prune every run" trigger="timer" acts="system">Dry run by default; --apply runs gc and prune; never while any slot has a live holder.</path>
+    <path id="N-14.workspace" dir="$COQ_CACHE/ws/&lt;slot&gt;/ and $COQ_CACHE/ws/&lt;slot&gt;.json" writes="the worktree, its ACL and its provision record" cleanup="scheduler/host/bin/cleanup-workspaces.sh" retention="removed when the run is closed_out or failed_spawn and the ticket is merged, dead or cancelled, or 24 h after closed_out" trigger="timer" acts="system">Dry run lists slot, holder, run, branch, dirty state; --apply removes only slots whose slots.free succeeds; a dirty worktree with unpushed commits is kept and reported, never deleted silently.</path>
+    <path id="N-14.log" dir="$COQ_STATE/seats/runs/&lt;run_id&gt;/provision.log" writes="git argv, exit codes, stderr tails" cleanup="scheduler/host/bin/cleanup-seat-runs.sh" retention="7 days" trigger="timer" acts="system"/>
+    <text>$COQ_CACHE resolves through bin/state-root.sh (default ${XDG_CACHE_HOME:-$HOME/.cache}/coq/coq-jev-herdr-plugin), mode 0700 coq-svc. Nothing under it is ever committed (C35).</text>
   </section>
 
   <section id="permissions" title="Permissions">
-    <text>The Go service: read and write under $COQ_CACHE/ws and $COQ_CACHE/git; run git; network to origin (fetch only; pushes happen in N-16's close-out through the same mirror remote with the owner's git credential helper on the host); gRPC to the store. No GitHub API token is needed to provision; the reviewer head is fetched by refspec.</text>
-    <text>A seat: receives the workspace path as its cwd and COQ_WORKTREE; may write only inside allow_paths of its bundle; never runs git worktree, git switch, treehouse or rm -rf of the slot (denied commands in N-13). A seat that needs another workspace cannot get one: it reports blocked.</text>
+    <text>The Go service, principal coq-svc acting as N-14: read and write CACHE/ws and CACHE/git; run git and setfacl; network to origin for fetch only; statements slots.take and slots.free; Commits of the three kinds. No forge token is needed to provision.</text>
+    <text>A seat: receives ws/n as its cwd from the launcher; may write only where its slot ACL allows (a worker's slot) and only allow_paths there (N-13); never runs git worktree, git switch to another branch, treehouse or rm of the slot. A seat that needs another workspace reports blocked.</text>
   </section>
 
   <section id="checklist" title="Checklist with proof">
-    <item proof="go test ./internal/workspace -run TestClaimOverlapRefused: two tickets declaring herdr/bin/* and herdr/bin/seat.sh; the second Provision returns workspace.refused 412 naming the first ticket; the store shows one claims row set">Overlap is refused by the store's unique index.</item>
-    <item proof="go test TestConcurrentProvisionOneSlot: 20 concurrent Provision calls against a pool of 16 yield 16 workspace records and 4 refused 429, with 16 distinct slots">Slots are handed out by compare-and-swap.</item>
-    <item proof="go test TestBaseRefByPhase: attempt 1 worker is at origin/main; attempt 2 with the branch on origin is at origin/wo/WO-x; reviewer is at refs/pull/N/head and equals target.head_sha; a moved head returns 412 head_moved">Base ref follows the phase and attempt.</item>
-    <item proof="probe: git -C ~/projects/coq-jev-herdr-plugin status --porcelain before and after 50 provisions is byte-identical">The main checkout is never touched.</item>
-    <item proof="probe: a fetch with origin unreachable (bogus URL) returns workspace.failed 500 fetch_failed after 3 attempts within 7 minutes and the slot row is null again">Fetch failure is bounded and releases the slot.</item>
+    <item proof="go test ./internal/workspace -run TestClaimMissingRefused: a worker ticket whose claim row was released returns workspace.refused 412 claim_missing naming the pattern; no claims row is written by this node">Claims are verified, never acquired here.</item>
+    <item proof="go test TestConcurrentProvisionOneSlot: 20 concurrent Provision calls against a pool of 16 yield 16 workspace records, 4 refused 429, 16 distinct slots, each slot n bound to coq-seat-n">Slots are one per pool user.</item>
+    <item proof="go test TestDrainRefuses: with a live drain:workspace lease every Provision returns 429 no_slot">A drain empties the pool.</item>
+    <item proof="host probe: as coq-seat-03 in a reviewer slot, touch of any file fails EACCES; as coq-seat-04 in a worker slot it succeeds">Read-only roles are read-only by ACL.</item>
+    <item proof="go test TestBaseRefByPhase: attempt 1 worker at origin/main; attempt 2 at origin/wo/WO-x; reviewer at refs/pull/N/head equal to target.head_sha; a moved head returns 412 head_moved">Base ref follows the phase and attempt.</item>
+    <item proof="probe: git -C the owner's checkout status --porcelain before and after 50 provisions is byte-identical">The main checkout is never touched.</item>
+    <item proof="probe: a fetch with origin unreachable returns workspace.failed 500 fetch_failed after 3 attempts and the slot is free again">Fetch failure is bounded and releases the slot.</item>
     <item proof="scheduler/host/bin/cleanup-workspaces.sh --dry-run lists a merged slot as removable and a dirty slot as kept; --apply removes only the first">Cleanup never deletes unpushed work.</item>
-    <item proof="scheduler/host/bin/cleanup-git-mirror.sh --dry-run prints the gc and prune it would run; --apply exits 0 and the mirror still serves a fetch">Mirror maintenance is scripted.</item>
-    <item proof="make lint: scheduler/config/seats.json validates against seats.schema.json with workspace_slots, provision_workers present">Pool size is config, not a role field.</item>
   </section>
 
   <section id="monitoring" title="Monitoring">
-    <text>Counters: workspaces_provisioned, workspaces_refused_overlap, workspaces_refused_slot, workspaces_failed, slots_in_use, provision_seconds histogram, mirror_fetch_seconds. The Machine screen (N-39) for this node shows slots in use over the pool as a belt occupancy. A 429 streak longer than seats.json slot_starvation_seconds (default 900) is an alert on N-41 because capacity, not seats, is the defect (D17 option B).</text>
+    <text>Counters: workspaces_provisioned, workspaces_refused_claim_missing, workspaces_refused_slot, workspaces_failed, slots_in_use, provision_seconds histogram, mirror_fetch_seconds. The Machine screen (N-39) for this node shows slots in use over the pool as a belt occupancy. A 429 streak longer than seats.json slot_starvation_seconds (default 900) is an alert on N-41 because capacity, not seats, is the defect (D17 option B).</text>
   </section>
 
   <section id="runbook" title="Runbook">
-    <text>See slots: scheduler status (gRPC Status) lists slots with holder, run, ticket, since. See a workspace: cat $COQ_CACHE/ws/&lt;slot&gt;.json; git -C $COQ_CACHE/ws/&lt;slot&gt; status.</text>
+    <text>See slots: scheduler status (gRPC Status) lists slots with holder, run, ticket, since. See a workspace (as the owner through ctl; COQ_CACHE is 0700 coq-svc): cat $COQ_CACHE/ws/&lt;slot&gt;.json; git -C $COQ_CACHE/ws/&lt;slot&gt; status; getfacl $COQ_CACHE/ws/&lt;slot&gt;.</text>
     <text>Mirror stuck under its lock: the lock file names the pid; if the pid is gone, the next Provision pass removes the stale lock (flock releases on process death anyway); never delete the mirror by hand.</text>
     <text>Cleanup: scheduler/host/bin/cleanup-workspaces.sh [--apply] [--slot N]; scheduler/host/bin/cleanup-git-mirror.sh [--apply]. Both run from N-45's timer; a hand run is the owner's break glass and is recorded by the script as a cleanup.run with by owner.</text>
     <text>A dirty slot that cleanup keeps: the record names the branch and the unpushed commits; the disposition is a card (N-28) with options land as a pull request or discard; never discarded by the script.</text>
@@ -185,9 +191,17 @@
   <section id="edges" title="DAG edges in and out">
     <edge dir="in" from="../N-07/spec.xml#N-07" record="dispatch"/>
     <edge dir="out" to="../N-15/spec.xml#N-15" record="workspace"/>
-    <edge dir="out" to="../N-11/spec.xml#N-11" record="workspace.refused 412 and 429, workspace.failed 500 (failure records)"/>
-    <edge dir="re-entry" to="../N-03/spec.xml#N-03" record="workspace.refused 412 claim_overlap returns the ticket to waiting without an attempt"/>
-    <text>N-18 calls Provision in process for its verify workspace; that is not a drawn edge because it is a library call inside the same service, recorded as a workspace record with role validator.</text>
+    <edge dir="out" to="../N-11/spec.xml#N-11" record="workspace.refused 412 and 429, workspace.failed 500 (failure records with failure_body)"/>
+    <text>N-18 calls Provision in process for its read-only borrow; not a drawn edge. Claims are N-03's (../../shared/contracts.xml#claims); this node returns nothing to N-03.</text>
+  </section>
+
+  <section id="examples" title="Examples">
+    <example schema="record.schema.json#/$defs/workspace">{"id":"20261014T063010Z-100-p4q5r","at":"2026-10-14T06:30:10Z","kind":"workspace","code":100,"node":"N-14","seq":5127,"epoch":1,"run_id":"d-20261014063000-p2m7dq","ticket":"WO-20261014-ab12","role":"worker","path":"CACHE/ws/4/","slot":4,"seat_user":"coq-seat-04","branch":"wo/WO-20261014-ab12","base_sha":"0123456789abcdef0123456789abcdef01234567","base_ref":"origin/main","mode":"write","mirror_sha":"0123456789abcdef0123456789abcdef01234567","claims_verified":[{"claim_id":812,"pattern":"scheduler/internal/sched/*.go"}],"expires_at":"2026-10-14T08:10:30Z"}</example>
+    <example schema="record.schema.json#/$defs/workspace">{"id":"20261014T070010Z-100-s6t7u","at":"2026-10-14T07:00:10Z","kind":"workspace","code":100,"node":"N-14","seq":5303,"epoch":1,"run_id":"d-20261014070000-r8k2wa","ticket":"WO-20261014-ab12","role":"reviewer","path":"CACHE/ws/7/","slot":7,"seat_user":"coq-seat-07","base_sha":"89abcdef0123456789abcdef0123456789abcdef","base_ref":"refs/pull/57/head","mode":"read-only","mirror_sha":"89abcdef0123456789abcdef0123456789abcdef","claims_verified":[]}</example>
+    <example schema="record.schema.json#/$defs/workspace">{"id":"20261014T065000Z-100-v8w9x","at":"2026-10-14T06:50:00Z","kind":"workspace","code":100,"node":"N-14","seq":5250,"epoch":1,"run_id":"v-SET-20261014-01","role":"validator","path":"CACHE/ws/16/","slot":16,"seat_user":"coq-seat-16","base_sha":"0123456789abcdef0123456789abcdef01234567","base_ref":"origin/main","mode":"read-only","mirror_sha":"0123456789abcdef0123456789abcdef01234567","claims_verified":[]}</example>
+    <example schema="record.schema.json#/$defs/workspace.refused">{"id":"20261014T063255Z-412-m1n2p","at":"2026-10-14T06:32:55Z","kind":"workspace.refused","code":412,"node":"N-14","seq":5158,"epoch":1,"run_id":"d-20261014063250-k3l4mn","dispatch_id":"d-20261014063250-k3l4mn","ticket":"WO-20261014-cd34","phase":"worker","attempt":1,"outcome":"refused","failure_kind":"workspace.refused","reason":"claim_missing","missing":["herdr/bin/seat.sh"]}</example>
+    <example schema="record.schema.json#/$defs/workspace.refused">{"id":"20261014T063300Z-429-y1z2a","at":"2026-10-14T06:33:00Z","kind":"workspace.refused","code":429,"node":"N-14","seq":5161,"epoch":1,"run_id":"d-20261014063255-b5c6de","dispatch_id":"d-20261014063255-b5c6de","ticket":"WO-20261014-ef56","phase":"worker","attempt":1,"outcome":"refused","failure_kind":"cap","reason":"no_slot","pool":{"size":16,"holders":["d-20261014063000-p2m7dq"]}}</example>
+    <example schema="record.schema.json#/$defs/workspace.failed">{"id":"20261014T063400Z-500-b3c4d","at":"2026-10-14T06:34:00Z","kind":"workspace.failed","code":500,"node":"N-14","seq":5170,"epoch":1,"run_id":"d-20261014063000-p2m7dq","dispatch_id":"d-20261014063000-p2m7dq","ticket":"WO-20261014-ab12","phase":"worker","attempt":1,"outcome":"failed","failure_kind":"workspace.failed","step":"mirror","reason":"fetch_failed","attempts":3,"stderr_tail":"fatal: unable to access origin"}</example>
   </section>
 
   <section id="sources" title="Sources cited">
@@ -215,9 +229,9 @@
   </section>
 
   <rejected id="rejected">
-    <item source="AGENTS.md#where-your-workspace-comes-from" what="the treehouse pool at ~/.treehouse as the one workspace source" reason="its lease was unenforced (30 h against a 4 h TTL), return --force killed shells, and a slot holding a branch blocked the next seat; the store's slots table with CAS and expiry replaces it; treehouse stays for the owner's own sessions"/>
+    <item source="AGENTS.md#where-your-workspace-comes-from" what="the treehouse pool at ~/.treehouse as the one workspace source" reason="its lease was unenforced (30 h against a 4 h TTL), return --force killed shells, and a slot holding a branch blocked the next seat; the store's slots table (slots.take, slots.free) with expiry replaces it; treehouse stays for the owner's own sessions"/>
     <item source="bin/wo-start.sh and .claude/skills/work-order/scripts/work-order.sh start" what="start through the work-order skill" reason="L11 F4: one human, one checkout; refuses a dirty tree, checks out in the project directory, and is a gitignored managed copy that cannot be reviewed; tickets live in the store (D04 C)"/>
-    <item source="factory/bin/claims.sh start" what="overlap check by reading gh pr list and git worktree list" reason="two readers of two copies (K07); the store's unique index is the one authority; the glob rule is carried forward unchanged"/>
+    <item source="factory/bin/claims.sh start" what="overlap check by reading gh pr list and git worktree list" reason="two readers of two copies (K07); the claims table of N-03 is the one authority (../../shared/contracts.xml#claims); the glob rule is carried forward"/>
     <item source="line/bin/seat-queue.sh" what="until loops waiting for a branch on origin and for a seat slot" reason="K12 bash loops as the control plane; a level-triggered tick replaces both waits"/>
     <item source="specs/SPEC-04-herdr-seat-lifecycle.xml#s-seat" what="worktree inside a labelled herdr pane" reason="D08: herdr is the owner's window; a workspace is a directory the launcher gives a process as cwd"/>
     <item source="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#4-what-works" what="Claude Code WorktreeCreate and WorktreeRemove hooks as the provisioner" reason="the hook runs inside the seat process; the workspace must exist before the seat and outlive a dead one, so the service owns it"/>

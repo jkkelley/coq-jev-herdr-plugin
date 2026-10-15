@@ -53,7 +53,7 @@
       "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
         "kind": {"const": "cancel"},
-        "code": {"enum": [200, 409, 412]},
+        "code": {"enum": [200, 412]},
         "body": {
           "type": "object",
           "required": ["epic", "ruling_id"],

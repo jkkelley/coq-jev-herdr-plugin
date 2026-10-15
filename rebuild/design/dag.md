@@ -155,6 +155,7 @@ flowchart LR
   N-09 --> N-48
   N-09 --> N-50
   N-10 --> N-28
+  N-10 --> N-35
   N-10 --> N-41
   N-10 --> N-51
   N-10 --> RE
@@ -362,9 +363,9 @@ The index volume `rebuild/design/index.xml` lists every node id and points to ev
 
 ## 6. Cycle check statement
 
-Nodes: 52. Drawn edges: 129. Re-entries (not edges): 12.
+Nodes: 52. Drawn edges: 130. Re-entries (not edges): 12.
 Result of Kahn's algorithm over the drawn edges: acyclic; every node appears in the topological order, no node is isolated, and no edge points at an unknown node.
-Topological order: N-01 N-06 N-20 N-21 N-27 N-31 N-03 N-05 N-43 N-22 N-29 N-30 N-33 N-02 N-37 N-44 N-49 N-07 N-13 N-14 N-15 N-12 N-16 N-17 N-19 N-23 N-18 N-24 N-36 N-46 N-40 N-42 N-25 N-04 N-08 N-09 N-11 N-26 N-35 N-47 N-50 N-10 N-38 N-48 N-45 N-41 N-51 N-39 N-28 N-32 N-52 N-34.
+Topological order: N-01 N-06 N-20 N-21 N-27 N-31 N-03 N-05 N-43 N-22 N-29 N-30 N-33 N-02 N-37 N-44 N-49 N-07 N-13 N-14 N-15 N-12 N-16 N-17 N-19 N-23 N-18 N-24 N-36 N-46 N-40 N-42 N-25 N-04 N-08 N-09 N-11 N-26 N-47 N-50 N-10 N-45 N-35 N-41 N-51 N-38 N-48 N-39 N-28 N-32 N-52 N-34.
 The check ran at 2026-10-14T04:28:51Z, again for 1.1.0 at 2026-10-15T06:00:00Z after the declared edges of section 2.1 were drawn, and re-runs on every change to this file through `rebuild/design/bin/dag-check.py` (check.sh C16), which recounts the nodes, the drawn edges (edges into the sink RE are re-entries, not counted) and the re-entry rows, runs Kahn's algorithm and verifies that the order above is a valid topological order.
 
 ## 7. Rules every node obeys

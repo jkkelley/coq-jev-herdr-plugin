@@ -152,9 +152,9 @@ flowchart LR
   </section>
 
   <section id="state-paths" title="State paths and the cleanup script for each">
-    <path p="$COQ_STATE/ci/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;.json" cleanup="ci/bin/cleanup-ci-state.sh --what gate-verdicts --older-than 90d [--apply]">The verdict input set and the post request and response bodies, for audit.</path>
-    <path p="GitHub commit statuses on jkkelley/coq-jev-herdr-plugin" retention="never" acts="owner" cleanup="kept on purpose: GitHub keeps statuses with the commit; nothing to delete, and a status is never edited after a terminal state">Not a host path; listed so the rule holds.</path>
-    <path p="GitHub branch protection of main" retention="never" acts="owner" cleanup="none: applied and removed only by the owner with forge-admin (shared/authority.xml#github-app); this node holds no credential that can change it">Listed so the rule holds.</path>
+    <path p="$COQ_STATE/ci/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;.json" cleanup="ci/bin/cleanup-ci-state.sh --what gate-verdicts --older-than 90d [--apply]" trigger="timer" acts="system">The verdict input set and the post request and response bodies, for audit.</path>
+    <path p="GitHub commit statuses on jkkelley/coq-jev-herdr-plugin" retention="never" cleanup="kept on purpose: GitHub keeps statuses with the commit; nothing to delete, and a status is never edited after a terminal state" trigger="owner" acts="owner">Not a host path; listed so the rule holds.</path>
+    <path p="GitHub branch protection of main" retention="never" cleanup="none: applied and removed only by the owner with forge-admin (shared/authority.xml#github-app); this node holds no credential that can change it" trigger="owner" acts="owner">Listed so the rule holds.</path>
     <s>The script dry-runs by default, acts with --apply, retries 3 times and exits 4 listing what remains; N-45 registers it.</s>
   </section>
 

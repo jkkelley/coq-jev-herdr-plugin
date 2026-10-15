@@ -16,7 +16,7 @@
      Rejected: writing shared/ from this seat (one shared author owns it; two authors on one file is the collision the book forbids)
      and leaving the hrefs to resolve later (a failing volume blocks the book now).
      Cost: a need is not a live pointer until shared/ lands; check.sh matches each need against the shared volumes then. -->
-<volume id="N-41" kind="node-spec" node="N-41" group="G6" version="1.1.0" issued="2026-10-14" written="2026-10-14T05:09:51Z" timezone="UTC">
+<volume id="N-41" kind="node-spec" node="N-41" group="G6" version="1.1.0" issued="2026-10-15T06:00:00Z" written="2026-10-14T05:09:51Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG edges</entry>
@@ -90,12 +90,12 @@
 
   <purpose id="purpose">
     <s>Every red and amber lamp in one list, newest first: the alert code from the status code map, the node, since (UTC), the cause line, the retry count, and what the system already did about it (wireframe-brief.json screen Alerts; C32 approved). Primary action: jump to the machine.</s>
-    <s>The owner's job on this screen: find out why a machine is red and what the system already did; acknowledge an alert so it stops shouting while the system keeps working on it. Acknowledging never resolves: resolution is a later 2xx record on the same node and ticket, written by the system.</s>
+    <s>The owner's job on this screen: find out why a machine is red and what the system already did; acknowledge an alert so it stops shouting while the system keeps working on it. Acknowledging never resolves: an alert resolves only on a later 2xx record whose recovery_of names that alert (record.schema.json#/$defs/recovery_of), written by the system; an unrelated 2xx on the same node and ticket resolves nothing.</s>
   </purpose>
 
   <input id="input" record="alert" schema="record.schema.json#/$defs/alert">
     <s>An alert is a record whose status code the code table marks as alerting (red or amber lamp): stall (N-12, 410), dead (N-11, after three attempts), rejected main (N-10, 422 with merge.hold), unhealthy (N-06 health), plus the map group's own alerting codes (deploy 5xx, art 422, binding 422, frame 422). N-31 pushes alert records and, for each, the attempt and resolution records that follow, so "what the system did" is a join the server makes, never a text a seat writes.</s>
-    <s>Each alert carries: id, code, node, ticket (with full title), since, cause (the record's message), retries so far (N-11 attempt), system_did (the latest attempt or recovery record one-liner), card_id when N-28 posted a card for it, resolved_at when a 2xx closed it, acked (by, at, version).</s>
+    <s>Each alert carries: id, code, node, ticket (with full title), since, cause (the record's message), retries so far (N-11 attempt), system_did (the latest attempt or recovery record one-liner), card_id when N-28 posted a card for it, resolved_at and resolved_by_record when a 2xx naming it in recovery_of closed it, acked (by, at, version).</s>
   </input>
 
   <output id="output" record="alert.ack" schema="record.schema.json#/$defs/alert.ack">
@@ -117,19 +117,21 @@ flowchart LR
   R11[N-11 dead, attempt n+1] --> ST
   R12[N-12 stall] --> ST
   R06[N-06 unhealthy] --> ST
-  ST --> J[N-31: alert view, joined with attempts, cards, resolution]
+  ST --> J[N-31: alert view, joined with attempts, cards, recovery_of]
   J --> C[client: alerts module]
   C --> D[alerts.frame drawn newest first]
   C -->|Acknowledge, owner key| A[alert.ack: CAS on alert version]
   A -->|201| C
-  A -->|409 already acked| C
+  A -->|200 replay of the same send| C
+  A -->|409 already acked or changed| C
+  REC[any 2xx with recovery_of = alert id] --> ST
   C -->|tap a row| SEL[selection record, source alerts] --> M[N-39]
 ]]></diagram>
     <step n="1" where="go-service">
-      <s>Alerting is a property of the code, not of a node: the code table (N-43) carries lamp red or amber and acts owner or system for every code; the alert view selects records with an alerting code and no later 2xx on the same node and ticket. Nothing is "raised" by a separate call, so a node cannot forget to alert (the board froze six hours and nobody raised anything, L08 section 5).</s>
+      <s>Alerting is a property of the code, not of a node: the code table (N-43) carries lamp red or amber and acts owner or system for every code; the alert view selects records with an alerting code and no later 2xx record whose recovery_of names them. Nothing is "raised" by a separate call, so a node cannot forget to alert (the board froze six hours and nobody raised anything, L08 section 5).</s>
     </step>
     <step n="2" where="go-service">
-      <s>The join: for each alert, the latest N-11 attempt record on the same ticket gives retries and system_did; the N-28 card record with the same source id gives card_id; the first 2xx after the alert on the same node and ticket gives resolved_at. The view is pushed as deltas keyed by alert id and version.</s>
+      <s>The join: for each alert, the latest N-11 attempt record on the same ticket gives retries and system_did; the N-28 card record with the same source id gives card_id; the 2xx record whose recovery_of equals the alert id gives resolved_at and resolved_by_record. The view is pushed as deltas keyed by alert id and version.</s>
     </step>
     <step n="3" where="client">
       <s>Rows render newest first; the filter is local; the node filter comes from the deep link /board#alerts/N-xx the Machine screen uses. Acknowledge is shown only on the owner key; it sends alert.ack with the alert's current version; the server applies compare-and-swap on that version: 201 when it matches, 409 when the alert changed or is already acked, with the acker and time in the reply.</s>
@@ -178,7 +180,7 @@ flowchart LR
     <s>Two owner devices acknowledging the same alert at once: both send alert.ack with the same version; the store's compare-and-swap lets one write 201 and answers the other 409 with the acker and the time; both rows end identical. No silent overwrite, no double ack.</s>
     <s>An ack racing a change: a new attempt record bumps the alert's version; an ack made against the old version gets 409 and the row shows the new system_did, so the owner acknowledges what is there now, not what was.</s>
     <s>Many alerts from many seats at once: twenty stalls at once are twenty rows, keyed by alert id (the source record id), never collapsed into a count a seat reports; the system builds at most one card per dead record (N-28 idempotent by source id).</s>
-    <s>Writes from clients are idempotent by client id and counter; a retried ack is a 409 no-op the client treats as its earlier result.</s>
+    <s>Writes from clients are idempotent by client id and counter; a retried ack (same client id and counter) replays 200 with the earlier result (shared/contracts.xml#operation-keys); 409 is only a version conflict.</s>
   </many-agents>
 
   <status-codes id="status-codes" map="spec.xml#shared-needs">
@@ -192,10 +194,10 @@ flowchart LR
   </status-codes>
 
   <state-paths id="state-paths" cleanup-registry="../N-45/spec.xml#N-45">
-    <path p="store table alert_acks" cleanup="N-45 retention class: keep 90 days">Acks.</path>
-    <path p="store view alerts (derived)" cleanup="none; derived from records retained by their own classes">The alert view.</path>
-    <path p="store table selections" cleanup="N-45 retention class: keep 30 days">Row taps (shared with N-38).</path>
-    <path p="browser localStorage key coq-map-alerts-filter" class="client" retention="never" acts="owner" cleanup="lives in the owner's browser, not on the host; Reset view in the stamp menu clears it">Filter choice per client.</path>
+    <path trigger="timer" acts="system" p="store table alert_acks" cleanup="N-45 retention class: keep 90 days">Acks.</path>
+    <path trigger="timer" acts="system" p="store view alerts (derived)" cleanup="none; derived from records retained by their own classes">The alert view.</path>
+    <path trigger="timer" acts="system" p="store table selections" cleanup="N-45 retention class: keep 30 days">Row taps (shared with N-38).</path>
+    <path trigger="owner" acts="owner" p="browser localStorage key coq-map-alerts-filter" class="client" retention="never" cleanup="lives in the owner's browser, not on the host; Reset view in the stamp menu clears it">Filter choice per client.</path>
   </state-paths>
 
   <look id="look" requirement="owner 04:45Z all views carry the Krastorio look; command-center-visual-bar: the alerts panel reproduced">
@@ -204,8 +206,8 @@ flowchart LR
   </look>
 
   <checklist id="checklist">
-    <item><check>Alerting is a code property: every red or amber code in the code table appears in the alert view when a record carries it and no later 2xx exists.</check><proof>A Go test over a fixture store with one record per alerting code and one resolved pair.</proof></item>
-    <item><check>The join fills retries, system_did, card_id and resolved_at from N-11, N-28 and later 2xx records.</check><proof>A fixture with a dead ticket after three attempts and a card rendering 3 and the card chip.</proof></item>
+    <item><check>Alerting is a code property: every red or amber code in the code table appears in the alert view when a record carries it and no later 2xx names it in recovery_of.</check><proof>A Go test over a fixture store with one record per alerting code and one resolved pair.</proof></item>
+    <item><check>The join fills retries, system_did, card_id and resolved_at from N-11, N-28 and the 2xx record naming the alert in recovery_of.</check><proof>A fixture with a dead ticket after three attempts and a card rendering 3 and the card chip; a fixture where an unrelated 2xx on the same node and ticket leaves the alert open and a 2xx with recovery_of closes it.</proof></item>
     <item><check>Ack is compare-and-swap on the alert version; a second ack and an ack against a changed alert return 409 with the acker.</check><proof>A test running two acks concurrently and one ack after a version bump.</proof></item>
     <item><check>An ack dims the row and removes it from the Map's alert chip count but does not change the machine lamp.</check><proof>Playwright test asserting the chip count and the lamp after an ack.</proof></item>
     <item><check>An open alert past its bound produces one 410 alert.aged and one card, never a repeat.</check><proof>A test advancing the clock past the bound twice and counting one card.</proof></item>
@@ -235,7 +237,7 @@ flowchart LR
     <src href="rebuild/investigation/L08-bearings-owner-surface.md#5-what-broke-and-why">The board froze six hours and nothing raised it; alerting must be a property of records.</src>
     <src href="rebuild/investigation/01-ROOT-CAUSES.md">Line 201: the owner, not a check, found the frozen board.</src>
     <src href="rebuild/factory-rebuild-plan.xml#failure-cases">stall, crash, bad-output, governance-interference: detection, recovery, retries 3, then blocked.</src>
-    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md">No re-confirmation; an ack is one tap and never a required step.</src>
+    <src href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md">No re-confirmation; an ack is one tap and never a required step.</src>
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md#5-sprite-groups-for-the-five-screens">5.4 Alerts sprite groups.</src>
   </sources>
 

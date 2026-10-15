@@ -58,13 +58,27 @@
       "properties": { "kind": { "const": "promotion.confirm" }, "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" } },
       "additionalProperties": false
     },
+    "effect_run_kill": {
+      "type": "object",
+      "required": ["kind", "card_id", "scope"],
+      "description": "owner-only; the Controls kill (N-42), separate from USERHALT, which only sets the hold; N-12 writes kill:<run_id> for each run in scope",
+      "properties": {
+        "kind": { "const": "run.kill" },
+        "card_id": { "$ref": "#/$defs/cardId" },
+        "scope": { "enum": ["all-running", "run"] },
+        "run_id": { "type": "string", "minLength": 1, "maxLength": 64 }
+      },
+      "if": { "properties": { "scope": { "const": "run" } } },
+      "then": { "required": ["run_id"] },
+      "additionalProperties": false
+    },
     "effect": {
-      "description": "one typed effect; build-mode.set, control.halt and control.resume are N-44's defs so N-44 consumes exactly what N-29 writes",
+      "description": "one typed effect; build-mode.set, control.halt and control.resume are N-44's flag_effect so N-44 consumes exactly what N-29 writes; run.kill is the Controls kill N-12 reads (shared/contracts.xml#kill-authority)",
       "oneOf": [
         { "$ref": "#/$defs/effect_none" },
         { "$ref": "#/$defs/effect_ticket_unblock" },
-        { "$ref": "../N-44/record.schema.json#/$defs/build_mode_effect" },
-        { "$ref": "../N-44/record.schema.json#/$defs/hold_effect" },
+        { "$ref": "../N-44/record.schema.json#/$defs/flag_effect" },
+        { "$ref": "#/$defs/effect_run_kill" },
         { "$ref": "#/$defs/effect_gofactory" },
         { "$ref": "#/$defs/effect_break_glass" },
         { "$ref": "#/$defs/effect_promotion_confirm" }

@@ -17,7 +17,7 @@
      Rejected: writing shared/ from this seat (one shared author owns it; two authors on one file is the collision the book forbids)
      and leaving the hrefs to resolve later (a failing volume blocks the book now).
      Cost: a need is not a live pointer until shared/ lands; check.sh matches each need against the shared volumes then. -->
-<volume id="N-36" kind="node-spec" node="N-36" group="G6" version="1.1.0" issued="2026-10-14" written="2026-10-14T05:09:51Z" timezone="UTC">
+<volume id="N-36" kind="node-spec" node="N-36" group="G6" version="1.1.0" issued="2026-10-15T06:00:00Z" written="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG edges</entry>
@@ -54,10 +54,12 @@
     <shared href="../../dag.md#3-every-node" role="dag"/>
     <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 3 (three attempts then report) and rule 4 (artifacts under the state root); the atlas builds from a record, never from a person</principle>
     <principle href="../../dag.md#8-many-agents-at-once" role="principle">Atomic rename into a hash-named directory; sprite.sheet keyed by hash; duplicate put replayed as 200</principle>
+    <shared href="../../shared/retry-budget.xml#layers" role="retry">The pod ladder and plan attempts the art unit runs under</shared>
+    <shared href="../../shared/ci-capacity.xml#model" role="capacity">The art unit is an ordinary suite pod</shared>
     <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
     <dag href="../../dag.md#2-the-dag">
       <in kind="source" href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory-files.tsv" record="art inventory record (built from the companion table and the originals folder)"/>
-      <in node="N-23" kind="trigger" href="../N-23/spec.xml#N-23" record="suite.plan entry art for a commit touching tools/map/art/** (shared need: planner mapping)"/>
+      <in node="N-23" kind="trigger" href="../N-23/spec.xml#N-23" record="suite.plan entry art for a commit touching tools/map/art/**; its records rows (art.inventory and sprite.sheet for N-36) are typed in nodes/N-23/record.schema.json#/$defs/import_kind and the edge is declared in N-23's edges"/>
       <out node="N-38" href="../N-38/spec.xml#N-38" record="sprite.sheet record"/>
       <out node="N-39" href="../N-39/spec.xml#N-39" record="sprite.sheet record"/>
       <out node="N-40" href="../N-40/spec.xml#N-40" record="sprite.sheet record"/>
@@ -73,7 +75,7 @@
     <need kind="store-table" volume="shared/state-store.xml" anchor="table-idempotency">idempotency(key PRIMARY KEY, seq, response JSON, at); a seen key replays its response with code 200.</need>
     <need kind="store-table" volume="shared/state-store.xml" anchor="record-kinds-registry">The record kinds registry (every kind with its code set, writer node and schema path, loaded by N-43 with the code table) carries the kinds this node reads and writes: art.inventory, sprite.sheet (keyed by atlas sha256), art.gap, suite.plan (entry art), pod.run (N-24).</need>
     <need kind="n-23">The suite planner maps a commit touching tools/map/art/** to a suite.plan entry named art, so this node starts from a record and never from a person running the atlas build.</need>
-    <need kind="n-24">The pod runner's retry ladder (3 attempts, backoff) is the only retry for the atlas build; a 422 art.rejected is never retried because the input, not the infrastructure, is wrong.</need>
+    <need kind="n-24">The pod runner's ladder of 5 rungs inside 2 plan attempts (shared/retry-budget.xml#layers pod-ladder and plan-attempt) is the only retry for the atlas build; a 422 art.rejected is never retried because the input, not the infrastructure, is wrong.</need>
     <need kind="principle" volume="shared/principles.xml" anchor="no-cog">No cog: every wait has a timeout and a fallback, nothing starts by an agent typing, no agent is a gate; the system drives (brief C rule 3).</need>
     <need kind="principle" volume="shared/principles.xml" anchor="multi-agent-first">Many agents at once from the first line: append-only records, compare-and-swap, idempotent retryable steps, conflicts that report as 409 (brief C rule 2).</need>
     <need kind="principle" volume="shared/principles.xml" anchor="three-attempts">Every automated step retries up to 3 times with backoff, then recovers and reports as a record; a dead record becomes exactly one card.</need>
@@ -91,6 +93,7 @@
     <field name="allowlist">Every Krastorio2Assets path with class 1, plus the confidence (high or medium) and the sha256 of the file as cloned at Krastorio2Assets 96e5f05.</field>
     <field name="originals">Every file under tools/map/art/original/ with its provenance entry: author seat or person, date UTC, tool, "drawn from scratch in the Factorio idiom", and the sprite group it fills (belts, inserters, lamps, pipes, ground, GUI frames, progress bars, status lights, alert pictograms, crates, ore).</field>
     <field name="denylist">Every class 2, 3 and 4 path and the 162 Wube graphics the K2 Lua references by path (section 3.5), so a later copy is caught by sha and by path.</field>
+    <field name="inputs_bundle">The art-inputs OCI bundle the record was built from: ref ghcr.io/jkkelley/coq-art-inputs, digest, and the sha256 of its MANIFEST.json (#m-inputs).</field>
     <field name="policy">Which class 1 confidence ships: high only, or high plus medium after a visual check (inventory section 7 question 1). Default high only until a ruling says otherwise.</field>
   </input>
 
@@ -114,8 +117,13 @@ flowchart LR
   A --> C[201 sprite.sheet record with atlas_sha256]
   C --> M[screens N-38 to N-42 load the pinned atlas]
 ]]></diagram>
+    <step n="0" id="m-inputs" where="registry: ghcr.io/jkkelley/coq-art-inputs@sha256 (OCI artifact)">
+      <s>Everything the pipeline reads that is not in the repository travels as one OCI artifact pinned by digest (review F25: the table lived only in the host state root and the Krastorio2 PNGs in no repository, so a pod had nothing to read): krastorio-art-inventory-files.tsv; every class 1 file of Krastorio2Assets at commit 96e5f05 that the allowlist names, at its path; the LGPL-3.0 and GPL-3.0 texts and the Krastorio2 notice; the silhouette masks (48 x 48 alpha masks of the Wube and Krastorio sprites the traced-copy check compares against, derived data, never shipped in an atlas); and MANIFEST.json with one sha256 per file.</s>
+      <s>The bundle is pushed from the host, where the reference folder and the clone live, by tools/map/art/inputs.sh (planned) as a system job dispatched when the table's sha256 or the policy changes; tools/map/art/inputs.lock.json (planned, tracked) pins the digest and the MANIFEST.json sha256, so a commit names exactly the inputs its atlas was built from.</s>
+      <s>The art unit pulls the bundle by digest with the namespace's pull secret, recomputes every file's sha256 against MANIFEST.json and MANIFEST.json's against the lock, and fails closed: any mismatch, missing file or unpinned reference is art.rejected 422 stage art-inputs and no atlas; there is no fallback to a host path or a tag.</s>
+    </step>
     <step n="1" where="repo: tools/map/art/inventory.sh">
-      <s>Reads the TSV copy that the repo pins by sha256 (tools/map/art/inventory.tsv.sha256 names the hash of the reference table; the table itself stays in the state root, outside the repo) and writes the art.inventory record as JSON to the work directory and to the store through the Go service's record.put when running on the host, or as a build artifact when running in a pod (a pod cannot reach the store, D23; the unit writes it to records/art.jsonl and N-24's artifact import puts it in the store for this node when the build ends, nodes/N-24/spec.xml#m-mirror, because the art suite entry lists art.inventory and sprite.sheet in its records, nodes/N-23/spec.xml#output).</s>
+      <s>Reads the TSV from the verified inputs bundle (#m-inputs; tools/map/art/inventory.tsv.sha256 still names the table's hash and must equal its MANIFEST.json row) and writes the art.inventory record as JSON to the work directory and to the store through the Go service's record.put when running on the host, or as a build artifact when running in a pod (a pod cannot reach the store, D23; the unit writes it to records/art.jsonl and N-24's artifact import puts it in the store for this node when the build ends, nodes/N-24/spec.xml#m-mirror, because the art suite entry lists art.inventory and sprite.sheet in its records, nodes/N-23/spec.xml#output).</s>
     </step>
     <step n="2" where="repo: tools/map/art/verify.sh">
       <s>For each file the atlas manifest names: a Krastorio file must match an allowlist row by path and sha256 at the stated confidence under the policy; an original must have a PROVENANCE.json entry; any denylist hit by sha or path is a 422 with the rule code quoted from the inventory (W1 to W9, B1, T1 to T11).</s>
@@ -127,7 +135,7 @@ flowchart LR
     </step>
     <step n="4" where="repo: tools/map/art/original/">
       <s>Original pixel art for belts (yellow with dark edges and moving chevrons), inserters (small yellow arms), lamps (round, off, green, amber, red, with glow), pipes (grey), ground tiles (dusty ochre to dark brown with a faint grid), crates, ore patches, GUI nine-slice frames, buttons, progress bars, status dots and alert pictograms, drawn as PNG at 1x and 2x plus the SVG source, in the style the reference README section 3 establishes.</s>
-      <s>Each original is a worker-seat ticket (N-16) with the sprite group and the reference frame named; a human or a tool may draw it, and the provenance entry names which. Nothing is traced from a Wube or K2 sprite; the verify step's silhouette check (48 x 48 alpha mask correlation against the local Factorio 2.0.77 install when present on the host, skipped in pods) catches a traced copy.</s>
+      <s>Each original is a worker-seat ticket (N-16) with the sprite group and the reference frame named; a human or a tool may draw it, and the provenance entry names which. Nothing is traced from a Wube or K2 sprite; the verify step's silhouette check (48 x 48 alpha mask correlation against the masks in the inputs bundle, #m-inputs) runs in every pod and catches a traced copy; it needs no local game install.</s>
     </step>
     <step n="5" where="build">
       <s>make -C tools/map art runs steps 1 to 3 and writes the atlas to $COQ_STATE/map/art/dist/&lt;atlas_sha256&gt;/; make -C tools/map build copies the pinned atlas into dist/ for the image (N-35) and for the bearings tier serving /board (N-48).</s>
@@ -141,14 +149,14 @@ flowchart LR
   </start>
 
   <waits id="waits">
-    <wait name="art-suite-pod" timeout="PT10M" fallback="pod.run exit with code 504, infrastructure retry by N-24's ladder, then 500 art.failed">
+    <wait name="art-suite-pod" timeout="the unit's budget_minutes and pod deadline (shared/retry-budget.xml#deadlines d-pod)" fallback="a pod that never ran the command climbs N-24's ladder (pod-ladder, then plan-attempt); after both, 500 art.failed; a command exit is a result">
       <s>The pipeline over 260 to 766 files and the originals is measured on a Pi core at under four minutes; the bound is set from that measurement plus headroom and re-measured when the file count grows.</s>
     </wait>
-    <wait name="reference-table-present" timeout="PT0S" fallback="422 art.rejected with stage inventory">
-      <s>The TSV is in the state root on the host and a CI artifact in the pod; if neither matches the pinned sha256, the build stops at once: a wrong inventory must never produce an atlas.</s>
+    <wait name="inputs-bundle-verified" timeout="PT0S after the pull; the pull itself is inside the pod's checkout" fallback="422 art.rejected with stage art-inputs; no atlas; never retried">
+      <s>The bundle is pulled by digest and every file's sha256 checked against MANIFEST.json and the lock (#m-inputs); any mismatch stops the build at once: a wrong inventory must never produce an atlas.</s>
     </wait>
-    <wait name="factorio-install-for-silhouette-check" timeout="PT0S" fallback="skip the silhouette check and record 201 with check=skipped; the daily host tick runs it where the install exists">
-      <s>The install at /mnt/d/SteamLibrary/steamapps/common/Factorio is host-only; the check is advisory in pods and binding on the host.</s>
+    <wait name="silhouette-masks" timeout="PT0S" fallback="masks missing from a verified bundle cannot happen (MANIFEST.json lists them); a bundle without them fails the art-inputs stage, 422">
+      <s>The masks ship in the bundle, so the check is binding in every pod and the host install is no longer an input.</s>
     </wait>
     <wait name="originals-ticket" timeout="PT0S" fallback="the atlas ships at once with the gap filled by a plain placeholder sprite from tools/map/art/original/placeholder/ and the sprite.sheet record lists the gap">
       <s>A missing original never blocks the atlas; the Map screen draws the placeholder and the Alerts screen lists the gap as a 300 waiting record, so the owner sees the hole instead of a stalled build.</s>
@@ -156,15 +164,15 @@ flowchart LR
   </waits>
 
   <retries id="retries">
-    <s>An infrastructure failure of the pod (image pull, node loss, timeout) is retried by N-24's ladder up to 3 times; a verify failure (422) is never retried, because the input is wrong and a retry would produce the same answer (the same split as pod.run: an assertion failure is never retried).</s>
-    <s>After the third infrastructure failure the node writes 500 art.failed and N-28 builds one card; the last good atlas keeps serving from its pinned hash.</s>
+    <s>An infrastructure failure of the pod (image pull, node loss, connect timeout) is retried by N-24's ladder of 5 rungs, and a whole build by one more plan attempt (shared/retry-budget.xml#layers); a verify failure (422) is never retried, because the input is wrong and a retry would produce the same answer (the same split as pod.run: an assertion failure is never retried).</s>
+    <s>After the ladder and the last plan attempt the node writes 500 art.failed and N-28 builds one card; the last good atlas keeps serving from its pinned hash.</s>
   </retries>
 
   <many-agents id="many-agents">
     <s>Readers: a build seat reads #mechanism and #checklist; a drawing seat reads #look and the sprite group it was given; the reviewer reads #waits and this section.</s>
     <s>Many drawing seats at once: each original is its own file set under tools/map/art/original/&lt;group&gt;/&lt;name&gt;.{png,svg,json}; the ticket declares those files and nothing else, so two seats never claim one sprite (N-14 refuses overlap). PROVENANCE.json is not one shared file: it is a directory of one JSON per sprite, merged by the inventory step, so no two tickets edit one file.</s>
     <s>Atlas builds in parallel on two commits: each build writes to its own $COQ_STATE/map/art/work/&lt;sha&gt;/ and publishes to dist/&lt;atlas_sha256&gt;/ by rename after a complete write (atomic on one filesystem); two builds of the same content produce the same hash and the second rename finds the directory present and records 200 art.superseded without rewriting.</s>
-    <s>Store writes: the sprite.sheet record is keyed by atlas_sha256 with that hash as the idempotency key; a duplicate put is a no-op 409 at N-01 that the build reports as 200.</s>
+    <s>Store writes: the sprite.sheet record is keyed by atlas_sha256 with that hash as the idempotency key; a duplicate commit with the same operation key and payload is replayed 200 by N-01 and the build reports 200.</s>
     <s>Screens never read the newest atlas by name; they read the hash pinned in the build they were tested with (N-37 binding check includes the atlas hash), so a new atlas cannot change a running page under the owner.</s>
   </many-agents>
 
@@ -179,10 +187,11 @@ flowchart LR
   </status-codes>
 
   <state-paths id="state-paths" cleanup-registry="../N-45/spec.xml#N-45">
-    <path p="$COQ_STATE/map/art/work/&lt;sha&gt;/" cleanup="tools/map/bin/cleanup.sh --art-work --older-than 7d">Scratch of one build: crops, slices, logs.</path>
-    <path p="$COQ_STATE/map/art/dist/&lt;atlas_sha256&gt;/" cleanup="tools/map/bin/cleanup.sh --art-dist --keep-pinned (keeps every hash a live tier or the current image pins, deletes the rest)">Published atlases by hash.</path>
-    <path p="$COQ_STATE/rebuild/2026/10/map/reference/" retention="never" acts="owner" cleanup="kept on purpose: the owner's data copy (reference README section 1); cleanup.sh lists it and refuses apply; only the owner removes it, by disposition">Inventory report, table, screenshots, and the mods clones.</path>
-    <path p="store table sprite_sheets" cleanup="N-45 retention class: keep every record (small, append-only)">Sprite sheet records.</path>
+    <path p="$COQ_STATE/map/art/work/&lt;sha&gt;/" cleanup="tools/map/bin/cleanup.sh --art-work --older-than 7d" trigger="timer" acts="system">Scratch of one build: crops, slices, logs.</path>
+    <path p="$COQ_STATE/map/art/dist/&lt;atlas_sha256&gt;/" cleanup="tools/map/bin/cleanup.sh --art-dist --keep-pinned (keeps every hash a live tier or the current image pins, deletes the rest)" trigger="timer" acts="system">Published atlases by hash.</path>
+    <path p="ghcr.io/jkkelley/coq-art-inputs package versions" cleanup="ci/bin/cleanup-ghcr.sh --image coq-art-inputs [--apply] (keeps every digest a tracked inputs.lock.json on main or in an unfinished plan names)" trigger="timer" acts="system">The inputs bundles by digest.</path>
+    <path p="$COQ_STATE/rebuild/2026/10/map/reference/" retention="never" cleanup="kept on purpose: the owner's data copy (reference README section 1); cleanup.sh lists it and refuses apply; only the owner removes it, by disposition" trigger="disposition" acts="owner">Inventory report, table, screenshots, and the mods clones.</path>
+    <path p="store table sprite_sheets" cleanup="N-45 retention class: keep every record (small, append-only)" trigger="timer" acts="system">Sprite sheet records.</path>
     <s>Nothing above lives in the repository; the repository holds the scripts, the originals with provenance, and the pinned sha256 of the inventory table.</s>
   </state-paths>
 
@@ -194,6 +203,8 @@ flowchart LR
   </look>
 
   <checklist id="checklist">
+    <item><check>The art unit pulls the inputs bundle by digest and fails closed on any hash mismatch.</check><proof>Fixtures in tools/map/art/tests/: a bundle with one altered PNG and a lock naming another digest each produce 422 stage art-inputs and no atlas (not-run).</proof></item>
+    <item><check>The silhouette check runs in the pod from the bundle's masks.</check><proof>A traced fixture original produces 422 stage silhouette in a pod run (not-run).</proof></item>
     <item><check>inventory.sh produces an art.inventory record from the pinned table and the originals, with allowlist, denylist and policy.</check><proof>The record JSON in the work directory and its sha256 of the table equal to tools/map/art/inventory.tsv.sha256.</proof></item>
     <item><check>verify.sh rejects a class 2 file by sha, a class 2 file by path, a class 3 file, a class 4 file and an original without provenance.</check><proof>Five test fixtures under tools/map/art/tests/ each producing 422 with the expected rule code, run in make -C tools/map test.</proof></item>
     <item><check>The atlas contains only allowlisted Krastorio files at the policy confidence and originals with provenance.</check><proof>PROVENANCE.json of the built atlas cross-checked by verify.sh with exit 0, saved beside the sprite.sheet record.</proof></item>
@@ -206,7 +217,7 @@ flowchart LR
   </checklist>
 
   <permissions id="permissions">
-    <s>Build seat: writes tools/map/art/*.sh, slice.py, tests, Makefile targets; never writes under original/.</s>
+    <s>Build seat: writes tools/map/art/*.sh, slice.py, tests, Makefile targets; never writes under original/ and never pushes the inputs bundle (the system job does, with the host's GHCR push credential that shared/authority.xml#credential-matrix must carry; see the 1.1.0 report).</s>
     <s>Drawing seat: writes only tools/map/art/original/&lt;group&gt;/&lt;name&gt;.* and its provenance JSON; never touches scripts or the inventory hash.</s>
     <s>No seat edits the reference folder in the state root; no seat copies any file out of the mods clones into the repository (reference README section 1 and section 5).</s>
     <s>Policy change (high only to high plus medium) is a ruling record (N-29), never a config edit by a seat.</s>
@@ -232,7 +243,7 @@ flowchart LR
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md#7-open-questions">Questions resolved by ruling.</src>
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/README.md#5-rule-on-art">Rule on art: Wube sprites never ship; inventory by origin first.</src>
     <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/README.md#3-what-the-references-establish">The visual idiom the originals follow.</src>
-    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/command-center-visual-bar.md">The bar: 1 to 1, original art, Krastorio 2 as the source.</src>
+    <src href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/command-center-visual-bar.md">The bar: 1 to 1, original art, Krastorio 2 as the source.</src>
     <src href="rebuild/investigation/03-DECISIONS.md#24-d22-which-steps-stay-on-the-wsl-host-and-which-go-to-pods">Builds as pods.</src>
     <src href="../../dag.md#3-every-node">N-23, N-24, N-25 shapes the trigger relies on.</src>
   </sources>

@@ -27,7 +27,7 @@
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
-    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="shared-needs">Shared anchors this volume cites</entry>
     <entry ref="purpose">Purpose</entry>
     <entry ref="input">Input: the spec-author brief inside a seat run</entry>
     <entry ref="output">Output record: ticket-set.draft</entry>
@@ -44,6 +44,7 @@
     <entry ref="monitoring">Monitoring</entry>
     <entry ref="runbook">Runbook</entry>
     <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples</entry>
     <entry ref="sources">Sources cited</entry>
     <entry ref="rejected">Rejected, with the reason</entry>
   </contents>
@@ -53,7 +54,7 @@
     <dag href="../../dag.md#3-every-node">The DAG row of this node: input record and output record</dag>
     <principle href="../../dag.md#7-rules-every-node-obeys">Rules 1 to 9: input to output, no cog, three attempts, one store, code does mechanical jobs, the verdict the agent cannot edit, herdr is the owner's window, build mode, ships dark</principle>
     <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, timed-out stalls, a 409 that reports</principle>
-    <needs href="spec.xml#shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <needs href="spec.xml#shared-needs">The shared anchors this volume cites</needs>
     <sibling href="record.schema.json" kind="schema">JSON schema of ticket-set.draft (the seat's structured output and the record)</sibling>
     <sibling href="../N-13/spec.xml#N-13">Seat layer render: the brief template and the read-only fence</sibling>
     <sibling href="../N-14/spec.xml#N-14">Workspace provision: a read-only workspace at origin/main</sibling>
@@ -68,14 +69,17 @@
   </pointers>
 
   <shared-needs id="shared-needs">
-    <text>Declared, not linked: the shared author writes these volumes and anchors; check.sh matches each need against shared/ when it lands. Nothing below points at a file that does not exist in this pull request.</text>
-    <need volume="../../shared/status-codes.xml" anchor="code-100" kind="status-code">100 exists or in progress: seat.bundle, workspace, seat.heartbeat, pr.opened, ticket-set.draft; acts: the next node on the edge</need>
-    <need volume="../../shared/status-codes.xml" anchor="code-423" kind="status-code">423 blocked: seat.result outcome blocked with a terminal_reason from the reason table; acts: N-11 by reason</need>
-    <need volume="../../shared/seat-contract.xml" anchor="llm-only-for-judgement" kind="seat-contract">an LLM appears only in N-16 (write code), N-17 (cut tickets as data) and N-19 (judge a diff); every mechanical step around it is code</need>
-    <need volume="../../shared/seat-contract.xml" anchor="structured-output" kind="seat-contract">every phase returns structured output against the node's record.schema.json through --json-schema; an optional blocked object carries reason, observations and repro</need>
-    <need volume="../../shared/principles.xml" anchor="tickets-are-small" kind="principle">one concern, a few files (at most 6), a diff a reviewer reads in minutes; when in doubt split</need>
-    <need volume="../../shared/principles.xml" anchor="design-first" kind="principle">tickets are cut from an anchor of this book and from nothing else; the architect never authors or cuts</need>
-    <need volume="../../shared/state-store.xml" anchor="table-ticket-sets" kind="store-table">ticket_sets: ticket-set.draft and ticket-set.accepted by set_id with anchor, repo_sha, attempt, verdict_ref</need>
+    <text>Every shared anchor below is live in book 1.1.0; this volume cites them and restates none of their numbers.</text>
+    <need volume="../../shared/contracts.xml" anchor="dispatch" kind="contract">the CR target: request, anchor, group, source_request</need>
+    <need volume="../../shared/contracts.xml" anchor="operation-keys" kind="contract">N-17/ticket-set.draft/RUN_ID</need>
+    <need volume="../../shared/contracts.xml" anchor="run-states" kind="contract">result_committed to closed_out by the phase owner</need>
+    <need volume="../../shared/contracts.xml" anchor="retry-owner" kind="contract">phase.failed and output_rejected rows</need>
+    <need volume="../../shared/seat-contract.xml" anchor="llm-only-for-judgement" kind="seat-contract">an LLM cuts tickets as data; code does the rest</need>
+    <need volume="../../shared/seat-contract.xml" anchor="structured-output" kind="seat-contract">the draft through --json-schema</need>
+    <need volume="../../shared/seat-contract.xml" anchor="ticket-shape" kind="seat-contract">the ticket as data</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-100" kind="status-code">ticket-set.draft</need>
+    <need volume="../../shared/principles.xml" anchor="tickets-are-small" kind="principle">one concern, a few files, a diff read in minutes</need>
+    <need volume="../../shared/principles.xml" anchor="design-first" kind="principle">tickets are cut from an anchor of this book only</need>
   </shared-needs>
 
   <section id="purpose" title="Purpose">
@@ -84,116 +88,112 @@
   </section>
 
   <section id="input" title="Input: the spec-author brief inside a seat run">
-    <text>The dispatch's target names anchor (a pointer into this book, for example rebuild/design/nodes/N-14/spec.xml#mechanism, or a node id for the whole node), group, the cut request (its id, source record and, for a fix, the rejected id and hold id) when the key is CR-..., and on a retry verdict_ref (the validator.refused record). N-13 renders bundle_dir/brief.md with:</text>
-    <field name="anchor text">the section or volume the anchor points to, copied verbatim from the repository at repo_sha, plus its checklist section, because every ticket's acceptance must map to a checklist item's proof.</field>
-    <field name="existing tickets">every ticket record in the store cut from the same anchor (id, title, status, files), so the draft extends rather than duplicates.</field>
-    <field name="rules">one concern per ticket; files declared and disjoint inside the set; acceptance commands that run from the repository root through make targets or scripts in the repository; input and output records declared from the node's record.schema.json; depends_on by key inside the set or by id outside; a ticket touching an owner surface names its screenshot proof (memory screenshot-every-page-change); a ticket that flips a node live is separate from the ticket that builds it dark (build-mode rule).</field>
-    <field name="verdict">on a retry: the validator.refused record verbatim, with the failing command, its observed exit and stderr tail, or the check that failed (overlap, cycle, size).</field>
-    <field name="output contract">ticket-set.draft shape, section ticket-shape; limits stated once.</field>
-    <text>The workspace is read-only, detached at origin/main (N-14 mode read-only); the spec-author reads code to size tickets and name real paths and real make targets.</text>
+    <text>The dispatch's target is ../../shared/contracts.schema.json#/$defs/target_cr: request (the CR ticket), anchor (a pointer into this book), group, source_request (the ticket.request record the CR was admitted from) and, on a rework, verdict_refs (the validator.refused records). N-13 renders the brief with:</text>
+    <field name="anchor text">the section or volume the anchor points to, verbatim at repo_sha, plus its checklist section, because every acceptance must map to a checklist item's proof.</field>
+    <field name="existing tickets">every ticket in the store cut from the same anchor (id, title, status, files), so the draft extends rather than duplicates.</field>
+    <field name="rules">one concern per ticket; files declared and disjoint inside the set, new files listed in new_paths; acceptance commands from the repository root with test_ref, and expected_failure for a test that is red on main until the ticket lands; arch_sensitive where the CPU matters; depends_on by key or id; an owner-surface ticket names its screenshot proof; a go-live ticket is separate from the dark build.</field>
+    <field name="verdict">on a rework: the validator.refused records verbatim (failing command, observed exit, classification, stderr tail, or the check that failed).</field>
+    <text>The workspace is read-only by ACL, detached at origin/main (N-14).</text>
   </section>
 
   <section id="output" title="Output record: ticket-set.draft">
-    <text>Kind ticket-set.draft, code 100, written by the launcher's post step from the validated structured output. Fields: set_id (equals run_id), anchor, group, attempt, author_session_id, tickets (an array, section ticket-shape), rationale (one paragraph on the split), verdict_ref (on a retry). idempotency_key = run_id. A draft is never a ticket: ticket ids are minted by N-18 on acceptance, so a refused draft leaves nothing behind but its record.</text>
-    <text>A blocked output (the anchor is contradictory, or already fully ticketed, or needs a ruling) is seat.result 423 seat_blocked with observations naming the anchor lines; "needs a ruling" carries a proposed card (about, decide, options) that N-28 can post as is.</text>
+    <text>ticket-set.draft (record.schema.json#/$defs/ticket-set.draft), code 100, on the shared committed envelope, written by the draft put after a done seat.result: set_id (equals run_id), run_id, cut_request, source_request, anchor, group, attempt, lease, repo_sha, author_session_id, tickets, rationale, verdict_refs on a rework. Operation key N-17/ticket-set.draft/RUN_ID/r1. A draft is never a ticket: ids are minted by N-18 on acceptance.</text>
+    <text>A blocked output (anchor contradictory, fully ticketed, needs a ruling, anchor not found) is seat.result 423 seat_blocked from N-15; a needs-a-ruling block carries a proposed card N-28 can post as is.</text>
   </section>
 
   <section id="mechanism" title="Mechanism: the brief, the run, the draft put by code">
     <mermaid>flowchart LR
-  A[dispatch target: anchor, group, verdict_ref] --> B[N-13 brief: anchor text, checklist, existing tickets, rules, verdict]
-  B --> R[claude -p run on the role's model, read-only workspace]
-  R --> O{structured output ticket-set.draft}
-  O -- tickets --> P[launcher post step: shape check, put ticket-set.draft 100]
-  O -- blocked --> X[seat.result 423 with observations or a proposed card]
+  A[dispatch target_cr: request, anchor, group, source_request] --> B[N-13 brief]
+  B --> R[seat run, read-only slot]
+  R --> O{structured output}
+  O -- tickets --> P[draft put in the service: shape and claim checks, ticket-set.draft 100]
+  O -- blocked --> X[seat.result 423 from N-15]
   P --> V[N-18 validator]</mermaid>
-    <step n="1">The run: the spec-author reads the anchor and the checklist, reads the code the anchor names, and writes tickets as data in the output schema. It makes no file change: Write and Edit are denied; its Bash is read-only (git log|show|grep, rg, ls, make lint to learn the target names). It may run no acceptance command itself: N-18 does, on main, and records the observed exit; a spec-author that runs a command is guessing at what the validator will see.</step>
-    <step n="2">The post step (scheduler/internal/launcher/specauthor.go): validate the structured output against record.schema.json (the launcher already did; this is the second, same check before a put), add set_id, anchor, group, attempt, author_session_id, put ticket-set.draft with idempotency_key run_id. No mint, no file, no pull request.</step>
+    <step n="1">The run: the spec-author reads the anchor, its checklist and the code it names, and writes tickets as data. Write and Edit are denied and its slot is read-only by ACL; its Bash is read-only. It runs no acceptance command: N-18 does, on main.</step>
+    <step n="2">The draft put (scheduler/internal/closeout/specauthor.go), in the service as N-17, level-triggered on run entities in result_committed with a done spec-author seat.result: validate the structured output again, refuse a draft whose new_paths are not covered by its files or whose role is not worker (phase.failed step draft.put, failure_kind output_rejected), then one Commit with key N-17/ticket-set.draft/RUN_ID/r1 under the spec lease: the ticket-set.draft record, Lease.Release, run:RUN_ID to closed_out with phase_record_ref. No mint, no file, no pull request.</step>
     <step n="3">N-18 starts on the committed draft (level-triggered). The spec-author is gone by then.</step>
-    <text>Model: roles/spec-author.json model.claude (claude-opus-5-5 today; the right-size rule allows Sonnet by a ruling); effort high; limits from seats.json spec-author: max_turns 150, budget 25 USD, wall clock 3600 s, stall 600 s.</text>
+    <text>Model and limits come from roles/spec-author.json through the bundle (N-13); the deadline and stall bound are run.deadline_seconds.spec-author and stall.seconds.spec-author (../../shared/contracts.xml#timing).</text>
   </section>
 
   <section id="ticket-shape" title="The ticket as data: what every drafted ticket declares">
     <field name="key">t1..tn inside the set; the validator mints the id.</field>
-    <field name="title">the full title; the pull request title will be "&lt;id&gt; - &lt;title&gt;".</field>
-    <field name="node">the node id and anchor the ticket builds; a ticket builds one node.</field>
-    <field name="concern">one sentence; a ticket with two concerns is refused by the validator's size check and by the reviewer's judgement.</field>
-    <field name="files">declared paths or globs, bash glob rule of factory/bin/claims.sh; at most seats.json ticket_max_files (default 6); never an aggregate or a runtime path; disjoint across the set.</field>
-    <field name="input and output">the record kind that starts the work and the record kind that proves it, from the node's record.schema.json; for a dark build the output is the test proof; for a go-live ticket the output is the first real record of the node.</field>
-    <field name="acceptance">one or more commands with runs_in (host or pod), expect_exit after the change (0 for a test, or a named non-zero for a refusal test), and the checklist item each proves. The validator records observed_exit_on_main.</field>
+    <field name="title">the full title; the PR title will be "id - title".</field>
+    <field name="target_node, anchor">the node id and anchor the ticket builds (target_node, not node, which is an envelope field).</field>
+    <field name="concern">one sentence.</field>
+    <field name="files, new_paths">declared paths or globs, at most seats.json ticket_max_files; new_paths lists files the ticket creates, each covered by a files pattern, so N-18 admits a path that does not yet exist on main.</field>
+    <field name="input_record, output_record">record kinds from the node's record.schema.json.</field>
+    <field name="acceptance">per command: runs_in (host or pod), expect_exit after the change, proves (a checklist item), test_ref, and either regression_guard (green on main and stays green) or expected_failure {exit, match} (red on main for the reason the ticket fixes); arch_sensitive true sends it to the arm64 pod path as well (N-18).</field>
     <field name="depends_on">keys inside the set or ticket ids outside; acyclic.</field>
-    <field name="role">worker (default) or spec-author (a ticket whose files are specs or roles or this book's volumes).</field>
-    <field name="size">files count and an estimated diff lines; a reviewer reads it in minutes (owner: this is a factory not a slog fest).</field>
-    <field name="proof">for an owner-surface ticket, the screenshot path pattern under the state root; for a go-live ticket, the named proof the build-mode rule requires.</field>
-    <field name="steps">numbered, short, with the degrees of freedom named.</field>
-    <text>Schema: record.schema.json#/$defs/draft_ticket.</text>
+    <field name="role">always worker: a change to specs or this book is a worker ticket whose files are those volumes.</field>
+    <field name="size, proof, go_live, steps">as before; size bounds the review.</field>
+    <text>Schema: record.schema.json#/$defs/draft_ticket and #/$defs/acceptance; the accepted shape is ../N-18/record.schema.json#/$defs/ticket.</text>
   </section>
 
   <section id="start" title="How it starts without an agent typing">
-    <text>A spec-author dispatch is created by N-07 from a spec-phase lease on a cut-request key (CR-&lt;request id&gt;), which N-02 grants on the ticket.ready N-03 writes when it admits a ticket.request record (writers: N-10 a fix for a held main, N-30 rule R05 a cut: message, N-49 a LAND row, N-50 the archive ticket; nodes/N-03/spec.xml#input), or from a validator.refused that N-11 turns into attempt n+1 on the same cut-request key. The go-live tickets of the cut-over order (shared/cut-over.xml#order) are briefed one per step in that order; before the scheduler goes live (shared/cut-over.xml#step-usergo) the rebuild plan's seats run those briefs under build mode (shared/cut-over.xml#builders), after it N-07 dispatches them like any other cut request. The run is an N-15 process; the brief is its argument. No architect cuts, approves, or types; the architect reads the book once it passes check.sh and rules only through cards.</text>
+    <text>A spec-author run starts from a dispatch N-07 grants on a CR ticket in ready (../../shared/contracts.xml#dispatch), which N-03 created from a ticket.request (writers: N-10 a fix for a held main, N-30 a cut message, N-49 a land row, N-50 the archive ticket). A rework is N-11's attempt n plus 1 on the same CR after validator.refused (failure_kind output_rejected). The run is an N-15 unit; the brief is its argument. No architect cuts, approves or types.</text>
   </section>
 
   <section id="waits" title="Every wait, its timeout and its fallback">
-    <wait what="the run" timeout="wall clock 3600 s, stall 600 s, max turns 150, budget 25 USD" attempts="1 per run" fallback="N-15 kills and records blocked; N-11 counts the attempt"/>
-    <wait what="ticket-set.draft put" timeout="5 s" attempts="3" fallback="phase.failed 500; the recovery pass re-puts from result.json (idempotent by run_id)"/>
-    <wait what="the validator's verdict" timeout="not waited on by this node; the seat is gone" attempts="n/a" fallback="N-18 has its own bounds; a draft with no validator record after N-18's bound is N-18's failure record"/>
+    <wait what="the run" timeout="the unit's RuntimeMaxSec and N-12's stall bound for spec-author (../../shared/contracts.xml#timing)" attempts="1 per run" fallback="blocked; N-11 charges it"/>
+    <wait what="the draft put Commit" timeout="5 s" attempts="3 passes, same operation key" fallback="phase.failed step draft.put; N-11 charges once"/>
+    <wait what="the validator's verdict" class="level-triggered" timeout="none: not waited on by this node; the seat is gone" attempts="n/a" fallback="N-18 has its own bounds"/>
   </section>
 
   <section id="retries" title="Retries up to 3, then recover and report">
-    <text>A validator.refused is a failure record; N-11 dispatches attempt n+1 with verdict_ref and a fresh session (a refused cut is re-thought, not resumed); after attempt 3 the anchor is dead for cutting and N-28 posts one card with the three refusals, whose options are: the architect's ruling on the anchor (a card), a change to the volume (a spec-author ticket on the book itself), or cancel. A seat.result blocked (limits, crash) retries the same way. The post step's put retries 3 times then phase.failed; recovery is the level-triggered pass of N-15.</text>
+    <text>A validator.refused is a failure with failure_kind output_rejected; N-11 dispatches attempt n plus 1 on the same CR with verdict_refs and a fresh session; after attempt 3 the CR is dead and N-28 posts one card with the three refusals. A blocked run retries the same way; a needs-a-ruling block becomes its card on the first attempt. The draft put retries 3 passes, then phase.failed.</text>
   </section>
 
   <section id="many-agents" title="Many agents at once">
-    <text>Many spec-authors run at once, one per anchor (the seven groups of ../../dag.md#5-groups-for-parallel-authors were written exactly this way); none writes a file, so there is no file to collide on. Each draft is its own record keyed by run_id.</text>
-    <text>Collision 1, two drafts for one anchor (a retry overlapping a late first run, or two cut requests): both drafts are committed; N-18 validates both; the second's tickets that duplicate the first's (same node, same files) are refused by the validator's overlap check against accepted tickets, so one set of tickets exists. The brief's existing tickets list makes the second author see the first's accepted tickets when they are already in the store.</text>
-    <text>Collision 2, drafts from two anchors declare overlapping files: both are valid drafts; N-18 accepts both (files overlap across sets is a scheduling order, not a cut defect); N-03 serializes their readiness by the claims rule.</text>
-    <text>Collision 3, the anchor volume changes on main while a spec-author reads it: the brief carries the text at repo_sha; the draft names repo_sha; the validator refuses a draft whose repo_sha is older than the anchor's last change on main with reason anchor_moved, and attempt n+1 reads the new text.</text>
-    <text>Collision 4, the owner cuts a ticket by hand through a card: it enters as a cut request with the owner's words as the anchor; it still goes through a spec-author run and the validator, so a hand cut is never an unvalidated ticket.</text>
-    <text>Collision 5, two validator workers (N-18, validator_workers 2) pick up two drafts of one cut request CR-id at once, for instance a retry draft overlapping a late first draft: each would pass the duplicate check C6 before either mints, so two sets of tickets could be cut for one request. The answer is a lease with a fencing token on the cut request id: a validation of any draft of CR-id takes the system-job lease node:N-18:CR-id (shared/state-store.xml#table-leases, key form node:N-xx:KEY, ttl PT15M, renewed on each command), the second worker gets lease.refused 423 and puts the draft back for the next tick, and every put the winner makes (id_mint reservations, ticket, ticket-set.accepted) carries the token, so N-01 refuses a late write from a worker whose lease expired with 412 record.stale (shared/state-store.xml#fencing). The accept itself is also a compare-and-swap on the ticket_sets row for the request (status from drafted to accepted at expected_version, shared/state-store.xml#cas), so a second set for the same request is refused 409 and the author's retry sees the first set's tickets. Rejected: a unique index on the anchor alone (two legitimate cut requests may name one anchor, N-03 admits both). Cost: validations of one request run one at a time; two requests still run in parallel.</text>
+    <text>Many spec-authors run at once, one per CR; none writes a file. Each draft is its own record keyed by its run.</text>
+    <text>Two drafts for one CR (a rework overlapping a late first run): both commit; N-18 accepts at most one set per CR by its accept key N-18/ticket-set.accept/SET_ID and the ticket_sets row precondition (../N-18/spec.xml#many-agents).</text>
+    <text>Drafts from two anchors declare overlapping files: both may be accepted; N-03 serializes their readiness by claims (../../shared/contracts.xml#claims).</text>
+    <text>The anchor changes on main mid-read: the draft names repo_sha; N-18 refuses an anchor_moved draft and the rework reads the new text.</text>
   </section>
 
   <section id="codes" title="Status codes this node emits">
     <code value="100" kind="ticket-set.draft">A draft exists. Acts: N-18 only.</code>
-    <code value="423" kind="seat.result">Blocked: seat_blocked (anchor contradictory, fully ticketed, needs a ruling with a proposed card), or any launcher reason. Acts: N-11; a needs-a-ruling block with a proposed card goes to N-28 as that card after the first attempt, not the third, because retrying a question is nagging.</code>
-    <code value="500" kind="phase.failed">The draft put failed 3 times. Acts: the recovery pass, then N-11.</code>
+    <code value="500" kind="phase.failed">The draft put refused the output (output_rejected) or failed 3 passes. Acts: N-11.</code>
   </section>
 
   <section id="state-paths" title="State paths and the cleanup script for each">
-    <path dir="$COQ_STATE/seats/runs/&lt;run_id&gt;/" writes="result.json holds the draft as returned; transcript.jsonl" cleanup="scheduler/host/bin/cleanup-seat-runs.sh (N-15)" retention="7 days; 30 days when the anchor died"/>
-    <path dir="$COQ_CACHE/ws/&lt;slot&gt;/" writes="nothing (read-only workspace)" cleanup="scheduler/host/bin/cleanup-workspaces.sh (N-14)" retention="released on seat.result"/>
-    <text>Drafts live in the store (table ticket_sets, kept for the life of the anchor's tickets; pruned by N-45's store retention when every ticket of the set is merged or cancelled plus 30 days). Nothing is written into the repository: a cut is not a pull request (D04 option C ends cut PRs).</text>
+    <text>This node writes no file: the run directory is N-15's (N-15.runs), the read-only slot is N-14's, and drafts live in the store (table ticket_sets, retention by N-01). Nothing is written into the repository: a cut is not a pull request (D04 option C).</text>
   </section>
 
   <section id="permissions" title="Permissions">
-    <text>The spec-author seat (from N-13): Read, Grep, Glob, Bash read-only (git log|show|grep|ls-files, rg, ls, cat, make -n, make lint); denied: Write, Edit, Agent, Task, git push, gh *, podman *, any make target that changes files, any path under $COQ_STATE except its own brief. Model from roles/spec-author.json.</text>
-    <text>The post step (code): gRPC put only.</text>
+    <text>The spec-author seat (N-13): Read, Grep, Glob, read-only Bash; denied Write, Edit, Agent, Task, git push, gh; a read-only slot by ACL. Model from roles/spec-author.json.</text>
+    <text>The draft put: principal coq-svc acting as N-17; one Commit per run.</text>
   </section>
 
   <section id="checklist" title="Checklist with proof">
-    <item proof="probe: a spec-author seat on the fixture anchor (a small node volume) returns a ticket-set.draft that validates against record.schema.json, with every ticket's files disjoint and at most 6 files">The output is tickets as data in the contract shape.</item>
-    <item proof="probe: the same seat's permission_denials show a refused Write when the brief contains a trap line asking it to edit a file; the workspace is clean after the run">A spec-author writes nothing.</item>
-    <item proof="go test ./internal/launcher -run TestDraftPutIdempotent: two post steps for one run_id commit one ticket-set.draft">One draft per run.</item>
-    <item proof="go test TestRetryCarriesVerdict (N-13 fixture): attempt 2 after validator.refused renders a brief containing the failing command, observed exit and stderr tail verbatim and a fresh session id">A refused cut is re-thought with the verdict attached.</item>
-    <item proof="go test TestNeedsRulingBecomesCard (N-11 and N-28 fixture): a seat.result blocked with a proposed card yields one card record on the first attempt and no second dispatch">A question is asked once.</item>
-    <item proof="probe: the fixture draft's tickets each name an anchor checklist item in acceptance[].proves and the item exists in the volume">Every ticket proves a checklist item.</item>
+    <item proof="probe: a spec-author seat on the fixture anchor returns a draft that validates against record.schema.json, with every ticket's files disjoint, at most 6 files, role worker, and new_paths covered by files">Tickets as data in the contract shape.</item>
+    <item proof="host probe: the seat's permission_denials show a refused Write for a trap line, and a touch in its slot fails EACCES">A spec-author writes nothing.</item>
+    <item proof="go test ./internal/closeout -run TestDraftPutIdempotent: two passes for one run commit one ticket-set.draft and close the run out once">One draft per run.</item>
+    <item proof="go test TestDraftCarriesSourceRequest: the draft's cut_request and source_request equal the dispatch target's request and source_request">N-03 can close the CR by its source request.</item>
+    <item proof="go test TestExpectedFailureShape: an acceptance with both regression_guard true and expected_failure is refused by the schema">A command is either a guard or an expected red.</item>
+    <item proof="go test TestRetryCarriesVerdict (N-13 fixture): attempt 2 after validator.refused renders the refusals verbatim with a fresh session">A refused cut is re-thought with the verdict attached.</item>
   </section>
 
   <section id="monitoring" title="Monitoring">
-    <text>Counters: drafts_written, drafts_refused (from N-18, by check), tickets_per_draft histogram, files_per_ticket histogram, spec_author_cost_usd, needs_ruling_cards. The Stats screen (N-40) shows tickets cut per hour and the refusal rate by check; a refusal rate above seats.json draft_refusal_alert (default 0.5 over the last 10 drafts) is an alert on N-41 because the brief template or the anchor is at fault, not the seats.</text>
+    <text>Counters: drafts_written, drafts_refused (from N-18, by check and classification), tickets_per_draft histogram, files_per_ticket histogram, spec_author_cost_usd, needs_ruling_cards. The Stats screen (N-40) shows tickets cut per hour and the refusal rate by check; a refusal rate above seats.json draft_refusal_alert (default 0.5 over the last 10 drafts) is an alert on N-41 because the brief template or the anchor is at fault, not the seats.</text>
   </section>
 
   <section id="runbook" title="Runbook">
-    <text>See a draft: scheduler status lists ticket sets with set_id, anchor, attempt, verdict; the draft body is result.json in the run directory and the record in the store.</text>
-    <text>An anchor dead after three refusals: the card names the three checks that failed; the usual fix is the volume (the acceptance it asks for cannot run on main) and the ticket for that is a spec-author ticket on rebuild/design, which goes through the same path.</text>
-    <text>Cut a ticket by hand: not a path; the owner's words on a card become a cut request record (N-29) and a spec-author run drafts it. The break glass (N-42) can dispatch that run outside the tick; it cannot skip the validator.</text>
-    <text>Cleanup: run directories by cleanup-seat-runs.sh; store retention of ticket_sets by N-45.</text>
+    <text>See a draft: ctl ticket-set SET_ID prints the draft, its CR, its source request and N-18's verdict.</text>
+    <text>A CR dead after three refusals: the card names the three checks that failed; the usual fix is the volume (an acceptance that cannot run on main), cut as a worker ticket on rebuild/design through the same path.</text>
+    <text>Cut a ticket by hand: not a path; the owner's words on a card become a ticket.request (N-29) and a spec-author run drafts it; the validator is never skipped.</text>
   </section>
 
   <section id="edges" title="DAG edges in and out">
-    <edge dir="in" from="../N-15/spec.xml#N-15" record="the spec-author brief inside a seat run"/>
+    <edge dir="in" from="../N-15/spec.xml#N-15" record="seat.result done for a spec-author run"/>
     <edge dir="out" to="../N-18/spec.xml#N-18" record="ticket-set.draft"/>
-    <edge dir="out" to="../N-11/spec.xml#N-11" record="seat.result blocked 423, phase.failed 500 (written by N-15 on this node's behalf)"/>
-    <edge dir="re-entry" to="../N-02/spec.xml#N-02" record="attempt n+1 after validator.refused"/>
-    <text>Re-entries that reach this node through N-07: N-10 rejected main (a fix ticket), N-29 ruling (a cut), N-49 land dispositions (../../dag.md#4-re-entries).</text>
+    <edge dir="out" to="../N-11/spec.xml#N-11" record="phase.failed 500 (failure_body)"/>
+    <edge dir="re-entry" to="../N-07/spec.xml#N-07" record="attempt n+1 on the same CR after validator.refused"/>
+    <text>Re-entries that reach this node through N-03 and N-07: N-10 rejected main (a fix CR), N-29 ruling (a cut), N-49 land dispositions (../../dag.md#4-re-entries).</text>
+  </section>
+
+  <section id="examples" title="Examples">
+    <example schema="record.schema.json#/$defs/ticket-set.draft">{"id":"20261014T081000Z-100-a8b9c","at":"2026-10-14T08:10:00Z","kind":"ticket-set.draft","code":100,"node":"N-17","seq":5650,"epoch":1,"set_id":"d-20261014071500-s3c9vb","run_id":"d-20261014071500-s3c9vb","cut_request":"CR-req-0042","source_request":"20261014T071000Z-100-m4n5b","anchor":"rebuild/design/nodes/N-38/spec.xml#frames","group":"G6","attempt":1,"lease":{"key":"CR-req-0042:spec:1","token":195},"repo_sha":"89abcdef0123456789abcdef0123456789abcdef","author_session_id":"1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d","tickets":[{"key":"t1","title":"Map frame renderer for the belt lanes","target_node":"N-38","anchor":"rebuild/design/nodes/N-38/spec.xml#frames","concern":"Render the belt lanes as frames from the snapshot.","files":["tools/bearings/map/frames/*.ts"],"new_paths":["tools/bearings/map/frames/lanes.ts","tools/bearings/map/frames/lanes.test.ts"],"input_record":"snapshot","output_record":"frame","acceptance":[{"id":"a1","command":"make -C tools/bearings test-frames","runs_in":"pod","expect_exit":0,"proves":"c-frames","test_ref":"tools/bearings/map/frames/lanes.test.ts::renders lanes","expected_failure":{"exit":1,"match":"Cannot find module .*lanes"},"arch_sensitive":true}],"depends_on":[],"role":"worker","size":{"files":2,"diff_lines_estimate":180},"steps":["Add lanes.ts that maps snapshot lanes to frames.","Add lanes.test.ts covering three lanes."]}],"rationale":"One concern: the lane frames; the screenshot proof is its own go-live ticket."}</example>
+    <example schema="record.schema.json#/$defs/spec-author.output">{"blocked":{"reason":"needs_ruling","observations":[{"path":"rebuild/design/nodes/N-38/spec.xml","line":120,"saw":"two frame rates named","expected":"one"}],"proposed_card":{"about":"N-38 names two frame rates","decide":"which rate the map uses","options":[{"choice":"1 Hz","what_happens":"lower load"},{"choice":"5 Hz","what_happens":"smoother belt"}],"recommendation":0}}}</example>
   </section>
 
   <section id="sources" title="Sources cited">

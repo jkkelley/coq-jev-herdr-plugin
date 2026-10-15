@@ -74,7 +74,7 @@
     <need kind="principle" volume="shared/principles.xml" anchor="artifacts-out-of-repo">Backups, logs and state live under the state root with a README and a cleanup script each (C35); the hand backup tree is disposed of by N-49.</need>
     <need kind="principle" volume="shared/principles.xml" anchor="no-privileged-profile">No node selects the owner's privileged AWS profile; a cloud mirror is the owner's own user-initiated script (global hard rule).</need>
     <need kind="config" volume="shared/state-store.xml" anchor="config-keys">backup.interval_seconds, backup.min_interval_seconds, backup.snapshot_seconds, backup.verify_seconds, backup.mirror_seconds, backup.min_free_mib, backup.retention, backup.rpo_offhost_hours, backup.mirror_dir; the defaults are the shared config-key rows, cited, never restated.</need>
-    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="crash">The service restarts mid-run: temps under tmp/ removed at start, backup:running cleared, a due backup runs at once; nothing is lost because the live store is never the thing being written.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="crash">The service restarts mid-run: temps under tmp/ removed at start, the maintenance lease backup:store expires or is swept by N-02 recover, a due backup runs at once; nothing is lost because the live store is never the thing being written.</need>
     <need kind="failure-case" volume="shared/failure-cases.xml" anchor="disk-full">Free space under backup.min_free_mib (default 2048 MiB, the one floor): backup.disk 503 once, run skipped, N-45 cleanup, then one card if still under.</need>
   </shared-needs>
 
@@ -125,7 +125,7 @@
   M -- no --> B
   Y --> B[append backup 201]
   F --> B2[backup.failed 500 after 3]</mermaid>
-    <step n="1">Ask N-01 for Snapshot(tmp) under the maintenance lease backup:store (allowed under hold, shared/contracts.xml#lease-machine); the reply carries epoch, high_water_seq, row_count, min_retained_seq and bytes.</step>
+    <step n="1">Acquire the maintenance lease backup:store (allowed under hold, shared/contracts.xml#lease-machine) in a Commit whose precondition is that no live drain:&lt;resource&gt; lease covers the target snapshot path or STATE/backup/store/tmp/ (N-45 drains before it cleans, nodes/N-45/spec.xml#mechanism); a live drain lease refuses the allocation with backup.busy 423 reason drained and the next tick retries. Then ask N-01 for Snapshot(tmp); the reply carries epoch, high_water_seq, row_count, min_retained_seq and bytes.</step>
     <step n="2">Compress to tmp.zst; compute sha256 of the raw file while reading it.</step>
     <step n="3">Verify: decompress to a second temp file, open read-only, PRAGMA integrity_check must be exactly ok, SELECT count(*) FROM records must equal row_count, SELECT max(seq) must equal high_water_seq, SELECT min(seq) must be at or above min_retained_seq, and store:epoch must equal epoch. Any difference is a failed attempt.</step>
     <step n="4">Rename tmp.zst to the final path; fsync the directory; sha256 the compressed file.</step>
@@ -159,12 +159,12 @@
 
   <many-agents id="many-agents">
     <reading>Any node and the owner read the backups table and backup:latest; a seat never needs a backup; the restore runbook (N-01) reads the latest verified row.</reading>
-    <working>One backup runs at a time: the run takes the entity flag backup:running by CAS (expected absent) and releases it at the end; a backup.now while one runs returns backup.busy 423 and is not queued, because the next tick will cover it.</working>
+    <working>One backup runs at a time: the run holds the maintenance lease backup:store (shared/contracts.xml#lease-machine) and releases it at the end; N-05 writes no flag entity (N-44 is the only flag writer); a backup.now while the lease is live returns backup.busy 423 and is not queued, because the next tick will cover it.</working>
     <collision name="tick-vs-now">A scheduled tick and a backup.now in the same minute: the flag admits one; the other is 423; the one that ran is of the class that won; a manual class is never downgraded, so if the manual one lost, N-50 or N-49 retries after backup.min_interval_seconds and gets its manual copy.</collision>
     <collision name="backup-vs-writes">The snapshot is one consistent image while commits continue: VACUUM INTO runs on N-01's reader connection in one read transaction and never takes the writer; high_water_seq names the boundary exactly. Probe evidence at baseline: 9,788 writes committed during a 2.84 s copy, worst write 184 ms (report D, a model of the store; the built proof is not-run).</collision>
     <collision name="backup-vs-retention">N-45 deletes old records while a backup runs: the copy is one read transaction, so it holds the rows as of its start; min_retained_seq in the copy is the floor at that moment, and the verifier's min check uses it.</collision>
     <collision name="backup-vs-cleanup">N-45 prunes while a backup writes: the new file is under tmp/ until rename, and N-45 prunes only rows in the backups table with a past retention date, so an in-progress backup is invisible to it.</collision>
-    <collision name="restart-mid-backup">The service restarts mid-run: the temp files are removed at the next start (step 7 of the mechanism), the flag backup:running is cleared by the start sequence, and the due check runs a backup at once.</collision>
+    <collision name="restart-mid-backup">The service restarts mid-run: the temp files are removed at the next start (step 7 of the mechanism), the backup:store lease is swept by N-02 recover, and the due check runs a backup at once.</collision>
     <test>With the fake clock: 10 days of ticks with Puts between them, one backup.now storm of 5 calls, one injected verify failure and one injected disk-full: every record's class is right, exactly one run at a time, the failure retried 3 times and reported once, the disk-full skipped with one 503, and every surviving file verifies.</test>
   </many-agents>
 
@@ -183,7 +183,7 @@
     <path p="STATE/backup/store/YYYY/MM/*.zst" writer="N-05" readme="STATE/backup/store/README.md" cleanup="scheduler/host/bin/cleanup-backups.sh: --dry-run lists files whose backups row is past its retention class and files with no row (orphans); --apply deletes them and marks the rows pruned; it never deletes the newest verified backup of any class, whatever its age" registry="N-45" trigger="backup" acts="system"/>
     <path p="STATE/backup/store/tmp/" writer="N-05" cleanup="removed by the run itself at start; scheduler/host/bin/cleanup-backups.sh --apply removes anything left over an hour old" registry="N-45" trigger="timer" acts="system"/>
     <path p="backup.mirror_dir/store/YYYY/MM/*.zst (off-host)" writer="N-05" cleanup="scheduler/host/bin/cleanup-backups.sh --mirror applies the same retention to the mirror; it refuses when the mirror is not mounted" registry="N-45" trigger="backup" acts="system"/>
-    <path p="STATE/store/coq.db (table backups, entities backup:latest, backup:running)" writer="N-05 through N-01" cleanup="rows are pruned with their files by cleanup-backups.sh" registry="N-45" trigger="owner" acts="owner"/>
+    <path p="STATE/store/coq.db (table backups, entity backup:latest)" writer="N-05 through N-01" cleanup="rows are pruned with their files by cleanup-backups.sh" registry="N-45" trigger="owner" acts="owner"/>
     <rule>The hand backups under STATE/backup/2026/10/ (L02 S19) are a different tree: N-49 disposes of them; this node never writes there.</rule>
   </state-paths>
 

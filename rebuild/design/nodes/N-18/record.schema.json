@@ -2,106 +2,156 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-18/record.schema.json",
   "title": "N-18 Validator: input and output records",
-  "description": "Input: ticket-set.draft (../N-17/record.schema.json#/$defs/ticket-set.draft). Outputs: ticket (accepted, one per drafted ticket), ticket-set.accepted, validator.refused, validator.failed.",
+  "description": "Book 1.1.0. Input: ticket-set.draft (../N-17/record.schema.json#/$defs/ticket-set.draft). Outputs: ticket (THE ticket shape of the book: N-03, N-07 and N-13 $ref #/$defs/ticket and never restate it), ticket-set.accepted, validator.refused (a failure routed to N-11, carrying shared failure_body) and validator.failed (the validator's own infrastructure layer, shared/retry-budget.xml#layers row validator). Every record extends the shared committed envelope; the operation key rides on the Commit request (shared/contracts.xml#operation-keys), never in the record. UTC everywhere.",
   "$defs": {
-    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
     "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "ticket_id": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
-    "envelope": {
-      "type": "object",
-      "required": ["id", "kind", "code", "at", "node", "idempotency_key"],
-      "properties": {
-        "id": { "type": "string", "minLength": 8 },
-        "kind": { "type": "string" },
-        "code": { "type": "integer", "enum": [100, 200, 201, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
-        "at": { "$ref": "#/$defs/utc" },
-        "node": { "const": "N-18" },
-        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
-        "idempotency_key": { "type": "string" },
-        "version": { "type": "integer", "minimum": 0 }
-      }
+    "set_id": { "type": "string", "pattern": "^d-[0-9]{14}-[a-z0-9]{6}$", "description": "the spec-author run id the draft came from (../N-17/record.schema.json#/$defs/ticket-set.draft)" },
+    "source_request": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$", "description": "the ticket.request record id the cut request was admitted from; N-03 closes the cut request by it" },
+    "platform": { "enum": ["amd64", "arm64"] },
+    "exec_path": { "enum": ["container", "host", "pod-arm64"], "description": "container: podman on the host with the pinned test image (runs_in pod); host: a transient sandboxed unit on the host (runs_in host); pod-arm64: the N-24 executor on an arm64 node (arch_sensitive)" },
+    "classification": {
+      "enum": ["guard_pass", "expected_match", "wrong_failure_reason", "infra", "cannot_run", "already_passing", "unexpected_red", "timeout"],
+      "description": "guard_pass and expected_match are admitted; every other value refuses the set with 422"
     },
     "ticket-set.draft": { "$ref": "../N-17/record.schema.json#/$defs/ticket-set.draft" },
-    "observed_acceptance": {
-      "allOf": [{ "$ref": "../N-17/record.schema.json#/$defs/acceptance" }],
+    "observed_run": {
       "type": "object",
-      "required": ["observed_exit_on_main", "observed_at", "observed_at_sha", "duration_seconds", "log_path"],
+      "required": ["platform", "path", "exit", "classification", "duration_seconds", "observed_at", "observed_at_sha", "log_path"],
       "properties": {
-        "observed_exit_on_main": { "type": "integer", "minimum": 0, "maximum": 255 },
-        "observed_at": { "$ref": "#/$defs/utc" },
-        "observed_at_sha": { "$ref": "#/$defs/sha1" },
+        "platform": { "$ref": "#/$defs/platform" },
+        "path": { "$ref": "#/$defs/exec_path" },
+        "image_digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "absent on the host path" },
+        "exit": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "classification": { "$ref": "#/$defs/classification" },
+        "infra_signature": { "enum": ["readonly_cache", "readonly_fs", "network", "tool_missing", "no_rule", "script_missing", "permission"], "description": "the matched infrastructure signature when classification is infra or cannot_run" },
+        "matched": { "type": "string", "maxLength": 400, "description": "the output line expected_failure.match hit" },
         "duration_seconds": { "type": "number", "minimum": 0 },
-        "log_path": { "type": "string" },
+        "observed_at": { "$ref": "../../shared/contracts.schema.json#/$defs/at" },
+        "observed_at_sha": { "$ref": "#/$defs/sha1" },
+        "log_path": { "type": "string", "minLength": 1 },
         "stdout_tail": { "type": "string", "maxLength": 2000 },
         "stderr_tail": { "type": "string", "maxLength": 2000 }
-      }
+      },
+      "additionalProperties": false
+    },
+    "observed_acceptance": {
+      "description": "one drafted acceptance entry plus what N-18 saw on main; observed_exit_on_main, platform and classification repeat runs[0] for readers that want one number",
+      "type": "object",
+      "required": ["observed_exit_on_main", "platform", "classification", "observed_at", "observed_at_sha", "log_path", "runs"],
+      "properties": {
+        "observed_exit_on_main": { "type": "integer", "minimum": 0, "maximum": 255 },
+        "platform": { "$ref": "#/$defs/platform" },
+        "classification": { "enum": ["guard_pass", "expected_match"] },
+        "observed_at": { "$ref": "../../shared/contracts.schema.json#/$defs/at" },
+        "observed_at_sha": { "$ref": "#/$defs/sha1" },
+        "log_path": { "type": "string", "minLength": 1 },
+        "runs": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "$ref": "#/$defs/observed_run" }, "description": "two runs (amd64 and arm64) when arch_sensitive is true, else one" },
+        "expected_red_entry": { "type": "boolean", "description": "true when the red test already exists on main and is listed in tests/expected-red.json (planned); false for a test under new_paths" }
+      },
+      "allOf": [
+        { "$ref": "../N-17/record.schema.json#/$defs/acceptance" },
+        { "if": { "properties": { "arch_sensitive": { "const": true } }, "required": ["arch_sensitive"] }, "then": { "properties": { "runs": { "minItems": 2 } } } }
+      ]
     },
     "ticket": {
-      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "../N-17/record.schema.json#/$defs/draft_ticket" }],
+      "description": "THE ticket: the record N-18 commits for every admitted drafted ticket and the shape of a tickets row as N-03, N-07 and N-13 read it. The DAG node the ticket builds is target_node; node is the envelope's writer (F37). Row columns (status, phase, attempt, version, not_before) are optional on the record and present on a row read.",
       "type": "object",
-      "required": ["ticket", "set_id", "status", "acceptance", "depends_on_ids", "cut_at"],
+      "allOf": [
+        { "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" },
+        { "$ref": "../N-17/record.schema.json#/$defs/draft_ticket" }
+      ],
+      "required": ["ticket", "set_id", "cut_request", "acceptance", "depends_on_ids", "cut_at", "lane"],
       "properties": {
         "kind": { "const": "ticket" },
         "code": { "const": 201 },
-        "idempotency_key": { "type": "string", "pattern": "^[^:]+:t[0-9]{1,3}$", "description": "set_id:key" },
-        "ticket": { "$ref": "#/$defs/ticket_id" },
-        "set_id": { "type": "string" },
-        "status": { "const": "cut", "description": "N-03 moves it to waiting, ready; later nodes to started, pr-open, merged, verified, dead, cancelled" },
+        "node": { "const": "N-18" },
+        "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/wo_id" },
+        "set_id": { "$ref": "#/$defs/set_id" },
+        "cut_request": { "$ref": "../../shared/contracts.schema.json#/$defs/cr_id" },
+        "source_request": { "$ref": "#/$defs/source_request" },
+        "lane": { "$ref": "../../shared/contracts.schema.json#/$defs/lane" },
         "acceptance": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/observed_acceptance" } },
-        "depends_on_ids": { "type": "array", "items": { "$ref": "#/$defs/ticket_id" } },
-        "cut_at": { "$ref": "#/$defs/utc" },
-        "validate_log": { "type": "string" }
+        "depends_on_ids": { "type": "array", "items": { "$ref": "../../shared/contracts.schema.json#/$defs/wo_id" } },
+        "cut_at": { "$ref": "../../shared/contracts.schema.json#/$defs/at" },
+        "validate_log": { "type": "string" },
+        "status": { "$ref": "../../shared/contracts.schema.json#/$defs/ticket_status", "description": "cut on the record N-18 writes; the row moves only per shared/contracts.xml#ticket-transitions" },
+        "phase": { "$ref": "../../shared/contracts.schema.json#/$defs/phase" },
+        "row_attempt": { "type": "integer", "minimum": 0, "maximum": 4, "description": "row column attempt as read from the tickets table (the envelope attempt is the record's own)" },
+        "not_before": { "$ref": "../../shared/contracts.schema.json#/$defs/at" },
+        "version": { "type": "integer", "minimum": 0 }
       }
     },
     "ticket-set.accepted": {
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
       "type": "object",
-      "required": ["set_id", "anchor", "tickets", "observed_at_sha", "validate_seconds"],
+      "allOf": [{ "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" }],
+      "required": ["set_id", "run_id", "cut_request", "anchor", "tickets", "observed_at_sha", "validate_seconds", "platforms"],
       "properties": {
         "kind": { "const": "ticket-set.accepted" },
         "code": { "const": 201 },
-        "idempotency_key": { "type": "string", "description": "equals set_id" },
-        "set_id": { "type": "string" },
+        "node": { "const": "N-18" },
+        "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/cr_id", "description": "the cut request the set answers" },
+        "set_id": { "$ref": "#/$defs/set_id" },
+        "run_id": { "$ref": "#/$defs/set_id" },
+        "cut_request": { "$ref": "../../shared/contracts.schema.json#/$defs/cr_id" },
+        "source_request": { "$ref": "#/$defs/source_request" },
         "anchor": { "type": "string" },
-        "tickets": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["key", "ticket", "title"], "properties": { "key": { "type": "string" }, "ticket": { "$ref": "#/$defs/ticket_id" }, "title": { "type": "string" } } } },
+        "tickets": {
+          "type": "array", "minItems": 1, "maxItems": 15,
+          "items": { "type": "object", "required": ["key", "ticket", "title"], "properties": { "key": { "type": "string" }, "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/wo_id" }, "title": { "type": "string" } }, "additionalProperties": false }
+        },
         "observed_at_sha": { "$ref": "#/$defs/sha1" },
+        "platforms": { "type": "array", "minItems": 1, "maxItems": 2, "uniqueItems": true, "items": { "$ref": "#/$defs/platform" } },
         "validate_seconds": { "type": "number", "minimum": 0 },
         "validate_log": { "type": "string" }
       }
     },
     "validator.refused": {
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "description": "a failure routed to N-11 (shared/contracts.xml#retry-owner row output_rejected, or schema_invalid for a 400): N-11 charges the spec phase and dispatches spec-author attempt n+1 with this record attached",
       "type": "object",
-      "required": ["set_id", "check", "detail"],
+      "allOf": [
+        { "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" },
+        { "$ref": "../../shared/contracts.schema.json#/$defs/failure_body" },
+        { "if": { "properties": { "code": { "const": 400 } } }, "then": { "properties": { "failure_kind": { "const": "schema_invalid" }, "check": { "const": "schema" } } }, "else": { "properties": { "failure_kind": { "const": "output_rejected" } } } }
+      ],
+      "required": ["set_id", "run_id", "check", "reason", "detail"],
       "properties": {
         "kind": { "const": "validator.refused" },
         "code": { "enum": [400, 422] },
-        "idempotency_key": { "type": "string", "description": "equals set_id" },
-        "set_id": { "type": "string" },
+        "node": { "const": "N-18" },
+        "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/cr_id" },
+        "phase": { "const": "spec" },
+        "outcome": { "const": "refused" },
+        "failure_kind": { "enum": ["output_rejected", "schema_invalid"] },
+        "set_id": { "$ref": "#/$defs/set_id" },
+        "run_id": { "$ref": "#/$defs/set_id" },
         "anchor": { "type": "string" },
         "check": { "enum": ["schema", "anchor_moved", "files", "records", "depends", "size", "duplicate", "acceptance", "validator_timeout"] },
+        "reason": { "enum": ["schema_invalid", "moved", "aggregate", "runtime_path", "overlap", "too_many_files", "unknown_path", "new_path_outside_files", "unknown_kind", "unresolved", "cycle", "go_live_without_build", "too_large", "too_many_tickets", "duplicate_of", "cannot_run", "infra", "already_passing", "unexpected_red", "wrong_failure_reason", "unlisted_red", "arch_mismatch", "runs_in_pod_unknown", "timeout"] },
         "ticket_key": { "type": "string", "pattern": "^t[0-9]{1,3}$" },
         "acceptance_id": { "type": "string" },
-        "reason": { "enum": ["cannot_run", "already_passing", "runs_in_pod_unknown", "aggregate", "runtime_path", "overlap", "too_many_files", "unknown_path", "unknown_kind", "unresolved", "cycle", "go_live_without_build", "too_large", "duplicate_of", "timeout", "schema_invalid", "moved"] },
         "command": { "type": "string" },
-        "observed_exit": { "type": "integer" },
+        "run": { "$ref": "#/$defs/observed_run", "description": "the run that refused, for an acceptance refusal" },
+        "expected_failure": { "type": "object", "properties": { "exit": { "type": "integer" }, "match": { "type": "string" } } },
         "expect_exit": { "type": "integer" },
-        "stderr_tail": { "type": "string", "maxLength": 2000 },
         "detail": { "type": "string", "maxLength": 2000 },
-        "existing_ticket": { "$ref": "#/$defs/ticket_id" },
+        "existing_ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/wo_id" },
         "log_path": { "type": "string" }
       }
     },
     "validator.failed": {
-      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "description": "the validator's own infrastructure failure; retried by N-18 (layer validator, its own retries, never a seat attempt); at attempts 3 it is a defect N-28 posts as one card",
       "type": "object",
+      "allOf": [{ "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" }],
       "required": ["set_id", "reason", "attempts"],
       "properties": {
         "kind": { "const": "validator.failed" },
         "code": { "const": 500 },
-        "set_id": { "type": "string" },
-        "reason": { "enum": ["store_unreachable", "workspace", "podman", "image"] },
+        "node": { "const": "N-18" },
+        "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/cr_id" },
+        "set_id": { "$ref": "#/$defs/set_id" },
+        "reason": { "enum": ["store_unreachable", "workspace", "podman", "image", "pod_arm64", "host_unit"] },
         "attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "next_try_at": { "$ref": "../../shared/contracts.schema.json#/$defs/at" },
         "stderr_tail": { "type": "string", "maxLength": 2000 }
       }
     }

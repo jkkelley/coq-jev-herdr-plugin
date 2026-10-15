@@ -2,81 +2,303 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-48/record.schema.json",
   "title": "N-48 Tier promotion with screenshot: input and output records",
-  "description": "Parent: ../../index.xml#N-48. Sibling: spec.xml. Envelope as in ../N-43/record.schema.json#/$defs/envelope.",
-  "oneOf": [ { "$ref": "#/$defs/input" }, { "$ref": "#/$defs/output" } ],
+  "description": "Book 1.1.0. Parent: ../../index.xml#N-48. Sibling: spec.xml. Envelope: shared/state-store.schema.json#/$defs/committed_envelope (UTC-stamp id). Inputs by reference to their producers: pr.opened (N-16, dev tier), gate.verdict green (N-08, uat tier), verified (N-10, stable tier; the changed paths are the merge record's, read by merge_sha). Outputs promotion and screenshot keep their body object.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/input"
+    },
+    {
+      "$ref": "#/$defs/output"
+    }
+  ],
   "$defs": {
-    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "tier": { "type": "string", "enum": ["dev", "uat", "stable", "map-dev", "map-stable"] },
-    "envelope": { "$ref": "../N-43/record.schema.json#/$defs/envelope" },
-    "changed-paths": { "type": "array", "items": { "type": "string" }, "contains": { "pattern": "^(tools/bearings/|map/)" } },
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "dev",
+        "uat",
+        "stable",
+        "map-dev",
+        "map-stable"
+      ]
+    },
+    "envelope": {
+      "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope"
+    },
+    "changed-paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "contains": {
+        "pattern": "^(tools/bearings/|map/)"
+      }
+    },
     "input": {
       "oneOf": [
-        { "title": "pr.opened (from N-16)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "pr.opened" }, "body": { "type": "object", "required": ["pr", "head_sha", "ticket", "changed_paths"], "properties": { "pr": { "type": "integer" }, "head_sha": { "$ref": "#/$defs/sha" }, "ticket": { "type": "string" }, "branch": { "type": "string" }, "changed_paths": { "$ref": "#/$defs/changed-paths" } } } } },
-        { "title": "gate.verdict green (from N-08)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "gate.verdict" }, "body": { "type": "object", "required": ["head_sha", "state"], "properties": { "head_sha": { "$ref": "#/$defs/sha" }, "pr": { "type": "integer" }, "state": { "type": "string", "enum": ["green", "red", "pending"] } } } } },
-        { "title": "merge (from N-09)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "merge" }, "body": { "type": "object", "required": ["pr", "merge_sha", "changed_paths"], "properties": { "pr": { "type": "integer" }, "merge_sha": { "$ref": "#/$defs/sha" }, "ticket": { "type": "string" }, "changed_paths": { "$ref": "#/$defs/changed-paths" } } } } }
+        {
+          "title": "pr.opened (from N-16), dev tier",
+          "$ref": "../N-16/record.schema.json#/$defs/pr.opened"
+        },
+        {
+          "title": "gate.verdict green (from N-08), uat tier",
+          "allOf": [
+            {
+              "$ref": "../N-08/record.schema.json#/$defs/gate_verdict"
+            },
+            {
+              "properties": {
+                "verdict": {
+                  "const": "green"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "title": "verified (from N-10), stable tier",
+          "$ref": "../N-10/record.schema.json#/$defs/verified"
+        }
       ]
     },
     "look-row": {
       "type": "object",
-      "required": ["token", "expected", "result"],
+      "required": [
+        "token",
+        "expected",
+        "result"
+      ],
       "properties": {
-        "token": { "type": "string", "pattern": "^--" },
-        "expected": { "type": "string" },
-        "actual": { "type": "string" },
-        "result": { "type": "string", "enum": ["match", "differs", "missing"] }
+        "token": {
+          "type": "string",
+          "pattern": "^--"
+        },
+        "expected": {
+          "type": "string"
+        },
+        "actual": {
+          "type": "string"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "match",
+            "differs",
+            "missing"
+          ]
+        }
       }
     },
     "screenshot": {
       "title": "screenshot",
-      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        }
+      ],
       "properties": {
-        "kind": { "const": "screenshot" },
-        "code": { "const": 200 },
+        "kind": {
+          "const": "screenshot"
+        },
+        "code": {
+          "const": 200
+        },
         "body": {
           "type": "object",
-          "required": ["tier", "sha", "url", "images", "tokens"],
+          "required": [
+            "tier",
+            "sha",
+            "url",
+            "images",
+            "tokens"
+          ],
           "properties": {
-            "tier": { "$ref": "#/$defs/tier" },
-            "sha": { "$ref": "#/$defs/sha" },
-            "url": { "type": "string", "description": "without the key" },
-            "images": { "type": "array", "minItems": 2, "items": { "type": "object", "required": ["path", "width", "height"], "properties": { "path": { "type": "string" }, "width": { "type": "integer", "enum": [1280, 430] }, "height": { "type": "integer" }, "ready": { "type": "boolean" } } } },
-            "tokens": { "type": "object", "additionalProperties": { "type": "string" } },
-            "image_digest": { "type": "string", "description": "the playwright image digest used" }
+            "tier": {
+              "$ref": "#/$defs/tier"
+            },
+            "sha": {
+              "$ref": "#/$defs/sha"
+            },
+            "url": {
+              "type": "string",
+              "description": "without the key"
+            },
+            "images": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "width",
+                  "height"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string"
+                  },
+                  "width": {
+                    "type": "integer",
+                    "enum": [
+                      1280,
+                      430
+                    ]
+                  },
+                  "height": {
+                    "type": "integer"
+                  },
+                  "ready": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "tokens": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "image_digest": {
+              "type": "string",
+              "description": "the playwright image digest used"
+            }
           }
         }
       }
     },
     "promotion": {
       "title": "promotion",
-      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        }
+      ],
       "properties": {
-        "kind": { "const": "promotion" },
-        "code": { "enum": [201, 422, 423, 429] },
+        "kind": {
+          "const": "promotion"
+        },
+        "code": {
+          "enum": [
+            201,
+            422,
+            423,
+            429
+          ]
+        },
         "body": {
           "type": "object",
-          "required": ["tier", "sha", "state"],
+          "required": [
+            "tier",
+            "sha",
+            "state"
+          ],
           "properties": {
-            "tier": { "$ref": "#/$defs/tier" },
-            "sha": { "$ref": "#/$defs/sha" },
-            "ticket": { "type": "string" },
-            "pr": { "type": "integer" },
-            "state": { "type": "string", "enum": ["up", "swapped", "failed", "reverted", "queued"] },
-            "url": { "type": "string" },
-            "unit": { "type": "string", "pattern": "^coq-bearings@" },
-            "pid": { "type": "integer" },
-            "port": { "type": "integer" },
-            "previous_pid": { "type": "integer" },
-            "previous_sha": { "$ref": "#/$defs/sha" },
-            "swap_method": { "type": "string", "enum": ["front-door-repoint", "fresh-port", "gitops-tag"] },
-            "screenshot_id": { "type": "string" },
-            "look": { "type": "array", "items": { "$ref": "#/$defs/look-row" } },
-            "probe": { "type": "object", "properties": { "health": { "type": "integer" }, "root": { "type": "integer" }, "seconds": { "type": "number" } } },
-            "reason": { "type": "string", "enum": ["probe", "look", "provision", "screenshot", "no-port", "lease-timeout", "hold", "argo-timeout"] },
-            "owner_acts": { "type": "boolean" }
+            "tier": {
+              "$ref": "#/$defs/tier"
+            },
+            "sha": {
+              "$ref": "#/$defs/sha"
+            },
+            "ticket": {
+              "type": "string"
+            },
+            "pr": {
+              "type": "integer"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "up",
+                "swapped",
+                "failed",
+                "reverted",
+                "queued"
+              ]
+            },
+            "url": {
+              "type": "string"
+            },
+            "unit": {
+              "type": "string",
+              "pattern": "^coq-bearings@"
+            },
+            "pid": {
+              "type": "integer"
+            },
+            "port": {
+              "type": "integer"
+            },
+            "previous_pid": {
+              "type": "integer"
+            },
+            "previous_sha": {
+              "$ref": "#/$defs/sha"
+            },
+            "swap_method": {
+              "type": "string",
+              "enum": [
+                "front-door-repoint",
+                "fresh-port",
+                "gitops-tag"
+              ]
+            },
+            "screenshot_id": {
+              "type": "string"
+            },
+            "look": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/look-row"
+              }
+            },
+            "probe": {
+              "type": "object",
+              "properties": {
+                "health": {
+                  "type": "integer"
+                },
+                "root": {
+                  "type": "integer"
+                },
+                "seconds": {
+                  "type": "number"
+                }
+              }
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "probe",
+                "look",
+                "provision",
+                "screenshot",
+                "no-port",
+                "lease-timeout",
+                "hold",
+                "argo-timeout"
+              ]
+            },
+            "owner_acts": {
+              "type": "boolean"
+            }
           }
         }
       }
     },
-    "output": { "oneOf": [ { "$ref": "#/$defs/promotion" }, { "$ref": "#/$defs/screenshot" } ] }
+    "output": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/promotion"
+        },
+        {
+          "$ref": "#/$defs/screenshot"
+        }
+      ]
+    }
   }
 }

@@ -189,9 +189,9 @@
 
   <state-paths id="state-paths">
     <root>$COQ_STATE, default ${XDG_STATE_HOME:-$HOME/.local/state}/coq/coq-jev-herdr-plugin (AGENTS.md Law: runtime data never lives in git; bin/state-root.sh). The path elements below are in the form N-45's generator reads (../N-45/spec.xml#state-paths). The brief has no path here: it lives only in the run bundle (N-13).</root>
-    <path id="N-07.store" glob="$COQ_STATE/store/coq.db" retention="owned by N-01" trigger="none here" cleanup="line/bin/cleanup.sh --entry N-01.store">Rows in tables records, leases and tickets, written only through N-01 Commits; retention is N-01's row.</path>
-    <path id="N-07.logs" glob="$COQ_STATE/logs/scheduler/*/*/*-tick-*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-07.logs">One JSON line per decision; rotated daily.</path>
-    <path id="N-07.run" glob="$COQ_STATE/run/scheduler.heartbeat" retention="P0D when the unit is inactive" trigger="unit stop" cleanup="line/bin/cleanup.sh --entry N-07.run">Touched every tick by the tick loop (SPEC-16.F f-belt-touch); overwritten on start.</path>
+    <path id="N-07.store" glob="$COQ_STATE/store/coq.db" retention="owned by N-01" trigger="owner" acts="owner" cleanup="line/bin/cleanup.sh --entry N-01.store">Rows in tables records, leases and tickets, written only through N-01 Commits; retention is N-01's row.</path>
+    <path id="N-07.logs" glob="$COQ_STATE/logs/scheduler/*/*/*-tick-*.jsonl" retention="P30D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-07.logs">One JSON line per decision; rotated daily.</path>
+    <path id="N-07.run" glob="$COQ_STATE/run/scheduler.heartbeat" retention="P0D when the unit is inactive" trigger="unit-stop" acts="system" cleanup="line/bin/cleanup.sh --entry N-07.run">Touched every tick by the tick loop (SPEC-16.F f-belt-touch); overwritten on start.</path>
     <never>No path under the repository, no file in a worktree, no pane.</never>
   </state-paths>
 

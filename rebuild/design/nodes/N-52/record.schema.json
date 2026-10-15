@@ -56,7 +56,7 @@
         "idempotency_key": {
           "type": "string",
           "pattern": "^N-52/push\\.send/",
-          "description": "the operation key N-52/push.send/<card>/r1 (shared/contracts.xml#operation-keys)"
+          "description": "the operation key N-52/push.send/<card>@<channel>/r1, channel ntfy (shared/contracts.xml#operation-keys)"
         }
       },
       "required": ["card", "provider", "provider_id", "topic_hash", "sent_at", "attempt", "priority", "idempotency_key"]

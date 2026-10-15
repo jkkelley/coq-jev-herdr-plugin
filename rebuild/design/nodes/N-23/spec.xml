@@ -147,9 +147,9 @@ flowchart LR
   </section>
 
   <section id="state-paths" title="State paths and the cleanup script for each">
-    <path p="$COQ_STATE/ci/mirror/repo.git" cleanup="ci/bin/cleanup-ci-state.sh --what mirror [--apply]">The bare mirror; the script deletes it and the next poll re-clones it (about 60 s); refuses while a planner runs.</path>
-    <path p="$COQ_STATE/ci/plan/&lt;sha12&gt;-&lt;attempt&gt;/" cleanup="ci/bin/cleanup-ci-state.sh --what plan-worktrees --older-than 1h [--apply]">Ephemeral detached worktrees; removed by the planner on exit; the script prunes leftovers and runs git worktree prune on the mirror.</path>
-    <path p="$COQ_STATE/ci/plan/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;.json" cleanup="ci/bin/cleanup-ci-state.sh --what plan-logs --older-than 30d [--apply]">The planner's full output (commands, units, stderr) for the record's log path.</path>
+    <path p="$COQ_STATE/ci/mirror/repo.git" cleanup="ci/bin/cleanup-ci-state.sh --what mirror [--apply]" trigger="timer" acts="system">The bare mirror; the script deletes it and the next poll re-clones it (about 60 s); refuses while a planner runs.</path>
+    <path p="$COQ_STATE/ci/plan/&lt;sha12&gt;-&lt;attempt&gt;/" cleanup="ci/bin/cleanup-ci-state.sh --what plan-worktrees --older-than 1h [--apply]" trigger="timer" acts="system">Ephemeral detached worktrees; removed by the planner on exit; the script prunes leftovers and runs git worktree prune on the mirror.</path>
+    <path p="$COQ_STATE/ci/plan/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;.json" cleanup="ci/bin/cleanup-ci-state.sh --what plan-logs --older-than 30d [--apply]" trigger="timer" acts="system">The planner's full output (commands, units, stderr) for the record's log path.</path>
     <s>Every script dry-runs by default, acts with --apply, retries each deletion 3 times, exits 4 listing what remains; N-45 registers them.</s>
   </section>
 
