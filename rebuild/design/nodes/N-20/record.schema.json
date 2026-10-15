@@ -294,9 +294,6 @@
       "node": {
        "const": "N-20"
       },
-      "attempt": {
-       "const": 3
-      },
       "gitops_sha": {
        "$ref": "#/$defs/sha40"
       },

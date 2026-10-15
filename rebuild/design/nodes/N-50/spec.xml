@@ -9,6 +9,7 @@
     <entry ref="input">Input record</entry>
     <entry ref="output">Output record</entry>
     <entry ref="cancel-set">The cancel set: fourteen tickets, by rule not by list</entry>
+    <entry ref="bootstrap">Bootstrap state: the only writer of bootstrap:state</entry>
     <entry ref="mechanism">Mechanism</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
@@ -35,6 +36,7 @@
     <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
     <shared href="../../shared/rejected-with-reason.xml#spec-16">SPEC-16 and SPEC-17 as sources, never authority</shared>
     <shared href="../../dag.md#3-every-node">DAG row N-50</shared>
+    <shared href="../../shared/cut-over.xml#bootstrap">Bootstrap states B0 to B8; this node is the only writer of bootstrap:state</shared>
     <shared href="../../shared/cut-over.xml#step-gofactory" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
   </pointers>
 
@@ -55,16 +57,30 @@
     <record kind="cancel" code="200">One per ticket in the cancel set: ticket id, full title from the ticket file, reason (D09 ruling id), the epic it belongs to, and the ticket.request id for the archive PR.</record>
     <record kind="pr.close" code="200">PR 35: number, title, head sha, the closing comment text (D14 ruling id, the book's path as the canonical design), the treehouse slot 2 lease released.</record>
     <record kind="branch.delete" code="200">feat/go-scheduler-design-one-xml-spec-per-domain-unde: the sha at deletion (012fa41 expected; the record carries the actual), the tag rebuild/spec-16-design-&lt;date&gt; made first, the list of small-cut tickets that harvested files from it.</record>
-    <record kind="cancel" code="409">The cancel set did not count fourteen; nothing is cancelled; the record names the set found and the rule that produced it; owner acts through one card.</record>
+    <record kind="cancel" code="412">The cancel set did not count fourteen (reason cancel-set-mismatch); nothing is cancelled; the record names the set found and the rule that produced it; owner acts through one card.</record>
+    <record kind="bootstrap.advanced" code="200">bootstrap:state moved one state (from, to, the proof record ids cited), written in the same Commit as the entity CAS.</record>
+    <record kind="bootstrap.foundation" code="201">The B1 proof: the passing store, schema and fixture tests on the test state root.</record>
+    <record kind="bootstrap.ready" code="201">The B7 proof: the proof records of cut-over steps 2, 6 and 7, each named; the owner-only ready card follows (no default, no deadline).</record>
     <schema href="record.schema.json#/$defs/output"/>
+    <example schema="record.schema.json#/$defs/bootstrap-advanced"><![CDATA[
+{ "id": "20261016T070001Z-200-b2adv", "at": "2026-10-16T07:00:01Z", "kind": "bootstrap.advanced", "code": 200, "node": "N-50",
+  "body": { "from": "B1", "to": "B2", "proofs": ["20261015T200000Z-201-fnd01"], "ruling_id": "20261016T070000Z-200-gofac",
+            "state": { "state": "B2", "since": "2026-10-16T07:00:01Z", "proofs": ["20261015T200000Z-201-fnd01"], "ruling_ref": "20261016T070000Z-200-gofac" } } }
+    ]]></example>
   </output>
 
   <cancel-set id="cancel-set">
     <rule>The set is computed, not typed: every child ticket of epic WO-20261012-ea33 - Go scheduler: a lightweight Go service in Podman on WSL schedules the small loop and the software factory DAG, designed by a Fable architect and built by four Opus workers, with status ready on main at the GOFACTORY sha, minus any child that 04-UNLANDED.md gives its own verdict row (WO-20261012-8d87 - Replay fixtures: one golden case per routes row and per policies row under scheduler/testdata/replay, derived from the factory suite's cases, synthetic, with a schema and a check script, which is a KEEP row in section 3 and goes through N-49), minus the epic itself.</rule>
     <expected>Fourteen: WO-20261012-9790 (config), 5a3d (intake), 32fe (routes), 7a9a (job), 8e69 (seat), 6e43 (policy), 3c7a (health), d7f4 (executor), b12c (observe and status), 1ccf (engine and run, check, retry), fa36 (cut-over and shadow mode), 379f (contract tests), 0113 (lint and CI wiring), 1635 (end-to-end acceptance). Full titles are taken from the ticket files at cancel time and written into the records; L14 section 4.1 truncates them.</expected>
-    <check>If the computed count is not fourteen, the node writes cancel 409 and one card with the set it found; the owner's answer is a ruling that names the set, and the node re-runs on it. A count mismatch is a sign the tree moved since the investigation, which the owner must see, never a reason to cancel more or fewer silently.</check>
+    <check>If the computed count is not fourteen, the node writes cancel 412 cancel-set-mismatch and one card with the set it found; the owner's answer is a ruling that names the set, and the node re-runs on it. A count mismatch is a sign the tree moved since the investigation, which the owner must see, never a reason to cancel more or fewer silently.</check>
     <what-cancel-means>A cancel record is the ticket's status in the store (D04 C). While ticket files still live under work-orders/ on main, one ticket request to N-03 archives the fourteen files as cancelled with the reason (the normal ticket path, one small PR touching only those files and the index), so main and the store agree. The archive ticket declares exactly those files.</what-cancel-means>
   </cancel-set>
+
+  <bootstrap id="bootstrap">
+    <s>N-50 is the only writer of entity bootstrap:state (contracts.schema.json#/$defs/bootstrap_state, shared/cut-over.xml#bootstrap). On every scheduler tick it reads the state and the proof records its exit names; when they are all present it advances one state by compare-and-swap, in one Commit (operation key N-50/bootstrap.advance/&lt;to-state&gt;/r1) that writes the entity and bootstrap.advanced 200 citing the proof ids; never two states at once, never backwards.</s>
+    <s>B1: when the foundation tests pass on the test state root, bootstrap.foundation 201 lists them. B1 to B2 needs that record and the GOFACTORY ruling, the owner word typed by the owner into the owner CLI (coq bootstrap authorize) or the owner page, never a relay or an import. B6 to B7: bootstrap.ready 201 names the proofs of steps 2, 6 and 7. B7 to B8: only the USERGO ruling; N-44 clears flag:hold on the same ruling.</s>
+    <s>N-50 never writes a flag and never matches an owner word: N-29 matches the words, N-44 writes flag:hold, N-50 moves the state; a ruling from any other principal or source moves nothing.</s>
+  </bootstrap>
 
   <mechanism id="mechanism">
     <where>Go package cutover in the service; forge calls through the service's gh auth; file reads from the mirror at the GOFACTORY sha.</where>
@@ -80,7 +96,7 @@ flowchart LR
   V -- no --> M[cancel 412 + one card]
   V -- yes --> S[compute cancel set at sha]
   S --> C{count == 14?}
-  C -- no --> X[cancel 409 + one card]
+  C -- no --> X[cancel 412 + one card]
   C -- yes --> R[14 cancel records + archive ticket.request]
   G --> P[gh pr close 35 + slot 2 release] --> Q[pr.close 200]
   G --> W[wait: small-cut merges naming the design branch]
@@ -104,7 +120,7 @@ flowchart LR
   <retries id="retries">
     <policy attempts="3" backoff="min(10 s x 2^(n-1), 5 min)">Forge calls and store puts; cancel records are idempotent by key.</policy>
     <recover>After three failures the record is 423 with the error; the daily tick retries transient classes for 7 days; the cancel set is never partially applied silently: each ticket's record stands alone and the archive ticket lists exactly the ones recorded.</recover>
-    <report>412, 409 and the w3 timeout are one card each; 423 is an alert record.</report>
+    <report>Each 412 and the w3 timeout are one card each; 423 is an alert record.</report>
   </retries>
 
   <many-agents id="many-agents">
@@ -118,8 +134,11 @@ flowchart LR
 
   <status-codes id="status-codes">
     <emits code="200" kind="cancel">Ticket cancelled in the store; system acts (archive ticket).</emits>
-    <emits code="409" kind="cancel">Cancel set count not fourteen; owner acts (one card naming the set).</emits>
-    <emits code="412" kind="cancel">D09 or D14 ruling record missing; owner acts (one card); N-29 records the ruling.</emits>
+    <emits code="412" kind="cancel">Cancel set count not fourteen (cancel-set-mismatch); owner acts (one card naming the set).</emits>
+    <emits code="412" kind="cancel">D09 or D14 ruling missing from the GOFACTORY card (ruling-missing); owner acts (one card).</emits>
+    <emits code="200" kind="bootstrap.advanced">bootstrap:state moved one state; system acts (the steps the new state allows).</emits>
+    <emits code="201" kind="bootstrap.foundation">B1 proof present; nobody acts until GOFACTORY.</emits>
+    <emits code="201" kind="bootstrap.ready">B7 reached; owner acts (USERGO on the owner-only ready card).</emits>
     <emits code="200" kind="pr.close">PR 35 closed; nobody acts.</emits>
     <emits code="100" kind="ticket.request">The archive ticket of the fourteen cancels, to N-03.</emits>
     <emits code="200" kind="branch.delete">Design branch tagged and marked for deletion; N-45 acts.</emits>
@@ -140,19 +159,20 @@ flowchart LR
   </edges>
 
   <checklist id="checklist">
-    <item><check>The cancel set computed on main at GOFACTORY counts fourteen and matches the expected ids.</check><proof>The cancel-set JSON file and fourteen cancel 200 records with full titles; a test world with fifteen ready children yields 409 and one card.</proof></item>
+    <item><check>The cancel set computed on main at GOFACTORY counts fourteen and matches the expected ids.</check><proof>The cancel-set JSON file and fourteen cancel 200 records with full titles; a test world with fifteen ready children yields cancel 412 cancel-set-mismatch and one card.</proof></item>
     <item><check>PR 35 is closed with the comment naming D14 and the book.</check><proof>gh pr view 35 --json state,comments shows CLOSED and the comment; pr.close 200.</proof></item>
     <item><check>The design branch is tagged before deletion and deleted only after the harvest.</check><proof>git tag -l rebuild/spec-16-design-* non-empty; branch.delete 200 lists the harvesting tickets; N-45 cleanup.run row for the branch with the sha.</proof></item>
+    <item><check>bootstrap:state moves one state at a time, only on its proofs, and only N-50 writes it.</check><proof>A test world at B3 with the step 3 proof: one bootstrap.advanced 200 to B4 citing it; a control.resume ruling at B4 moves nothing; a Commit to bootstrap:state from another principal is 403 kind_not_permitted.</proof></item>
     <item><check>A missing ruling record stops the node with 412.</check><proof>A test world without the C41 record; cancel 412; no cancel records; one card.</proof></item>
     <item><check>No cancelled ticket is ever dispatched.</check><proof>N-07 test: a ticket with a cancel record is not in the ready set after the next tick.</proof></item>
     <item><check>Main and the store agree on the fourteen.</check><proof>The archive PR merged: the fourteen files under work-orders/archive with status cancelled and the D09 reason; N-51's audit shows no status lag row for them.</proof></item>
   </checklist>
 
   <permissions id="permissions">
-    <may role="system" do="compute the set; write cancel, pr.close, branch.delete; close PR 35; tag the design branch; request the archive ticket"/>
-    <may role="owner" do="answer GOFACTORY (owner page or CLI); rule a different cancel set on the 409 card; rule on the w3 card"/>
+    <may role="system" do="compute the set; write cancel, pr.close, branch.delete; advance bootstrap:state on its proofs; close PR 35; tag the design branch; request the archive ticket"/>
+    <may role="owner" do="answer GOFACTORY (owner page or CLI); rule a different cancel set on the cancel-set-mismatch card; rule on the w3 card"/>
     <may-not role="seat" do="cancel a ticket; close a PR; delete or tag a branch"/>
-    <may-not role="relay" do="carry GOFACTORY or the 409 cancel-set answer; a relayed or imported answer authorizes nothing here"/>
+    <may-not role="relay" do="carry GOFACTORY or the cancel-set answer; a relayed or imported answer authorizes nothing here"/>
     <may-not role="system" do="cancel outside the computed set; delete the design branch before the tag exists; delete before the harvest or the w3 default"/>
   </permissions>
 
@@ -164,7 +184,7 @@ flowchart LR
   </monitoring>
 
   <runbook id="runbook">
-    <step n="1" when="a 409 card">Read the set found; if the tree moved (a ticket was done or re-cut), answer with the set to cancel; the ruling re-runs the node.</step>
+    <step n="1" when="a cancel-set-mismatch card">Read the set found; if the tree moved (a ticket was done or re-cut), answer with the set to cancel; the ruling re-runs the node.</step>
     <step n="2" when="a 412 card">The GOFACTORY card did not list C41 or C42: N-28 posts a fresh GOFACTORY card that lists both, and the owner answers it on the owner page or CLI; no system lane writes a ruling for the owner.</step>
     <step n="3" when="the w3 card">Delete anyway (the tag keeps the files) or extend; the default is delete after 7 more days.</step>
     <step n="4" when="a file from the deleted branch is needed later">git show rebuild/spec-16-design-&lt;date&gt;:&lt;path&gt; from the mirror; no branch restore needed.</step>
@@ -198,7 +218,7 @@ flowchart LR
     <need kind="rejected">shared/rejected-with-reason.xml#spec-16 and #spec-17 entries for the SPEC-16 domain specs, SPEC-17 1.0.1, the 1.1.0 draft and PR 35's export, each with the reason and what was harvested (proto, interfaces, fake clock, H01 to H26, B1 to B10).</need>
     <need kind="store-table">ticket status values including cancelled with reason and ruling id; a query for children of an epic by status at a sha; leases cutover:run.</need>
     <need kind="record-kinds">cancel, pr.close, branch.delete, ruling (with card_id and decision), ticket.request, merge (with source_branch and source_sha on the ticket).</need>
-    <need kind="status-codes">200, 409 set mismatch (owner acts), 412 ruling missing (owner acts), 423.</need>
+    <need kind="status-codes">200, 412 cancel-set-mismatch or ruling-missing (owner acts), 423; bootstrap.advanced 200, bootstrap.foundation 201, bootstrap.ready 201.</need>
     <need kind="n-29">answers.jsonl rows C34 to C42 and rulings-r02.jsonl rows C43 to C58 are imported at bring-up as evidence (source import, keyed by card id), never as owner answers; the GOFACTORY card lists the ones this node acts on.</need>
     <need kind="n-17 n-18">Small-cut tickets carry source_branch and source_sha when their files come from the design branch.</need>
     <need kind="config">cutover.epic WO-20261012-ea33, cutover.expected_count 14, cutover.harvest_timeout P14D, cutover.harvest_default_days 7, cutover.pr 35.</need>

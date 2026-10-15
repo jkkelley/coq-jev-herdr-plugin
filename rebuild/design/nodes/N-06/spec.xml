@@ -14,15 +14,27 @@
      Cost: a declared need is not a live pointer until shared/ lands; check.sh matches each need's volume and anchor against the
      shared volumes when they land, so no hand edit happens here. Cross-group edges point at volumes that now exist, and at
      index.xml#<node-id> for a node whose volume has not landed, because the index entry is the one anchor every node is guaranteed. -->
-<volume id="N-06" kind="node-spec" node="N-06" group="G1" version="1.1.0" written="2026-10-14T05:01:33Z" timezone="UTC">
+<!-- N-06 book 1.1.0, 2026-10-15T06:00:00Z.
+     What broke (review dispositions F01, F11, F15; verification NF-A7, NF12, NF20): one user unit ran the service and the
+     launcher, the seats were child process groups inside its cgroup, and KillMode=mixed on a restart or a watchdog kill
+     killed every seat, so every deploy charged an attempt per running seat; the whole line ran as the owner's uid; a store
+     that could not open "raised one card" through the store that could not open; ticks and health were called entities
+     while every entity write was also a record; the duplicate-instance exit 3 collided with the missing-config exit 3 and
+     no RestartPreventExitStatus stopped the loop.
+     The fix: two system units, coq-svc.service (User=coq-svc, the service) and coq-launch.service (User=coq-launch, the
+     launcher), per shared/authority.xml#principals; each seat runs in its own transient unit in coq-launch's user manager,
+     outside both service cgroups, so a restart of either unit kills no seat and the launcher adopts runs by unit name;
+     store-down is seen by the outside probe (shared/outside-probe.xml); ticks and health are entity-only kinds
+     (shared/contracts.xml#entity-only); a duplicate instance is exit 4 with RestartPreventExitStatus=4. -->
+<volume id="N-06" kind="node-spec" node="N-06" group="G1" version="1.1.0" written="2026-10-15T06:00:00Z" timezone="UTC">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG and principles</entry>
     <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
     <entry ref="purpose">Purpose</entry>
-    <entry ref="input">Input record: unit.start</entry>
+    <entry ref="input">Input record: unit.start of the two system units</entry>
     <entry ref="output">Output records: tick and health</entry>
-    <entry ref="mechanism">Mechanism: one systemd user unit, one clock, five tick loops, one health answer</entry>
+    <entry ref="mechanism">Mechanism: two system units, per-run seat units, one clock, the tick loops, one health answer</entry>
     <entry ref="start">How it starts without an agent typing</entry>
     <entry ref="waits">Every wait, its timeout and its fallback</entry>
     <entry ref="retries">Retries up to 3, then recover and report</entry>
@@ -30,6 +42,7 @@
     <entry ref="status-codes">Status codes this node emits</entry>
     <entry ref="state-paths">State paths and the cleanup script for each</entry>
     <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples (checked by C22)</entry>
     <entry ref="checklist">Checklist with proofs</entry>
     <entry ref="permissions">Permissions</entry>
     <entry ref="monitoring">Monitoring</entry>
@@ -50,39 +63,47 @@
     <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 2 (no cog: N-06 owns the clock, nothing starts by an agent typing) and rule 7 (herdr is the owner's window; every system process is its own supervised unit)</principle>
     <principle href="../../dag.md#8-many-agents-at-once" role="principle">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, 409 that reports</principle>
     <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <shared href="../../shared/authority.xml#principals" role="authority">The service and launcher users these units run as</shared>
+    <shared href="../../shared/authority.xml#seat-isolation" role="authority">Seats run as pool users in their own units</shared>
+    <shared href="../../shared/contracts.xml#run-states" role="contract">The per-run unit and the run entity the launcher adopts by</shared>
+    <shared href="../../shared/contracts.xml#kill-authority" role="contract">Who stops a seat's unit</shared>
+    <shared href="../../shared/contracts.xml#entity-only" role="contract">Ticks and health write no record unless the state changes</shared>
+    <shared href="../../shared/outside-probe.xml#probe" role="probe">Store or host down is seen from outside the host</shared>
+    <shared href="../../shared/outside-probe.xml#journal" role="probe">N-06 imports the probe journal and replays the emergency journal on recovery</shared>
     <shared href="../../shared/cut-over.xml#step-system" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
   </pointers>
   <shared-needs id="shared-needs">
     <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares. check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
-    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for unit.started 100; tick (subkinds scheduler, poll, backup, stall, health, daily) 100; health.recovered 200; reload.applied 200; tick.missed 500; unit.crashloop 500; unit.duplicate 500; reload.failed 500; health.unhealthy 503. Owner-acts: unit.crashloop; health.unhealthy with reason store, disk or crashloop; tick.missed at three in an hour; three watchdog restarts in an hour.</need>
-    <need kind="store-table" volume="shared/state-store.xml" anchor="table-ticks">Entities tick:&lt;subkind&gt; (n, at, interval_seconds, class for backup) written by compare-and-swap once per tick; the tick record carries subkind, n, at.</need>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for unit.started 100; tick.daily 100; health.recovered 200; reload.applied 200; tick.missed 500; unit.crashloop 500; unit.duplicate 500; reload.failed 500; host.outage 500; health.unhealthy 503. tick and health are entity-only kinds and carry no code row of their own. Owner-acts: unit.crashloop; health.unhealthy with reason store, disk or crashloop; tick.missed at three in an hour; three watchdog restarts in an hour.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-ticks">Entities tick:&lt;subkind&gt; (n, at, interval_seconds, class for backup), entity-only (shared/contracts.xml#entity-only): written by compare-and-swap once per tick, no record except tick.missed.</need>
     <need kind="store-table" volume="shared/state-store.xml" anchor="table-health">Entity health:service (status, reasons[], counters, version, config_hash, at) and table health_history(at, status, reasons JSON) appended on transition; pruned by cleanup-logs.sh --health.</need>
     <need kind="principle" volume="shared/principles.xml" anchor="system-before-agents">The system comes up before humans and agents; the unit is 100 percent operational and checked before the line is kicked (global rule: design first, system first).</need>
     <need kind="principle" volume="shared/principles.xml" anchor="no-cog">Every wait has a timeout and a fallback; nothing starts by an agent typing; the clock is the only trigger.</need>
     <need kind="principle" volume="shared/principles.xml" anchor="monitor-never-stops">The owner's always-on monitor never stops on a halt: ticks, health, backups, the poll and the push transport keep running under hold (memory rule bearings-stable-is-the-only-always-on-monitor).</need>
-    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">tick intervals scheduler 5, poll 30, stall 15, health 15, backup 21600, daily 00:05Z; drain_seconds 30, reload_seconds 10, health.check_seconds 2, health.keep_days 30, logs.keep_days 14; env COQ_STATE, COQ_REPO, XDG_RUNTIME_DIR, the secrets file path.</need>
-    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="crash">Restart=always in 5 s, no start limit; unit.started with reason; three in ten minutes is unit.crashloop and one card; the unit keeps restarting because a dark line is worse than a noisy one.</need>
-    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="duplicate-instance">A second binary started by hand: flock on STATE/run/service.lock refuses, exit 3, unit.duplicate 500 naming the holder pid.</need>
+    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">tick intervals scheduler 5, poll 30, stall 15, health 15, backup 21600, daily 00:05Z; drain_seconds 30, reload_seconds 10, health.check_seconds 2, health.keep_days 30, logs.keep_days 14; env COQ_STATE, COQ_REPO and the secrets file path; a missing key is exit 3 naming the key; exit 4 is a duplicate instance and nothing else.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="crash">Restart=always in 5 s, StartLimitIntervalSec=0 (never give up), RestartPreventExitStatus=4; unit.started with reason; three in ten minutes is unit.crashloop and one card; seats are untouched by a service restart.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="duplicate-instance">A second binary started by hand: flock on STATE/run/service.lock (or STATE/run/launcher.lock) refuses, exit 4, unit.duplicate 500 naming the holder pid; RestartPreventExitStatus=4 keeps systemd from looping on it.</need>
     <need kind="failure-case" volume="shared/failure-cases.xml" anchor="suspend-gap">WSL suspend and wake: tickers fire once each, the tick counter shows the gap, tick.missed once per subkind.</need>
   </shared-needs>
 
   <purpose id="purpose">
-    <is>N-06 is the machine that starts the factory: one systemd user unit runs the one Go binary; the binary owns the one clock; the clock emits every tick the other nodes run on (scheduler, poll, backup, stall, daily); and the unit answers health for the whole service so monitoring is the system reporting on itself.</is>
+    <is>N-06 is the machine that starts the factory: two systemd system units run the two long-lived processes as their own users (shared/authority.xml#principals): coq-svc.service runs coq-service (every node in-process, the one clock, the store) as coq-svc, and coq-launch.service runs the launcher (N-15) as coq-launch. The clock emits every tick the other nodes run on, and the service answers health for the whole line.</is>
+    <is>Seats are never children of either unit: each run is its own transient unit coq-seat-&lt;run_id&gt; in coq-launch's user manager (shared/contracts.xml#run-states), so restarting, upgrading or watchdog-killing a service unit kills no seat; the launcher adopts its runs by unit name when it comes back.</is>
     <is>It is the root of the DAG's time: no node polls on its own timer and no agent starts anything; the system comes up before humans and agents, like starting the machines before the line is kicked (global rule: design first, system first).</is>
-    <is-not>It is not herdr: herdr is the owner's window only (D08, C46); no pane hosts this process, and no node calls herdr to schedule, route or store. It is not a container: the small cut runs the binary on the host under systemd (D22, C38), not in Podman.</is-not>
+    <is-not>It is not herdr: herdr is the owner's window only (D08, C46); no pane hosts this process, and no node calls herdr to schedule, route or store. It is not a container: the small cut runs the binaries on the host under systemd (D22, C38), not in Podman (containers deferred, shared/authority.xml).</is-not>
     <decisions>D01, D08 (C46: every system process is its own supervised unit), D22 (C38), D09 (C41: small cut, keep interfaces and the fake clock), SPEC-16 sh-unit (one supervised unit, domain loops as goroutines) kept.</decisions>
   </purpose>
 
   <input id="input">
     <record kind="unit.start" schema="record.schema.json#/$defs/unit_start">
-      <who>systemd --user, at boot through linger, on crash through Restart=always, or on `systemctl --user start coq-service` by the owner.</who>
-      <field name="unit">coq-service.service.</field>
+      <who>The system manager (systemd PID 1), at boot (WantedBy=multi-user.target), on crash through Restart=always, or on `sudo systemctl start coq-svc` by the owner.</who>
+      <field name="unit">coq-svc.service or coq-launch.service.</field>
       <field name="reason">boot, restart, manual, watchdog.</field>
-      <field name="env">COQ_STATE, COQ_REPO, XDG_RUNTIME_DIR and the secrets file path; nothing else; every tunable is in scheduler/config/scheduler.json (SPEC-16 l-config kept: a missing key is exit 3 naming the key).</field>
+      <field name="env">COQ_STATE, COQ_REPO and the secrets file path; nothing else; every tunable is in scheduler/config/scheduler.json (a missing key is exit 3 naming the key).</field>
     </record>
     <also kind="SIGTERM" from="systemd stop or restart" note="drain, then exit 0 within drain_seconds"/>
     <also kind="SIGHUP or `scheduler ctl reload`" from="the owner or N-43" note="reload tables and config; the clock and the ticks are not restarted"/>
-    <also kind="flag:hold entity" from="N-29 and N-42" note="read every tick; a hold stops dispatch and merges, never ticks, health or backups (bearings-stable-is-the-only-always-on-monitor: a halt never stops monitoring)"/>
+    <also kind="flag:hold entity" from="N-44 (the only flag writer, shared/contracts.xml#statements)" note="read every tick; a hold stops seat grants, work-class leases and merges, never ticks, health, backups or the probe import (a halt never stops monitoring)"/>
   </input>
 
   <output id="output">
@@ -90,32 +111,37 @@
       <field name="subkind">scheduler (tick.scheduler_seconds 5), poll (forge.poll_seconds 30), backup (backup.interval_seconds 21600, with class), stall (stall.tick_seconds 15), daily (tick.daily_at 00:05Z).</field>
       <field name="at">UTC from the service clock.</field>
       <field name="n">A per-subkind counter that only grows since start, with the start id, so a late or doubled tick is detectable.</field>
-      <rule>Ticks are entities, not log records: the entity tick:SUBKIND is CAS-written every tick (version grows) and broadcast in-process to the node loops; the records log gets only tick.missed 500 (a tick late by two intervals) and tick.daily 100, because 17,280 scheduler ticks a day in the log would bury every real record and flood N-31.</rule>
+      <rule>tick is an entity-only kind (shared/contracts.xml#entity-only): the entity tick:SUBKIND is CAS-written every tick and broadcast in-process to the node loops, and no record is appended; the log gets only tick.missed 500 and tick.daily 100. Book 1.0 said the same but every entity write was also a record (NF-A7); the entity-only registration is what makes it true.</rule>
     </record>
     <record kind="health" code="200 or 503" schema="record.schema.json#/$defs/health">
       <field name="status">serving or not_serving, the grpc.health.v1 answer, plus the reason list when not serving.</field>
       <field name="checks">store (N-01), forge (N-04 snapshot age), backup (N-05 age), leases (sweep age), ticks (every subkind's age), disk (free under STATE), unit (pid, started_at, version, config hash).</field>
       <field name="counters">Every counter the six G1 nodes and the other service nodes expose, by name, reset at start (SPEC-16.I kept as the shape: counters live in the answer, no metrics server).</field>
-      <rule>health is an entity health:service CAS-written every health.tick_seconds 15 and pushed by N-31; the log gets health.unhealthy 503 and health.recovered 200 once per transition (latched), never per tick.</rule>
+      <rule>health is an entity-only kind: health:service is CAS-written every health.tick_seconds and pushed by N-31 as an entity frame; the log gets health.unhealthy 503 and health.recovered 200 once per status transition, never per tick.</rule>
     </record>
   </output>
 
   <mechanism id="mechanism">
-    <component name="unit">scheduler/host/systemd/coq-service.service, installed by `make -C scheduler install-unit` into ~/.config/systemd/user/: Type=notify, ExecStart=%h/.local/bin/coq-service run (the binary make build wrote, copied by install), Restart=always, RestartSec=5, StartLimitIntervalSec=0 (never give up: a crash loop is visible in health history, and giving up is the 9.5 h dark outage of L06 section 5.2 again), WatchdogSec=60 (the binary sends WATCHDOG=1 every 20 s from the tick loop, so a hung loop is killed and restarted by systemd, never by a pane reader), TimeoutStopSec=drain_seconds plus 10, EnvironmentFile=%h/.local/state/coq/coq-jev-herdr-plugin/config/service.env, KillMode=mixed. `loginctl enable-linger` is a runbook step so the unit starts at boot with no login.</component>
+    <component name="units">Two system unit files, installed by `sudo make -C scheduler install-units` into /etc/systemd/system/ (sources scheduler/host/systemd/coq-svc.service and coq-launch.service, planned):
+      coq-svc.service: User=coq-svc, Group=coq-svc, Type=notify, ExecStart=/usr/local/bin/coq-service run, RuntimeDirectory=coq (mode 0750, so /run/coq holds store.sock and control.sock), Restart=always, RestartSec=5, StartLimitIntervalSec=0, RestartPreventExitStatus=4, WatchdogSec=60, TimeoutStopSec=drain_seconds plus 10, KillMode=mixed, EnvironmentFile=STATE/config/service.env, UMask=0077, NoNewPrivileges=yes.
+      coq-launch.service: User=coq-launch, Group=coq-launch, SupplementaryGroups=coq-store, Type=notify, ExecStart=/usr/local/bin/coq-launcher run, Requires and After coq-svc.service, the same Restart, StartLimit, RestartPreventExitStatus and Watchdog values, KillMode=mixed.
+      Restart and StartLimit agree in both: restart every 5 s forever (a crash loop is visible in health history and through unit.crashloop; giving up is the 9.5 h dark outage of L06 section 5.2), except exit 4, which a restart cannot fix. KillMode=mixed is safe because neither cgroup holds a seat.</component>
+    <component name="seat-units">The launcher starts each run with `systemd-run --user --unit=coq-seat-&lt;run_id&gt; --collect -p KillMode=control-group -p TimeoutStopSec=&lt;kill.grace_seconds&gt; -p RuntimeMaxSec=&lt;bound&gt;` in coq-launch's own user manager (`loginctl enable-linger coq-launch`, an install step), whose ExecStart is coq-seat-exec start and whose ExecStop is coq-seat-exec kill (shared/authority.xml#seat-isolation). The unit is in user@&lt;coq-launch uid&gt;.service, not in coq-svc.service or coq-launch.service, so stopping either service unit leaves it running; on start the launcher lists coq-seat-* units and adopts each by the run entity run:&lt;run_id&gt; (shared/contracts.xml#run-states). Only the kill authority of shared/contracts.xml#kill-authority stops a seat unit.</component>
     <component name="clock">core.Clock (scheduler/internal/core/interfaces.go) with the real implementation returning time.Now().UTC() and testkit.Clock for tests; every node receives the clock by injection; nothing calls time.Now directly (go vet rule in lint: a grep for time.Now outside clock.go fails the build).</component>
     <component name="ticks">Package scheduler/internal/unit: one goroutine per subkind on a time.Ticker from the clock; each tick writes the entity tick:SUBKIND and sends on a per-subkind channel with a buffer of 1; a slow consumer coalesces ticks (level-triggered consumers do not need every tick, T03), and a consumer that has not drained in two intervals is reported tick.missed with the subkind.</component>
-    <component name="health">grpc.health.v1.Health on the control socket XDG_RUNTIME_DIR/coq/control.sock (mode 0600) plus Status (the SPEC-16 Scheduler service shape: Health, Status, Reload, Drain, Retry kept on the same proto, generated code regenerated by `make proto` in the build container). Every check is a function returning ok or a reason with a bound of health.check_seconds 2; a check over its bound is a reason itself.</component>
+    <component name="health">grpc.health.v1.Health on the control socket /run/coq/control.sock (coq-svc:coq-store, mode 0660) plus Status (the SPEC-16 Scheduler service shape: Health, Status, Reload, Drain, Retry kept on the same proto, generated code regenerated by `make proto` in the build container). Every check is a function returning ok or a reason with a bound of health.check_seconds 2; a check over its bound is a reason itself.</component>
     <mermaid id="m-start">sequenceDiagram
-  participant SD as systemd --user
+  participant SD as systemd (system manager)
   participant U as coq-service run
   participant ST as N-01 store
   participant T as tick loops
   participant H as health
-  SD->>U: ExecStart (boot by linger, or Restart)
+  SD->>U: ExecStart as coq-svc (boot, or Restart)
   U->>U: resolve STATE (state-root rule), load config (exit 3 on a missing key)
   U->>ST: open, quick_check, migrate (3 attempts)
   ST-->>U: SERVING or NOT_SERVING
   U->>U: recover: N-02 leases, N-03 claims, N-05 temps, flag backup:running
+  U->>ST: replay STATE/run/emergency.jsonl, import the probe journal
   U->>T: start scheduler, poll, backup, stall, daily loops
   U->>H: serve control.sock, store.sock
   U->>SD: READY=1
@@ -130,40 +156,43 @@
   U->>ST: finish in-flight, checkpoint TRUNCATE, close
   U->>SD: exit 0 within drain_seconds</mermaid>
     <schedule>Scheduler 5 s, poll 30 s, stall 15 s, health 15 s, backup every 6 h with class tick, daily at 00:05Z (and backup class daily at the first backup tick after 03:00Z, monthly at the first daily of a month). All from config keys named in record.schema.json; a tick interval under 1 s or over a day is a config validation error at start.</schedule>
-    <hold>The entity flag:hold (set by N-29 from a control.action or a card) is read into memory on every scheduler tick; N-07 and N-09 check it before any dispatch or merge; ticks, health, backups, the forge poll and the push transport keep running under hold, because the owner's monitor never stops on a halt.</hold>
+    <hold>The entity flag:hold (written only by N-44) is read into memory on every scheduler tick; N-02's grant guard and N-09 check it; ticks, health, backups, the forge poll, the push transport and every maintenance lease keep running under hold, because the owner's monitor never stops on a halt.</hold>
+    <recovery>On every start and on every transition of the store check to serving, N-06 replays STATE/run/emergency.jsonl (operation key N-06/emergency.replay/&lt;sha256 of the line&gt;/r1) and imports the probe's journal as host.outage records (operation key N-06/host.outage/&lt;outage_id&gt;/r1), per shared/outside-probe.xml#journal; both are replays when repeated.</recovery>
     <counters>Every node registers counters by name at start; Status returns them all; a reset at start is itself a counter (unit.restarts_total is read from the health history in the store, so it survives restarts).</counters>
   </mechanism>
 
   <start id="start">
-    <rule>Nothing starts by an agent typing. systemd starts the unit at boot because linger is enabled; a crash is restarted in 5 s; a hang is killed by the watchdog and restarted. The owner's only hand action is the one-time install in the runbook.</rule>
-    <step n="1">Install once: `make -C scheduler install-unit` copies the binary to ~/.local/bin/coq-service, writes the unit file, runs `systemctl --user daemon-reload`, `enable --now`, and prints `loginctl enable-linger` if linger is off; the Makefile target is the one hand step and it is a script in the repository.</step>
+    <rule>Nothing starts by an agent typing. The system manager starts both units at boot; a crash is restarted in 5 s; a hang is killed by the watchdog and restarted. The owner's only hand action is the one-time install in the runbook.</rule>
+    <step n="1">Install once, as the owner with sudo: `sudo make -C scheduler install-units` runs scheduler/host/bin/install-users.sh (planned: creates coq-svc, coq-launch, the coq-seat-01..16 pool and group coq-store per shared/authority.xml#principals), copies the binaries to /usr/local/bin, writes both unit files, runs `systemctl daemon-reload`, `enable --now coq-svc coq-launch` and `loginctl enable-linger coq-launch`; the Makefile target is the one hand step and it is a script in the repository.</step>
     <step n="2">Start sequence as in the diagram; unit.started 100 with version, config hash, STATE path and reason; READY=1 only after the store is SERVING and the sockets listen.</step>
-    <step n="3">A start that cannot open the store after 3 attempts still reaches READY=1 with health not_serving and reason store, so the health answer and the push to the owner's page work while the store does not (the monitor stays up when the line is down); N-28 raises one card.</step>
+    <step n="3">A start that cannot open the store after 3 attempts still reaches READY=1 with health not_serving and reason store; nothing is carded through the store that cannot open. The stable page's /livez reports store down and the outside probe alerts the owner within its bound (shared/outside-probe.xml#probe, #alerting); records that could not commit go to the emergency journal and are replayed on recovery.</step>
     <step n="4">The old bash watchers (route.sh, flow.sh, policy.sh, the five watch scripts) are not started by anything once this unit is enabled; N-49 and N-50 retire their units and cache copies (04-UNLANDED section 8).</step>
   </start>
 
   <waits id="waits">
-    <wait name="store-open" on="N-01" timeout="3 x 5 s then not_serving" fallback="READY with health not_serving; card; the unit keeps retrying the open every health tick so a fixed disk recovers without a restart"/>
+    <wait name="store-open" on="N-01" timeout="3 x 5 s then not_serving" fallback="READY with health not_serving; the outside probe alerts (shared/outside-probe.xml#alerting); the unit keeps retrying the open every health tick so a fixed disk recovers without a restart"/>
     <wait name="tick-consumer" on="a node loop draining its tick channel" timeout="2 intervals" fallback="tick.missed 500 for the subkind; the tick is coalesced, never queued; health lists the slow subkind"/>
     <wait name="health-check" on="each check function" timeout="health.check_seconds 2" fallback="the check reports timeout as its reason; the health answer is never blocked by one check"/>
-    <wait name="watchdog" on="the tick loop sending WATCHDOG=1" timeout="WatchdogSec 60" fallback="systemd kills and restarts; unit.started reason watchdog; three watchdog restarts in an hour is an owner-acts code through N-28"/>
+    <wait name="watchdog" on="the tick loop sending WATCHDOG=1" timeout="WatchdogSec 60" fallback="systemd kills and restarts the unit, never a seat (seats are in their own units); unit.started reason watchdog; three watchdog restarts in an hour is an owner-acts code through N-28"/>
+    <wait name="probe-import" on="the probe's journal over the tailnet" timeout="10 s per request, 3 attempts (shared/outside-probe.xml#journal)" fallback="leave the journal on the Pi and retry on the next daily tick"/>
     <wait name="drain" on="in-flight work at SIGTERM" timeout="drain_seconds 30" fallback="exit anyway; systemd's TimeoutStopSec kills at drain plus 10; the store's WAL makes that safe"/>
     <wait name="reload" on="config and tables reloading" timeout="reload_seconds 10" fallback="the old tables stay loaded; reload.failed 500 names the key; the ctl call returns the failure"/>
   </waits>
 
   <retries id="retries">
     <rule>Every automated step retries up to 3 times, then recovers and reports.</rule>
-    <step name="open">3 attempts at start, then not_serving and one card, with the open retried every health tick thereafter (recovery without the owner when the cause clears).</step>
-    <step name="crash">Restart=always with RestartSec 5 and no start limit; each start appends unit.started with reason; three crashes in ten minutes is unit.crashloop 500, one card, and the unit keeps restarting because a dark line is worse than a noisy one (L06 section 5.2: the dead man's switch never fired in a 9.5 h outage).</step>
+    <step name="open">3 attempts at start, then not_serving with the open retried every health tick thereafter (recovery without the owner when the cause clears); the owner hears of it from the outside probe, not from a card, and the outage is recorded as host.outage on recovery.</step>
+    <step name="crash">Restart=always with RestartSec 5 and no start limit, except exit 4; each start appends unit.started with reason; three crashes in ten minutes is unit.crashloop 500 and one card; running seats are not touched and are adopted by the launcher. A crash loop that also keeps the store down is seen by the outside probe (L06 section 5.2: the in-host dead man's switch never fired in a 9.5 h outage).</step>
     <step name="health-write">A CAS 409 on health:service (only possible after a restart overlap) is re-read and rewritten once; a store 503 skips this tick's write and the next tick writes.</step>
     <step name="reload">A failed reload is reported and not retried by itself; the next `ctl reload` or SIGHUP tries again; the running tables are never half-replaced.</step>
   </retries>
 
   <many-agents id="many-agents">
     <reading>Every node, screen and seat reads one health entity and the tick entities through the store or N-31; the Status RPC is read-only and serves any number of callers concurrently.</reading>
-    <working>One process is the rule: the unit file's single instance plus a flock on STATE/run/service.lock taken at start; a second binary started by hand exits 3 with unit.duplicate 500 before touching the store, so two clocks can never tick one store.</working>
+    <working>One process per unit is the rule: each unit's single instance plus a flock (STATE/run/service.lock for coq-service, STATE/run/launcher.lock for the launcher) taken at start; a second binary started by hand exits 4 with unit.duplicate 500 before touching the store, so two clocks can never tick one store; RestartPreventExitStatus=4 keeps a doubled unit from looping.</working>
     <collision name="two-instances">A hand start while the unit runs: the flock refuses; the record names the pid that holds it.</collision>
-    <collision name="restart-during-tick">systemd restarts the unit while a scheduler tick dispatches: the dispatch is a lease plus an idempotent Put (N-02, N-07), so the new instance's first tick finds the lease live and does not dispatch twice (level-triggered compare of open work with live runs).</collision>
+    <collision name="restart-during-tick">systemd restarts coq-svc while a scheduler tick dispatches: GrantDispatch is one Commit under one operation key (N-07), so the new instance's first tick finds the lease reserved and does not dispatch twice.</collision>
+    <collision name="deploy-with-seats-running">The owner upgrades and restarts both units while eight seats run: the seats are in their coq-seat-* units in coq-launch's user manager and keep running; their heartbeats miss at most one interval (lease ttl is far longer, shared/contracts.xml#timing); the new launcher lists the units and adopts each by run:&lt;run_id&gt;; no attempt is charged (F11).</collision>
     <collision name="tick-burst">The host sleeps and wakes (WSL suspend): the tickers fire once each, not once per missed interval (Go's Ticker drops ticks), the tick counter shows the gap, and tick.missed is reported once per subkind.</collision>
     <collision name="hold-vs-dispatch">The owner sets hold during a tick: the flag is read at the start of the tick; a dispatch already past the check completes (it holds a lease and will finish); the next tick holds. Hold is a level, not an interrupt.</collision>
     <collision name="non-stable-tier-stop">A dev or uat tier page idle-stops or stops unclean: N-06 counts the page.down (100 for a clean idle stop, 500 for a crash) on that tier's own lamp and in its restart counter; it writes no alert and no wake, and a STOPPED from a non-stable tier is a record, never a prompt to the architect (nodes/N-32/spec.xml#tier-rules, rule wake-only-stable). Only a stable-tier page.down 500 or watcher.dead 500 reaches the owner, as a card through N-28.</collision>
@@ -178,26 +207,28 @@
     <emits code="200" kind="reload.applied" acts="nobody; N-43 reads the loaded hash"/>
     <emits code="500" kind="tick.missed" acts="N-06 itself (health reason); owner card at three in an hour"/>
     <emits code="500" kind="unit.crashloop" acts="owner, one card from N-28"/>
-    <emits code="500" kind="unit.duplicate" acts="the person who typed the second start; the record says so"/>
+    <emits code="500" kind="unit.duplicate" acts="the person who typed the second start; the record says so (exit 4)"/>
     <emits code="500" kind="reload.failed" acts="the caller; the config ticket is wrong"/>
+    <emits code="500" kind="host.outage" acts="owner, at most one card per outage_id after the fact; the probe already alerted (shared/outside-probe.xml#journal)"/>
     <emits code="503" kind="health.unhealthy" acts="owner through N-28 when the reason is owner-acts (store, disk, crashloop); otherwise the named node's own fallback"/>
     <rule>Every code above must exist in ../../shared/status-codes.xml#codes with the same meaning and actor.</rule>
   </status-codes>
 
   <state-paths id="state-paths">
-    <path p="~/.config/systemd/user/coq-service.service" writer="make -C scheduler install-unit" cleanup="scheduler/host/bin/cleanup-unit.sh --apply: `systemctl --user disable --now coq-service`, remove the unit file and the binary copy; dry-run prints the three commands" registry="N-45"/>
-    <path p="~/.local/bin/coq-service" writer="make -C scheduler install-unit" cleanup="scheduler/host/bin/cleanup-unit.sh" registry="N-45"/>
-    <path p="STATE/run/service.lock, STATE/run/service.pid" writer="N-06 at start" cleanup="scheduler/host/bin/cleanup-run.sh removes them when no live pid holds the lock; refuses otherwise" registry="N-45"/>
-    <path p="STATE/config/service.env" writer="the owner, once (secrets: forge tokens)" retention="never" acts="owner" cleanup="kept on purpose; listed in the README so cleanup-run.sh skips it by name; only the owner removes it, by break glass" registry="N-45"/>
+    <path p="/etc/systemd/system/coq-svc.service, /etc/systemd/system/coq-launch.service" writer="sudo make -C scheduler install-units" cleanup="scheduler/host/bin/cleanup-unit.sh --apply (owner, sudo): disable --now both units, remove the unit files and the binaries; dry-run prints the commands" registry="N-45" trigger="owner" acts="owner"/>
+    <path p="/usr/local/bin/coq-service, /usr/local/bin/coq-launcher" writer="sudo make -C scheduler install-units" cleanup="scheduler/host/bin/cleanup-unit.sh (owner)" registry="N-45" trigger="owner" acts="owner"/>
+    <path p="STATE/run/service.lock, STATE/run/launcher.lock, STATE/run/service.pid" writer="N-06 at start" cleanup="scheduler/host/bin/cleanup-run.sh removes them when no live pid holds the lock; refuses otherwise" registry="N-45" trigger="unit-stop" acts="system"/>
+    <path p="STATE/run/emergency.jsonl" writer="any node whose Commit failed (shared/outside-probe.xml#journal)" cleanup="truncated by N-06's replay only after every line committed; scheduler/host/bin/cleanup-run.sh never touches it" registry="N-45" trigger="timer" acts="system"/>
+    <path p="STATE/config/service.env" writer="the owner, once (secrets: forge tokens)" retention="never" cleanup="kept on purpose; listed in the README so cleanup-run.sh skips it by name; only the owner removes it, by break glass" registry="N-45" trigger="owner" acts="owner"/>
     <path p="STATE/logs/service/unit.jsonl" writer="N-06 structured log (starts, ticks missed, health transitions, reloads)" cleanup="scheduler/host/bin/cleanup-logs.sh (logs.keep_days 14)" registry="N-45"/>
-    <path p="XDG_RUNTIME_DIR/coq/control.sock" writer="N-06 at start" cleanup="removed at drain; cleanup-run.sh removes a stale one" registry="N-45"/>
+    <path p="/run/coq/control.sock" writer="N-06 at start (RuntimeDirectory of coq-svc.service)" cleanup="systemd removes /run/coq at stop; scheduler/host/bin/cleanup-run.sh removes a stale one" registry="N-45" trigger="unit-stop" acts="system"/>
     <path p="STATE/store/coq.db (entities tick:*, health:service, table health_history)" writer="N-06 through N-01" cleanup="health_history rows older than health.keep_days 30 are pruned by scheduler/host/bin/cleanup-logs.sh --health" registry="N-45"/>
-    <path p="journald: `journalctl --user -u coq-service`" writer="systemd" cleanup="journald's own retention; `journalctl --user --vacuum-time=14d` is in cleanup-logs.sh --journal" registry="N-45"/>
+    <path p="journald: `journalctl -u coq-svc -u coq-launch`" writer="systemd" cleanup="journald's own retention; `journalctl --vacuum-time=14d` is in scheduler/host/bin/cleanup-logs.sh --journal" registry="N-45" trigger="timer" acts="system"/>
   </state-paths>
 
 
   <edges id="edges">
-    <in from="systemd --user" record="unit.start" href="spec.xml#input"/>
+    <in from="systemd (system manager)" record="unit.start" href="spec.xml#input" drawn="false"/>
     <out to="N-04" record="poll tick" href="../N-04/spec.xml#input"/>
     <out to="N-05" record="backup tick with class" href="../N-05/spec.xml#input"/>
     <out to="N-07" record="scheduler tick" href="../N-07/spec.xml#input"/>
@@ -209,28 +240,37 @@
     <also to="N-02 (sweep) and N-03 (evaluate)" record="stall tick and scheduler tick" note="in-group consumers; the drawn edges go through N-07 and N-12"/>
   </edges>
 
+  <examples id="examples">
+    <example schema="record.schema.json#/$defs/tick">{"subkind":"scheduler","at":"2026-10-15T06:30:05Z","n":4211,"start_id":"20261015T001000Z-100-s7a2t","interval_seconds":5}</example>
+    <example schema="record.schema.json#/$defs/unit_started">{"id":"20261015T001000Z-100-s7a2t","at":"2026-10-15T00:10:00Z","kind":"unit.started","code":100,"node":"N-06","epoch":1,"unit":"coq-svc.service","reason":"restart","version":"1.1.0","config_hash":"0c5ad1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e","state_root":"/var/lib/coq-svc/state/coq-jev-herdr-plugin","store_status":"serving","seats_adopted":8}</example>
+    <example schema="record.schema.json#/$defs/host_outage">{"id":"20261015T091500Z-500-h0u7g","at":"2026-10-15T09:15:00Z","kind":"host.outage","code":500,"node":"N-06","epoch":1,"outage_id":"o-20261015T080200Z","state":"store-down","started_at":"2026-10-15T08:02:00Z","ended_at":"2026-10-15T09:14:30Z","passes_failed":145,"alerts_sent":2}</example>
+  </examples>
+
   <checklist id="checklist">
-    <item><check>The unit file has Type=notify, Restart=always, RestartSec=5, StartLimitIntervalSec=0, WatchdogSec=60, EnvironmentFile under STATE.</check><proof>`systemctl --user cat coq-service` saved in the test log; scheduler/host/tests asserts the keys.</proof></item>
+    <item><check>Both unit files have their User, Type=notify, Restart=always, RestartSec=5, StartLimitIntervalSec=0, RestartPreventExitStatus=4, WatchdogSec=60; coq-svc has RuntimeDirectory=coq and EnvironmentFile under STATE.</check><proof>`systemctl cat coq-svc coq-launch` saved in the test log; scheduler/host/tests asserts the keys (not-run).</proof></item>
+    <item><check>A seat started by the launcher is in user@&lt;coq-launch uid&gt;.service/app.slice/coq-seat-&lt;run_id&gt;.service; `systemctl restart coq-svc coq-launch` leaves it running and the launcher adopts it.</check><proof>Host test: start a sleep seat, restart both units, read /proc/PID/cgroup before and after, find run.adopted (not-run).</proof></item>
     <item><check>READY=1 is sent only after the store is SERVING and both sockets listen.</check><proof>Test with NOTIFY_SOCKET captured.</proof></item>
     <item><check>WATCHDOG=1 is sent every 20 s from the tick loop; a blocked loop stops it.</check><proof>Test with a blocked loop and a captured NOTIFY_SOCKET: no ping after the block.</proof></item>
     <item><check>Every subkind ticks at its configured interval and the tick entity's version grows by one per tick.</check><proof>Go test with testkit.Clock.</proof></item>
     <item><check>A consumer slower than two intervals yields one tick.missed and coalesced ticks, never a queue.</check><proof>Go test.</proof></item>
     <item><check>health:service is written every 15 s and transitions appear once each in the log.</check><proof>Go test: 100 ticks, 2 transitions, 2 records.</proof></item>
     <item><check>Hold stops dispatch and merges only; ticks, health, backup and poll continue.</check><proof>Integration test with flag:hold set: N-07 dispatch count 0, tick counters growing.</proof></item>
-    <item><check>A second instance exits 3 with unit.duplicate.</check><proof>Script test starting the binary twice.</proof></item>
+    <item><check>A second instance exits 4 with unit.duplicate, and systemd does not restart it; a missing config key exits 3.</check><proof>Script test starting the binary twice and once with a key removed (not-run).</proof></item>
+    <item><check>With the store unable to open, no card is attempted; /livez reports store down; after recovery the emergency journal is replayed once and host.outage is imported once per outage.</check><proof>Host test on a test state root (not-run; shared/outside-probe.xml lists the go-live proof).</proof></item>
     <item><check>SIGTERM drains within drain_seconds and exits 0; the WAL is checkpointed.</check><proof>Script test; wal file size 0 after exit.</proof></item>
     <item><check>No time.Now outside the clock implementation.</check><proof>lint grep rule passes.</proof></item>
     <item><check>Every state path above has its cleanup script, dry-run by default, registered in N-45.</check><proof>Each script run with no flags prints and exits 0; the registry lists them.</proof></item>
-    <item><check>The unit starts at boot without a login.</check><proof>`loginctl show-user $USER -p Linger` says yes; a reboot test shows unit.started reason boot in the log.</proof></item>
+    <item><check>The units start at boot without a login, and coq-launch's user manager runs without a login.</check><proof>`systemctl is-enabled coq-svc coq-launch` and `loginctl show-user coq-launch -p Linger` say yes; a reboot test shows unit.started reason boot (not-run).</proof></item>
   </checklist>
 
   <permissions id="permissions">
-    <actor name="systemd --user" may="start, stop, restart, watchdog-kill the unit"/>
+    <actor name="systemd (system manager)" may="start, stop, restart, watchdog-kill coq-svc.service and coq-launch.service"/>
+    <actor name="coq-launch's user manager" may="run and stop the coq-seat-* units; only the launcher asks it to (shared/contracts.xml#kill-authority)"/>
     <actor name="N-06 in-process" may="write tick and health entities, the lock and pid, notify systemd"/>
-    <actor name="N-29, N-42 (code)" may="set and clear flag:hold through a ruling or control.action record"/>
+    <actor name="N-44 (code)" may="set and clear flag:hold (the only flag writer), from N-29 rulings and N-42 controls"/>
     <actor name="N-43 (code)" may="call Reload after a status-code map commit"/>
-    <actor name="seat (the model)" may="`scheduler ctl health` read-only; never systemctl on this unit (the rendered seat settings deny it, N-13)"/>
-    <actor name="owner" may="install, enable, start, stop, restart; set hold from the Controls screen; break glass is the only path to stop the unit while the line runs, and the stop itself is recorded by the drain"/>
+    <actor name="seat (the model)" may="nothing: a pool user cannot reach the control socket or manage either unit (shared/authority.xml#seat-isolation)"/>
+    <actor name="owner" may="install, enable, start, stop, restart with sudo; `scheduler ctl health` and status over the control socket (group coq-store); set hold from the Controls screen; break glass is the only path to stop the units while the line runs, and the stop itself is recorded by the drain"/>
   </permissions>
 
   <monitoring id="monitoring">
@@ -247,13 +287,13 @@
   </monitoring>
 
   <runbook id="runbook">
-    <task name="install">`make -C scheduler build` then `make -C scheduler install-unit`; run the `loginctl enable-linger` line it prints if needed; `systemctl --user status coq-service` shows active (running).</task>
+    <task name="install">`make -C scheduler build` then `sudo make -C scheduler install-units`; `systemctl status coq-svc coq-launch` shows both active (running).</task>
     <task name="read health">`scheduler ctl health` (the grpc.health.v1 answer plus reasons) and `scheduler ctl status` (counters, ticks, tables, held and dead jobs).</task>
-    <task name="logs">`journalctl --user -u coq-service -f` for the process; STATE/logs/service/*.jsonl for structured lines by node.</task>
+    <task name="logs">`journalctl -u coq-svc -u coq-launch -f` for the processes; STATE/logs/service/*.jsonl for structured lines by node.</task>
     <task name="reload config or tables">Merge the config ticket; `scheduler ctl reload`; reload.applied names the hashes.</task>
-    <task name="hold the line">From the Controls screen (N-42) or `scheduler ctl hold set --reason ...` (recorded as a control.action through N-29); `hold clear` resumes; ticks and monitoring never stop.</task>
-    <task name="restart">`systemctl --user restart coq-service`; the drain finishes in-flight Puts; leases survive (N-02 recover); nothing is lost.</task>
-    <task name="upgrade the binary">`make -C scheduler build` then `make -C scheduler install-unit`, then restart; the version appears in unit.started.</task>
+    <task name="hold the line">From the Controls screen (N-42) or `scheduler ctl hold set --reason ...` (a control.action through N-29, applied by N-44); clearing it is an owner ruling; ticks and monitoring never stop.</task>
+    <task name="restart">`sudo systemctl restart coq-svc coq-launch`; the drain finishes in-flight Commits; seats keep running in their own units; leases survive (N-02 recover); the launcher adopts its runs; nothing is lost and no attempt is charged.</task>
+    <task name="upgrade the binary">`make -C scheduler build` then `sudo make -C scheduler install-units`, then restart; the version appears in unit.started.</task>
     <task name="cleanup">scheduler/host/bin/cleanup-unit.sh, cleanup-run.sh, cleanup-logs.sh; dry-run first.</task>
   </runbook>
 
@@ -263,6 +303,8 @@
     <item source="scheduler/config/scheduler.json" what="belt.file and belt.stale_seconds as the liveness signal; seat.busy_regex and seat.done_regex screen reads" reason="liveness is systemd's watchdog plus the health entity's age; screen regexes are K04 and V08 violations (an LLM screen is not a probe)"/>
     <item source="rebuild/investigation/L01-line-scripts.md#8-what-to-carry-forward" what="watchdog.timer as a separate dead man's switch unit" reason="item 10 is honoured by WatchdogSec in the same unit plus the bearings page staleness; a second unit that counts records was the one that never fired (L06 section 5.2); the exit test (N-51) is the outside-the-line timer that remains"/>
     <item source="rebuild/investigation/04-UNLANDED.md#8-runtime-and-scripts-outside-the-repository" what="~/.cache/coq-watch/patrol-tick.sh and watchdog.sh as running line processes" reason="their probes are health checks here; the scripts are retired by N-49 under the LAND verdicts of WO-20261013-9617 and WO-20261013-bf70, which fold into this node"/>
+    <item source="nodes/N-06/spec.xml" what="one systemd user unit as the owner with KillMode=mixed and the seats as child process groups (book 1.0)" reason="every restart, deploy or watchdog kill killed every seat and charged an attempt per seat, and every process ran as the owner (F01, F11); two system units under their own users and one transient unit per seat replace it"/>
+    <item source="nodes/N-06/spec.xml" what="one card when the store cannot open (book 1.0)" reason="a card is a commit to the store that cannot open (F15); the outside probe alerts instead"/>
     <item source="scheduler/host/bin/run.sh" what="run.sh resolving the image digest and passing env into a container pane" reason="no container for the service; the digest pin survives for the pod images (N-22)"/>
     <item source="rebuild/investigation/03-DECISIONS.md#24-d22-which-steps-stay-on-the-wsl-host-and-which-go-to-pods" what="the Go service as a cluster pod (option C)" reason="C38 ruled test steps in pods and the service on the host; the store is a host file (SQLite does not work over a network filesystem)"/>
   </rejected>
@@ -296,7 +338,7 @@
     <source path="rebuild/factory-rebuild-plan.xml" anchor="no-cog"/>
     <source path="rebuild/factory-rebuild-plan.xml" anchor="failure-cases"/>
     <source path="~/.claude/CLAUDE.md" anchor="hard-rule-design-first-system-first-never-by-hand"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/bearings-stable-is-the-only-always-on-monitor.md" note="one-page memory rule; no heading, so the pointer is the file"/>
-    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-cog-system-drives.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/bearings-stable-is-the-only-always-on-monitor.md" note="one-page memory rule"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/no-cog-system-drives.md" note="one-page memory rule"/>
   </sources>
 </volume>

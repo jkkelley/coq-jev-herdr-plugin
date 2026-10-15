@@ -2,83 +2,170 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "rebuild/design/nodes/N-50/record.schema.json",
   "title": "N-50 Cut-over records: input and output records",
-  "description": "Parent: ../../index.xml#N-50. Sibling: spec.xml. Envelope as in ../N-43/record.schema.json#/$defs/envelope.",
-  "oneOf": [ { "$ref": "#/$defs/input" }, { "$ref": "#/$defs/output" } ],
+  "description": "Parent: ../../index.xml#N-50. Sibling: spec.xml. Book 1.1.0: shared envelope through ../N-43/record.schema.json#/$defs/envelope; cancel-set mismatch is 412; N-50 is the only writer of bootstrap:state and emits bootstrap.advanced, bootstrap.foundation and bootstrap.ready (shared/cut-over.xml#bootstrap).",
+  "oneOf": [{"$ref": "#/$defs/input"}, {"$ref": "#/$defs/output"}],
   "$defs": {
-    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
-    "ticket-id": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
-    "envelope": { "$ref": "../N-43/record.schema.json#/$defs/envelope" },
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "ticket-id": {"type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$"},
+    "envelope": {"$ref": "../N-43/record.schema.json#/$defs/envelope"},
     "input": {
       "oneOf": [
-        { "title": "ruling (from N-29): GOFACTORY, D09 (C41) or D14 (C42)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "ruling" }, "body": { "type": "object", "required": ["card_id"], "properties": { "signal": { "type": "string", "enum": ["GOFACTORY"] }, "card_id": { "type": "string" }, "decision": { "type": "string", "pattern": "^D[0-9]{2}$" }, "pick": { "type": "integer" }, "choice": { "type": "string" }, "words": { "type": "string", "maxLength": 240 } } } } },
-        { "title": "merge (from N-09) of a small-cut ticket naming the design branch", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "merge" }, "body": { "type": "object", "required": ["pr", "merge_sha", "ticket"], "properties": { "pr": { "type": "integer" }, "merge_sha": { "$ref": "#/$defs/sha" }, "ticket": { "$ref": "#/$defs/ticket-id" }, "source_branch": { "type": "string" }, "source_sha": { "$ref": "#/$defs/sha" } } } } }
+        {
+          "title": "ruling (from N-29): GOFACTORY, D09 (C41) or D14 (C42)",
+          "allOf": [{"$ref": "#/$defs/envelope"}],
+          "properties": {
+            "kind": {"const": "ruling"},
+            "body": {
+              "type": "object",
+              "required": ["card_id"],
+              "properties": {
+                "signal": {"type": "string", "enum": ["GOFACTORY"]},
+                "card_id": {"type": "string"},
+                "decision": {"type": "string", "pattern": "^D[0-9]{2}$"},
+                "pick": {"type": "integer"},
+                "choice": {"type": "string"},
+                "words": {"type": "string", "maxLength": 240}
+              }
+            }
+          }
+        },
+        {
+          "title": "merge (from N-09) of a small-cut ticket naming the design branch",
+          "allOf": [{"$ref": "#/$defs/envelope"}],
+          "properties": {
+            "kind": {"const": "merge"},
+            "body": {
+              "type": "object",
+              "required": ["pr", "merge_sha", "ticket"],
+              "properties": {
+                "pr": {"type": "integer"},
+                "merge_sha": {"$ref": "#/$defs/sha"},
+                "ticket": {"$ref": "#/$defs/ticket-id"},
+                "source_branch": {"type": "string"},
+                "source_sha": {"$ref": "#/$defs/sha"}
+              }
+            }
+          }
+        }
       ]
     },
     "cancel": {
-      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
-        "kind": { "const": "cancel" },
-        "code": { "enum": [200, 409, 412] },
+        "kind": {"const": "cancel"},
+        "code": {"enum": [200, 409, 412]},
         "body": {
           "type": "object",
           "required": ["epic", "ruling_id"],
           "properties": {
-            "ticket": { "$ref": "#/$defs/ticket-id" },
-            "title": { "type": "string", "minLength": 10, "description": "full title from the ticket file" },
-            "epic": { "$ref": "#/$defs/ticket-id" },
-            "ruling_id": { "type": "string" },
-            "reason": { "type": "string", "maxLength": 240 },
-            "archive_request": { "type": "string", "description": "ticket.request id of the archive PR" },
-            "set_found": { "type": "array", "items": { "$ref": "#/$defs/ticket-id" }, "description": "on 409: the computed set" },
-            "expected_count": { "type": "integer", "const": 14 },
-            "missing_ruling": { "type": "string", "enum": ["C41", "C42"] },
-            "owner_acts": { "type": "boolean" }
+            "ticket": {"$ref": "#/$defs/ticket-id"},
+            "title": {"type": "string", "minLength": 10, "description": "full title from the ticket file"},
+            "epic": {"$ref": "#/$defs/ticket-id"},
+            "ruling_id": {"type": "string"},
+            "reason": {"type": "string", "maxLength": 240, "description": "cancel-set-mismatch or ruling-missing on 412; the D09 reason on 200"},
+            "archive_request": {"type": "string", "description": "ticket.request id of the archive PR"},
+            "set_found": {"type": "array", "items": {"$ref": "#/$defs/ticket-id"}, "description": "on 412 cancel-set-mismatch: the computed set"},
+            "expected_count": {"type": "integer", "const": 14},
+            "missing_ruling": {"type": "string", "enum": ["C41", "C42"]},
+            "owner_acts": {"type": "boolean"}
           }
         }
       }
     },
     "pr-close": {
-      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
-        "kind": { "const": "pr.close" },
-        "code": { "enum": [200, 423] },
+        "kind": {"const": "pr.close"},
+        "code": {"enum": [200, 423]},
         "body": {
           "type": "object",
           "required": ["pr", "title", "ruling_id"],
           "properties": {
-            "pr": { "type": "integer", "const": 35 },
-            "title": { "type": "string" },
-            "head_sha": { "$ref": "#/$defs/sha" },
-            "branch": { "type": "string" },
-            "comment": { "type": "string", "maxLength": 1000 },
-            "comment_id": { "type": "string" },
-            "ruling_id": { "type": "string" },
-            "slot_released": { "type": "string", "description": "treehouse slot path" },
-            "error": { "type": "string", "maxLength": 240 }
+            "pr": {"type": "integer", "const": 35},
+            "title": {"type": "string"},
+            "head_sha": {"$ref": "#/$defs/sha"},
+            "branch": {"type": "string"},
+            "comment": {"type": "string", "maxLength": 1000},
+            "comment_id": {"type": "string"},
+            "ruling_id": {"type": "string"},
+            "slot_released": {"type": "string", "description": "treehouse slot path"},
+            "error": {"type": "string", "maxLength": 240}
           }
         }
       }
     },
     "branch-delete": {
-      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "allOf": [{"$ref": "#/$defs/envelope"}],
       "properties": {
-        "kind": { "const": "branch.delete" },
-        "code": { "enum": [200, 423] },
+        "kind": {"const": "branch.delete"},
+        "code": {"enum": [200, 423]},
         "body": {
           "type": "object",
           "required": ["branch", "sha", "reason"],
           "properties": {
-            "branch": { "type": "string" },
-            "sha": { "$ref": "#/$defs/sha" },
-            "tag": { "type": "string", "pattern": "^rebuild/spec-16-design-[0-9]{8}$" },
-            "harvested_by": { "type": "array", "items": { "$ref": "#/$defs/ticket-id" } },
-            "open_tickets_naming_branch": { "type": "array", "items": { "$ref": "#/$defs/ticket-id" } },
-            "reason": { "type": "string", "enum": ["harvest-complete", "harvest-late-default", "owner-ruling", "harvest-late"] },
-            "owner_acts": { "type": "boolean" }
+            "branch": {"type": "string"},
+            "sha": {"$ref": "#/$defs/sha"},
+            "tag": {"type": "string", "pattern": "^rebuild/spec-16-design-[0-9]{8}$"},
+            "harvested_by": {"type": "array", "items": {"$ref": "#/$defs/ticket-id"}},
+            "open_tickets_naming_branch": {"type": "array", "items": {"$ref": "#/$defs/ticket-id"}},
+            "reason": {"type": "string", "enum": ["harvest-complete", "harvest-late-default", "owner-ruling", "harvest-late"]},
+            "owner_acts": {"type": "boolean"}
           }
         }
       }
     },
-    "output": { "oneOf": [ { "$ref": "#/$defs/cancel" }, { "$ref": "#/$defs/pr-close" }, { "$ref": "#/$defs/branch-delete" } ] }
+    "output": {
+      "oneOf": [
+        {"$ref": "#/$defs/cancel"},
+        {"$ref": "#/$defs/pr-close"},
+        {"$ref": "#/$defs/branch-delete"},
+        {"$ref": "#/$defs/bootstrap-advanced"},
+        {"$ref": "#/$defs/bootstrap-proof"}
+      ]
+    },
+    "bootstrap-advanced": {
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "type": "object",
+      "required": ["body"],
+      "properties": {
+        "kind": {"const": "bootstrap.advanced"},
+        "code": {"const": 200},
+        "node": {"const": "N-50"},
+        "body": {
+          "type": "object",
+          "required": ["from", "to", "proofs", "state"],
+          "properties": {
+            "from": {"type": "string", "enum": ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8"]},
+            "to": {"type": "string", "enum": ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8"]},
+            "proofs": {"type": "array", "items": {"type": "string"}},
+            "state": {"$ref": "../../shared/contracts.schema.json#/$defs/bootstrap_state"},
+            "ruling_id": {"type": "string", "description": "GOFACTORY (B1 to B2) or USERGO (B7 to B8)"}
+          }
+        }
+      }
+    },
+    "bootstrap-proof": {
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "type": "object",
+      "required": ["body"],
+      "properties": {
+        "kind": {"enum": ["bootstrap.foundation", "bootstrap.ready"]},
+        "code": {"const": 201},
+        "node": {"const": "N-50"},
+        "body": {
+          "type": "object",
+          "required": ["proofs"],
+          "properties": {
+            "proofs": {
+              "type": "array",
+              "minItems": 1,
+              "items": {"type": "string"},
+              "description": "foundation: the passing test records; ready: the proof records of cut-over steps 2, 6 and 7"
+            },
+            "state_root": {"type": "string", "description": "foundation: the test state root it ran on"}
+          }
+        }
+      }
+    }
   }
 }

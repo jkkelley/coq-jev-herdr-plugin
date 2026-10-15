@@ -53,8 +53,8 @@ What this branch adds (PR 189, branch `rebuild/design`):
 What waits for the owner, in order:
 
 1. Read this file and close R-03 (decision 1 in [section 15](#15-decisions-for-the-owner)): the bootstrap enters B0, and B1 foundation tickets may be cut.
-2. Give GOFACTORY when you choose: B2 starts the runtime, the unlanded cleanup as a dry run first, and the cut-over steps.
-3. Give USERGO only when the line reports B7 with the proofs of cut-over steps 2, 6 and 7; it moves the line to B8 and clears the hold.
+2. GOFACTORY is yours alone, given when you choose: it moves the line to B2, which starts the runtime, the unlanded cleanup as a dry run first, and the cut-over steps.
+3. USERGO is yours alone too, and is accepted only once the line reports B7 with the proofs of cut-over steps 2, 6 and 7; it moves the line to B8 and clears the hold.
 4. Answer the open decisions of [section 15](#15-decisions-for-the-owner) (probe Pi, GitHub App, WSL interop, bootstrap merge path, Kaniko fork pin).
 
 The line is held today: the owner's USERHALT stands, product work is frozen (D19), and the stable bearings page is the one monitor that never stops.
@@ -255,7 +255,7 @@ Depth: [state store](shared/state-store.xml#purpose), [seat contract](shared/sea
 Every node turns one input record into one output record; a seat or a process on a node exists only between the two.
 An edge means the output record of the source is the input record of the target.
 The store (N-01) carries every record and the push transport (N-31) carries every page-bound record; their return edges are not drawn, because they would make every node a cycle through the store.
-Time loops (a retry, a phase change, an owner answer) are re-entries into the sink `RE` with a counter that only grows, so the graph stays acyclic: 52 nodes, 125 drawn edges, 12 re-entries, checked by Kahn's algorithm in [`bin/dag-check.py`](bin/dag-check.py) (check C16).
+Time loops (a retry, a phase change, an owner answer) are re-entries into the sink `RE` with a counter that only grows, so the graph stays acyclic: 52 nodes, 129 drawn edges, 12 re-entries, checked by Kahn's algorithm in [`bin/dag-check.py`](bin/dag-check.py) (check C16).
 Since 1.1.0 the same check compares the drawing with the edges every node volume declares, so a node cannot name an input the DAG does not show ([dag.md section 2.1](dag.md#21-declared-edges-that-are-not-drawn)).
 The acyclic drawing does not prove that the loops end: the [retry owner](shared/contracts.xml#retry-owner) and the [budgets](shared/retry-budget.xml#budgets) do, and the loops themselves are drawn as state machines in [section 8.4](#84-runtime-state-machines).
 
@@ -335,6 +335,7 @@ flowchart LR
   N-02 --> N-07
   N-02 --> N-12
   N-03 --> N-02
+  N-03 --> N-07
   N-03 --> N-09
   N-04 --> N-08
   N-04 --> N-35
@@ -355,8 +356,11 @@ flowchart LR
   N-06 --> N-49
   N-06 --> N-51
   N-07 --> N-11
+  N-07 --> N-12
   N-07 --> N-13
   N-07 --> N-14
+  N-07 --> N-15
+  N-07 --> N-28
   N-07 --> N-40
   N-08 --> N-09
   N-08 --> N-11

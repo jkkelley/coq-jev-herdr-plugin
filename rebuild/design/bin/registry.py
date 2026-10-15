@@ -23,7 +23,7 @@ a tracked file in a repository, a host path).
 Book 1.1.0 (review NF-E4, NF-E6, 2026-10-15): nothing defaults to a timer job any more. Book 1.0.0 turned every
 unmarked path into trigger timer, acts system, which scheduled owner break glass (removing main's branch protection),
 namespace deletes, unit uninstalls, tokens and the store database itself as system timer jobs. Now every path declares
-trigger and acts (R8); an entry whose glob or command is owner-acted (OWNER_RE: break glass, retire, uninstall,
+trigger and acts (R8); an entry whose glob or command is owner-acted (OWNER_GLOB_RE, OWNER_CMD_RE: break glass, retire, uninstall,
 disable, branch protection, namespace or PVC delete, a token, secret or credential, the store database, a unit file or
 a binary under ~/.local/bin) renders as trigger owner, acts owner when unmarked and fails R7 when marked otherwise,
 because the service never runs it (nodes/N-45/spec.xml#registry). R2 needs a real script path (a/b.sh, not any text
@@ -37,7 +37,7 @@ Checks (one line "FAIL C14 <volume> <detail>" each):
      page's Reset view; neither is a host state path);
   R4 ids are unique across the book; R5 the committed registry equals the generated one (--check);
   R6 every entry validates against shared/cleanup-registry.schema.json; a missing jsonschema module is a failure;
-  R7 an owner-acted entry (OWNER_RE matches its glob or command) declares trigger="owner" acts="owner";
+  R7 an owner-acted entry (owner_match: OWNER_GLOB_RE on its glob or OWNER_CMD_RE on its command) declares trigger="owner" acts="owner";
   R8 every path declares trigger (one of TRIGGERS) and acts (system or owner) explicitly.
 
 Usage: bin/registry.py [--check] [--out PATH]
@@ -60,12 +60,21 @@ EXTERNAL_MECH_RE = re.compile(r"(buildDiscarder|journalctl\s+--vacuum|retention:
 CLASSES = ("host", "store", "client", "external", "tracked")
 TRIGGERS = ("timer", "merge", "backup", "disposition", "owner", "unit-stop")
 ACTS = ("system", "owner")
-# R7: cleanups only the owner performs; matched on the glob and the command, never on the note.
-OWNER_RE = re.compile(
-    r"(break[- ]?glass|owner[- ]only|\bretire|\buninstall|\bdisable\b|install-units\.sh\s+--remove|"
-    r"branch[- ]protection|delete[- ]namespace|namespace\s+delete|whole namespace|-namespace\b|\bpvc\b|persistentvolumeclaim|"
-    r"\btokens?\b|secrets?/|credential|keyring|service\.env\b|coq\.db\b|store database|"
-    r"systemd/user/|\.local/bin/)", re.I)
+# R7: cleanups only the owner performs. Matched on the glob (what is deleted) and on the command (how), never on the note.
+OWNER_GLOB_RE = re.compile(
+    r"(branch[- ]protection|whole namespace|\bpvc\b|persistentvolumeclaim|\btokens?\b|secrets?/|credential|keyring|"
+    r"service\.env\b|coq\.db\s*$|store database|systemd/user/|\.local/bin/)", re.I)
+OWNER_CMD_RE = re.compile(
+    r"(break[- ]?glass|owner[- ]only|\bretire\b(?!-)|\buninstall|\bdisable\b|install-units\.sh\s+--remove|"
+    r"branch[- ]protection|delete[- ]namespace|namespace\s+delete|-namespace\b)", re.I)
+
+
+def owner_match(glob_text, cleanup):
+    """The R7 match, or None. A per-ticket template instance (glob with @<...>) stopped on merge is routine, not an uninstall."""
+    m = OWNER_GLOB_RE.search(glob_text.strip()) or OWNER_CMD_RE.search(cleanup)
+    if m and m.group(0).lower() == "disable" and "@<" in glob_text:
+        return None
+    return m
 
 
 def infer_class(glob_text, pid):
@@ -124,7 +133,7 @@ def collect():
                 retention = (a.get("retention") or "").strip()
                 trigger = (a.get("trigger") or "").strip()
                 acts = (a.get("acts") or "").strip()
-                owner_hit = OWNER_RE.search(g + " " + cleanup)
+                owner_hit = owner_match(g, cleanup)
                 if not trigger or not acts:
                     missing = " and ".join(x for x, v in (("trigger", trigger), ("acts", acts)) if not v)
                     want = 'trigger="owner" acts="owner"' if owner_hit else 'trigger="timer|merge|backup|disposition|owner|unit-stop" acts="system|owner"'

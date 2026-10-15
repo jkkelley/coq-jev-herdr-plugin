@@ -105,7 +105,7 @@
     <field name="argo_synced_at">UTC time the public healthz first answered with this sha, which is the only sync proof the host can read without cluster credentials.</field>
     <field name="haproxy_route">The host the Ingress routes, map.gatehouse.click.</field>
     <field name="public_200_at">UTC time GET https://map.gatehouse.click/ answered 200 with the hello marker.</field>
-    <field name="status">201, or 500 build-failed, 502 front-door-unreachable, 504 build-timeout or sync-timeout.</field>
+      <field name="status">201, or 500 build-failed, 502 front-door-unreachable, 504 build-timeout or sync-timeout.</field>
     <field name="attempt">1 to 3.</field>
     <s>A 2xx deploy record is the input of N-38 (the public name serves the bundle) and the evidence N-48 attaches its screenshot record to.</s>
   </output>

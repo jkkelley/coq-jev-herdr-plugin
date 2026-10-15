@@ -78,6 +78,7 @@
     </record>
     <example schema="record.schema.json#/$defs/output">{"id":"20261015T064000Z-201-s7t8u","at":"2026-10-15T06:40:00Z","seq":4200,"epoch":1,"kind":"gate.run","code":201,"node":"N-25","head_sha":"89abcdef0123456789abcdef0123456789abcdef","pr":57,"plan_attempt":1,"plan_kind":"pr","context":"coq/gate","state":"success","description":"12 units passed; 1 expected red","target_url":"https://jenkins.invalid/job/coq-gate/412/","counts":{"pass":11,"fail":0,"timeout":0,"infra":0,"superseded":0,"spec_check_pass":1,"spec_check_fail":0,"expected_red":1},"op_id":"N-25/status.post/89abcdef0123456789abcdef0123456789abcdef@coq/gate@1/r1","posted":{"ok":true,"status_id":901,"created_at":"2026-10-15T06:40:01Z","app_id":123456,"attempts":1}}</example>
     <example schema="record.schema.json#/$defs/status_post_failed">{"id":"20261015T064500Z-500-v9w0x","at":"2026-10-15T06:45:00Z","seq":4210,"epoch":1,"kind":"status.post.failed","code":500,"node":"N-25","head_sha":"89abcdef0123456789abcdef0123456789abcdef","pr":57,"context":"coq/gate","plan_attempt":1,"op_id":"N-25/status.post/89abcdef0123456789abcdef0123456789abcdef@coq/gate@1/r1","state_wanted":"success","error":"502 from api.github.com three times","attempts":3}</example>
+    <example schema="record.schema.json#/$defs/protection">{"id":"20261015T060000Z-200-y1z2a","at":"2026-10-15T06:00:00Z","seq":4000,"epoch":1,"kind":"protection.observed","code":200,"node":"N-25","branch":"main","config_sha256":"4444444444444444444444444444444444444444444444444444444444444444","observed_at":"2026-10-15T06:00:00Z","strict":true,"checks":[{"context":"coq/gate","app_id":123456}],"linear_history":true,"allow_force_pushes":false,"expected_app_id":123456,"drift":[]}</example>
     <example schema="record.schema.json#/$defs/expected_red_row">{"path":"factory/tests/cases/31-claims.test.sh","test_id":"claims-overlap-refused","content_sha256":"3333333333333333333333333333333333333333333333333333333333333333","ticket":"WO-20261015-ab12","expected_failure":{"kind":"message","match":"claim_overlap not refused"}}</example>
     <s>The gate page link: the Jenkins build page of the plan's build (http://${SITE_JENKINS_HOST}/job/coq-gate/N/, the host from the owner's site file) which holds every unit log and is reachable on the owner's LAN and tailnet; the bearings page (N-32) also shows the gate.run record per pull request, and the map's machine screen (N-39) links both.</s>
   </section>
@@ -89,7 +90,7 @@
     <step n="3" id="m-attempts">Error from infrastructure is not final at once: the gate run has plan-attempt tries (shared/retry-budget.xml#layers, max 2); on infra the node asks N-23 (or N-26) to plan attempt 2, a fresh build with its own operation key, and the status stays pending with "retrying attempt 2"; after attempt 2's infra the status is error and one card is posted by N-28 (dedupe key node:N-25:head_sha); the gate phase is never re-dispatched after that (gate-phase layer, max 1).</step>
     <step n="4" id="m-post">The post: the verdict's Commit writes gate.run and the effects row of operation status.post (shared/retry-budget.xml#operations) together; the outbox worker posts with an installation token of the coq-gate GitHub App (shared/authority.xml#credential-matrix row coq-gate), 10 s timeout per call, retried only by the status-post layer; before any repost it reads GET /repos/jkkelley/coq-jev-herdr-plugin/commits/&lt;sha&gt;/statuses for context coq/gate created by that app, and equal state and description is done (the read-back, never the snapshot); the status id and app id go into gate.run posted.</step>
     <step n="5" id="m-superseded">Supersession: N-07's tick compares each open pull request's head in forge.snapshot with the newest plan; when the head moved, N-07 writes plan.superseded 410 for the old sha, the Go service stops the old build, and this node posts error "superseded by &lt;new sha12&gt;" on the old sha, so no sha is ever left pending (the abortPrevious semantic of the old Jenkinsfile, now owned by the scheduler).</step>
-    <step n="6" id="m-required">The required check: branch protection on main requires context coq/gate with app_id forge.gate_app_id and strict true, applied once by the owner with forge-admin (shared/authority.xml#github-app); this node holds no administration credential and never applies or removes protection; the read-only protection check and its records protection.observed and protection.drift are defined at shared/authority.xml#github-app and nodes/N-04/record.schema.json#/$defs/protection, and N-09 reads them.</step>
+    <step n="6" id="m-required">The required check: branch protection on main requires context coq/gate with app_id forge.gate_app_id and strict true, applied once by the owner with forge-admin (shared/authority.xml#github-app); this node never applies or removes protection. The protection check is this node's and read-only: at service start and on the daily tick it reads GET /repos/jkkelley/coq-jev-herdr-plugin/branches/main/protection with forge-read and asserts strict true, a check entry coq/gate with that app_id, linear history and no force pushes; it writes protection.observed 200 (config hash, observed_at) when all hold and protection.drift 412 naming each difference with one card otherwise; N-09 reads them.</step>
     <step n="7" id="m-record">gate.run is the derived notification and the audit trail; the authority is the status on GitHub (D05), which N-08 reads from forge.snapshot; no node reads gate.run in place of the status.</step>
     <mermaid>
 flowchart LR
@@ -145,6 +146,8 @@ flowchart LR
     <emits code="500" name="STALLED or DEAD" kind="gate.run">coq/gate error after the last plan attempt; N-28 posts one card.</emits>
     <emits code="410" name="SUPERSEDED" kind="gate.run">coq/gate error superseded; nobody acts.</emits>
     <emits code="412" name="GATE_FAILED" kind="gate.run">coq/gate error plan refused (fork, no image, planner error); the worker lane acts.</emits>
+    <emits code="200" name="DONE" kind="protection.observed">Main's protection matches; N-09 reads the newest as its precondition.</emits>
+    <emits code="412" name="GATE_FAILED" kind="protection.drift">Protection differs from the expected configuration; one card; N-09 holds merges while it is the newest.</emits>
     <emits code="500" name="STALLED or DEAD" kind="status.post.failed">The coq/gate post failed after the status-post layer; one card; the head stays without a terminal status until the next post succeeds.</emits>
   </section>
 
@@ -162,7 +165,7 @@ flowchart LR
   </section>
 
   <section id="checklist" title="Checklist with proofs">
-    <item><check>coq/gate is a required status check on main with strict true and app_id forge.gate_app_id.</check><proof>The newest protection.observed 200 (shared/authority.xml#github-app) names the context and the app id (not-run).</proof></item>
+    <item><check>coq/gate is a required status check on main with strict true and app_id forge.gate_app_id.</check><proof>The newest protection.observed 200 of this node names the context and the app id (not-run).</proof></item>
     <item><check>A listed expected-red test failing as expected keeps the gate green; the same test passing turns it red.</check><proof>Verdict rule fixtures expected-red-hit, expected-red-wrong-reason, unexpected-pass, row-added-without-acceptance (not-run).</proof></item>
     <item><check>Every planned head ends with a terminal status: no sha stays pending past its bound.</check><proof>A daily query over forge.snapshot: zero heads with coq/gate pending older than PT3H; the alert in section monitoring.</proof></item>
     <item><check>The verdict rule is pure and tested: success, first failure named, infra error, superseded, empty plan.</check><proof>Go unit tests in the service package for the rule with the five fixtures; go test exit 0 in the scheduler suite's pod.run.</proof></item>
@@ -174,10 +177,10 @@ flowchart LR
   </section>
 
   <section id="permissions" title="Permissions">
-    <s>The Go service (coq-svc): the coq-gate GitHub App key, whose installation token has commit statuses write only, for the post; forge-read for the statuses read-back (shared/authority.xml#credential-matrix); no administration credential.</s>
+    <s>The Go service (coq-svc): the coq-gate GitHub App key, whose installation token has commit statuses write only, for the post; forge-read for the statuses read-back and the protection read (shared/authority.xml#credential-matrix); no administration write credential.</s>
     <s>Jenkins: no GitHub credential for the gate; Jenkins posts nothing to GitHub (shared/authority.xml#credential-matrix row jenkins-held covers only the image and map pipelines).</s>
     <s>Seats: no forge credential and no route to the forge (shared/authority.xml#seat-isolation); the verdict reaches them in their brief and in records.</s>
-    <s>The owner: branch protection is applied, changed or removed only with forge-admin from the owner's keyring as break glass; protection.drift (N-04) reports any change and carries one card until protection is back.</s>
+    <s>The owner: branch protection is applied, changed or removed only with forge-admin from the owner's keyring as break glass; protection.drift reports any change and carries one card until protection is back.</s>
   </section>
 
   <section id="monitoring" title="Monitoring">
@@ -189,7 +192,7 @@ flowchart LR
   <section id="runbook" title="Runbook">
     <step n="R1" id="r-red">A red pull request: the description names the unit; the log is behind the target_url and in the pod.run record; the fix is a new commit, which replans; nobody re-runs a failed assertion.</step>
     <step n="R2" id="r-error">An error status: superseded needs nothing; infrastructure after the ladder has a card; the N-24 runbook names the cause classes.</step>
-    <step n="R3" id="r-protection">Protection drift: the protection.drift card names what differs; the owner re-applies it with forge-admin (shared/authority.xml#github-app); this node changes nothing.</step>
+    <step n="R3" id="r-protection">Protection drift: the protection.drift 412 card names what differs; the owner re-applies it with forge-admin (shared/authority.xml#github-app); this node changes nothing.</step>
     <step n="R4" id="r-post-failed">status.post.failed: the card names the GitHub error; once GitHub answers, the next verdict tick posts through a new effect after the statuses read-back.</step>
     <step n="R5" id="r-cleanup">Cleanup: ci/bin/cleanup-ci-state.sh --what gate-verdicts --older-than 90d.</step>
   </section>
