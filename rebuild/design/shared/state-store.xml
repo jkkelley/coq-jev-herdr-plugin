@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Shared volume: the state store. One SQLite file under the state root behind the Go service (N-01): the record
-     envelope, every table and entity, leases with fencing tokens, compare-and-swap, idempotency, the stream, backups,
-     retention and the config key table. Validated by rebuild/design/check.sh against schema/volume.xsd. -->
-<volume id="state-store" kind="shared" version="1.0.0" issued="2026-10-14T06:30:00Z" timezone="UTC" title="State store">
+     envelope, every table and entity, compare-and-swap, the idempotency table, the stream, backups, retention and the
+     config key table. The cross-node contracts (operation keys, Store.Commit, the lease machine, fencing, the ticket
+     transitions, claims, the outbox, epochs, restore, timing) live in contracts.xml; this volume points at them. Validated by rebuild/design/check.sh against schema/volume.xsd. -->
+<volume id="state-store" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="State store">
 
   <contents id="contents">
     <entry ref="pointers">Pointers: parent, siblings, DAG, the envelope schema</entry>
     <entry ref="purpose">Purpose and the one-store rule</entry>
-    <entry ref="records">Records: envelope, append-only table, entities, idempotency, compare-and-swap, migrations, stream, apply</entry>
+    <entry ref="records">Records: envelope, append-only table, entities, epoch, idempotency, compare-and-swap, migrations, stream, apply</entry>
+    <entry ref="authority-tables">Principals, seat users and the effects outbox</entry>
     <entry ref="leases">Leases: table, fencing, heartbeats, attempts, slots</entry>
-    <entry ref="tickets">Tickets: tickets, claims, file claims, ticket sets, id mint</entry>
+    <entry ref="tickets">Tickets: tickets, claims, ticket sets, id mint</entry>
     <entry ref="flags">Flags: hold, build mode, freeze</entry>
     <entry ref="service-tables">Service tables: forge, backups, ticks, health, code table, registry, plans</entry>
     <entry ref="owner-tables">Owner-surface and governance tables</entry>
@@ -28,8 +30,11 @@
     <sibling href="failure-cases.xml#failure-cases" kind="shared"/>
     <sibling href="rejected-with-reason.xml#rejected-with-reason" kind="shared"/>
     <sibling href="command-center.xml#command-center" kind="shared"/>
+    <sibling href="contracts.xml#contracts" kind="shared"/>
     <dag href="../dag.md#3-every-node" row="N-01"/>
     <shared href="state-store.schema.json#/$defs/envelope" role="schema">The envelope as JSON Schema 2020-12; every node schema should $ref it</shared>
+    <shared href="contracts.schema.json#/$defs/commit_request" role="schema">The cross-node shapes: commit request and reply, lease row, effect row, cursor, store epoch</shared>
+    <shared href="authority.xml#principals" role="authority">Principals and peer credentials behind the principals and seat_users tables</shared>
     <shared href="../nodes/N-01/spec.xml#N-01" role="owner">N-01 owns the store, the migrations of the core tables and the id form</shared>
     <shared href="../nodes/N-02/spec.xml#N-02" role="leases">N-02 owns leases, the fencing token counter and heartbeats</shared>
     <shared href="../nodes/N-45/spec.xml#N-45" role="cleanup">N-45 owns retention and the cleanup registry</shared>
@@ -43,92 +48,154 @@
 
   <records id="records">
     <store-rule id="envelope" title="The record envelope every kind carries">
-      <statement>Fields (the one envelope, shared/state-store.schema.json#/$defs/envelope): required id (string, form YYYYMMDDTHHMMSSZ-CODE-xxxxx: UTC stamp, the code, five lowercase alphanumerics; unique per writer), at (UTC 2006-01-02T15:04:05Z, assigned by N-01 at commit when absent), kind (dotted lowercase), code (an integer in the live code table) and node (N-xx that wrote it); optional by (node id or seat id), attempt (0..3 where one applies; 0 means none), ticket (WO-id or CR-id), note (max 240) and schema_version (when present, 2.0.0); seq (assigned by N-01 at commit, never on input) and hash (canonical JSON by RFC 8785 of the body, set by N-01). A committed record carries seq (committed_envelope), which is what N-07 and every reader requires.</statement>
-      <statement>Not envelope fields: the put request carries the idempotency_key (required on every put), the lease_token (the integer fencing token, required on every system-job write and on every seat write) and the entity write (key, expected_version, body) for a compare-and-swap, as nodes/N-01/record.schema.json#/$defs/record_put defines them. A lease body names its fencing token token and its lease key key (WO-id:phase:attempt, no prefix; nodes/N-02/record.schema.json#/$defs/lease_body); the entity row for a lease is the string lease:KEY, which is the entities table key, never a field of the record. The token is an integer from the counter lease_token: the string form t-000184 and a lease: prefix on a record field were rejected because N-01 (fencing), N-02 (lease_body) and N-07 (dispatch) already carry an integer token and an unprefixed key.</statement>
+      <statement>Fields (the one envelope, shared/state-store.schema.json#/$defs/envelope): required id (string, form YYYYMMDDTHHMMSSZ-CODE-xxxxx: UTC stamp, the code, five lowercase alphanumerics; unique per writer), kind (dotted lowercase), code (an integer in the live code table) and node (N-xx that wrote it; checked against the caller, shared/authority.xml#role-derivation); optional on input at (UTC 2006-01-02T15:04:05Z, assigned by N-01 at commit when absent), by (set by N-01 from the authenticated caller), attempt (0..3 where one applies; 0 means none), ticket (WO-id or CR-id), note (max 240) and schema_version (when present, 2.0.0); set by N-01 at commit, never trusted on input: seq, epoch (contracts.xml#epoch-cursor) and hash (canonical JSON by RFC 8785 of the body). A committed record carries seq, at and epoch (committed_envelope), which is what N-07 and every reader requires.</statement>
+      <statement>Not envelope fields: the commit request (contracts.xml#batch, contracts.schema.json#/$defs/commit_request) carries the operation_key (contracts.xml#operation-keys; required on every Commit), the lease it acts under as {key, token} (contracts.xml#fencing), preconditions, entity writes, owner-registered statements and outbox effects. Lease state lives only in the leases table (contracts.xml#lease-machine); there is no lease:KEY entity. A lease body names its fencing token token and its key key (ticket:phase:attempt or a system key, contracts.schema.json#/$defs/lease_key). The token is an integer from counter:lease_token: the string form t-000184 and a lease: prefix on a record field were rejected because N-01 (fencing), N-02 (lease_body) and N-07 (dispatch) carry an integer token and an unprefixed key.</statement>
       <statement>Ruling on the id form: N-01 owns the records table and today's event writers already mint the UTC-stamp form (events/schema/event.schema.json), so the book keeps it; the r-prefixed form some G4 and G7 schemas repeat is rejected with reason (rejected-with-reason.xml#envelope-id-form) and those schemas $ref state-store.schema.json#/$defs/envelope by their own ticket.</statement>
-      <example schema="../nodes/N-02/record.schema.json#/$defs/lease_granted">{"schema_version":"2.0.0","id":"20261014T063000Z-201-k3v9q","at":"2026-10-14T06:30:00Z","kind":"lease.granted","code":201,"node":"N-02","seq":5101,"ticket":"WO-20261014-ab12","attempt":1,"key":"WO-20261014-ab12:worker:1","phase":"worker","role":"worker","holder":"20261014T063005Z-100-p2m7d","token":184,"generation":1,"granted_at":"2026-10-14T06:30:00Z","expires_at":"2026-10-14T06:45:00Z","heartbeat_seconds":30}</example>
-      <source>N-01 spec.xml#input; events/schema/event.schema.json; nodes/N-02/record.schema.json#/$defs/lease_granted (the example validates against it, bin/check-examples.py, check C22); G5 schemas embed it by allOf; N-43 record.schema.json#/$defs/envelope.</source>
+      <example schema="../nodes/N-02/record.schema.json#/$defs/lease_granted">{"schema_version":"2.0.0","id":"20261014T063000Z-201-k3v9q","at":"2026-10-14T06:30:00Z","kind":"lease.granted","code":201,"node":"N-02","by":"N-07","seq":5101,"epoch":1,"ticket":"WO-20261014-ab12","attempt":1,"key":"WO-20261014-ab12:worker:1","class":"seat","state":"reserved","phase":"worker","role":"worker","holder":"d-20261014063000-p2m7dq","token":184,"generation":1,"version":1,"granted_at":"2026-10-14T06:30:00Z","expires_at":"2026-10-14T06:32:00Z","heartbeat_seconds":30}</example>
+      <source>N-01 spec.xml#input; events/schema/event.schema.json; nodes/N-02/record.schema.json#/$defs/lease_granted (the example validates against it, bin/check-examples.py, check C22: a seat lease as GrantDispatch leaves it, reserved with the start grace, holder the dispatch id); G5 schemas embed it by allOf; N-43 record.schema.json#/$defs/envelope.</source>
     </store-rule>
     <store-table id="table-records" name="records" owner="N-01" mode="append-only">
-      <purpose>Every record of every kind; the only log; seq strictly increasing; a row is never updated or deleted except by N-45 retention.</purpose>
-      <column name="seq" type="INTEGER PRIMARY KEY" key="pk"/>
+      <purpose>Every record of every kind; the only log; seq strictly increasing and never reused, not gapless (contracts.xml#epoch-cursor); a row is never updated; N-45 retention deletes rows of expired classes and advances store:epoch min_retained_seq in the same Commit.</purpose>
+      <column name="seq" type="INTEGER PRIMARY KEY AUTOINCREMENT" key="pk"/>
+      <column name="epoch" type="INTEGER"/>
       <column name="id" type="TEXT UNIQUE"/>
       <column name="at" type="TEXT"/>
       <column name="code" type="INTEGER"/>
       <column name="kind" type="TEXT"/>
       <column name="node" type="TEXT"/>
+      <column name="by" type="TEXT"/>
       <column name="ticket" type="TEXT NULL"/>
       <column name="attempt" type="INTEGER"/>
+      <column name="op_key" type="TEXT"/>
       <column name="body" type="JSON"/>
       <column name="hash" type="TEXT"/>
       <rule>Indexes: (kind, seq), (ticket, seq), (code, seq); the query "newest record of kind K for key X with code C" is one index read.</rule>
-      <rule>A put whose code is not in the live code table is 400 with the live hash in the reason; a put of a line-op kind by a seat is 403; a duplicate id is 409 record.conflict key=id.</rule>
-      <rule>A multi-record put under one idempotency key commits all rows or none (N-51 verdict plus freeze flip).</rule>
+      <rule>A record whose code is not in the live code table is 400 with the live hash in the reason; a kind the authenticated principal may not write is 403 record.refused (kind_not_permitted, shared/authority.xml#role-derivation); a duplicate id is 409 record.conflict reason id.</rule>
+      <rule>Every write is one Store.Commit (contracts.xml#batch): its records, entity writes, statements and effects commit all or none under one operation key (N-51 verdict plus freeze flip, N-18 set admission plus id mint, GrantDispatch).</rule>
     </store-table>
     <store-table id="table-entities" name="entities" owner="N-01" mode="cas">
-      <purpose>Current state by key (ticket entities, flags, counters, snapshots, health); every write is compare-and-swap on version and is also a record.</purpose>
+      <purpose>Current state by key (counters, snapshots, health, ticks, page state, run:RUN_ID, kill:RUN_ID, store:epoch); every write is compare-and-swap on version inside a Commit; an entity-only kind appends no record unless its state changes (contracts.xml#entity-only), every other entity write rides with the record that explains it.</purpose>
       <column name="key" type="TEXT PRIMARY KEY" key="pk"/>
       <column name="kind" type="TEXT"/>
       <column name="version" type="INTEGER"/>
       <column name="body" type="JSON"/>
       <column name="updated_seq" type="INTEGER"/>
       <column name="updated_at" type="TEXT"/>
-      <rule>version grows by one per write; updated_seq is the seq of the record that last wrote it; expected 0 inserts.</rule>
+      <rule>version grows by one per write; updated_seq is the seq of the record that last wrote it (unchanged by an entity-only write); expected 0 inserts. counter:lease_token's version is the last issued token (contracts.xml#dispatch).</rule>
     </store-table>
+    <store-rule id="store-epoch" title="Entity store:epoch">
+      <statement>Entity store:epoch (contracts.schema.json#/$defs/store_epoch): epoch, started_at, cause (created, restored, migrated), min_retained_seq. Created at epoch 1 with the store; bumped only by a restore (contracts.xml#restore); min_retained_seq advanced by N-45 retention. Every record, Tail frame and cursor carries the epoch (contracts.xml#epoch-cursor).</statement>
+    </store-rule>
     <store-table id="table-idempotency" name="idempotency" owner="N-01" mode="append-only">
-      <purpose>A seen key replays its response with code 200; the same key with a different payload is 409 record.conflict; the same payload is a no-op.</purpose>
-      <column name="key" type="TEXT PRIMARY KEY" key="pk"/>
-      <column name="seq" type="INTEGER"/>
-      <column name="response" type="JSON"/>
+      <purpose>One row per committed operation key (contracts.xml#operation-keys): the same key with the same request hash replays the stored reply with 200 reason replayed and writes nothing; the same key with a different request hash is 409 idempotency_mismatch before any write or effect.</purpose>
+      <column name="key" type="TEXT PRIMARY KEY" key="pk">operation key, contracts.schema.json#/$defs/operation_key; its node segment equals the authenticated caller's node</column>
+      <column name="kind" type="TEXT">the kind of the first record, or entity when the Commit wrote entities only</column>
+      <column name="node" type="TEXT"/>
+      <column name="request_hash" type="TEXT">sha256 of the RFC 8785 canonical commit request with every record's id, at, seq and hash removed</column>
+      <column name="epoch" type="INTEGER"/>
+      <column name="seq" type="INTEGER NULL">the first seq the Commit appended</column>
+      <column name="response" type="JSON">the commit_reply</column>
       <column name="at" type="TEXT"/>
-      <rule>Keys in use: pr:head:verdict, pr:head, pr:head:conflict, main_sha:hold, hold:ID:aged, lease_key:generation, node:N-xx:KEY for every system job, sha plus attempt (N-35), atlas sha256 (N-36), client id plus counter (N-38, N-39, N-41, N-42), window plus tick minute (N-40), card source id (N-28), message id (N-30), set_id plus key (N-18).</rule>
+      <rule>The key forms in use are the op-key rows of contracts.xml#operation-keys and nowhere else; one effect, one key.</rule>
+      <retention>Kept as long as the records it names; deleted with them by N-45.</retention>
     </store-table>
-    <store-rule id="idempotency" title="Idempotent puts">
-      <statement>Every automated step writes under a key; a retry of the step replays the first response (200) and never creates a second record; a step whose outcome is unknown re-runs by its key (failure-cases.xml#unknown-outcome).</statement>
+    <store-rule id="idempotency" title="Idempotent commits">
+      <statement>Every automated step commits under its operation key; a retry of the step replays the first reply (200) and never creates a second record or effect; a step whose outcome is unknown re-runs by its key (failure-cases.xml#unknown-outcome), and an external effect is looked up by its op_id before any resend (contracts.xml#outbox).</statement>
     </store-rule>
     <store-rule id="cas" title="Compare-and-swap">
-      <statement>An entity write carries expected_version; a miss is 409 with the current version in the reason and the writer re-reads; expected 0 inserts; used by lease generation, merge.hold.lifted, forge:snapshot, backup:latest, tick:*, health:service, flag:hold, build-mode.state, break-glass.token, alert.ack, the tier pointer, page.state, ack, plan.step and plan.side.</statement>
+      <statement>An entity write carries expected_version; a miss is 409 reason version with the current version in the reply and the writer re-reads; expected 0 inserts; used by counter:lease_token, merge.hold.lifted, forge:snapshot, backup:latest, tick:*, health:service, store:epoch, run:*, kill:*, break-glass.token, alert.ack, the tier pointer, page.state, ack, plan.step and plan.side. Node-owned table rows (leases, tickets, claims, flags, effects) change only through owner-registered statements (contracts.xml#statements), each guarded by the row's version.</statement>
     </store-rule>
     <store-rule id="migrations" title="Forward-only migrations">
       <statement>Table migrations(id INTEGER PRIMARY KEY, name, node, applied_at); applied in order at open inside one transaction each; never a down migration; the node owning a table owns its migration file under scheduler/internal/store/migrations/ and its test; a migration that fails leaves the store closed (store.corrupt 500) rather than half-applied.</statement>
     </store-rule>
     <store-rule id="stream" title="The record.committed stream">
-      <statement>Subscribe(class, filter, Last-Event-ID) streams seq in order over gRPC; a client that reconnects sends its last seq and re-reads the full snapshot of its class before applying new frames (D21, principles.xml#level-triggered); a slow client past stream.buffer is dropped (429 push.client.dropped) and re-subscribes; nothing is lost because the log is the truth.</statement>
+      <statement>Store.Tail(class, filter, cursor) streams committed records in seq order over gRPC with the cursor {epoch, seq} (contracts.schema.json#/$defs/cursor); a cursor of another epoch, below min_retained_seq or above the high-water seq is answered cursor.expired and the client takes Store.Snapshot, one read transaction returning the state and its seq, before tailing again (contracts.xml#epoch-cursor, principles.xml#level-triggered). Entity-only kinds arrive as coalesced entity frames. Slow consumers are N-31's: one drop rule, push.max_pending and push.send_timeout_s; nothing is lost because the log is the truth.</statement>
     </store-rule>
     <store-rule id="apply" title="Apply rules by kind">
-      <statement>Compare-and-swap upsert by version for page.state, ack, plan.step and plan.side; append-only for ledger.row, reply and owner.message; every apply is also a record so the stream carries it.</statement>
+      <statement>Compare-and-swap upsert by version for page.state, ack, plan.step and plan.side; append-only for ledger.row, reply and owner.message, applied idempotently by record id; page.state is entity-only (contracts.xml#entity-only), the others are records the stream carries.</statement>
     </store-rule>
     <store-rule id="code-table" title="The code table">
       <statement>Table code_table(hash UNIQUE, main_sha, loaded_at, version, body JSON): the status code map loaded by N-43 from shared/status-codes.xml at the merge sha; N-01 reads the newest row to validate every put; a failed load keeps the previous row and writes code.table 400 with the live hash.</statement>
     </store-rule>
   </records>
 
-  <leases id="leases">
-    <store-table id="table-leases" name="leases" owner="N-02" mode="cas">
-      <purpose>One holder per key; the fencing token orders writers; generation bumps on every grant and expiry.</purpose>
-      <column name="key" type="TEXT PRIMARY KEY" key="pk">ticket:phase:attempt for seats (CR-&lt;request id&gt;:spec:attempt for a cut request); node:N-xx:KEY for system jobs, including node:N-07:leader (the scheduler leader, ttl lease.leader_ttl_seconds 30, renewed every 10 s); merge.lock; watcher/&lt;page&gt;; cleanup:ENTRY, workspace:TICKET, seat:RUN, tier:NAME, backup:SNAPSHOT, publish:drive, unlanded:run, cutover:run, exittest:DAY</column>
+  <authority-tables id="authority-tables">
+    <store-table id="table-principals" name="principals" owner="N-01" mode="cas">
+      <purpose>Who a peer is: the store socket (/run/coq/store.sock 0660, group coq-store) reads SO_PEERCRED and maps the uid here; the server derives role, the nodes the caller may act as and its permitted kinds; an unknown uid is 403 unknown_principal (shared/authority.xml#principals, #peer-credentials). Written at install by the owner CLI from scheduler/config/principals.json (planned) and changed only by a ruling.</purpose>
+      <column name="uid" type="INTEGER PRIMARY KEY" key="pk"/>
+      <column name="name" type="TEXT">owner, coq-svc, coq-launch, coq-seat-01 to coq-seat-16</column>
+      <column name="role" type="TEXT">owner, service, launcher or seat (contracts.schema.json#/$defs/principal_role)</column>
+      <column name="nodes" type="JSON">node ids whose operation keys it may use</column>
+      <column name="version" type="INTEGER"/>
+      <rule>A seat principal has no socket access; a row with role seat exists so a forged peer is refused by name, never by absence.</rule>
+    </store-table>
+    <store-table id="table-seat-users" name="seat_users" owner="N-15" mode="cas">
+      <purpose>Which pool user runs which run, one run at a time, scrubbed between runs (shared/authority.xml#seat-isolation); written by statement seat_users.bind in the run.start Commit.</purpose>
+      <column name="uid" type="INTEGER PRIMARY KEY" key="pk"/>
+      <column name="name" type="TEXT"/>
+      <column name="slot" type="INTEGER"/>
+      <column name="run_id" type="TEXT NULL"/>
       <column name="ticket" type="TEXT NULL"/>
       <column name="phase" type="TEXT NULL"/>
-      <column name="attempt" type="INTEGER"/>
-      <column name="holder" type="TEXT"/>
-      <column name="token" type="TEXT"/>
+      <column name="lease_key" type="TEXT NULL"/>
+      <column name="lease_token" type="INTEGER NULL"/>
+      <column name="granted_at" type="TEXT NULL"/>
+      <column name="expires_at" type="TEXT NULL"/>
+      <column name="scrubbed_at" type="TEXT NULL"/>
+      <column name="version" type="INTEGER"/>
+      <rule>A pool user is bound only when scrubbed_at is later than its last run's end; bind and scrub are compare-and-swap on version.</rule>
+    </store-table>
+    <store-table id="table-effects" name="effects" owner="N-01" mode="cas">
+      <purpose>The outbox (contracts.xml#outbox; row contracts.schema.json#/$defs/effect_row): one row per external effect, inserted with state intent in the Commit of the record that decides it; advanced by statement effects.advance.</purpose>
+      <column name="op_id" type="TEXT PRIMARY KEY" key="pk"/>
+      <column name="provider" type="TEXT"/>
+      <column name="action" type="TEXT"/>
+      <column name="target" type="TEXT"/>
+      <column name="request_hash" type="TEXT"/>
+      <column name="lease_key" type="TEXT NULL"/>
+      <column name="lease_token" type="INTEGER NULL"/>
+      <column name="state" type="TEXT">intent, sent, accepted, unknown, done, failed</column>
+      <column name="attempts" type="INTEGER"/>
+      <column name="external_id" type="TEXT NULL"/>
+      <column name="epoch" type="INTEGER"/>
+      <column name="updated_at" type="TEXT"/>
+      <column name="version" type="INTEGER"/>
+      <rule>Index (state, provider); a worker picks rows in intent or unknown; done only after the provider read-back.</rule>
+      <retention>done and failed rows 30 days, with their records.</retention>
+    </store-table>
+  </authority-tables>
+
+  <leases id="leases">
+    <store-table id="table-leases" name="leases" owner="N-02" mode="cas">
+      <purpose>The only lease state (no lease:KEY entity): one row per key, the state machine of contracts.xml#lease-machine, row shape contracts.schema.json#/$defs/lease_row.</purpose>
+      <column name="key" type="TEXT PRIMARY KEY" key="pk">contracts.schema.json#/$defs/lease_key: ticket:phase:attempt for a seat-class lease (CR-&lt;request id&gt;:spec:attempt for a cut request); a system key otherwise (node:N-07:leader, merge.lock, watcher/&lt;page&gt;, cleanup:ENTRY, workspace:TICKET, seat:RUN, tier:NAME, backup:SNAPSHOT, publish:drive, unlanded:run, cutover:run, exittest:DAY)</column>
+      <column name="class" type="TEXT">seat, work or maintenance</column>
+      <column name="ticket" type="TEXT NULL"/>
+      <column name="phase" type="TEXT NULL"/>
+      <column name="attempt" type="INTEGER NULL"/>
+      <column name="state" type="TEXT">reserved, running, released, expired, revoked</column>
+      <column name="token" type="INTEGER"/>
       <column name="generation" type="INTEGER"/>
+      <column name="holder" type="TEXT">never empty: the dispatch id for a seat lease, node and job otherwise</column>
+      <column name="run_id" type="TEXT NULL"/>
       <column name="granted_at" type="TEXT"/>
       <column name="expires_at" type="TEXT"/>
-      <column name="heartbeat_at" type="TEXT"/>
-      <column name="released_at" type="TEXT NULL"/>
+      <column name="heartbeat_at" type="TEXT NULL"/>
+      <column name="progress_at" type="TEXT NULL"/>
+      <column name="ended_at" type="TEXT NULL"/>
+      <column name="end_reason" type="TEXT NULL"/>
       <column name="version" type="INTEGER"/>
-      <rule>The token counter is entity counter:lease_token and only grows; the merge.lock lease is 120 s; the default system-job ttl is PT15M; a renew is accepted only for the current generation.</rule>
+      <rule>Every change is a statement of contracts.xml#statements (leases.grant, acquire, start, renew, release, sweep, revoke) whose guards and effects are the rows of contracts.xml#lease-machine; the token comes from counter:lease_token and only grows; generation bumps only on grant; timings are the keys of contracts.xml#timing (lease.ttl_seconds, start.grace_seconds, merge.lock_seconds, lease.leader_ttl_seconds).</rule>
       <rule>A script may ask whether a path is held (lease list --path) before it deletes anything (N-45).</rule>
     </store-table>
     <store-rule id="fencing" title="Fencing tokens">
-      <statement>The store-wide fencing token only grows; N-01 refuses a put whose token is not current for the record's ticket and attempt (412 record.stale) and logs it; N-39 shows the token beside the last records; a stale writer learns it lost and exits.</statement>
+      <statement>contracts.xml#fencing: a write under a lease is current only when the row for its key is reserved or running, the token matches and expires_at has not passed at commit; else 412 stale_token or lease_not_current (record.stale); the one exception is contracts.xml#terminal-report. N-39 shows the token beside the last records; a stale writer exits.</statement>
     </store-rule>
     <store-table id="table-heartbeats" name="heartbeats" owner="N-15" mode="upsert">
-      <purpose>Latest heartbeat per run (upsert with monotonic seq); N-12 reads it for the stall bound; N-39 shows the age.</purpose>
+      <purpose>Latest heartbeat per run (upsert with monotonic seq; entity-only, contracts.xml#entity-only: no record per beat); N-12 reads it for the stall bound; N-39 shows the age.</purpose>
       <column name="run_id" type="TEXT PRIMARY KEY" key="pk"/>
-      <column name="lease" type="TEXT"/>
-      <column name="token" type="TEXT"/>
+      <column name="lease_key" type="TEXT"/>
+      <column name="token" type="INTEGER"/>
       <column name="generation" type="INTEGER"/>
       <column name="pid" type="INTEGER"/>
       <column name="at" type="TEXT"/>
@@ -136,10 +203,10 @@
       <column name="progress_at" type="TEXT"/>
       <column name="transcript_bytes" type="INTEGER"/>
       <column name="adopted" type="BOOLEAN"/>
-      <rule>An older generation on a heartbeat is 412; adopted is true after a launcher restart re-entered the beat loop.</rule>
+      <rule>A heartbeat is fenced like any write (contracts.xml#fencing, 412); adopted is true after a launcher restart re-attached to the run's unit coq-seat-RUN_ID (contracts.xml#run-states). Two launchers on one run cannot exist: the unit name is unique and run:RUN_ID moves by compare-and-swap.</rule>
     </store-table>
     <store-table id="table-attempts" name="attempts" owner="N-11" mode="append-only">
-      <purpose>One row per attempt of a ticket phase with its backoff and outcome; dead after 3.</purpose>
+      <purpose>One row per charged attempt of a ticket phase with its backoff and outcome; dead after 3; who charges is contracts.xml#retry-owner.</purpose>
       <column name="ticket" type="TEXT" key="idx"/>
       <column name="phase" type="TEXT"/>
       <column name="n" type="INTEGER"/>
@@ -160,7 +227,7 @@
 
   <tickets id="tickets">
     <store-table id="table-tickets" name="tickets" owner="N-03" mode="cas">
-      <purpose>The whole ticket as a record; status is the closed set cut, waiting, ready, in_flight, done, dead, cancelled, refused.</purpose>
+      <purpose>The whole ticket; status is contracts.schema.json#/$defs/ticket_status and phase is its own column.</purpose>
       <column name="id" type="TEXT PRIMARY KEY" key="pk"/>
       <column name="status" type="TEXT"/>
       <column name="phase" type="TEXT"/>
@@ -179,24 +246,19 @@
       <column name="ready_at" type="TEXT NULL"/>
       <column name="done_at" type="TEXT NULL"/>
       <column name="version" type="INTEGER"/>
-      <rule>Transitions: cut to waiting or ready or refused; waiting to ready or cancelled or dead (stale); ready to in_flight; in_flight to done or ready (next attempt) or dead or cancelled; any other is 409 ticket.transition_refused. cancelled carries reason and ruling id.</rule>
+      <rule>Transitions: only the rows of contracts.xml#ticket-transitions, through statement tickets.transition; any other pair, owner or a stale from status is refused 412 precondition with ticket.transition_refused. cancelled carries reason and ruling id.</rule>
       <rule>Queries: by status at a sha; children of an epic by status; by kind and by over an at range.</rule>
     </store-table>
     <store-table id="table-claims" name="claims" owner="N-03" mode="append-only">
-      <purpose>The proof of one file, one in-flight ticket: taken in the ticket.ready transaction, released in the terminal transaction.</purpose>
-      <column name="path" type="TEXT PRIMARY KEY" key="pk"/>
-      <column name="ticket" type="TEXT"/>
-      <column name="taken_at" type="TEXT"/>
-      <column name="released_at" type="TEXT NULL"/>
-    </store-table>
-    <store-table id="table-file-claims" name="file_claims" owner="N-14" mode="append-only">
-      <purpose>Claims by pattern and prefix at workspace start (N-14), unique on prefix for in-flight tickets; released by N-45 on merge, dead or cancel.</purpose>
+      <purpose>The one claim authority (contracts.xml#claims): taken in the Commit of a transition whose claims attribute is acquire, released in the Commit of one whose attribute is release; the N-14 file_claims table of book 1.0.0 is deleted.</purpose>
+      <column name="id" type="INTEGER PRIMARY KEY AUTOINCREMENT" key="pk"/>
       <column name="ticket" type="TEXT"/>
       <column name="pattern" type="TEXT"/>
-      <column name="prefix" type="TEXT" key="unique-in-flight"/>
-      <column name="run_id" type="TEXT"/>
-      <column name="at" type="TEXT"/>
-      <rule>A second in-flight ticket on tools/map/registry/** or on one screen volume is refused (N-37).</rule>
+      <column name="prefix" type="TEXT">the literal part before the first glob metacharacter</column>
+      <column name="taken_at" type="TEXT"/>
+      <column name="released_at" type="TEXT NULL"/>
+      <rule>Overlap is two-way prefix containment against live claims of other tickets, checked inside the Commit; own claims excluded; a non-unique partial index on prefix where released_at is null; the only update is released_at from null, by statement claims.release.</rule>
+      <rule>A second live ticket on tools/map/registry/** or on one screen volume overlaps by prefix and is refused (N-37).</rule>
     </store-table>
     <store-table id="table-ticket-sets" name="ticket_sets" owner="N-18" mode="cas">
       <purpose>ticket-set.draft and ticket-set.accepted by set_id with anchor, repo_sha, attempt and verdict_ref.</purpose>
@@ -219,7 +281,7 @@
 
   <flags id="flags">
     <store-table id="table-flags" name="flags" owner="N-44" mode="cas">
-      <purpose>The three flags: build-mode, hold, freeze; each with state, scope, expiry, the card and ruling that set it.</purpose>
+      <purpose>The three flags: build-mode, hold, freeze; each with state, scope, expiry, the card and ruling that set it. N-44 is the only writer of every row (statement flags.set); N-29 rulings and N-42 Controls actions reach N-44 as ruling effects and never write a flag themselves.</purpose>
       <column name="name" type="TEXT PRIMARY KEY" key="pk"/>
       <column name="state" type="TEXT"/>
       <column name="scope" type="TEXT NULL">rebuild or all</column>
@@ -229,10 +291,10 @@
       <column name="version" type="INTEGER"/>
     </store-table>
     <store-rule id="flag-hold" title="The hold flag">
-      <statement>Entity flag:hold (a row of flags) is set and cleared by N-29 from a ruling or a Controls action by compare-and-swap; N-03, N-07 and N-09 read it at the start of every tick before any dispatch or merge; ticks, health, backups, the poll and the push transport never stop under hold; a dispatch under a set flag writes 500 hold.ignored (N-42).</statement>
+      <statement>flag:hold (a row of flags) is set and cleared only by N-44, from an owner ruling (N-29) or a Controls action (N-42) that names it, or by a restore (contracts.xml#restore); N-03, N-07 and N-09 read it inside the Commit that would dispatch or merge; GrantDispatch and work-class leases are refused 423 hold while maintenance leases, ticks, health, backups, the poll and the push transport run (contracts.xml#lease-machine).</statement>
     </store-rule>
     <store-rule id="table-build-mode" title="Build mode state">
-      <statement>Entity build-mode.state (flags row build-mode): state on or off, scope, expires_at, ruling_id, version; written by N-44, read by N-07 at dispatch and copied into the dispatch record with its version; cleared by the system at expiry (max flags.build_mode.max_duration P7D) with one card when rebuild tickets are still open.</statement>
+      <statement>Flags row build-mode (record kind build-mode.state): state on or off, scope, expires_at, ruling_id, version; written by N-44, read by N-07 in the GrantDispatch Commit and copied into the dispatch as contracts.schema.json#/$defs/build_mode with its version; cleared by N-44 at expiry (flags.build_mode.max_duration) with one card when rebuild tickets are still open.</statement>
     </store-rule>
   </flags>
 
@@ -246,29 +308,32 @@
       <retention>forge.keep_days 30; cleanup-forge.sh; the live entity is never touched.</retention>
     </store-table>
     <store-table id="table-backups" name="backups" owner="N-05" mode="append-only">
-      <purpose>One row per snapshot; entities backup:latest (compare-and-swap) and backup:running (expected absent).</purpose>
+      <purpose>One row per snapshot under STATE/backup/store/ (nodes/N-05/spec.xml); entities backup:latest (compare-and-swap) and backup:running (expected absent). The snapshot is taken on a reader connection in one read transaction, so the writer is never blocked.</purpose>
       <column name="id" type="TEXT PRIMARY KEY" key="pk"/>
       <column name="at" type="TEXT"/>
-      <column name="class" type="TEXT">daily, weekly, monthly</column>
+      <column name="class" type="TEXT">tick, daily, monthly, manual</column>
       <column name="path" type="TEXT"/>
       <column name="bytes" type="INTEGER"/>
       <column name="checksum" type="TEXT"/>
       <column name="inner_checksum" type="TEXT"/>
-      <column name="top_seq" type="INTEGER"/>
+      <column name="epoch" type="INTEGER"/>
+      <column name="high_water_seq" type="INTEGER">the verifier checks max(seq) equals it</column>
+      <column name="row_count" type="INTEGER">the verifier checks count(*) equals it (seq is not gapless)</column>
+      <column name="min_retained_seq" type="INTEGER">the verifier checks min(seq) is at or above it</column>
       <column name="verified" type="BOOLEAN"/>
       <column name="mirror_path" type="TEXT NULL"/>
       <column name="mirror_checksum" type="TEXT NULL"/>
       <column name="pruned_at" type="TEXT NULL"/>
-      <retention>cleanup.backup_keep daily 14, weekly 8, monthly 6; the newest verified backup is never deleted.</retention>
+      <retention>backup.retention (tick 48 h, daily 30 d, monthly 12 months, manual until the owner's cleanup card); the newest verified backup is never deleted; an off-host copy older than backup.rpo_offhost_hours raises one card.</retention>
     </store-table>
     <store-rule id="table-ticks" title="Ticks">
-      <statement>Entities tick:SUBKIND (n, at, interval_seconds, class for backup) written by compare-and-swap once per tick (scheduler, poll, backup, stall, health, hourly, daily); the tick record carries subkind, n, at and duration_ms; the tick minute keys a counters window; a skipped tick is tick.missed once per subkind and counters.failed for the stats screen.</statement>
+      <statement>Entities tick:SUBKIND (n, at, interval_seconds, duration_ms, class for backup) written by compare-and-swap once per tick (scheduler, poll, backup, stall, health, hourly, daily); entity-only (contracts.xml#entity-only), so a tick writes no record; the tick minute keys a counters window; a skipped tick is tick.missed once per subkind and counters.failed for the stats screen.</statement>
     </store-rule>
     <store-rule id="table-health" title="Health">
-      <statement>Entity health:service (status, reasons[], counters, version, config_hash, at; includes the Jenkins GET /api/json probe with a 10 s timeout, unknown when missing) and table health_history(at, status, reasons JSON) appended on transition; pruned by cleanup-logs.sh --health.</statement>
+      <statement>Entity health:service (status, reasons[], counters, version, config_hash, at; includes the Jenkins GET /api/json probe with a 10 s timeout, unknown when missing), entity-only with a record only on a status transition, and table health_history(at, status, reasons JSON) appended on transition; pruned by cleanup-logs.sh --health.</statement>
     </store-rule>
     <store-rule id="record-kinds-registry" title="The record kinds registry">
-      <statement>Every record kind with its code set, class (record, line-op, owner-surface, plan, screen), writer node and schema path; loaded by N-43 with the code table; a put of an unregistered kind is 400 and a kind under a code not listed for it is 400.</statement>
+      <statement>Every record kind with its code set, class (record, line-op, owner-surface, plan, screen), writer node, schema path and, where the owning volume says so, the entity-only mark (contracts.xml#entity-only); loaded by N-43 with the code table; a record of an unregistered kind is 400 and a kind under a code not listed for it is 400.</statement>
       <statement>The registry is generated: shared/record-kinds.xml, written by rebuild/design/bin/make-kinds.py from the status-codes section of every node volume, so the node that emits a kind is the only place it is declared (check.sh C15 refuses a stale file; C18 refuses a kind whose code row in status-codes.xml does not name it). What broke (gap review R-03, 2026-10-14): the hand list that stood here by group omitted most kinds the volumes emit (every store.* kind, dispatch.refused, seat.bundle.refused, every deploy.* and art.* kind, push.failed and more), so N-01 would have refused the factory's own records. test.proof is emitted by N-24 for dark builds (nodes/N-24/spec.xml#m-mirror).</statement>
       <statement>Not record kinds: views (map.state, node.state, checklist.state, alert, health, hold.flag, counters and the others of nodes/N-31/spec.xml#views) are derived by the service and pushed by subscription; static kinds (node.spec, source.inventory, nodes/N-37/spec.xml#static-kinds) are generated into the map bundle at build. A panel binds one of the three (check.sh C20).</statement>
       <statement>Line-op class (refused 403 from a seat): code.table, build-mode.state, rule.bit, cleanup.run, disposition, cancel, pr.close, branch.delete, promotion, exit.verdict, freeze.state, merge, verified, dispatch, job.run, ticket.request, lease.*, any flag. bin/make-kinds.py reads this statement for the class column, so this sentence is the one list.</statement>
@@ -321,17 +386,43 @@
   </store-table>
 
   <retention id="retention">
-    <s>Retention is a class per kind registered with N-45: record (records kept for the life of the store; the daily backup is the archive), owner-surface (page.state 7 days, other page.* 90 days, messages and replies for the life of the store), plan (90 days), screen (pushed frames not stored, frame.report 7 days), lease (released or expired rows 30 days), forge (forge_history 30 days), health (health_history 30 days), heartbeat (7 days after seat.result).</s>
-    <s>Every state path under the store's root (STATE/store/coq.db, its WAL, STATE/backups/, STATE/run/service.lock, STATE/config/service.env) is an entry in shared/cleanup-registry.json with line/bin/cleanup.sh --entry ID as its verb; the live database file is never a cleanup target.</s>
-    <s>Free space: a put is refused 503 store.disk under store.min_free_mib and a backup is skipped once under backup.min_free_mib; N-45 cleanup runs first and one card follows if still under (failure-cases.xml#disk-full).</s>
+    <s>Retention is a class per kind registered with N-45, and a retention run deletes rows: N-45 deletes the expired rows of a class and advances store:epoch min_retained_seq in the same Commit (contracts.xml#epoch-cursor), so a backup verifier and a Tail cursor know the floor. Classes: record (records kept for the life of the store; the backups are the archive), owner-surface (page.* other than page.state 90 days; messages and replies for the life of the store), plan (90 days), screen (pushed frames not stored, frame.report 7 days), lease (released, expired or revoked rows 30 days), forge (forge_history 30 days), health (health_history 30 days), effects (done or failed 30 days), heartbeat (7 days after seat.result). Entity-only kinds (page.state, ticks, health:service, heartbeats, watcher.alive) keep one current row each and no history in records.</s>
+    <s>Every state path under the store's root (STATE/store/coq.db, its WAL, STATE/backup/store/, STATE/run/service.lock, STATE/config/service.env) is an entry in shared/cleanup-registry.json with line/bin/cleanup.sh --entry ID as its verb; the live database file is never a cleanup target.</s>
+    <s>Free space: a Commit is refused 503 store.disk under store.min_free_mib, except the store.reserve_mib kept for health and restore records; a backup is skipped once under backup.min_free_mib; N-45 cleanup runs first and one card follows if still under (failure-cases.xml#disk-full).</s>
   </retention>
 
   <config-keys id="config-keys">
-    <s>Keys live in STATE/config/service.env (the read token as COQ_FORGE_READ_TOKEN) and the config table; Scheduler.Reload applies a change without a restart; every value is a key, never a literal in code (K10).</s>
+    <s>Keys live in STATE/config/service.env and the config table; service credentials are not keys and live with coq-svc (shared/authority.xml#credential-matrix); Scheduler.Reload applies a change without a restart; every value is a key, never a literal in code (K10); a missing key is exit 3 naming it. The timing and capacity keys below carry the defaults of contracts.xml#timing, the one table; a node volume cites the key.</s>
+    <s>Site placeholders: every ${SITE_*} value in the book (${SITE_VPS_ADDR}, ${SITE_CI_LAN_ADDR}, ${SITE_PI_LAN_ADDR}, ${SITE_TAILNET_HOST}, ${SITE_TAILNET_ADDR}, ${SITE_JENKINS_HOST}, ${SITE_K8S_WORKER}, ${SITE_K8S_ADMIN}) resolves from the owner's site file $HOME/.config/coq/site.env, mode 0600, never in the repository; ${HOME_SLUG} is the -home-USER- Claude project slug derived from $HOME. The service reads the site file at start and refuses to start (exit 3) when a key a live node needs is missing.</s>
     <config-key name="lease.ttl_seconds" default="900" unit="s" owner="N-02"/>
     <config-key name="lease.heartbeat_seconds" default="30" unit="s" owner="N-02">one key read by N-02, N-07, N-12 and N-15; N-12's dead-launcher bound is 3 x this (90 s)</config-key>
     <config-key name="lease.leader_ttl_seconds" default="30" unit="s" owner="N-02">node:N-07:leader, renewed every 10 s</config-key>
     <config-key name="lease.keep_days" default="30" unit="d" owner="N-02"/>
+    <config-key name="start.grace_seconds" default="120" unit="s" owner="N-02">a reserved seat lease with no Start expires after this, no attempt charged (contracts.xml#lease-machine)</config-key>
+    <config-key name="kill.grace_seconds" default="30" unit="s" owner="N-12">the one kill grace: TimeoutStopSec of every seat unit (contracts.xml#kill-authority)</config-key>
+    <config-key name="stall.seconds.worker" default="600" unit="s" owner="N-12"/>
+    <config-key name="stall.seconds.spec-author" default="600" unit="s" owner="N-12"/>
+    <config-key name="stall.seconds.reviewer" default="300" unit="s" owner="N-12"/>
+    <config-key name="run.deadline_seconds.worker" default="5400" unit="s" owner="N-07">deadline_at of a dispatch is granted_at plus this; the seat unit's RuntimeMaxSec</config-key>
+    <config-key name="run.deadline_seconds.spec-author" default="5400" unit="s" owner="N-07"/>
+    <config-key name="run.deadline_seconds.reviewer" default="1200" unit="s" owner="N-07"/>
+    <config-key name="tick.scheduler_seconds" default="5" unit="s" owner="N-07"/>
+    <config-key name="caps.max_seats" default="16" unit="seats" owner="N-07">the one seat cap (replaces jobs.in_flight and lease.caps); counts seat-class leases reserved or running for seat roles</config-key>
+    <config-key name="retry.claim_seconds" default="300" unit="s" owner="N-11">wait before a free regrant after claim_overlap, files-claimed or workspace.refused (contracts.xml#retry-owner)</config-key>
+    <config-key name="budget.ticket_pods_per_unit" default="30" unit="pods" owner="N-07">per ticket and test unit, enforced at GrantDispatch (shared/retry-budget.xml#budgets)</config-key>
+    <config-key name="budget.ticket_seat_usd" default="100" unit="USD" owner="N-07"/>
+    <config-key name="budget.daily_seat_usd" default="300" unit="USD" owner="N-07">owner-tunable; meaning in shared/retry-budget.xml#budgets</config-key>
+    <config-key name="budget.daily_pod_minutes" default="4320" unit="min" owner="N-07">owner-tunable; meaning in shared/retry-budget.xml#budgets</config-key>
+    <config-key name="merge.lock_seconds" default="300" unit="s" owner="N-09">covers a merge call, its read-back and the acquire (contracts.xml#outbox)</config-key>
+    <config-key name="gate.error_seconds" default="900" unit="s" owner="N-08">age at which an unchanged error status on the current head escalates</config-key>
+    <config-key name="store.reserve_mib" default="256" unit="MiB" owner="N-01">kept below store.min_free_mib for health, restore and outage records</config-key>
+    <config-key name="store.commit_ms" default="250" unit="ms" owner="N-01">the in-transaction bound of one Commit (contracts.xml#batch)</config-key>
+    <config-key name="backup.interval_seconds" default="21600" unit="s" owner="N-05"/>
+    <config-key name="backup.retention" default="tick 48h, daily 30d, monthly 12mo, manual until card" owner="N-05">N-45 applies it</config-key>
+    <config-key name="backup.rpo_offhost_hours" default="24" unit="h" owner="N-05">the newest verified off-host copy is never older than this, else one card</config-key>
+    <config-key name="restore.rto_minutes" default="60" unit="min" owner="N-01">the bound of contracts.xml#restore steps 1 to 4</config-key>
+    <config-key name="push.max_pending" default="10000" unit="records" owner="N-31">the one drop rule for a slow Tail consumer (replaces stream.buffer)</config-key>
+    <config-key name="push.send_timeout_s" default="2" unit="s" owner="N-31"/>
     <config-key name="intake.stale_days" default="14" unit="d" owner="N-03"/>
     <config-key name="forge.poll_seconds" default="30" unit="s" owner="N-04"/>
     <config-key name="forge.request_seconds" default="10" unit="s" owner="N-04"/>
@@ -345,7 +436,7 @@
     <config-key name="forge.keep_days" default="30" unit="d" owner="N-04"/>
     <config-key name="forge.ticket_pattern" default="WO-[0-9]{8}-[a-z0-9]{4}" owner="N-04"/>
     <config-key name="forge.delete_branch_on_merge" default="true" owner="N-04">needs repo admin on the service token</config-key>
-    <config-key name="backup.min_free_mib" default="1024" unit="MiB" owner="N-05"/>
+    <config-key name="backup.min_free_mib" default="2048" unit="MiB" owner="N-05"/>
     <config-key name="store.min_free_mib" default="512" unit="MiB" owner="N-01"/>
     <config-key name="drain_seconds" default="30" unit="s" owner="N-06"/>
     <config-key name="stall.tick_seconds" default="15" unit="s" owner="N-12"/>
@@ -367,13 +458,12 @@
     <config-key name="cards.enabled" default="false" owner="N-28">ships dark; live at cut-over step 2 once a watcher lamp is alive</config-key>
     <config-key name="rail.enabled" default="false" owner="N-33">ships dark; live at cut-over step 2</config-key>
     <config-key name="phone_push.enabled" default="false" owner="N-52">ships dark; live at cut-over step 9 (cut-over.xml#step-phone)</config-key>
-    <config-key name="workspace_slots" default="16" owner="N-14">16 = caps.max_seats default (owner card C27 lever 2, ruling gxmaw, 8 to 16), the most the host runs: floor((36 GiB WSL limit minus 8) divided by 1.5) is 18 (nodes/N-15/spec.xml, L04-herdr.md line 80); never below caps.max_seats or the pool silently lowers the cap; 8 was the retired max_agents, 12 matched no source</config-key>
+    <config-key name="workspace_slots" default="16" unit="slots" owner="N-14">16 = caps.max_seats default (owner card C27 lever 2, ruling gxmaw, 8 to 16), the most the host runs: floor((36 GiB WSL limit minus 8) divided by 1.5) is 18 (nodes/N-15/spec.xml, L04-herdr.md line 80); never below caps.max_seats or the pool silently lowers the cap; 8 was the retired max_agents, 12 matched no source</config-key>
     <config-key name="gate.runs_in_flight_max" default="2" owner="N-07">main first, then the oldest pr.opened</config-key>
     <config-key name="image.builds_in_flight_max" default="2" owner="N-22"/>
     <config-key name="flags.build_mode.max_duration" default="P7D" owner="N-44"/>
     <config-key name="flags.build_mode.scope" default="rebuild" owner="N-44">enum rebuild, all</config-key>
     <config-key name="cleanup.allowed_roots" default="$COQ_STATE $COQ_CACHE treehouse-pool ~/.bearings git-refs" owner="N-45"/>
-    <config-key name="cleanup.backup_keep" default="daily 14, weekly 8, monthly 6" owner="N-45"/>
     <config-key name="cleanup.plan_ttl" default="PT1H" owner="N-45"/>
     <config-key name="cleanup.lease_ttl" default="PT15M" owner="N-45"/>
     <config-key name="drive.folder_id" default="unset" owner="N-47">the owner supplies it once</config-key>
@@ -388,7 +478,7 @@
     <config-key name="promotion.probe_timeout" default="PT60S" owner="N-48"/>
     <config-key name="promotion.drain" default="PT30S" owner="N-48"/>
     <config-key name="screenshot.viewports" default="1280x800 430x932" owner="N-48"/>
-    <config-key name="unlanded.owner_checkout" default="/home/luna/projects/coq-jev-herdr-plugin" owner="N-49"/>
+    <config-key name="unlanded.owner_checkout" default="$HOME/projects/coq-jev-herdr-plugin" owner="N-49">$HOME expands from the owner's environment; no home path is written into the repository</config-key>
     <config-key name="unlanded.known_dirty_files" default="[]" owner="N-49"/>
     <config-key name="unlanded.decide_default_days" default="14" unit="d" owner="N-49"/>
     <config-key name="cutover.epic" default="WO-20261012-ea33" owner="N-50"/>
@@ -397,24 +487,23 @@
     <config-key name="cutover.harvest_default_days" default="7" unit="d" owner="N-50"/>
     <config-key name="cutover.pr" default="35" owner="N-50"/>
     <config-key name="exittest.tick" default="00:05Z" owner="N-51"/>
-    <config-key name="exittest.owner_checkout" default="/home/luna/projects/coq-jev-herdr-plugin" owner="N-51"/>
+    <config-key name="exittest.owner_checkout" default="$HOME/projects/coq-jev-herdr-plugin" owner="N-51"/>
     <config-key name="exittest.known_dirty_files" default="[]" owner="N-51"/>
     <config-key name="exittest.card_every_fails" default="3" owner="N-51"/>
     <config-key name="map.frame_budget_ms" default="16" unit="ms" owner="N-38"/>
     <config-key name="map.stale_after_s" default="90" unit="s" owner="N-38"/>
     <config-key name="hold.effect_timeout_s" default="60" unit="s" owner="N-42"/>
     <config-key name="watcher.heartbeat_timeout_s" default="30" unit="s" owner="N-27"/>
-    <config-key name="stream.buffer" default="1024" unit="frames" owner="N-31"/>
-    <config-key name="owner_key" default="secret, STATE/secrets" owner="N-32">directory 0700, files 0600, acts owner, covered by the seat deny list</config-key>
+    <config-key name="owner_key" default="secret, STATE/secrets" owner="N-32">the only copy (nodes/N-32/spec.xml#web-security): directory 0700 owned by coq-svc, files 0600; a seat user cannot read STATE at all (shared/authority.xml#seat-isolation)</config-key>
     <config-key name="viewer_key" default="secret, STATE/secrets" owner="N-32"/>
-    <config-key name="executor.verbs" default="cleanup plan PT2M apply PT10M; publish-drive PT10M; promote PT5M; screenshot PT90S; unlanded plan PT5M apply PT1H per step" owner="N-07">scheduler.proto Executor.Run verb table</config-key>
+    <config-key name="executor.verbs" default="cleanup plan PT2M apply PT10M; publish-drive PT10M; promote PT5M; screenshot PT90S; unlanded plan PT5M apply PT1H per step" owner="N-07">the verb table of Executor.Run, the one RPC of scheduler.proto this book keeps as is</config-key>
   </config-keys>
 
   <many-agents id="many-agents">
-    <readers>Every node reads through N-01's gRPC API; fifty readers at once are one SQLite WAL reader each; the stream fans out seq in order to every subscriber.</readers>
-    <writers>One process (the Go service) holds the write lock; every write is a transaction with compare-and-swap on version or an idempotency key; a seat never holds the file; a second service instance is refused by flock on STATE/run/service.lock (failure-cases.xml#duplicate-instance).</writers>
-    <collision>Two writers on one entity: the second compare-and-swap misses and gets 409 with the current version; two writers on one lease key: the second gets lease.refused 423; two puts with one key: the second replays 200 or, with a different payload, 409; a writer with a stale fencing token: 412; none of these waits and none overwrites.</collision>
-    <test>N-01 test: 20 goroutines put under one idempotency key; exactly one row; 19 replays. N-02 test: 20 claims on one key; one holder; 19 refusals naming it.</test>
+    <readers>Every node reads through N-01 (Store.Get, List, Tail, Snapshot); fifty readers at once are one SQLite WAL reader each; Tail fans out seq in order within one epoch to every consumer.</readers>
+    <writers>One process (coq-service, user coq-svc) holds the write lock; every write is one Store.Commit or Store.Do under an operation key (contracts.xml#batch); a seat never holds the file or the socket; a second service instance is refused by flock on STATE/run/service.lock (failure-cases.xml#duplicate-instance).</writers>
+    <collision>Two writers on one entity: the second compare-and-swap misses, 409 version; two grants on one lease key: the second fails its guard, 423 or 412 (contracts.xml#lease-machine); two commits under one operation key: the second replays 200 or, with a different request hash, 409 idempotency_mismatch; a stale or non-current token: 412; none of these waits and none overwrites.</collision>
+    <test>N-01 test (planned, not-run): 20 goroutines Commit under one operation key; exactly one row; 19 replays; the six effects of one run under six keys all commit. N-02 test (planned, not-run): 20 GrantDispatch on one ticket and phase; one lease; 19 refusals.</test>
   </many-agents>
 
   <sources id="sources">
@@ -425,9 +514,9 @@
     <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal" note="T06 lease with heartbeat, generation and compare-and-swap"/>
     <source path="rebuild/investigation/L02-state-stores.md" anchor="" note="the many copies with no authority this store replaces"/>
     <source path="rebuild/investigation/L14-go-grpc-control-plane.md" anchor="" note="the investigation behind D01"/>
-    <source path="scheduler/api/scheduler/v1/scheduler.proto" anchor="" note="the proto the store API extends: Put, Get, List, Subscribe, Lease, Heartbeat, Executor.Run"/>
+    <source path="scheduler/api/scheduler/v1/scheduler.proto" anchor="" note="the real proto today: Executor{Run, Health} and Scheduler{Health, Status, Reload, Drain, Retry}, no streaming call; the book adds Store, Lease and Intake (contracts.xml#batch)"/>
     <source path="specs/scheduler/SPEC-16-scheduler-overview.xml" anchor="" note="source only (D09): the fake clock and interfaces kept"/>
     <source path="events/schema/event.schema.json" anchor="/properties/id" note="the id form today's writers mint"/>
-    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/runtime-data-never-in-the-repo.md"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/runtime-data-never-in-the-repo.md"/>
   </sources>
 </volume>

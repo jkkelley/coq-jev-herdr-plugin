@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: the cross-node contracts. The one place where a shape, a key, a state machine, a transition table or
+     a timing default that two or more nodes depend on is defined; node volumes cite these anchors and never restate
+     them. The JSON shapes live in contracts.schema.json beside this file. Machine-readable rows (<transition>,
+     <op-key>, <lease-transition>, <retry-row>, <default>, <statement-def>) are parsed by bin/check-book.py (C24 ticket
+     transitions, C25 operation keys). Validated by rebuild/design/check.sh against schema/volume.xsd. -->
+<volume id="contracts" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="Contracts">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, the contracts schema</entry>
+    <entry ref="purpose">Purpose and the one-definition rule</entry>
+    <entry ref="roles">Roles and phases</entry>
+    <entry ref="dispatch">The dispatch and the GrantDispatch transaction</entry>
+    <entry ref="operation-keys">Operation keys and idempotency</entry>
+    <entry ref="batch">Store.Commit: one transaction, the RPC inventory, codes</entry>
+    <entry ref="statements">Owner-registered statements on node-owned tables</entry>
+    <entry ref="lease-machine">The lease state machine</entry>
+    <entry ref="fencing">Fencing</entry>
+    <entry ref="terminal-report">The terminal-report exception</entry>
+    <entry ref="kill-authority">Kill authority</entry>
+    <entry ref="run-states">Run states of one seat run</entry>
+    <entry ref="ticket-transitions">Ticket statuses and the transition table</entry>
+    <entry ref="claims">File claims</entry>
+    <entry ref="retry-owner">Who retries what, and whether an attempt is charged</entry>
+    <entry ref="outbox">The outbox: external effects</entry>
+    <entry ref="epoch-cursor">Epoch, seq and cursors</entry>
+    <entry ref="restore">Restore</entry>
+    <entry ref="timing">Timing and capacity defaults</entry>
+    <entry ref="entity-only">Entity-only kinds</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="state-store.xml#state-store" kind="shared"/>
+    <sibling href="status-codes.xml#status-codes" kind="shared"/>
+    <sibling href="seat-contract.xml#seat-contract" kind="shared"/>
+    <sibling href="failure-cases.xml#failure-cases" kind="shared"/>
+    <sibling href="principles.xml#principles" kind="shared"/>
+    <sibling href="cut-over.xml#cut-over" kind="shared"/>
+    <shared href="contracts.schema.json#/$defs/dispatch_body" role="schema">Every shape this volume names, as JSON Schema 2020-12; node schemas $ref ../../shared/contracts.schema.json#/$defs/NAME</shared>
+    <shared href="state-store.schema.json#/$defs/envelope" role="schema">The record envelope (identity, time, kind, code, node, epoch, seq)</shared>
+    <shared href="authority.xml#principals" role="authority">Who the caller is: principals, peer credentials, role derivation (written beside this volume in book 1.1.0)</shared>
+    <shared href="retry-budget.xml#layers" role="retry">How the retry layers compose and the budgets they spend (written beside this volume in book 1.1.0)</shared>
+    <shared href="../nodes/N-01/spec.xml#N-01" role="store">N-01 implements Store.Commit, Store.Do, Tail and Snapshot</shared>
+    <shared href="../nodes/N-02/spec.xml#N-02" role="leases">N-02 owns the leases table and its statements</shared>
+    <shared href="../nodes/N-03/spec.xml#N-03" role="tickets">N-03 owns the tickets and claims tables and their statements</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>Book 1.0.0 defined each cross-node shape in the producer, again in each consumer and a third time in prose; they disagreed (review findings F02, F03, F04, F05, F12, F14, F16, F17; shared/review-dispositions.xml).</s>
+    <s>The rule from 1.1.0: a shape, key, state machine, transition table or default that crosses a DAG edge is defined here once; a node volume cites the anchor and adds only what is specific to it; a node schema $refs contracts.schema.json and never restates a def.</s>
+    <s>Status codes everywhere: a stale or non-current lease token is 412 (reason stale_token or lease_not_current); 409 is only an entity version conflict (reason version or id) or idempotency_mismatch; 403 is authorization (record.refused, shared/authority.xml#role-derivation); 423 is a hold or a lock; 429 is a cap.</s>
+  </purpose>
+
+  <roles id="roles">
+    <s>A ticket has a phase (contracts.schema.json#/$defs/phase: worker, reviewer, spec, gate) and each phase is run by one role (#/$defs/role); phase_role pins the pairs. Status (#ticket-transitions) and phase are separate columns of the tickets table.</s>
+    <role-def phase="worker" role="worker" runs="seat" node="N-16" tickets="WO">Writes the change in its workspace; the service pushes and opens the PR (N-16 close-out); a seat never pushes.</role-def>
+    <role-def phase="reviewer" role="reviewer" runs="seat" node="N-19" tickets="WO">Reads the PR head read-only and writes review.passed or review.changes.</role-def>
+    <role-def phase="spec" role="spec-author" runs="seat" node="N-17" tickets="CR">Writes a ticket-set draft for a cut request; CR tickets hold only this phase.</role-def>
+    <role-def phase="gate" role="gate" runs="code" node="N-25" tickets="WO">A code run (N-23 plan, N-24 pods, N-25 status post), never a seat; it holds a seat-class lease so fencing and the transition table apply, and counts against gate.runs_in_flight_max, not caps.max_seats.</role-def>
+    <s>Principal roles (owner, service, launcher, seat; #/$defs/principal_role) are a different axis: who is calling, derived from the peer uid (shared/authority.xml#role-derivation). A seat principal never reaches the store socket.</s>
+  </roles>
+
+  <dispatch id="dispatch">
+    <s>Shape: contracts.schema.json#/$defs/dispatch_body. N-07 writes it; N-13, N-14 and N-15 read it; every consumer $refs the def (closes P01, P02). The record is envelope (kind dispatch, code 100, node N-07) plus this body.</s>
+    <s>The run id is the dispatch id: one dispatch is one run; a rerun is a new dispatch under a new token. N-13 (seat.bundle), N-14 (workspace) and N-15 (run:, seat.result) all key by it.</s>
+    <s>deadline_at is granted_at plus run.deadline_seconds.ROLE (#timing); the brief lives only in the run bundle at brief_path (N-13); build_mode is the flag:build_mode entity read in the same transaction with its version.</s>
+    <s>GrantDispatch is one Store.Do transaction by N-07 (#batch): guards of #lease-machine row GrantDispatch, then statement leases.grant (lease reserved, new token, generation plus one, holder the dispatch id, expires_at now plus start.grace_seconds), statement tickets.transition (ready or pr_open to in_flight), the lease.granted record (node N-02, by N-07) and the dispatch record; all or nothing. A dispatch without its lease, or a lease without its dispatch, cannot exist (closes F05 holder race: holder is set at grant and never empty).</s>
+    <s>The token in the operation key is known before commit: the counter:lease_token entity's version is the last issued token; N-07 proposes token = version plus 1 with a precondition on that version, and a concurrent grant makes the Commit 409 version and the next tick retries.</s>
+    <example schema="contracts.schema.json#/$defs/dispatch_body">{"dispatch_id":"d-20261014063000-p2m7dq","ticket":"WO-20261014-ab12","phase":"worker","role":"worker","attempt":1,"lane":"build","lease":{"key":"WO-20261014-ab12:worker:1","token":184,"generation":1},"deadline_at":"2026-10-14T08:00:00Z","repo":{"slug":"jkkelley/coq-jev-herdr-plugin","origin":"git@github.com:jkkelley/coq-jev-herdr-plugin.git"},"repo_sha":"0123456789abcdef0123456789abcdef01234567","build_mode":{"on":false,"scope":"rebuild","version":3},"target":{"type":"wo","ticket":"WO-20261014-ab12"},"session":{"mode":"new"},"brief_path":"bundle/d-20261014063000-p2m7dq/brief.md"}</example>
+    <example schema="contracts.schema.json#/$defs/dispatch_body">{"dispatch_id":"d-20261014070000-r8k2wa","ticket":"WO-20261014-ab12","phase":"reviewer","role":"reviewer","attempt":1,"lane":"verify","lease":{"key":"WO-20261014-ab12:reviewer:1","token":191,"generation":1},"deadline_at":"2026-10-14T07:20:00Z","repo":{"slug":"jkkelley/coq-jev-herdr-plugin","origin":"git@github.com:jkkelley/coq-jev-herdr-plugin.git"},"repo_sha":"89abcdef0123456789abcdef0123456789abcdef","build_mode":{"on":true,"scope":"rebuild","version":4,"expires_at":"2026-10-20T00:00:00Z","ruling_ref":"20261013T120000Z-200-q1w2e"},"target":{"type":"wo","ticket":"WO-20261014-ab12","pr":57,"head_sha":"89abcdef0123456789abcdef0123456789abcdef"},"session":{"mode":"new"},"brief_path":"bundle/d-20261014070000-r8k2wa/brief.md"}</example>
+    <example schema="contracts.schema.json#/$defs/dispatch_body">{"dispatch_id":"d-20261014071500-s3c9vb","ticket":"CR-req-0042","phase":"spec","role":"spec-author","attempt":1,"lane":"build","lease":{"key":"CR-req-0042:spec:1","token":195,"generation":1},"deadline_at":"2026-10-14T08:45:00Z","repo":{"slug":"jkkelley/coq-jev-herdr-plugin","origin":"git@github.com:jkkelley/coq-jev-herdr-plugin.git"},"repo_sha":"89abcdef0123456789abcdef0123456789abcdef","build_mode":{"on":false,"scope":"rebuild","version":4},"target":{"type":"cr","request":"CR-req-0042","anchor":"nodes/N-38/spec.xml#frames","group":"G6","source_request":"20261014T071000Z-100-m4n5b"},"session":{"mode":"new"},"brief_path":"bundle/d-20261014071500-s3c9vb/brief.md"}</example>
+  </dispatch>
+
+  <operation-keys id="operation-keys">
+    <s>Form: node/operation/subject/rREVISION, pattern contracts.schema.json#/$defs/operation_key. One key per intended effect: bundle, workspace, result, push, PR and verdict of one run are six effects with six keys (closes F02, where all six shared the dispatch id).</s>
+    <s>The node segment must equal the node the authenticated caller may act as (shared/authority.xml#role-derivation), else 403 principal_mismatch. The idempotency row stores key, kind, node and request_hash: sha256 of the RFC 8785 canonical JSON of the commit request with every record's id, at, seq and hash removed, so an honest retry that minted a new id and at hashes the same.</s>
+    <s>Same key, same hash: replay the stored commit_reply with code 200 reason replayed and write nothing. Same key, different hash: 409 idempotency_mismatch before any write or effect. The revision is the only way to make a second effect for one subject on purpose (an owner-ordered rerun is r2).</s>
+    <s>Every Commit carries a key; the table below is the complete list of operations that write. A node volume names its operations by these rows; a key form not listed is a defect (check C25 parses the rows: examples match the pattern and are unique).</s>
+    <op-key node="N-07" operation="dispatch" subject="{lease_key}@{token}" example="N-07/dispatch/WO-20261014-ab12:worker:1@184/r1"/>
+    <op-key node="N-13" operation="seat.bundle" subject="{dispatch_id}" example="N-13/seat.bundle/d-20261014063000-p2m7dq/r1"/>
+    <op-key node="N-14" operation="workspace.provision" subject="{dispatch_id}" example="N-14/workspace.provision/d-20261014063000-p2m7dq/r1"/>
+    <op-key node="N-15" operation="run.start" subject="{run_id}" example="N-15/run.start/d-20261014063000-p2m7dq/r1"/>
+    <op-key node="N-15" operation="lease.renew" subject="{run_id}@{beat}" example="N-15/lease.renew/d-20261014063000-p2m7dq@12/r1"/>
+    <op-key node="N-15" operation="seat.result" subject="{run_id}" example="N-15/seat.result/d-20261014063000-p2m7dq/r1"/>
+    <op-key node="N-16" operation="branch.push" subject="{ticket}@{head_sha}" example="N-16/branch.push/WO-20261014-ab12@89abcdef0123456789abcdef0123456789abcdef/r1"/>
+    <op-key node="N-16" operation="pr.open" subject="{ticket}@{attempt}" example="N-16/pr.open/WO-20261014-ab12@1/r1"/>
+    <op-key node="N-17" operation="ticket-set.draft" subject="{run_id}" example="N-17/ticket-set.draft/d-20261014071500-s3c9vb/r1"/>
+    <op-key node="N-19" operation="review.verdict" subject="{pr}@{head_sha}@{run_id}" example="N-19/review.verdict/57@89abcdef0123456789abcdef0123456789abcdef@d-20261014070000-r8k2wa/r1"/>
+    <op-key node="N-08" operation="gate.verdict" subject="{pr}@{head_sha}@{status_updated_at}" example="N-08/gate.verdict/57@89abcdef0123456789abcdef0123456789abcdef@2026-10-14T06:40:00Z/r1"/>
+    <op-key node="N-09" operation="merge" subject="{pr}@{head_sha}" example="N-09/merge/57@89abcdef0123456789abcdef0123456789abcdef/r1"/>
+    <op-key node="N-10" operation="verified" subject="{main_sha}" example="N-10/verified/fedcba9876543210fedcba9876543210fedcba98/r1"/>
+    <op-key node="N-11" operation="attempt" subject="{ticket}:{phase}:{n}" example="N-11/attempt/WO-20261014-ab12:worker:2/r1"/>
+    <op-key node="N-11" operation="regrant" subject="{lease_key}@{token}" example="N-11/regrant/WO-20261014-ab12:worker:1@184/r1"/>
+    <op-key node="N-12" operation="kill" subject="{run_id}@{lease_version}" example="N-12/kill/d-20261014063000-p2m7dq@7/r1"/>
+    <op-key node="N-02" operation="lease.sweep" subject="{lease_key}@{token}" example="N-02/lease.sweep/WO-20261014-ab12:worker:1@184/r1"/>
+    <op-key node="N-02" operation="lease.acquire" subject="{lease_key}@{token}" example="N-02/lease.acquire/merge.lock@200/r1"/>
+    <op-key node="N-03" operation="ticket.transition" subject="{ticket}@{version}" example="N-03/ticket.transition/WO-20261014-ab12@5/r1"/>
+    <op-key node="N-18" operation="ticket-set.accept" subject="{set_id}" example="N-18/ticket-set.accept/set-20261014-0007/r1"/>
+    <op-key node="N-23" operation="gate.run" subject="{pr}@{head_sha}@{plan_attempt}" example="N-23/gate.run/57@89abcdef0123456789abcdef0123456789abcdef@1/r1"/>
+    <op-key node="N-25" operation="status.post" subject="{sha}@{context}@{plan_attempt}" example="N-25/status.post/89abcdef0123456789abcdef0123456789abcdef@coq/gate@1/r1"/>
+    <op-key node="N-29" operation="ruling" subject="{card_id}" example="N-29/ruling/C-1234/r1"/>
+    <op-key node="N-44" operation="flag.set" subject="{flag}@{ruling_id}" example="N-44/flag.set/hold@20261014T080000Z-200-h7j8k/r1"/>
+    <op-key node="N-05" operation="backup" subject="{class}@{tick_n}" example="N-05/backup/daily@412/r1"/>
+    <op-key node="N-45" operation="retention" subject="{class}@{day}" example="N-45/retention/record@20261014/r1"/>
+    <op-key node="N-01" operation="store.restored" subject="{epoch}" example="N-01/store.restored/2/r1"/>
+    <op-key node="N-52" operation="push.send" subject="{card_id}@{channel}" example="N-52/push.send/C-1234@ntfy/r1"/>
+  </operation-keys>
+
+  <batch id="batch">
+    <s>The store API (closes F04, F07). The real proto today, scheduler/api/scheduler/v1/scheduler.proto, has Executor{Run, Health} and Scheduler{Health, Status, Reload, Drain, Retry}, and nothing streams. The book adds coq.store.v1.Store{Commit, Get, List, Tail, Snapshot, Health}, coq.lease.v1.Lease{Renew, Release, Start} and coq.intake.v1.Intake{Answer} (planned files under scheduler/api/, nodes/N-01/spec.xml). Tail replaces every "Subscribe" of book 1.0.0; Put survives only as a Commit with one record.</s>
+    <s>Store.Commit (contracts.schema.json#/$defs/commit_request, reply #/$defs/commit_reply) is one SQLite transaction on the single writer, in this order: (1) authenticate the peer by SO_PEERCRED and derive role, node and permitted kinds (403 unknown_principal, kind_not_permitted, principal_mismatch, capability_expired); (2) idempotency by operation key and request hash (#operation-keys); (3) fence the lease named in the request (#fencing; 412); (4) check every precondition (entity at version, or absent at 0; 412 precondition); (5) entity compare-and-swap writes (409 version); (6) owner-registered statements on node-owned tables (#statements); (7) append 0 to 16 records, each validated against its kind's schema and the live code table (400); (8) insert outbox effects (#outbox); (9) write the idempotency row; (10) COMMIT; (11) notify Tail.</s>
+    <s>Limits per Commit: 32 entity writes, 64 statement rows, 16 records, 8 effects, 250 ms inside the transaction, no network or disk I/O other than SQLite inside it; over a limit is 422 limits before BEGIN. A request with no record and no entity write is 400.</s>
+    <s>In-process callers (every node hosted by coq-service) use Store.Do(ctx, op, fn(*Tx)) with the same steps: Tx offers Get, CAS, Delete, Next(counter), Append, Exec(statement), Fence(lease_key, token) and Effect; fn runs inside the transaction and must not do I/O. Socket callers (the launcher N-15, the owner CLI) send commit_request; the server runs the same steps.</s>
+    <s>Error mapping on the wire (google.rpc.Status with ErrorInfo reason): 400 INVALID_ARGUMENT, 403 PERMISSION_DENIED, 409 ABORTED, 412 FAILED_PRECONDITION, 422 INVALID_ARGUMENT (limits), 423 and 429 RESOURCE_EXHAUSTED, 503 UNAVAILABLE. Compatibility is additive only.</s>
+    <example schema="contracts.schema.json#/$defs/commit_request">{"operation_key":"N-07/dispatch/WO-20261014-ab12:worker:1@184/r1","preconditions":[{"entity":"counter:lease_token","version":183},{"entity":"flag:hold","version":0}],"entities":[{"entity":"counter:lease_token","expected_version":183,"value":{"last":184}}],"statements":[{"name":"leases.grant","args":{"key":"WO-20261014-ab12:worker:1","class":"seat","token":184,"holder":"d-20261014063000-p2m7dq"}},{"name":"tickets.transition","args":{"ticket":"WO-20261014-ab12","from":"ready","to":"in_flight","version":5}}],"records":[{"id":"20261014T063000Z-201-k3v9q","kind":"lease.granted","code":201,"node":"N-02","by":"N-07","ticket":"WO-20261014-ab12"},{"id":"20261014T063000Z-100-p2m7d","kind":"dispatch","code":100,"node":"N-07","ticket":"WO-20261014-ab12"}]}</example>
+    <example schema="contracts.schema.json#/$defs/commit_reply">{"code":201,"epoch":1,"seqs":[5101,5102],"versions":{"counter:lease_token":184}}</example>
+    <example schema="contracts.schema.json#/$defs/commit_reply">{"code":412,"reason":"stale_token","epoch":1,"seqs":[]}</example>
+  </batch>
+
+  <statements id="statements">
+    <s>A node-owned table is written only through a statement its owner registers here: a named, parameterized SQL statement (table.verb) with its guards, run by Exec inside a Commit. No free SQL crosses the socket or the Tx. A statement may append the owner's record kind; that record's node is the owner and its by is the caller (lease.granted is node N-02, by N-07).</s>
+    <s>callers lists who may run it; any other caller is 403 kind_not_permitted.</s>
+    <statement-def name="leases.grant" owner="N-02" table="leases" callers="N-07 N-11" emits="lease.granted">GrantDispatch rows of #lease-machine</statement-def>
+    <statement-def name="leases.acquire" owner="N-02" table="leases" callers="any service node" emits="lease.granted">Acquire rows (maintenance, work)</statement-def>
+    <statement-def name="leases.start" owner="N-02" table="leases" callers="N-15" emits="none">reserved to running; run:RUN_ID moves in the same Commit</statement-def>
+    <statement-def name="leases.renew" owner="N-02" table="leases" callers="the holder" emits="none">entity-only unless the state changes (#entity-only)</statement-def>
+    <statement-def name="leases.release" owner="N-02" table="leases" callers="the holder" emits="lease.released"/>
+    <statement-def name="leases.sweep" owner="N-02" table="leases" callers="N-02" emits="lease.expired"/>
+    <statement-def name="leases.revoke" owner="N-02" table="leases" callers="N-12" emits="none">N-12 appends stall in the same Commit</statement-def>
+    <statement-def name="tickets.insert" owner="N-03" table="tickets" callers="N-03" emits="ticket.admitted"/>
+    <statement-def name="tickets.transition" owner="N-03" table="tickets" callers="N-03 N-07 N-09 N-11 N-16" emits="per #ticket-transitions trigger">Refuses a (from, to) pair not in #ticket-transitions or a caller other than the row's owner, 412 precondition</statement-def>
+    <statement-def name="claims.acquire" owner="N-03" table="claims" callers="N-03" emits="none">#claims</statement-def>
+    <statement-def name="claims.release" owner="N-03" table="claims" callers="N-03 N-09 N-11" emits="none">#claims</statement-def>
+    <statement-def name="attempts.append" owner="N-11" table="attempts" callers="N-11" emits="attempt"/>
+    <statement-def name="slots.take" owner="N-14" table="slots" callers="N-14" emits="none"/>
+    <statement-def name="slots.free" owner="N-14" table="slots" callers="N-14 N-15" emits="none"/>
+    <statement-def name="heartbeats.upsert" owner="N-15" table="heartbeats" callers="N-15" emits="none"/>
+    <statement-def name="seat_users.bind" owner="N-15" table="seat_users" callers="N-15" emits="none">shared/authority.xml#seat-isolation</statement-def>
+    <statement-def name="effects.advance" owner="N-01" table="effects" callers="the deciding node" emits="none">#outbox</statement-def>
+    <statement-def name="flags.set" owner="N-44" table="flags" callers="N-44" emits="build-mode.state">the only writer of every flag row (hold, build_mode, freeze); N-29 rulings and N-42 controls reach it as ruling effects</statement-def>
+    <statement-def name="ticket_sets.upsert" owner="N-18" table="ticket_sets" callers="N-18" emits="ticket-set.accepted"/>
+    <statement-def name="id_mint.reserve" owner="N-18" table="id_mint" callers="N-18" emits="none"/>
+    <statement-def name="plans.upsert" owner="N-23" table="plans" callers="N-23" emits="none"/>
+    <statement-def name="backups.append" owner="N-05" table="backups" callers="N-05 N-45" emits="backup"/>
+    <statement-def name="exit_verdicts.put" owner="N-51" table="exit_verdicts" callers="N-51" emits="exit.verdict"/>
+  </statements>
+
+  <lease-machine id="lease-machine">
+    <s>One leases table (shared/state-store.xml#table-leases, row shape contracts.schema.json#/$defs/lease_row); there is no lease:KEY entity. class is seat (a ticket phase, key ticket:phase:attempt, granted only by GrantDispatch), work (merge.lock, publish:drive, cutover:run, unlanded:run, exittest) or maintenance (node:N-xx leader keys, watcher/PAGE, backup, cleanup, workspace, seat, tier, drain). state is reserved, running, released, expired or revoked; the token is an INTEGER from counter:lease_token and only grows; holder is never empty.</s>
+    <s>generation bumps only on grant (each row below whose effect says new token); version bumps on every write. Renew never moves the generation, so "renew only for the current generation" of book 1.0.0 is gone; currency is the token and the state.</s>
+    <s>Hold (flag:hold set): GrantDispatch and work-class Acquire are refused 423 reason hold; maintenance Acquire is allowed, so watchers, the leader, backups, cleanup and drains run under a hold (closes the F05 watcher-down-for-good case). The desired set N-07 computes is: tickets ready (or pr_open awaiting reviewer or gate) with not_before passed and no reserved or running lease for the ticket and phase; it is computed under a hold too, and only the grant is refused.</s>
+    <s>Re-grant of the same key happens only for a free regrant (failure kinds claim_overlap, files-claimed, cap, workspace.refused, or a start-grace expiry; #retry-owner), always with a new token. Every charged failure moves to attempt n+1, a new key.</s>
+    <s>Rows: from lists one or more states separated by spaces (absent: no row for the key); caller is the node that runs the statement; guard is checked at commit; a failed guard is the code in brackets.</s>
+    <lease-transition from="absent" to="reserved" call="GrantDispatch" caller="N-07" guard="class seat; ticket ready (or pr_open for reviewer and gate) at the read version; no reserved or running lease for the ticket and phase; seats reserved or running below caps.max_seats; ticket budget left (shared/retry-budget.xml#budgets); flag:hold absent [423 hold, 429 cap, 412 precondition]" effect="new token; generation 1; holder the dispatch id; expires_at now plus start.grace_seconds; same Commit as the dispatch record and tickets.transition to in_flight"/>
+    <lease-transition from="released expired" to="reserved" call="GrantDispatch" caller="N-07" guard="as above, and the row's last end was a free regrant recorded by N-11 (N-11/regrant key) [412 precondition]" effect="new token; generation plus 1; new holder; expires_at now plus start.grace_seconds"/>
+    <lease-transition from="absent released expired revoked" to="running" call="Acquire" caller="the job's node" guard="class maintenance [423 when another holder is reserved or running]" effect="new token; generation plus 1; holder node and job; expires_at now plus lease.ttl_seconds (leader: lease.leader_ttl_seconds)"/>
+    <lease-transition from="absent released expired revoked" to="running" call="Acquire" caller="the job's node" guard="class work; flag:hold absent [423 hold]; no other holder [423]" effect="new token; generation plus 1; holder node and job; expires_at now plus lease.ttl_seconds (merge.lock: merge.lock_seconds)"/>
+    <lease-transition from="reserved" to="running" call="Start" caller="N-15" guard="token matches; now before expires_at [412 stale_token, 412 lease_not_current]" effect="run_id set; heartbeat_at now; expires_at now plus lease.ttl_seconds; same Commit as run:RUN_ID spawning to running"/>
+    <lease-transition from="reserved" to="reserved" call="Renew" caller="the holder" guard="token matches; now before expires_at [412]" effect="heartbeat_at only; expires_at keeps the start grace"/>
+    <lease-transition from="running" to="running" call="Renew" caller="the holder" guard="token matches; now before expires_at [412]" effect="heartbeat_at, progress_at; expires_at now plus lease.ttl_seconds"/>
+    <lease-transition from="reserved running" to="released" call="Release" caller="the holder" guard="token matches; now before expires_at [412]" effect="ended_at; end_reason released; lease.released"/>
+    <lease-transition from="reserved" to="expired" call="Sweep" caller="N-02" guard="now at or past expires_at at commit" effect="ended_at; end_reason start-grace; lease.expired; no attempt is charged (N-11 free regrant)"/>
+    <lease-transition from="running" to="expired" call="Sweep" caller="N-02" guard="now at or past expires_at at commit" effect="ended_at; end_reason expired; lease.expired; N-12 writes the kill and N-11 charges per #retry-owner stall"/>
+    <lease-transition from="reserved running" to="revoked" call="Revoke" caller="N-12" guard="row version equals the version N-12 judged and the stall predicate still holds at commit [409 version: a fresh heartbeat wins]" effect="ended_at; end_reason revoked-stall, revoked-launcher-lost or revoked-ruling; token unchanged; same Commit as the kill entity (#kill-authority)"/>
+    <example schema="contracts.schema.json#/$defs/lease_row">{"key":"WO-20261014-ab12:worker:1","class":"seat","ticket":"WO-20261014-ab12","phase":"worker","attempt":1,"state":"running","token":184,"generation":1,"holder":"d-20261014063000-p2m7dq","run_id":"d-20261014063000-p2m7dq","granted_at":"2026-10-14T06:30:00Z","expires_at":"2026-10-14T06:46:30Z","heartbeat_at":"2026-10-14T06:31:30Z","progress_at":"2026-10-14T06:31:25Z","version":4}</example>
+    <example schema="contracts.schema.json#/$defs/lease_row">{"key":"merge.lock","class":"work","state":"running","token":200,"generation":9,"holder":"N-09/merge","granted_at":"2026-10-14T07:00:00Z","expires_at":"2026-10-14T07:05:00Z","version":31}</example>
+  </lease-machine>
+
+  <fencing id="fencing">
+    <s>A Commit that acts under a lease carries lease {key, token} (contracts.schema.json#/$defs/lease_ref). It is current only when, at commit, the row for that key is reserved or running, its token equals the presented token and now is before expires_at. A token that differs is 412 stale_token; a matching token on a released, expired or revoked row, or past expires_at, is 412 lease_not_current; both write record.stale and the writer exits.</s>
+    <s>Fencing is by lease key, never by (ticket, attempt): worker attempt 1 and reviewer attempt 1 are different keys, and a system job fences with its system key (closes NF-A3). Every seat-run write (bundle, workspace, run start, renew, result, close-out) and every work-class job write carries its lease.</s>
+    <s>The only exception is #terminal-report.</s>
+  </fencing>
+
+  <terminal-report id="terminal-report">
+    <s>seat.result or phase.failed carrying the most recent token of a lease that is now revoked or expired is accepted once per run_id with fenced: true (contracts.schema.json#/$defs/failure_body); its operation key (N-15/seat.result/RUN_ID/r1) makes a second report a replay or a 409 idempotency_mismatch.</s>
+    <s>N-11 treats a fenced report as an echo: the failure was already charged by the stall or expiry path that ended the lease; the report adds evidence (cost, turns, terminal reason) and changes no ticket status. An older token than the row's is still 412 stale_token. This closes NF4: a killed run's result lands, no result.pending card is raised for it.</s>
+    <example schema="contracts.schema.json#/$defs/failure_body">{"ticket":"WO-20261014-ab12","phase":"worker","attempt":1,"outcome":"killed","failure_kind":"stall","dispatch_id":"d-20261014063000-p2m7dq","run_id":"d-20261014063000-p2m7dq","fenced":true}</example>
+  </terminal-report>
+
+  <kill-authority id="kill-authority">
+    <s>N-12 decides: it writes entity kill:RUN_ID {reason, lease_version, at} in the same Commit as Revoke (key N-12/kill/RUN_ID@LEASE_VERSION/r1). N-42 owner kill actions and USERHALT reach N-12 as rulings; nobody else writes a kill.</s>
+    <s>The launcher (N-15) executes: it watches kill:* for its runs and stops the per-run unit coq-seat-RUN_ID (systemctl --user stop; TimeoutStopSec is kill.grace_seconds, then systemd sends SIGKILL to the unit's control group). The deadline is the unit's RuntimeMaxSec, so no second timer kills.</s>
+    <s>N-12 signals directly (systemctl --user stop on the same unit) only when the launcher is gone: its heartbeat entity older than 3 x lease.heartbeat_seconds. kill.grace_seconds is the one grace everywhere (#timing).</s>
+  </kill-authority>
+
+  <run-states id="run-states">
+    <s>Entity run:RUN_ID, written by compare-and-swap before and after each step, so a restarted launcher resumes every run from its entity, never from a directory scan. Each seat runs in its own transient unit, systemd-run --user --unit=coq-seat-RUN_ID --collect -p KillMode=control-group -p TimeoutStopSec=kill.grace_seconds -p RuntimeMaxSec=BOUND, outside the service cgroup, so a service restart does not kill seats and the launcher adopts a run by its unit name; the unit name also makes a second launch of one run impossible (closes NF-A11).</s>
+    <s>Output: stdout to result.json.partial; on exit the launcher validates it, renames it to result.json, fsyncs, and writes result.ok holding its sha256.</s>
+    <run-transition from="absent" to="spawning" by="N-15" trigger="seat.bundle and workspace both committed for the dispatch; CAS expected absent; then systemd-run"/>
+    <run-transition from="spawning" to="running" by="N-15" trigger="the unit is active with a main pid; same Commit as lease Start (N-15/run.start)"/>
+    <run-transition from="spawning" to="failed_spawn" by="N-15" trigger="systemd-run failed, or no active unit by start.grace_seconds; the lease is released; failure_kind crashed to N-11"/>
+    <run-transition from="running" to="exited" by="N-15" trigger="the unit went inactive (exit, kill or RuntimeMaxSec)"/>
+    <run-transition from="exited" to="result_committed" by="N-15" trigger="seat.result committed (N-15/seat.result), fenced when the lease had ended (#terminal-report); no valid result.json is terminal_reason no_result"/>
+    <run-transition from="result_committed" to="closed_out" by="N-16 N-17 N-19" trigger="the phase close-out committed (pr.open, ticket-set.draft or review.verdict) or the failure was handed to N-11; the slot is freed"/>
+  </run-states>
+
+  <ticket-transitions id="ticket-transitions">
+    <s>Statuses: contracts.schema.json#/$defs/ticket_status. Terminal: done, dead, cancelled, refused; the only way out of a terminal status is dead to waiting by an owner ruling. merged means merged on main and not yet verified; merged to done happens only when N-10 writes verified for a main sha that contains the merge (F13).</s>
+    <s>This table is the only transition list in the book; node volumes cite rows. tickets.transition (#statements) refuses any pair not here, a caller other than owner, or a from status that is no longer current, with 412 precondition and record ticket.transition_refused. claims says what the same Commit does to the ticket's claims (#claims): acquire, keep, release or none.</s>
+    <transition from="cut" to="refused" trigger="ticket.refused" owner="N-03" claims="none"/>
+    <transition from="cut" to="waiting" trigger="ticket.waiting" owner="N-03" claims="none"/>
+    <transition from="cut" to="ready" trigger="ticket.ready" owner="N-03" claims="acquire"/>
+    <transition from="waiting" to="ready" trigger="ticket.ready" owner="N-03" claims="acquire"/>
+    <transition from="waiting" to="cancelled" trigger="ticket.cancelled" owner="N-03" claims="none"/>
+    <transition from="waiting" to="dead" trigger="ticket.stale" owner="N-03" claims="none"/>
+    <transition from="ready" to="in_flight" trigger="dispatch" owner="N-07" claims="keep"/>
+    <transition from="ready" to="waiting" trigger="ticket.waiting" owner="N-03" claims="release"/>
+    <transition from="ready" to="cancelled" trigger="ticket.cancelled" owner="N-03" claims="release"/>
+    <transition from="in_flight" to="pr_open" trigger="pr.opened" owner="N-16" claims="keep"/>
+    <transition from="in_flight" to="retry_wait" trigger="attempt" owner="N-11" claims="keep"/>
+    <transition from="in_flight" to="ready" trigger="regrant" owner="N-11" claims="keep"/>
+    <transition from="in_flight" to="dead" trigger="dead" owner="N-11" claims="release"/>
+    <transition from="in_flight" to="cancelled" trigger="ticket.cancelled" owner="N-03" claims="release"/>
+    <transition from="retry_wait" to="ready" trigger="ticket.ready" owner="N-03" claims="keep"/>
+    <transition from="retry_wait" to="cancelled" trigger="ticket.cancelled" owner="N-03" claims="release"/>
+    <transition from="pr_open" to="in_flight" trigger="dispatch" owner="N-07" claims="keep"/>
+    <transition from="pr_open" to="retry_wait" trigger="attempt" owner="N-11" claims="keep"/>
+    <transition from="pr_open" to="merged" trigger="merge" owner="N-09" claims="keep"/>
+    <transition from="pr_open" to="dead" trigger="dead" owner="N-11" claims="release"/>
+    <transition from="pr_open" to="cancelled" trigger="ticket.cancelled" owner="N-03" claims="release"/>
+    <transition from="merged" to="done" trigger="ticket.done" owner="N-03" claims="release"/>
+    <transition from="dead" to="waiting" trigger="ticket.waiting" owner="N-03" claims="none"/>
+    <s>Notes. in_flight to ready is the free regrant (no attempt charged). retry_wait to ready fires when the attempt's not_before passes. pr_open to in_flight dispatches the reviewer or gate phase on the open PR. dead to waiting needs an owner ruling (ticket.unblock, N-29) and resets the attempt counter; claims are taken again at the next ready. A main red after merged holds merges (N-10) and cuts a fix ticket; the merged ticket stays merged until a verified main contains it.</s>
+  </ticket-transitions>
+
+  <claims id="claims">
+    <s>One authority: the claims table owned by N-03 (shared/state-store.xml#table-claims: id, ticket, pattern, prefix, taken_at, released_at). The N-14 file_claims table of book 1.0.0 is deleted; N-14 only verifies that the dispatch's ticket holds live claims covering its files (412 claim_missing).</s>
+    <s>prefix is the literal part of the pattern before its first glob metacharacter. Two claims overlap when either prefix starts with the other (two-way containment): herdr/bin/ and herdr/bin/seat.sh overlap. Acquire runs inside the Commit of the transition whose claims attribute is acquire: it reads the live claims (released_at null) of other tickets, refuses the whole Commit on any overlap (412 precondition; the ticket stays waiting with reason files-claimed) and inserts one row per pattern. The ticket's own claims are excluded from the check, so a retried ticket never blocks on itself (closes NF6).</s>
+    <s>Release sets released_at by statement in the Commit of a release transition; a released row is never reused and a reacquire inserts new rows, so there is no primary-key collision on a path (closes NF-A6, NF5). The overlap check is a scan of live claims, bounded by the statement row limit (#batch); a non-unique partial index on prefix where released_at is null serves it.</s>
+  </claims>
+
+  <retry-owner id="retry-owner">
+    <s>The only table of who retries a failure and whether an attempt is charged (shared/retry-budget.xml#layers composes the layers). Only the innermost layer retries a given failure; an outer layer sees it only when the inner one gives up. Every failure routed to N-11 carries contracts.schema.json#/$defs/failure_body and N-11 accepts every failure_kind.</s>
+    <s>charges: yes (N-11 charges attempt n+1 at once), no (free: regrant or wait, the attempt counter does not move), on-exhaust (the owner retries inside its own budget; on give-up it writes the failure to N-11, which charges once). session: new (a fresh seat session), resume-if-done (resume the worker session only when the prior worker run ended done, else new), none (no seat is dispatched by this row).</s>
+    <retry-row failure="phase.failed" owner="N-16" charges="on-exhaust" session="new">close-out recovery in code, 3 tries, no model; then phase.failed to N-11</retry-row>
+    <retry-row failure="stall" owner="N-11" charges="yes" session="new">the fenced seat.result that follows is an echo</retry-row>
+    <retry-row failure="crashed" owner="N-11" charges="yes" session="new"/>
+    <retry-row failure="no_result" owner="N-11" charges="yes" session="new"/>
+    <retry-row failure="seat.bundle.failed" owner="N-11" charges="yes" session="new"/>
+    <retry-row failure="workspace.failed" owner="N-11" charges="yes" session="new"/>
+    <retry-row failure="workspace.refused" owner="N-11" charges="no" session="new">free regrant after retry.claim_seconds</retry-row>
+    <retry-row failure="claim_overlap" owner="N-11" charges="no" session="new">free regrant after retry.claim_seconds</retry-row>
+    <retry-row failure="files-claimed" owner="N-11" charges="no" session="new">free regrant after retry.claim_seconds</retry-row>
+    <retry-row failure="cap" owner="N-11" charges="no" session="new">free regrant on the next tick with capacity</retry-row>
+    <retry-row failure="review.changes" owner="N-11" charges="yes" session="resume-if-done">worker phase attempt n+1</retry-row>
+    <retry-row failure="gate.red" owner="N-11" charges="yes" session="resume-if-done">worker phase attempt n+1; the gate phase is never re-dispatched after N-25 has given up</retry-row>
+    <retry-row failure="merge.conflict" owner="N-11" charges="yes" session="resume-if-done">worker phase attempt n+1</retry-row>
+    <retry-row failure="schema_invalid" owner="N-11" charges="yes" session="new"/>
+    <retry-row failure="output_rejected" owner="N-11" charges="yes" session="new"/>
+    <retry-row failure="seat_blocked" owner="N-11" charges="yes" session="new"/>
+    <retry-row failure="error_max_turns" owner="N-11" charges="yes" session="new"/>
+    <retry-row failure="error_max_budget" owner="N-11" charges="yes" session="new"/>
+    <retry-row failure="harness_mismatch" owner="N-11" charges="no" session="none">ticket to waiting with one card; nothing dispatches until the harness pin matches</retry-row>
+    <retry-row failure="admission-refused" owner="N-24" charges="no" session="none">no ladder climb; a defect record and one card (shared/ci-capacity.xml#admission)</retry-row>
+    <s>Attempts: worker, reviewer and spec-author 3 each; dead after the third charged failure of a phase. Per-ticket and daily budgets (budget.* keys, #timing) are enforced by N-07 at GrantDispatch.</s>
+  </retry-owner>
+
+  <outbox id="outbox">
+    <s>An external effect (forge push, PR, merge, status post, Jenkins build, kubernetes object, ntfy push, Drive upload) is an effects row (contracts.schema.json#/$defs/effect_row; table shared/state-store.xml#table-effects) written in the same Commit as the record that decides it, with state intent. Nothing calls a provider before that Commit.</s>
+    <s>A worker of the deciding node sends it, records the provider's id (external_id) and reads the provider back; each state move is effects.advance by compare-and-swap: intent, sent, accepted (provider took it), done (read back observed), failed (after 3 attempts, routed per #retry-owner). A send whose outcome is unknown (timeout, lost reply, crash) moves to unknown and is looked up by op_id at the provider before any resend.</s>
+    <s>Lookup keys: Jenkins builds carry the parameter COQ_OP_ID; the worker searches the queue and the builds for it before any repost (a queue item URL expires after 5 minutes, so the build parameter is the identity). A merge is found by GET of the PR (merged, merge_commit_sha); a status by the statuses of the sha for its context; a PR by its head branch; a push by the remote head sha; an ntfy push by its message id. No record claims an effect done before the read back (invariant I06).</s>
+    <example schema="contracts.schema.json#/$defs/effect_row">{"op_id":"N-23/gate.run/57@89abcdef0123456789abcdef0123456789abcdef@1/r1","provider":"jenkins","action":"build.trigger","target":"coq-gate","request_hash":"9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08","state":"unknown","attempts":1,"updated_at":"2026-10-14T06:41:00Z","epoch":1}</example>
+  </outbox>
+
+  <epoch-cursor id="epoch-cursor">
+    <s>seq is INTEGER PRIMARY KEY AUTOINCREMENT on records: unique and strictly increasing within one store file, never reused, and not gapless (retention deletes rows; a rolled-back transaction can leave a gap). No reader counts seqs.</s>
+    <s>Entity store:epoch (contracts.schema.json#/$defs/store_epoch) names the epoch, when and why it began, and min_retained_seq (advanced by N-45 in the same Commit that deletes rows). Records (envelope epoch), Tail frames and cursors (#/$defs/cursor) carry the epoch; a seq means nothing outside its epoch.</s>
+    <s>Tail(cursor) answers cursor.expired when the cursor's epoch is not current, its seq is below min_retained_seq or above the high-water seq; the client then takes Snapshot, which returns its class's state and the seq S read in one read transaction, and tails strictly after S. Append-only kinds apply idempotently by record id. Entity-only frames carry the entity key and version, no seq, and coalesce by key (#entity-only).</s>
+    <example schema="contracts.schema.json#/$defs/store_epoch">{"epoch":2,"started_at":"2026-10-15T09:00:00Z","cause":"restored","min_retained_seq":120400}</example>
+    <example schema="contracts.schema.json#/$defs/cursor">{"epoch":2,"seq":120455}</example>
+  </epoch-cursor>
+
+  <restore id="restore">
+    <s>Restore of the store from a verified backup (STATE/backup/store/, nodes/N-05/spec.xml), bound restore.rto_minutes; the data loss is bounded by backup.rpo_offhost_hours for a host loss and by backup.interval_seconds otherwise.</s>
+    <step n="1">Stop coq-service; copy the backup to STATE/store/coq.db; integrity_check; start the service in restore mode, which accepts no socket caller but the owner until step 6.</step>
+    <step n="2">First Commit (N-01/store.restored/EPOCH/r1): store:epoch to epoch plus 1, cause restored; flag:hold set with reason restore; flag:build_mode off; counter:lease_token raised by 1000000000 so no token issued after the backup is ever reissued; every reserved or running lease to expired.</step>
+    <step n="3">Reconcile before any effect: N-04 polls the forge fresh; N-09 records merges found on main after the backup's main sha; N-23 looks up Jenkins builds by COQ_OP_ID; every effects row in intent, sent or unknown becomes unknown and is looked up (#outbox); tickets in_flight move to retry_wait uncharged and pr_open tickets are matched to their PRs.</step>
+    <step n="4">store.restored 200 names the new epoch, the backup id, its high-water seq and what reconciliation found; every Tail client gets cursor.expired and resnapshots.</step>
+    <step n="5">The line stays held; only an owner ruling (N-29, applied by N-44) clears the hold. A restore never releases its own hold.</step>
+  </restore>
+
+  <timing id="timing">
+    <s>The one table of timing and capacity defaults. The same keys and values are the config-key defaults of shared/state-store.xml#config-keys; a node volume cites the key, never the number. The budget keys mean what shared/retry-budget.xml#budgets says; their values are owner-tunable defaults.</s>
+    <default key="lease.ttl_seconds" value="900" unit="s"/>
+    <default key="lease.heartbeat_seconds" value="30" unit="s"/>
+    <default key="lease.leader_ttl_seconds" value="30" unit="s"/>
+    <default key="start.grace_seconds" value="120" unit="s"/>
+    <default key="kill.grace_seconds" value="30" unit="s"/>
+    <default key="stall.seconds.worker" value="600" unit="s"/>
+    <default key="stall.seconds.spec-author" value="600" unit="s"/>
+    <default key="stall.seconds.reviewer" value="300" unit="s"/>
+    <default key="run.deadline_seconds.worker" value="5400" unit="s"/>
+    <default key="run.deadline_seconds.spec-author" value="5400" unit="s"/>
+    <default key="run.deadline_seconds.reviewer" value="1200" unit="s"/>
+    <default key="tick.scheduler_seconds" value="5" unit="s"/>
+    <default key="merge.lock_seconds" value="300" unit="s"/>
+    <default key="retry.claim_seconds" value="300" unit="s"/>
+    <default key="caps.max_seats" value="16" unit="seats"/>
+    <default key="workspace_slots" value="16" unit="slots"/>
+    <default key="budget.ticket_pods_per_unit" value="30" unit="pods"/>
+    <default key="budget.ticket_seat_usd" value="100" unit="USD"/>
+    <default key="budget.daily_seat_usd" value="300" unit="USD"/>
+    <default key="budget.daily_pod_minutes" value="4320" unit="min"/>
+    <default key="store.commit_ms" value="250" unit="ms"/>
+  </timing>
+
+  <entity-only id="entity-only">
+    <s>Kinds registered entity-only write their entity by compare-and-swap and append no record unless the state changes: tick:SUBKIND (a record only for tick.missed), health:service (a record on a status transition), heartbeats (a record only for adopted or a token change), page.state (a record never; N-32), watcher.alive (a record when the lamp changes). This closes NF-A7 and NF-D6: book 1.0.0 made every entity write a record, about 29 million rows a year.</s>
+    <s>The kind registry (shared/record-kinds.xml, generated) carries the entity-only class mark from the owning node's volume; a record of an entity-only kind outside a state change is 400. Tail streams entity-only changes as coalesced entity frames (#epoch-cursor).</s>
+  </entity-only>
+
+  <many-agents id="many-agents">
+    <readers>Every node volume and schema cites these anchors and $refs contracts.schema.json; the review seat reads this volume first when two nodes disagree.</readers>
+    <writers>A change here is one PR that also changes every node volume citing the changed row; check C24 parses the ticket transitions and C25 the operation keys, and C22 validates the examples.</writers>
+    <collision>Two GrantDispatch commits for one ticket and phase: the second fails the no-live-lease guard or the counter precondition (409 version) and the next tick sees the first. A renew racing a revoke: the revoke's version guard fails (409), the fresh heartbeat wins. Two commits under one operation key: one row, the other replays 200 or is 409 idempotency_mismatch. A stale token: 412. None of these waits and none overwrites.</collision>
+    <test>Planned N-01 test: 20 goroutines Commit one operation key, exactly one row and 19 replays; the six effects of one run under six keys all commit (AT-F02). Planned N-02 test: 20 GrantDispatch on one ticket, one lease, 19 refusals; renew between stall snapshot and revoke keeps the lease (AT-F05). Status: not-run.</test>
+  </many-agents>
+
+  <sources id="sources">
+    <source path="rebuild/design/shared/review-dispositions.xml" planned="true" note="F02, F04, F05, F12, F14, F16, F17 dispositions"/>
+    <source path="scheduler/api/scheduler/v1/scheduler.proto" anchor="" note="the real services today: Executor{Run, Health}, Scheduler{Health, Status, Reload, Drain, Retry}; no streaming call"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal" note="T06 lease with heartbeat, generation and compare-and-swap"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="12-d10-durable-queue-or-broker" note="D10 one store, SQLite"/>
+  </sources>
+</volume>

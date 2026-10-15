@@ -246,10 +246,17 @@
       "additionalProperties": false
     },
     "effect_row": {
-      "allOf": [ { "$ref": "#/$defs/effect_intent" } ],
+      "description": "the effects table row (shared/state-store.xml#table-effects): the intent fields plus state; restated by $ref field by field because effect_intent closes its properties",
       "type": "object",
-      "required": ["state", "attempts", "updated_at", "epoch"],
+      "required": ["op_id", "provider", "action", "target", "request_hash", "state", "attempts", "updated_at", "epoch"],
+      "additionalProperties": false,
       "properties": {
+        "op_id": { "$ref": "#/$defs/effect_intent/properties/op_id" },
+        "provider": { "$ref": "#/$defs/effect_intent/properties/provider" },
+        "action": { "$ref": "#/$defs/effect_intent/properties/action" },
+        "target": { "$ref": "#/$defs/effect_intent/properties/target" },
+        "request_hash": { "$ref": "#/$defs/effect_intent/properties/request_hash" },
+        "lease": { "$ref": "#/$defs/lease_ref" },
         "state": { "$ref": "#/$defs/effect_state" },
         "attempts": { "type": "integer", "minimum": 0, "maximum": 3 },
         "external_id": { "type": "string" },
