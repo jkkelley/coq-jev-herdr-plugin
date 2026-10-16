@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-51/record.schema.json",
+  "title": "N-51 Exit test: input and output records",
+  "description": "Parent: ../../index.xml#N-51. Sibling: spec.xml. Book 1.1.0: shared envelope through ../N-43/record.schema.json#/$defs/envelope (NF-A12); inputs add seat.result (denied_line_ops) and record.refused (derived principal) for rows A1 and A2 (F20).",
+  "oneOf": [{"$ref": "#/$defs/input"}, {"$ref": "#/$defs/output"}],
+  "$defs": {
+    "utc": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "day": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"},
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "envelope": {"$ref": "../N-43/record.schema.json#/$defs/envelope"},
+    "input": {
+      "oneOf": [
+        {
+          "title": "tick daily (from N-06)",
+          "allOf": [{"$ref": "#/$defs/envelope"}],
+          "properties": {
+            "kind": {"const": "tick"},
+            "body": {"type": "object", "required": ["now", "tick"], "properties": {"now": {"$ref": "#/$defs/utc"}, "tick": {"const": "daily"}}}
+          }
+        },
+        {
+          "title": "verified or rejected main verdict (from N-10)",
+          "allOf": [{"$ref": "#/$defs/envelope"}],
+          "properties": {
+            "kind": {"type": "string", "enum": ["verified", "rejected"]},
+            "body": {
+              "type": "object",
+              "required": ["main_sha", "ticket"],
+              "properties": {"main_sha": {"$ref": "#/$defs/sha"}, "ticket": {"type": "string"}, "pr": {"type": "integer"}}
+            }
+          }
+        },
+        {
+          "title": "seat.result (from N-15): denied_line_ops for row A2",
+          "allOf": [{"$ref": "#/$defs/envelope"}],
+          "properties": {"kind": {"const": "seat.result"}, "node": {"const": "N-15"}}
+        },
+        {
+          "title": "record.refused (from N-01): 403 with the derived principal role, for row A1",
+          "allOf": [{"$ref": "#/$defs/envelope"}],
+          "properties": {"kind": {"const": "record.refused"}, "code": {"const": 403}, "node": {"const": "N-01"}}
+        }
+      ]
+    },
+    "audit-row": {
+      "type": "object",
+      "required": ["id", "name", "pass", "count"],
+      "properties": {
+        "id": {"type": "string", "enum": ["A1", "A2", "A3", "A4", "A5", "A6", "A7", "A8"]},
+        "name": {"type": "string"},
+        "pass": {"type": "boolean"},
+        "count": {"type": "integer", "minimum": 0},
+        "evidence": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "properties": {
+              "record": {"type": "string"},
+              "pr": {"type": "integer"},
+              "path": {"type": "string"},
+              "line": {"type": "string", "maxLength": 240},
+              "node": {"type": "string"}
+            }
+          }
+        },
+        "reason": {"type": "string", "maxLength": 240}
+      }
+    },
+    "exit-verdict": {
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": {"const": "exit.verdict"},
+        "code": {"enum": [201, 204, 422, 503]},
+        "body": {
+          "type": "object",
+          "required": ["day_from", "day_to", "rows", "consecutive_fails"],
+          "properties": {
+            "day_from": {"$ref": "#/$defs/day"},
+            "day_to": {"$ref": "#/$defs/day"},
+            "rows": {"type": "array", "minItems": 8, "maxItems": 8, "items": {"$ref": "#/$defs/audit-row"}},
+            "consecutive_fails": {"type": "integer", "minimum": 0},
+            "tickets_verified": {"type": "array", "items": {"type": "string"}},
+            "build_mode": {"type": "string", "enum": ["on", "off"]},
+            "hold": {"type": "string", "enum": ["on", "off"]},
+            "head": {"$ref": "#/$defs/sha"},
+            "origin_main": {"$ref": "#/$defs/sha"},
+            "freeze_record": {"type": "string", "description": "freeze.state id written in the same batch on a pass"},
+            "reason": {"type": "string", "maxLength": 240},
+            "owner_acts": {"type": "boolean"}
+          }
+        },
+        "node": {"const": "N-51"}
+      }
+    },
+    "freeze-state": {
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": {"const": "freeze.state"},
+        "code": {"const": 200},
+        "body": {
+          "type": "object",
+          "required": ["state", "reason"],
+          "properties": {
+            "state": {"type": "string", "enum": ["on", "off"]},
+            "reason": {"type": "string", "enum": ["d19-ruling", "exit-pass", "owner-ruling"]},
+            "verdict_id": {"type": "string"},
+            "ruling_id": {"type": "string"}
+          }
+        },
+        "node": {"const": "N-51"}
+      }
+    },
+    "output": {"oneOf": [{"$ref": "#/$defs/exit-verdict"}, {"$ref": "#/$defs/freeze-state"}]}
+  }
+}

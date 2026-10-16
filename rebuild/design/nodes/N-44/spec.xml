@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-44 Flags: build mode and hold. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
+     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh.
+     Book 1.1.0 (2026-10-15): single writer of flag:build_mode and flag:hold (review NF-A9); consumes the typed
+     effects of an N-29 ruling (NF-A5); shared envelope (NF-A12); owner principal only, never a relay. -->
+<volume id="N-44" kind="node-spec" node="N-44" group="G7" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, shared</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="authority">Who may set a flag</entry>
+    <entry ref="mechanism">Mechanism in the Go service</entry>
+    <entry ref="effects">What the flags change, node by node</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="examples">Example records</entry>
+    <entry ref="state-paths">State paths and their cleanup</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="shared-needs">What this volume needs from the shared volumes</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-44"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schema of this node</sibling>
+    <sibling href="../N-29/spec.xml#N-29" kind="node">Owner answer intake, which decides every flag effect this node applies</sibling>
+    <sibling href="../N-43/spec.xml#N-43" kind="node">Status code map loader, same group</sibling>
+    <sibling href="../N-51/spec.xml#N-51" kind="node">Exit test, same group</sibling>
+    <shared href="../../shared/principles.xml#build-mode">The build-mode principle this node mechanises</shared>
+    <shared href="../../shared/authority.xml#owner-words">Owner words: whole trimmed message, owner principal, owner page or owner CLI</shared>
+    <shared href="../../shared/authority.xml#relayable-rulings">Which answers a relay may carry (none and ticket.unblock only)</shared>
+    <shared href="../../shared/contracts.xml#restore">A restore starts a new epoch held</shared>
+    <shared href="../../shared/cut-over.xml#bootstrap">Bootstrap states B0 to B8; USERGO only at B7</shared>
+    <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
+    <shared href="../../shared/state-store.xml#flags">The flags store table</shared>
+    <shared href="../../shared/seat-contract.xml#build-mode">What a seat bundle looks like under build mode</shared>
+    <shared href="../../dag.md#3-every-node">DAG row N-44</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>Turns the owner's build-mode rule and the owner's hold into flags the system reads: entity flag:build_mode (on or off, scope, expiry the system enforces, card id) and entity flag:hold (on or off, and the owner word the hold lamp waits on).</is>
+    <is>N-44 is the single writer of both entities. N-29 decides (one ruling per card, typed effects); N-44 applies; N-42 draws the hold lamp and re-enters through N-29; N-03, N-07 and N-09 read. No other node, script or seat writes a flag row (review NF-A9).</is>
+    <is>While build mode is on, old-line gates, hooks, guards, leases, watches and status rules are not rendered into seats in scope (N-13), and a refusal that names an old rule is recorded as rule.bit and does not stop the ticket (factory-rebuild-plan.xml failure case governance-interference).</is>
+    <is-not>It is not a bypass of the gate: coq/gate on the head sha (N-08, N-25) and the reviewer record (N-19) still decide a merge under build mode. It is not a lift of permissions for the owner's break glass, which is N-42's one-time control.action. Flag:freeze is not a control flag: N-51 writes it in the exit verdict's own transaction.</is-not>
+    <why>L11 F1: build mode is a note, not a mechanism, and an agent switching rules off by hand is the pattern the owner rejected the same day. herdr/config/exemptions.json already has the right shape: rule, until, card_id, why (L11 section 8). Review NF-A9: three volumes named three writers of flag:hold.</why>
+  </purpose>
+
+  <input id="input">
+    <record kind="ruling" from="N-29">A ruling whose effects array carries a typed flag effect (record.schema.json#/$defs/flag_effect): build-mode.set with state, scope, expires_at and card_id (state off turns build mode off early); control.halt (USERHALT) or control.resume (USERGO) with card_id. A Controls screen action re-enters through N-29 and arrives here as a ruling.</record>
+    <record kind="store.restored">A restore started a new epoch (shared/contracts.xml#restore); package flags runs inside that first Commit (mechanism step 6) and the record is the evidence it did.</record>
+    <record kind="tick" from="N-06">The scheduler tick; on every tick the node compares now with the live build-mode expiry.</record>
+    <record kind="unit.start" from="N-06">Expiry reconcile before the first dispatch.</record>
+    <schema href="record.schema.json#/$defs/input"/>
+  </input>
+
+  <output id="output">
+    <record kind="build-mode.state" code="200">Build mode as the system now holds it: on or off, scope, expires_at, card id, the ruling id, flag_version and a reason (ruling, extend, ended-early, expired, start-reconcile, restore).</record>
+    <record kind="build-mode.state" code="422">A ruling refused on validation: expiry in the past, expiry beyond flags.build_mode.max_duration, or a scope not in the enum.</record>
+    <record kind="build-mode.state" code="409">The compare-and-swap lost twice (reason race); the live state is unchanged.</record>
+    <record kind="build-mode.state" code="403">The ruling did not come from an owner principal on the owner page, the owner CLI or the Controls screen (reason not-owner); nothing changes.</record>
+    <record kind="hold.state" code="200">flag:hold set or cleared: state, waits_on (USERGO or GOFACTORY), reason (userhalt, usergo, restore, bootstrap), card and ruling ids.</record>
+    <record kind="hold.state" code="412">control.resume before bootstrap B7 (reason not-ready, the missing proofs named); the hold stays.</record>
+    <record kind="hold.state" code="403">A hold effect from anything but an owner principal (reason not-owner).</record>
+    <schema href="record.schema.json#/$defs/output"/>
+    <reads>N-07 (copies flag:build_mode and its version into the dispatch as contracts.schema.json#/$defs/build_mode; refuses GrantDispatch under hold), N-13 (renders the seat bundle from that copy), N-03 and N-09 (read flag:hold every tick), N-42 (the hold lamp and the build-mode lamp; turn-off control), N-28 (one card when build mode expires with rebuild tickets still open), N-51 (the exit test records both states of the day).</reads>
+  </output>
+
+  <authority id="authority">
+    <rule>A flag effect is applied only when the ruling's server-derived principal (shared/authority.xml#role-derivation) is the owner and its source is the owner page, the owner CLI or the Controls screen of the owner page. A ruling from a relay, a policy, an import or a seat never changes a flag; N-44 writes 403 not-owner and N-29's card stays open (shared/authority.xml#relayable-rulings allows a relay only none and ticket.unblock).</rule>
+    <rule>USERHALT and USERGO are owner words (shared/authority.xml#owner-words): N-29 matches them; N-44 never reads message text. control.resume clears the hold only at bootstrap B7 or later (shared/cut-over.xml#bootstrap); before B7 it is hold.state 412 not-ready naming the missing proofs.</rule>
+    <rule>A restore sets the hold with no ruling (the store itself decides, shared/contracts.xml#restore); only an owner ruling clears it.</rule>
+  </authority>
+
+  <mechanism id="mechanism">
+    <where>Go package flags inside the service, the only code path that writes entity flag:build_mode or flag:hold; every write is one Store.Commit (shared/contracts.xml#batch) with a compare-and-swap on the entity version and the record in the same transaction; operation keys N-44/flag.set/&lt;ruling_id&gt;/r1, N-44/flag.expire/build_mode@&lt;version&gt;/r1 and N-44/flag.hold/restore@&lt;epoch&gt;/r1 (shared/contracts.xml#operation-keys).</where>
+    <step n="1">On a ruling: check authority (section authority); for each flag effect in order, validate. build-mode.set on: expires_at after now, at most flags.build_mode.max_duration (default P7D) ahead, scope in the enum. build-mode.set off: valid in any state (ended-early). control.halt: always valid. control.resume: bootstrap:state is B7 or B8.</step>
+    <step n="2">Commit the entity write and the state record together. A replay of the same ruling returns the first reply (same operation key, same request hash); N-29's one ruling per card means a card answered twice never reaches here twice. On 409 version, re-read and re-validate once; a second 409 is build-mode.state 409 reason race.</step>
+    <step n="3">On every tick: if build mode is on and now is at or after expires_at, commit off with reason expired, card_id of the ruling it closes.</step>
+    <step n="4">On unit.start: run step 3 once before the first dispatch, so a build mode that expired while the service was down is cleared before any seat renders.</step>
+    <step n="5">When build mode turns off by expiry and N-03 reports rebuild tickets still open (waiting, ready or in_flight with scope rebuild), set open_rebuild_tickets; N-28 turns it into one owner card (extend or let the rules apply), which carries no default.</step>
+    <step n="6">Restore (shared/contracts.xml#restore step 2): the restore's first Commit calls package flags inside its own transaction (Store.Do), so flag:hold on (waits_on USERGO, reason restore), build mode off (reason restore) and both state records are written by this node's code in the restore transaction itself; no dispatch can fall between the new epoch and the hold. Restore code never writes a flag entity directly.</step>
+    <scope>Scope rebuild applies to tickets whose lane is rebuild (cut from this spec book by N-17 and N-18); product to product-lane tickets; all to every ticket. A ticket's scope is fixed at cut and read by N-13 from the dispatch record.</scope>
+    <diagram>
+      <mermaid><![CDATA[
+stateDiagram-v2
+  [*] --> off
+  off --> on : build-mode.set on (owner principal) CAS ok
+  on --> on : build-mode.set on, later expiry (extend)
+  on --> off : build-mode.set off (ended-early)
+  on --> off : tick at or after expires_at (system)
+  on --> off : store.restored
+  off --> off : expired-at-start reconcile (unit.start)
+      ]]></mermaid>
+    </diagram>
+  </mechanism>
+
+  <effects id="effects">
+    <effect node="N-13">With build mode on and the ticket in scope, the seat bundle omits every hook, guard and watch from the old line (compaction-guard binding, nudge, trust writer, idle watch, prettier PostToolUse, AutoMem) and renders settings from the role only; the bundle hash records build_mode and scope.</effect>
+    <effect node="N-11">A failure record whose reason names an old rule (the old-rule table of shared/principles.xml#build-mode) is written as rule.bit 300 with the rule name, and the attempt is not charged; one fix ticket request per rule name goes to N-03.</effect>
+    <effect node="N-07">Under flag:hold, GrantDispatch and work-class leases are refused; maintenance leases are allowed (shared/contracts.xml#lease-machine).</effect>
+    <effect node="N-28">rule.bit is not a card; the expiry-with-open-tickets record is one card.</effect>
+    <effect node="N-42">The hold lamp (HOLD and the owner word it waits on) and the build-mode lamp (on, scope, time left) with turn off now, which re-enters at N-29.</effect>
+    <effect node="N-08 N-09 N-19">Build mode changes nothing: the gate, the reviewer record and the machine merge apply; a rule that blocks a rebuild ticket is a defect in the rule, a failing test is not.</effect>
+  </effects>
+
+  <start id="start">
+    <s>The ruling arrives as a record from N-29 (the owner's card answer on the owner page, the owner CLI, or a Controls screen action). No agent edits a flag file; no seat reads a memory note.</s>
+    <s>Expiry is enforced by the tick (N-06) and reconciled at unit start; a restore holds by itself; no one has to remember to turn anything off.</s>
+  </start>
+
+  <waits id="waits">
+    <wait id="w1" what="Store.Commit with CAS" timeout="PT5S" fallback="one re-read and retry; then build-mode.state 409 reason race; the live state is unchanged and the next tick re-evaluates"/>
+    <wait id="w2" what="build mode itself" timeout="expires_at (at most max_duration, default P7D)" fallback="the system turns it off and posts one card if rebuild tickets remain open"/>
+    <wait id="w3" what="N-03 open-ticket count for the expiry card" timeout="PT5S" fallback="post the card with count unknown rather than skip it"/>
+    <wait id="w4" class="owner-decision" what="the owner word that clears a hold" timeout="none; the hold lamp shows which word it waits on" fallback="nothing dispatches; ticks, health, backups, the poll and push keep running; the owner card carries no default and no deadline (shared/authority.xml#owner-words)"/>
+    <cog-test>The cog that could stall this node is a human remembering to turn build mode off. The expiry removes that cog; the owner's only action is optional (extend or end early). The hold is meant to wait for the owner, and the lamp says so.</cog-test>
+  </waits>
+
+  <retries id="retries">
+    <policy attempts="3" backoff="2 s fixed">Store commits (shared/contracts.xml#retry-owner: the innermost layer).</policy>
+    <recover>After three failures the node writes build-mode.state 409 race and leaves the live state; readers read the entity, not the attempt.</recover>
+    <report>A ruling refused for an expiry beyond the maximum is 422 and goes back to N-29, which re-asks with the maximum stated; never silently clipped.</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Sixteen seats rendering at once read build mode from the dispatch record N-07 gave them (N-07 copies the entity and its version in the GrantDispatch transaction), so a flip during a render cannot split one seat's bundle between two states.</readers>
+    <writers>Only package flags writes the two entities, by compare-and-swap; rulings are applied in store sequence order, so two rulings in the same second resolve deterministically and the later one wins.</writers>
+    <collision>An expiry tick and an extend ruling at the same moment: both CAS on the same version; one wins; the loser re-reads. If extend won, build mode stays on with the later expiry; if expiry won, the extend applies on its retry as a fresh on.</collision>
+    <collision>USERHALT and a restore at once: both set the hold; the second CAS re-reads, finds it on, and keeps the stronger waits_on (USERGO); one lamp.</collision>
+    <collision>A seat whose bundle was rendered under on while build mode turned off keeps its bundle for that run (one-shot, D02); the next attempt renders under the new state.</collision>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="200" kind="build-mode.state">Applied (on, off, extend, ended-early, expired, restore); system acts; with open_rebuild_tickets greater than 0 on an expiry, the owner acts through one card.</emits>
+    <emits code="422" kind="build-mode.state">Ruling invalid (bad expiry, bad scope); N-29 acts by re-asking with the reason.</emits>
+    <emits code="409" kind="build-mode.state">CAS lost twice (race); system acts (next tick).</emits>
+    <emits code="403" kind="build-mode.state">Not an owner principal; nobody acts (the card stays open).</emits>
+    <emits code="200" kind="hold.state">Hold set or cleared; N-03, N-07, N-09 act on the next tick; the hold lamp follows.</emits>
+    <emits code="412" kind="hold.state">USERGO before bootstrap B7; the owner reads the missing proofs on the hold lamp's card.</emits>
+    <emits code="403" kind="hold.state">Not an owner principal; nobody acts.</emits>
+    <emits code="300" kind="rule.bit">Written by N-11 on this node's rule; listed here because build mode defines when it may be written.</emits>
+  </status-codes>
+
+  <examples id="examples">
+    <example schema="record.schema.json#/$defs/build_mode_state"><![CDATA[
+{ "id": "20261015T060000Z-200-b7m4q", "at": "2026-10-15T06:00:00Z", "kind": "build-mode.state", "code": 200, "node": "N-44",
+  "body": { "state": "on", "scope": "rebuild", "expires_at": "2026-10-22T06:00:00Z", "card_id": "C-61",
+            "ruling_id": "20261015T055958Z-200-r8k2d", "reason": "ruling", "flag_version": 4 } }
+    ]]></example>
+    <example schema="record.schema.json#/$defs/hold_state"><![CDATA[
+{ "id": "20261015T061500Z-412-h3n9x", "at": "2026-10-15T06:15:00Z", "kind": "hold.state", "code": 412, "node": "N-44",
+  "body": { "state": "on", "waits_on": "USERGO", "reason": "not-ready", "card_id": "C-62",
+            "missing_proofs": ["cut-over step 6", "cut-over step 7"], "flag_version": 9 } }
+    ]]></example>
+    <example schema="record.schema.json#/$defs/build_mode_effect"><![CDATA[
+{ "kind": "build-mode.set", "state": "off", "card_id": "C-63" }
+    ]]></example>
+  </examples>
+
+  <state-paths id="state-paths">
+    <path id="N-44.log" glob="$COQ_STATE/logs/svc/flags/*.jsonl" retention="P14D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-44.log">Flag transitions as log lines; the store is the truth.</path>
+    <rule>herdr/config/exemptions.json is not written by this node; it is a source and is retired with the herdr config tree by N-49 once N-13 renders bundles from the flag.</rule>
+  </state-paths>
+
+  <edges id="edges">
+    <in ref="../N-29/spec.xml#N-29">ruling (typed effects build-mode.set, control.halt, control.resume)</in>
+    <in ref="../N-06/spec.xml#N-06">tick, unit.start</in>
+    <out ref="../N-13/spec.xml#N-13">build-mode.state (through the dispatch record of N-07)</out>
+    <out ref="../N-42/spec.xml#N-42">build-mode.state and hold.state (the lamps and the turn-off control)</out>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>An owner ruling turns build mode on with its expiry and card id.</check><proof>A test ruling from an owner principal on the owner page; one build-mode.state 200 on with the same card_id and expires_at; entity flag:build_mode version bumped.</proof></item>
+    <item><check>build-mode.set off ends build mode early.</check><proof>A ruling with state off while on; build-mode.state 200 off reason ended-early.</proof></item>
+    <item><check>A relayed or seat-produced ruling changes no flag.</check><proof>A ruling with source relay and one whose principal is a seat; build-mode.state 403 not-owner and hold.state 403 not-owner; entity versions unchanged.</proof></item>
+    <item><check>The system turns build mode off at expiry without any ruling.</check><proof>Fake clock advanced past expires_at; one build-mode.state 200 off reason expired by N-44.</proof></item>
+    <item><check>An expired build mode is cleared at unit start.</check><proof>Store seeded with an expired on; unit start; off record before the first dispatch record.</proof></item>
+    <item><check>USERGO before B7 is refused and the hold stays.</check><proof>bootstrap:state B4; a control.resume ruling; hold.state 412 not-ready listing the missing proofs; flag:hold still on.</proof></item>
+    <item><check>A restore holds by itself.</check><proof>A test restore; the first Commit's seqs hold store.restored, hold.state 200 on waits_on USERGO and build-mode.state 200 off reason restore, all in one epoch-opening transaction.</proof></item>
+    <item><check>No other node writes a flag.</check><proof>The statements registry (shared/contracts.xml#statements) lists flag:hold and flag:build_mode writes for N-44 only; a Commit touching either entity from another principal is 403 kind_not_permitted.</proof></item>
+    <item><check>A rule refusal under build mode does not charge an attempt.</check><proof>N-11 test: failure record naming an old rule; rule.bit 300 written; attempt unchanged; one fix ticket request.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <may role="owner" do="turn build mode on, extend it or end it, and set or clear the hold, through a card answer on the owner page, the owner CLI or the Controls screen"/>
+    <may role="system" do="apply owner rulings, expire build mode, hold on restore, write build-mode.state, hold.state and rule.bit"/>
+    <may-not role="relay" do="set or clear any flag; a chat relay carries only none and ticket.unblock"/>
+    <may-not role="seat" do="write build-mode.state, hold.state, rule.bit or any flag; read build mode from anywhere but its dispatch record"/>
+    <may-not role="architect" do="turn a flag on by editing a file, a memory note or a config"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="build_mode_on" kind="gauge">1 or 0 on the health record.</counter>
+    <counter name="build_mode_seconds_left" kind="gauge">Time to expiry; an alert record at one hour left while rebuild tickets are open.</counter>
+    <counter name="hold_on" kind="gauge">1 or 0, with the owner word it waits on as a label.</counter>
+    <counter name="rule_bit_total" labels="rule">How often each old rule bit; the top rule is the next fix ticket.</counter>
+    <lamp screen="Controls" name="the hold lamp">Lit while flag:hold is on: HOLD and the owner word it waits on.</lamp>
+    <lamp screen="Controls" name="build mode">Lit while on, with scope and time left; the turn-off control beside it.</lamp>
+  </monitoring>
+
+  <runbook id="runbook">
+    <step n="1" when="a rebuild ticket is refused by an old rule">Nothing by hand. Read the rule.bit record and the fix ticket request; the ticket re-dispatched on its own.</step>
+    <step n="2" when="build mode expired mid-rebuild">Answer the card on the owner page: extend (a new ruling with a new expiry) or let the rules apply.</step>
+    <step n="3" when="the owner is away from the page">The owner CLI is the other owner surface; a chat relay never sets a flag, and nothing edits the store by hand.</step>
+    <cleanup>line/bin/cleanup.sh --entry N-44.log.</cleanup>
+    <cold-start>The flag rows are in the store; unit start reconciles expiry; nothing else to restore.</cold-start>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="#principles">Principle build-mode: old rules off for rebuild tickets, nodes ship dark, a blocking rule is a defect, the ledger records which rule bit</source>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="#failure-cases">Case governance-interference: proceed, cut the fix ticket, record which rule bit</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#15-d13-seat-governance-layer-and-the-build-mode-switch">D13 B: build mode as a flag with an expiry that the gates read, the shape of herdr/config/exemptions.json</source>
+    <source path="rebuild/investigation/L11-governance-layer.md" anchor="#52-findings-f1-to-f18">F1 build mode is a note, not a mechanism</source>
+    <source path="rebuild/investigation/L11-governance-layer.md" anchor="#8-what-to-carry-forward">Exemptions with an expiry and a card id as the shape of a build-mode switch</source>
+    <source path="herdr/config/exemptions.json" anchor="/exemptions/0">rule, until, card_id, why</source>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/build-mode-rule.md" anchor="Rule">The owner's words and the four statements</source>
+    <source path="$HOME/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C47">D13 ruled</source>
+    <source path="$HOME/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="#5-owner-rulings-this-session-in-order">Ruling 4 build mode</source>
+  </sources>
+
+  <rejected id="rejected">
+    <reject source="herdr/config/exemptions.json as the live flag file" reason="A file an agent edits is a hand step and lives in the repository; the flag is a store entity with a ruling behind it. The file's shape is kept, its role is not."/>
+    <reject source="a flag without an expiry" reason="An open-ended exemption is how the old rules stayed half-on; the owner's D13 ruling names the expiry."/>
+    <reject source="build mode lifting the gate or the reviewer" reason="The owner's statement is about old governance rules, not tests; D15 keeps the machine verdict for every merge."/>
+    <reject source="build mode or a hold set from a chat relay (book 1.0.0 runbook break glass)" reason="A relay is not the owner principal; owner words and flag effects come only from the owner page or CLI (shared/authority.xml#owner-words)."/>
+    <reject source="N-29 or N-42 writing flag:hold directly (book 1.0.0, three writers)" reason="Three writers of one row race and disagree on the lamp; N-29 decides, N-44 writes (review NF-A9)."/>
+    <reject source="$HOME/.claude/hooks/no-hand-start.mjs and shell-lex.mjs" reason="Dead enforcement files referenced by no settings (L11 section 9); under build mode and the repo-owned seat layer they are not loaded; N-49 disposes of them."/>
+  </rejected>
+
+  <shared-needs id="shared-needs">
+    <need kind="principle">principles.xml#build-mode with the old-rule table: every old-line rule name and the refusal string it prints, so N-11 can match a refusal to a rule.</need>
+    <need kind="store-table">flags (state-store.xml#flags): entities flag:build_mode and flag:hold, owner N-44, the only writer; the statement text that names N-29 or N-42 as a writer of flag:hold changes to N-44.</need>
+    <need kind="contracts">contracts.schema.json#/$defs/build_mode is the dispatch copy; N-29's $defs/effect should $ref this node's record.schema.json#/$defs/flag_effect for build-mode.set, control.halt and control.resume.</need>
+    <need kind="record-kinds">ruling (typed effects), build-mode.state (200 403 409 422), hold.state (200 403 412), store.restored, rule.bit.</need>
+    <need kind="status-codes">300 for rule.bit (routed, informational, nobody acts), 422 invalid ruling (N-29 acts), 403 not-owner, 412 not-ready.</need>
+    <need kind="seat-contract">A seat bundle under build mode: which layers are omitted; the bundle hash input includes build_mode and scope.</need>
+    <need kind="config">flags.build_mode.max_duration (P7D) and the scope enum rebuild, product, all.</need>
+  </shared-needs>
+
+</volume>

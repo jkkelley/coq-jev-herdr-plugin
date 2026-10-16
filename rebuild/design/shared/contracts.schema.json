@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/shared/contracts.schema.json",
+  "title": "Cross-node contracts: the one definition of every shape two or more nodes exchange",
+  "description": "Book 1.1.0 (review dispositions F03, F05, F02, F04, F12, F16, F14, F17; shared/contracts.xml). A shape that crosses a DAG edge is defined here once; producer and consumer schemas $ref these defs and never restate them (check C23 edge-fixtures validates every producer example against every consumer def). Envelope fields stay in shared/state-store.schema.json; this file holds bodies, keys and request shapes. Times are UTC strings with a Z suffix.",
+  "$defs": {
+    "at": { "$ref": "state-store.schema.json#/$defs/at" },
+    "wo_id": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$", "description": "a work order ticket id" },
+    "cr_id": { "type": "string", "pattern": "^CR-[a-z0-9._-]+$", "description": "a cut request ticket id (spec phase only)" },
+    "ticket": { "oneOf": [ { "$ref": "#/$defs/wo_id" }, { "$ref": "#/$defs/cr_id" } ] },
+    "phase": { "type": "string", "enum": ["worker", "reviewer", "spec", "gate"], "description": "the ticket phase a lease and a dispatch serve; spec is run by role spec-author; gate is a code run, never a seat (shared/contracts.xml#roles)" },
+    "role": { "type": "string", "enum": ["worker", "reviewer", "spec-author", "gate"] },
+    "phase_role": {
+      "description": "phase and role agree: spec runs spec-author, every other phase runs the role of the same name",
+      "type": "object",
+      "required": ["phase", "role"],
+      "properties": { "phase": { "$ref": "#/$defs/phase" }, "role": { "$ref": "#/$defs/role" } },
+      "if": { "properties": { "phase": { "const": "spec" } } },
+      "then": { "properties": { "role": { "const": "spec-author" } } },
+      "else": { "properties": { "role": { "not": { "const": "spec-author" } } } }
+    },
+    "attempt": { "type": "integer", "minimum": 1, "maximum": 3, "description": "the attempt of one (ticket, phase); N-11 owns n+1" },
+    "lane": { "type": "string", "enum": ["build", "verify", "system"] },
+    "ticket_status": {
+      "type": "string",
+      "enum": ["cut", "refused", "waiting", "ready", "in_flight", "retry_wait", "pr_open", "merged", "done", "dead", "cancelled"],
+      "description": "the closed ticket status set; transitions only per shared/contracts.xml#ticket-transitions (check C24)"
+    },
+    "seat_lease_key": {
+      "type": "string",
+      "pattern": "^(WO-[0-9]{8}-[0-9a-f]{4}:(worker|reviewer|gate)|CR-[a-z0-9._-]+:spec):[1-3]$",
+      "description": "ticket:phase:attempt; a CR ticket only ever holds the spec phase"
+    },
+    "system_lease_key": {
+      "type": "string",
+      "pattern": "^(node:N-[0-9]{2}:[a-z][a-z0-9_-]*|watcher/[a-z0-9_-]+|merge\\.lock|(cleanup|workspace|seat|tier|backup|drain):[A-Za-z0-9._/-]+|publish:drive|unlanded:run|cutover:run|exittest:[0-9]{8})$",
+      "description": "leases that serve no ticket: leader election, the merge lock, maintenance jobs and resource drains"
+    },
+    "lease_key": { "oneOf": [ { "$ref": "#/$defs/seat_lease_key" }, { "$ref": "#/$defs/system_lease_key" } ] },
+    "lease_class": {
+      "type": "string",
+      "enum": ["seat", "work", "maintenance"],
+      "description": "seat: a ticket phase lease, granted only by GrantDispatch; work: merge.lock, publish:drive, cutover:run, refused under hold; maintenance: leader, watcher, backup, cleanup, drain, allowed under hold (shared/contracts.xml#lease-machine)"
+    },
+    "lease_state": { "type": "string", "enum": ["reserved", "running", "released", "expired", "revoked"] },
+    "lease_ref": {
+      "description": "how a record or request names the lease it acts under; the token is an integer everywhere (TEXT columns are gone)",
+      "type": "object",
+      "required": ["key", "token"],
+      "properties": {
+        "key": { "$ref": "#/$defs/lease_key" },
+        "token": { "$ref": "state-store.schema.json#/$defs/lease_token" },
+        "generation": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "lease_row": {
+      "description": "the leases table row as N-02 reads it back (shared/contracts.xml#lease-machine); holder is never empty",
+      "type": "object",
+      "required": ["key", "class", "state", "token", "generation", "holder", "granted_at", "expires_at", "version"],
+      "properties": {
+        "key": { "$ref": "#/$defs/lease_key" },
+        "class": { "$ref": "#/$defs/lease_class" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/phase" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "state": { "$ref": "#/$defs/lease_state" },
+        "token": { "$ref": "state-store.schema.json#/$defs/lease_token" },
+        "generation": { "type": "integer", "minimum": 1 },
+        "holder": { "type": "string", "minLength": 1, "description": "the dispatch id for a seat lease; the node and job for any other class" },
+        "run_id": { "type": "string" },
+        "granted_at": { "$ref": "#/$defs/at" },
+        "expires_at": { "$ref": "#/$defs/at" },
+        "heartbeat_at": { "$ref": "#/$defs/at" },
+        "progress_at": { "$ref": "#/$defs/at" },
+        "ended_at": { "$ref": "#/$defs/at" },
+        "end_reason": { "type": "string", "enum": ["released", "expired", "revoked-stall", "revoked-launcher-lost", "revoked-ruling", "start-grace"] },
+        "version": { "type": "integer", "minimum": 1 }
+      },
+      "allOf": [
+        { "if": { "properties": { "class": { "const": "seat" } } }, "then": { "required": ["ticket", "phase", "attempt"], "properties": { "key": { "$ref": "#/$defs/seat_lease_key" } } }, "else": { "properties": { "key": { "$ref": "#/$defs/system_lease_key" } } } }
+      ]
+    },
+    "build_mode": {
+      "description": "the N-44 build mode as the dispatch carries it; one shape book-wide (replaces the boolean of N-07 and the triple of seat-contract)",
+      "type": "object",
+      "required": ["on", "scope", "version"],
+      "properties": {
+        "on": { "type": "boolean" },
+        "scope": { "type": "string", "enum": ["rebuild", "product", "all"] },
+        "version": { "type": "integer", "minimum": 0, "description": "the flag:build_mode entity version read in the dispatch transaction" },
+        "expires_at": { "$ref": "#/$defs/at" },
+        "ruling_ref": { "type": "string", "description": "the ruling record id that set it; absent when off" }
+      },
+      "additionalProperties": false
+    },
+    "target_wo": {
+      "type": "object",
+      "required": ["type", "ticket"],
+      "properties": {
+        "type": { "const": "wo" },
+        "ticket": { "$ref": "#/$defs/wo_id" },
+        "pr": { "type": "integer", "minimum": 1 },
+        "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "verdict_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 16 }
+      },
+      "additionalProperties": false
+    },
+    "target_cr": {
+      "type": "object",
+      "required": ["type", "request", "anchor", "group", "source_request"],
+      "properties": {
+        "type": { "const": "cr" },
+        "request": { "$ref": "#/$defs/cr_id" },
+        "anchor": { "type": "string", "minLength": 1, "description": "the book anchor the spec-author writes against" },
+        "group": { "type": "string", "pattern": "^G[0-9]$" },
+        "source_request": { "type": "string", "description": "the ticket.request record id this CR was admitted from; N-03 closes the CR by it" },
+        "verdict_refs": { "type": "array", "items": { "type": "string" }, "maxItems": 16 }
+      },
+      "additionalProperties": false
+    },
+    "target": { "oneOf": [ { "$ref": "#/$defs/target_wo" }, { "$ref": "#/$defs/target_cr" } ] },
+    "session": {
+      "type": "object",
+      "required": ["mode"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["new", "resume"] },
+        "session_id": { "type": "string", "minLength": 1 }
+      },
+      "if": { "properties": { "mode": { "const": "resume" } } },
+      "then": { "required": ["session_id"] },
+      "additionalProperties": false,
+      "description": "resume only per shared/contracts.xml#retry-owner (review.changes, gate red, merge.conflict after a worker run that ended done); every other attempt is new"
+    },
+    "repo": {
+      "type": "object",
+      "required": ["slug", "origin"],
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$" },
+        "origin": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "dispatch_body": {
+      "description": "the dispatch record body: N-07 writes it in the GrantDispatch transaction; N-13, N-14 and N-15 read it; every consumer $refs this def (P01, P02 closed)",
+      "type": "object",
+      "required": ["dispatch_id", "ticket", "phase", "role", "attempt", "lane", "lease", "deadline_at", "repo", "repo_sha", "build_mode", "target", "session", "brief_path"],
+      "properties": {
+        "dispatch_id": { "type": "string", "pattern": "^d-[0-9]{14}-[a-z0-9]{6}$" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/phase" },
+        "role": { "$ref": "#/$defs/role" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "lane": { "$ref": "#/$defs/lane" },
+        "lease": { "$ref": "#/$defs/lease_ref" },
+        "deadline_at": { "$ref": "#/$defs/at" },
+        "not_before": { "$ref": "#/$defs/at" },
+        "repo": { "$ref": "#/$defs/repo" },
+        "repo_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "build_mode": { "$ref": "#/$defs/build_mode" },
+        "target": { "$ref": "#/$defs/target" },
+        "session": { "$ref": "#/$defs/session" },
+        "brief_path": { "type": "string", "pattern": "^bundle/d-[0-9]{14}-[a-z0-9]{6}/brief\\.md$", "description": "relative to the bundle root; the brief lives only in the run's bundle (N-13)" }
+      },
+      "allOf": [
+        { "$ref": "#/$defs/phase_role" },
+        { "if": { "properties": { "phase": { "const": "spec" } } }, "then": { "properties": { "target": { "$ref": "#/$defs/target_cr" }, "ticket": { "$ref": "#/$defs/cr_id" } } }, "else": { "properties": { "target": { "$ref": "#/$defs/target_wo" }, "ticket": { "$ref": "#/$defs/wo_id" } } } },
+        { "if": { "properties": { "phase": { "enum": ["reviewer", "gate"] } } }, "then": { "properties": { "target": { "required": ["pr", "head_sha"] } } } }
+      ]
+    },
+    "operation_key": {
+      "type": "string",
+      "pattern": "^N-[0-9]{2}/[a-z][a-z0-9-]*(\\.[a-z0-9-]+)*/[A-Za-z0-9._:@/-]{1,160}/r[0-9]{1,4}$",
+      "description": "node/operation/subject/r<revision> (shared/contracts.xml#operation-keys): one key per intended effect; the server refuses a key whose node segment is not the authenticated caller's node (403 principal_mismatch); same request hash replays 200, a different hash is 409 idempotency_mismatch before any effect"
+    },
+    "precondition": {
+      "type": "object",
+      "required": ["entity"],
+      "properties": {
+        "entity": { "type": "string", "minLength": 1 },
+        "version": { "type": "integer", "minimum": 0, "description": "expected version; 0 means the entity must be absent" }
+      },
+      "additionalProperties": false
+    },
+    "entity_write": {
+      "type": "object",
+      "required": ["entity", "expected_version", "value"],
+      "properties": {
+        "entity": { "type": "string", "minLength": 1 },
+        "expected_version": { "type": "integer", "minimum": 0 },
+        "value": { "type": ["object", "null"], "description": "null deletes the entity" }
+      },
+      "additionalProperties": false
+    },
+    "statement": {
+      "type": "object",
+      "required": ["name", "args"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$", "description": "an owner-registered statement (table.verb) in shared/contracts.xml#statements; no free SQL crosses the socket" },
+        "args": { "type": "object" }
+      },
+      "additionalProperties": false
+    },
+    "commit_request": {
+      "description": "Store.Commit: one transaction on the single writer (shared/contracts.xml#batch); authorize, idempotency, fence, preconditions, writes, records, effects, COMMIT, notify; all or nothing",
+      "type": "object",
+      "required": ["operation_key", "records"],
+      "properties": {
+        "operation_key": { "$ref": "#/$defs/operation_key" },
+        "lease": { "$ref": "#/$defs/lease_ref" },
+        "preconditions": { "type": "array", "items": { "$ref": "#/$defs/precondition" }, "maxItems": 32 },
+        "entities": { "type": "array", "items": { "$ref": "#/$defs/entity_write" }, "maxItems": 32 },
+        "statements": { "type": "array", "items": { "$ref": "#/$defs/statement" }, "maxItems": 64 },
+        "records": { "type": "array", "items": { "type": "object" }, "minItems": 0, "maxItems": 16 },
+        "effects": { "type": "array", "items": { "$ref": "#/$defs/effect_intent" }, "maxItems": 8 }
+      },
+      "anyOf": [ { "properties": { "records": { "minItems": 1 } } }, { "required": ["entities"], "properties": { "entities": { "minItems": 1 } } } ],
+      "additionalProperties": false
+    },
+    "commit_reply": {
+      "type": "object",
+      "required": ["code", "epoch", "seqs"],
+      "properties": {
+        "code": { "type": "integer", "enum": [200, 201, 400, 403, 409, 412, 422, 423, 429, 503] },
+        "reason": { "type": "string", "enum": ["replayed", "invalid", "unknown_principal", "kind_not_permitted", "principal_mismatch", "capability_expired", "idempotency_mismatch", "version", "id", "stale_token", "lease_not_current", "precondition", "limits", "hold", "busy"] },
+        "epoch": { "type": "integer", "minimum": 1 },
+        "seqs": { "type": "array", "items": { "type": "integer", "minimum": 1 } },
+        "versions": { "type": "object", "additionalProperties": { "type": "integer" } }
+      },
+      "additionalProperties": false
+    },
+    "principal_role": { "type": "string", "enum": ["owner", "service", "launcher", "seat"] },
+    "effect_state": { "type": "string", "enum": ["intent", "sent", "accepted", "unknown", "done", "failed"] },
+    "effect_intent": {
+      "description": "an outbox row written in the same transaction as the record that decides the effect (shared/contracts.xml#outbox); a worker sends it, reads back, and moves state by CAS",
+      "type": "object",
+      "required": ["op_id", "provider", "action", "target", "request_hash"],
+      "properties": {
+        "op_id": { "$ref": "#/$defs/operation_key" },
+        "provider": { "type": "string", "enum": ["github", "jenkins", "kubernetes", "ntfy", "drive", "registry", "host"] },
+        "action": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]*$" },
+        "target": { "type": "string", "minLength": 1 },
+        "request_hash": { "$ref": "state-store.schema.json#/$defs/sha256" },
+        "lease": { "$ref": "#/$defs/lease_ref" }
+      },
+      "additionalProperties": false
+    },
+    "effect_row": {
+      "description": "the effects table row (shared/state-store.xml#table-effects): the intent fields plus state; restated by $ref field by field because effect_intent closes its properties",
+      "type": "object",
+      "required": ["op_id", "provider", "action", "target", "request_hash", "state", "attempts", "updated_at", "epoch"],
+      "additionalProperties": false,
+      "properties": {
+        "op_id": { "$ref": "#/$defs/effect_intent/properties/op_id" },
+        "provider": { "$ref": "#/$defs/effect_intent/properties/provider" },
+        "action": { "$ref": "#/$defs/effect_intent/properties/action" },
+        "target": { "$ref": "#/$defs/effect_intent/properties/target" },
+        "request_hash": { "$ref": "#/$defs/effect_intent/properties/request_hash" },
+        "lease": { "$ref": "#/$defs/lease_ref" },
+        "state": { "$ref": "#/$defs/effect_state" },
+        "attempts": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "external_id": { "type": "string" },
+        "updated_at": { "$ref": "#/$defs/at" },
+        "epoch": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "cursor": {
+      "description": "a stream position; seq is meaningful only within its epoch (shared/contracts.xml#epoch-cursor)",
+      "type": "object",
+      "required": ["epoch", "seq"],
+      "properties": {
+        "epoch": { "type": "integer", "minimum": 1 },
+        "seq": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "store_epoch": {
+      "type": "object",
+      "required": ["epoch", "started_at", "cause", "min_retained_seq"],
+      "properties": {
+        "epoch": { "type": "integer", "minimum": 1 },
+        "started_at": { "$ref": "#/$defs/at" },
+        "cause": { "type": "string", "enum": ["created", "restored", "migrated"] },
+        "min_retained_seq": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "failure_body": {
+      "description": "every failure routed to N-11 carries these (shared/contracts.xml#retry-owner); N-11 accepts every kind in failure_kind",
+      "type": "object",
+      "required": ["ticket", "phase", "attempt", "outcome", "failure_kind"],
+      "properties": {
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/phase" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "outcome": { "type": "string", "enum": ["failed", "refused", "killed", "blocked", "changes", "red", "conflict"] },
+        "failure_kind": { "$ref": "#/$defs/failure_kind" },
+        "dispatch_id": { "type": "string" },
+        "run_id": { "type": "string" },
+        "fenced": { "type": "boolean", "description": "true when accepted under the terminal-report exception (shared/contracts.xml#terminal-report)" }
+      }
+    },
+    "failure_kind": {
+      "type": "string",
+      "enum": ["phase.failed", "stall", "crashed", "no_result", "seat.bundle.failed", "workspace.failed", "workspace.refused", "claim_overlap", "files-claimed", "cap", "review.changes", "gate.red", "merge.conflict", "schema_invalid", "output_rejected", "seat_blocked", "error_max_turns", "error_max_budget", "harness_mismatch", "admission-refused", "head_moved"]
+    },
+    "retry_layer": {
+      "type": "object",
+      "required": ["id", "owner", "max", "parent", "retries_on"],
+      "properties": {
+        "id": { "type": "string" },
+        "owner": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "max": { "type": "integer", "minimum": 1 },
+        "parent": { "type": ["string", "null"] },
+        "retries_on": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "owner_word": {
+      "type": "string",
+      "enum": ["GOFACTORY", "USERGO", "USERHALT"],
+      "description": "matched only as the whole trimmed message from an owner principal on the owner page or the owner CLI; never relayed, defaulted or produced by a seat (shared/authority.xml#owner-words)"
+    },
+    "bootstrap_state": {
+      "type": "object",
+      "required": ["state", "since", "proofs"],
+      "properties": {
+        "state": { "type": "string", "enum": ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "B7", "B8"] },
+        "since": { "$ref": "#/$defs/at" },
+        "proofs": { "type": "array", "items": { "type": "string" } },
+        "ruling_ref": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

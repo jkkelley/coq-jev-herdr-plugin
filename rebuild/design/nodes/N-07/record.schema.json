@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-07/record.schema.json",
+  "title": "N-07 Scheduler tick and dispatch: input and output records",
+  "description": "Book 1.1.0. Inputs: the tick:scheduler entity (../N-06/record.schema.json#/$defs/tick), the dispatchable rows of the tickets table (the ticket shape ../N-18/record.schema.json#/$defs/ticket) and the leases table (../../shared/contracts.schema.json#/$defs/lease_row). Outputs: dispatch (written by GrantDispatch in one Commit with the reserved lease and the ticket transition; its body is ../../shared/contracts.schema.json#/$defs/dispatch_body and N-13, N-14 and N-15 $ref this def, never a projection), dispatch.refused, budget.held and the sched:tick entity (tick_done). Every record extends base, the shared committed envelope. The operation key rides on the Commit request (shared/contracts.xml#operation-keys), never in the record. Times are UTC strings 2006-01-02T15:04:05Z.",
+  "oneOf": [
+    { "$ref": "../N-06/record.schema.json#/$defs/tick" },
+    { "$ref": "#/$defs/dispatch" },
+    { "$ref": "#/$defs/dispatch_refused" },
+    { "$ref": "#/$defs/budget_held" },
+    { "$ref": "#/$defs/tick_done" }
+  ],
+  "$defs": {
+    "at": { "$ref": "../../shared/contracts.schema.json#/$defs/at" },
+    "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/ticket" },
+    "phase": { "$ref": "../../shared/contracts.schema.json#/$defs/phase" },
+    "role": { "$ref": "../../shared/contracts.schema.json#/$defs/role" },
+    "lane": { "$ref": "../../shared/contracts.schema.json#/$defs/lane" },
+    "attempt": { "$ref": "../../shared/contracts.schema.json#/$defs/attempt" },
+    "base": {
+      "description": "The shared committed envelope (shared/state-store.schema.json#/$defs/committed_envelope: id, at, kind, code, node and seq) plus the ticket and attempt this node's records name. The operation key and the lease fence are fields of the Commit request (shared/contracts.schema.json#/$defs/commit_request), not of the record. N-08, N-09 and N-10 $ref this def.",
+      "allOf": [
+        { "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" },
+        {
+          "type": "object",
+          "properties": {
+            "ticket": { "$ref": "#/$defs/ticket" },
+            "attempt": { "type": "integer", "minimum": 0, "maximum": 3 }
+          }
+        }
+      ]
+    },
+    "dispatch": {
+      "description": "The dispatch record: the shared envelope plus the one dispatch body. unevaluatedProperties false keeps every consumer on one shape: a field that is not in the envelope or in contracts dispatch_body is refused here and in N-13, N-14 and N-15, which $ref this def.",
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "$ref": "../../shared/contracts.schema.json#/$defs/dispatch_body" },
+        {
+          "properties": {
+            "kind": { "const": "dispatch" },
+            "code": { "const": 100 },
+            "node": { "const": "N-07" }
+          },
+          "required": ["ticket", "attempt"]
+        }
+      ],
+      "unevaluatedProperties": false
+    },
+    "dispatch_refused": {
+      "description": "The address check failed before any lease was reserved: nothing is granted and no attempt is charged; the ticket stays dispatchable and is held with reason refused until the repository is fixed. Latched once per (ticket, phase, attempt, reason).",
+      "allOf": [{ "$ref": "#/$defs/base" }],
+      "properties": {
+        "kind": { "const": "dispatch.refused" },
+        "code": { "const": 412 },
+        "node": { "const": "N-07" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/phase" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "reason": { "type": "string", "enum": ["role-unknown", "brief-render-failed", "address-unknown"] },
+        "detail": { "type": "string", "maxLength": 240 }
+      },
+      "required": ["ticket", "phase", "attempt", "reason"]
+    },
+    "budget_held": {
+      "description": "A dispatch held because a budget of shared/retry-budget.xml#budgets is spent: per ticket (seat USD, pods per unit) or per UTC day (seat USD, pod minutes). A hold, not a refusal: nothing is granted and the next tick re-examines; latched once per (scope, ticket or day, measure) so N-28 posts one card.",
+      "properties": {
+        "kind": { "const": "budget.held" },
+        "code": { "const": 429 },
+        "node": { "const": "N-07" },
+        "scope": { "type": "string", "enum": ["ticket", "daily"] },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "day": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "measure": { "type": "string", "enum": ["ticket_seat_usd", "ticket_pods_per_unit", "daily_seat_usd", "daily_pod_minutes"] },
+        "unit": { "type": "string", "description": "the suite unit whose pod count is spent, for ticket_pods_per_unit" },
+        "used": { "type": "number", "minimum": 0 },
+        "limit": { "type": "number", "minimum": 0 },
+        "config_key": { "type": "string", "pattern": "^budget\\.[a-z_]+$" }
+      },
+      "required": ["scope", "measure", "used", "limit", "config_key"],
+      "allOf": [
+        { "$ref": "#/$defs/base" },
+        { "if": { "properties": { "scope": { "const": "ticket" } } }, "then": { "required": ["ticket"] }, "else": { "required": ["day"] } }
+      ]
+    },
+    "tick_done": {
+      "description": "The sched:tick entity, compare-and-swap written every tick; registered entity-only (shared/contracts.xml#entity-only), so it writes no record; version grows.",
+      "type": "object",
+      "properties": {
+        "entity": { "const": "sched:tick" },
+        "kind": { "const": "sched.tick" },
+        "code": { "const": 100 },
+        "node": { "const": "N-07" },
+        "at": { "$ref": "#/$defs/at" },
+        "version": { "type": "integer", "minimum": 1 },
+        "n": { "type": "integer", "minimum": 1 },
+        "leader": { "type": "boolean" },
+        "counts": {
+          "type": "object",
+          "required": ["desired", "live", "dispatched", "held_by_cap", "held_by_hold", "held_by_budget", "held_by_refusal"],
+          "properties": {
+            "desired": { "type": "integer", "minimum": 0 },
+            "live": { "type": "integer", "minimum": 0 },
+            "dispatched": { "type": "integer", "minimum": 0 },
+            "held_by_cap": { "type": "integer", "minimum": 0 },
+            "held_by_hold": { "type": "integer", "minimum": 0 },
+            "held_by_budget": { "type": "integer", "minimum": 0 },
+            "held_by_refusal": { "type": "integer", "minimum": 0 },
+            "conflicts": { "type": "integer", "minimum": 0, "description": "Commits refused 409 (entity version) or 412 (precondition) and read back" }
+          }
+        },
+        "snapshot_ok": { "type": "boolean", "description": "false when the store read timed out and counts are unknown" }
+      },
+      "required": ["entity", "at", "version", "n", "leader", "counts", "snapshot_ok"]
+    }
+  }
+}

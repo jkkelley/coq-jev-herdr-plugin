@@ -1,0 +1,418 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-10/record.schema.json",
+  "title": "N-10 Main verdict and hold: input and output records",
+  "description": "Book 1.1.0 (F13, review C new 7, E NF-E5). Input main.gate.status by reference to its producer (../N-26/record.schema.json#/$defs/output: merge_seq, suites, codes 201, 422, 500 and 410); outputs verified, rejected, merge.hold, merge.hold.lifted, main.verify.missing. Base ../N-07/record.schema.json#/$defs/base (the shared committed envelope). Keys are operation keys of shared/contracts.xml#operation-keys. Times are UTC.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/main_gate_status"
+    },
+    {
+      "$ref": "#/$defs/verified"
+    },
+    {
+      "$ref": "#/$defs/rejected"
+    },
+    {
+      "$ref": "#/$defs/merge_hold"
+    },
+    {
+      "$ref": "#/$defs/merge_hold_lifted"
+    },
+    {
+      "$ref": "#/$defs/main_verify_missing"
+    }
+  ],
+  "$defs": {
+    "at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "ticket": {
+      "type": "string",
+      "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$"
+    },
+    "base": {
+      "$ref": "../N-07/record.schema.json#/$defs/base"
+    },
+    "seq_range": {
+      "type": "object",
+      "required": [
+        "from",
+        "to"
+      ],
+      "properties": {
+        "from": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "to": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "suite_result": {
+      "$ref": "../N-26/record.schema.json#/$defs/suite_result"
+    },
+    "pr_ref": {
+      "type": "object",
+      "required": [
+        "pr",
+        "ticket",
+        "merge_sha",
+        "merge_seq"
+      ],
+      "properties": {
+        "pr": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ticket": {
+          "$ref": "#/$defs/ticket"
+        },
+        "merge_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "merge_seq": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "main_gate_status": {
+      "$ref": "../N-26/record.schema.json#/$defs/output"
+    },
+    "verified": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/base"
+        }
+      ],
+      "properties": {
+        "kind": {
+          "const": "verified"
+        },
+        "code": {
+          "const": 201
+        },
+        "node": {
+          "const": "N-10"
+        },
+        "idempotency_key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/op_key"
+            },
+            {
+              "pattern": "^N-10/verified/[0-9]+@[0-9a-f]{40}/r1$"
+            }
+          ]
+        },
+        "pr": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ticket": {
+          "$ref": "#/$defs/ticket"
+        },
+        "merge_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "main_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "merge_seq_range": {
+          "$ref": "#/$defs/seq_range"
+        },
+        "status_record_id": {
+          "$ref": "../../shared/state-store.schema.json#/$defs/id"
+        }
+      },
+      "required": [
+        "idempotency_key",
+        "pr",
+        "ticket",
+        "merge_sha",
+        "main_sha",
+        "merge_seq_range",
+        "status_record_id"
+      ]
+    },
+    "rejected": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/base"
+        }
+      ],
+      "properties": {
+        "kind": {
+          "const": "rejected"
+        },
+        "code": {
+          "const": 422
+        },
+        "node": {
+          "const": "N-10"
+        },
+        "idempotency_key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/op_key"
+            },
+            {
+              "pattern": "^N-10/rejected/[0-9a-f]{40}/r1$"
+            }
+          ]
+        },
+        "main_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "merge_seq_range": {
+          "$ref": "#/$defs/seq_range"
+        },
+        "prs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pr_ref"
+          }
+        },
+        "suites_red": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/suite_result"
+          },
+          "minItems": 0
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "suites-red",
+            "status-error",
+            "unknown-sha",
+            "linear-history-unverified"
+          ]
+        },
+        "fix_attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4
+        },
+        "owner_acts": {
+          "type": "boolean",
+          "description": "true at fix_attempt 4; N-28 posts one card"
+        },
+        "status_record_id": {
+          "$ref": "../../shared/state-store.schema.json#/$defs/id"
+        }
+      },
+      "required": [
+        "idempotency_key",
+        "main_sha",
+        "merge_seq_range",
+        "prs",
+        "suites_red",
+        "reason",
+        "fix_attempt",
+        "owner_acts",
+        "status_record_id"
+      ]
+    },
+    "merge_hold": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/base"
+        }
+      ],
+      "properties": {
+        "kind": {
+          "const": "merge.hold"
+        },
+        "code": {
+          "const": 423
+        },
+        "node": {
+          "const": "N-10"
+        },
+        "idempotency_key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/op_key"
+            },
+            {
+              "pattern": "^N-10/merge\\.hold/[0-9a-f]{40}/r1$"
+            }
+          ]
+        },
+        "held_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "held_merge_seq": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "reason": {
+          "type": "string",
+          "enum": [
+            "suites-red",
+            "status-error",
+            "unknown-sha",
+            "linear-history-unverified"
+          ]
+        },
+        "prs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/pr_ref"
+          }
+        },
+        "suites_red": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/suite_result"
+          }
+        },
+        "rejected_id": {
+          "type": "string"
+        },
+        "lifted": {
+          "type": "boolean"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "compare-and-swap version of the lifted field"
+        },
+        "fix_ticket_ids": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ticket"
+          },
+          "maxItems": 3
+        }
+      },
+      "required": [
+        "idempotency_key",
+        "held_sha",
+        "held_merge_seq",
+        "reason",
+        "prs",
+        "rejected_id",
+        "lifted",
+        "generation"
+      ]
+    },
+    "merge_hold_lifted": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/base"
+        }
+      ],
+      "properties": {
+        "kind": {
+          "const": "merge.hold.lifted"
+        },
+        "code": {
+          "const": 200
+        },
+        "node": {
+          "const": "N-10"
+        },
+        "idempotency_key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/op_key"
+            },
+            {
+              "pattern": "^N-10/merge\\.hold\\.lifted/[0-9a-f]{40}/r1$"
+            }
+          ]
+        },
+        "hold_id": {
+          "type": "string"
+        },
+        "held_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "by": {
+          "type": "string",
+          "enum": [
+            "green-main",
+            "break-glass"
+          ]
+        },
+        "green_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "ruling_id": {
+          "type": "string",
+          "description": "the N-29 ruling when by is break-glass"
+        }
+      },
+      "required": [
+        "idempotency_key",
+        "hold_id",
+        "held_sha",
+        "by"
+      ]
+    },
+    "main_verify_missing": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/base"
+        }
+      ],
+      "properties": {
+        "kind": {
+          "const": "main.verify.missing"
+        },
+        "code": {
+          "const": 500
+        },
+        "node": {
+          "const": "N-10"
+        },
+        "idempotency_key": {
+          "allOf": [
+            {
+              "$ref": "#/$defs/op_key"
+            },
+            {
+              "pattern": "^N-10/main\\.verify\\.missing/[0-9a-f]{40}/r1$"
+            }
+          ]
+        },
+        "merge_sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "merge_seq": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "age_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "bound_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "verify.expected_seconds, d-verify of shared/retry-budget.xml#deadlines"
+        }
+      },
+      "required": [
+        "idempotency_key",
+        "merge_sha",
+        "merge_seq",
+        "age_seconds",
+        "bound_seconds"
+      ]
+    },
+    "op_key": {
+      "$ref": "../../shared/contracts.schema.json#/$defs/operation_key"
+    }
+  }
+}

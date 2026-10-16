@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Node volume N-20 Jenkins as code. Written by the G4 spec-author seat, 2026-10-14T04:39Z UTC, against brief C
+     (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md) and dag.md section 3 row N-20.
+     Validated by rebuild/design/check.sh against rebuild/design/schema/ once the shared author lands them. -->
+<volume id="N-20" kind="node-spec" node="N-20" group="G4" name="Jenkins as code" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: jenkins.config</entry>
+    <entry ref="output">Output record: job.registered</entry>
+    <entry ref="mechanism">Mechanism: the gitops app, JCasC, the jobs by config, the check</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and the report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-20"/>
+    <dag href="../../dag.md#3-every-node" row="N-20"/>
+    <schema href="record.schema.json"/>
+    <sibling node="N-21" href="../N-21/spec.xml#N-21">Factory namespace</sibling>
+    <sibling node="N-22" href="../N-22/spec.xml#N-22">Image build</sibling>
+    <sibling node="N-23" href="../N-23/spec.xml#N-23">Suite planner</sibling>
+    <sibling node="N-24" href="../N-24/spec.xml#N-24">Pod run</sibling>
+    <sibling node="N-25" href="../N-25/spec.xml#N-25">Gate status post</sibling>
+    <sibling node="N-26" href="../N-26/spec.xml#N-26">Main verify pipeline</sibling>
+    <shared href="../../shared/status-codes.xml#status-codes">Status code map</shared>
+    <shared href="../../shared/principles.xml#no-cog">No cog principle</shared>
+    <shared href="../../shared/state-store.xml#records">State store record envelope and tables</shared>
+    <shared href="../../shared/failure-cases.xml#failure-cases">Failure cases</shared>
+    <shared href="../../shared/rejected-with-reason.xml#rejected">Book-wide rejected sources</shared>
+    <shared href="../../shared/ci-capacity.xml#pod-template">CI capacity: the pod template and the container cap</shared>
+    <shared href="../../shared/authority.xml#credential-matrix">Credential matrix</shared>
+    <shared href="../../shared/contracts.xml#outbox">Outbox: every Jenkins build is an effect carrying COQ_OP_ID</shared>
+    <shared href="../../shared/retry-budget.xml#layers">Retry layers: jenkins-check and jenkins-call</shared>
+  </pointers>
+
+  <section id="purpose" title="Purpose">
+    <s>N-20 turns the Jenkins controller the factory already owns into a thing that is defined by a commit and proven by a record, so that the CI gate (N-23 to N-26) and the image build (N-22) have a job to call that exists because git says so, never because a person clicked.</s>
+    <s>The ruling is D07, card C45: keep Jenkins, fix it as code, job by config, pinned image, resources, Longhorn home (03-DECISIONS.md section 9).</s>
+    <s>The defect it removes is RC7: the gate merged dark because the library, the job, the trigger and the reachability were human steps outside the repository (01-ROOT-CAUSES.md RC7; L10-cluster-and-gitops.md section 5.2 and 5.3).</s>
+    <s>The node is input to output: a jenkins.config record starts it and a job.registered record ends it; between the two only code runs.</s>
+  </section>
+
+  <section id="input" title="Input record: jenkins.config">
+    <record kind="jenkins.config" code="100" schema="record.schema.json#/$defs/input">
+      <s>Written by this node's gitops watch: a system job N-07 dispatches on every scheduler tick runs git fetch --prune on the bare mirror $COQ_STATE/ci/mirror/homelab-gitops.git (owned by this node; N-21 reads the same mirror) and writes jenkins.config when the main sha changes a path under apps/jenkins/ or argocd-apps/infrastructure/jenkins*/; N-04 polls only the factory repository through the API and never wrote it (review C new 9); this is the "commit in gitops" of the DAG row.</s>
+      <field name="gitops_sha" type="string" required="true">The homelab-gitops main commit that carries the change.</field>
+      <field name="casc_hash" type="string" required="true">sha256 of apps/jenkins/jenkins.yaml at that commit (the JCasC file).</field>
+      <field name="jobs_hash" type="string" required="true">sha256 of apps/jenkins/jobs.groovy at that commit (the Job DSL seed).</field>
+      <field name="image" type="string" required="true">The controller image reference with digest, ghcr.io/jkkelley/coq-jenkins:&lt;version&gt;@sha256:&lt;digest&gt;, read from the Deployment in the commit.</field>
+      <field name="resources" type="object" required="true">requests and limits of the controller container as written in the Deployment.</field>
+      <field name="home" type="object" required="true">pvc name, storage class and size of JENKINS_HOME as written in the commit.</field>
+      <field name="paths" type="array" required="true">Every changed path under the watched prefixes, so the check knows what to re-verify.</field>
+    </record>
+    <s>Operation key N-20/jenkins.config/&lt;gitops_sha&gt;/r1; a second watch of the same sha is a replay that writes nothing.</s>
+  </section>
+
+  <section id="output" title="Output record: job.registered">
+    <record kind="job.registered" code="201" schema="record.schema.json#/$defs/output">
+      <field name="gitops_sha" type="string" required="true">The commit the live controller was checked against.</field>
+      <field name="config_hash" type="string" required="true">sha256 over casc_hash plus jobs_hash plus the live /job/coq-gate/config.xml, so a drift between git and the controller changes the hash.</field>
+      <field name="image_digest" type="string" required="true">The digest the controller pod runs, read from the pod status (imageID), equal to the input image digest.</field>
+      <field name="resource_limits" type="object" required="true">The live requests and limits of the controller container.</field>
+      <field name="home_volume" type="object" required="true">pvc, storage_class (must be longhorn), size, and bound=true.</field>
+      <field name="jenkins_version" type="string" required="true">The x-jenkins response header.</field>
+      <field name="jobs" type="array" required="true">The job names the seed created and the check found: coq-gate, coq-image, coq-map.</field>
+      <field name="image_platforms" type="array" required="true">The platforms of the controller image's manifest list; must contain linux/arm64, because the controller runs on any Pi.</field>
+      <field name="cloud" type="object" required="true">The live kubernetes cloud: container_cap equal to shared/ci-capacity.xml#model container-cap, and the base pod template's jnlp image digest equal to the jnlp row.</field>
+      <field name="argo_revision" type="string" required="true">The revision Argo reports as synced and healthy.</field>
+    </record>
+    <example schema="record.schema.json#/$defs/output">{"id":"20261015T055000Z-201-e5f6g","at":"2026-10-15T05:50:00Z","seq":3900,"epoch":1,"kind":"job.registered","code":201,"node":"N-20","gitops_sha":"0123456789abcdef0123456789abcdef01234567","config_hash":"8888888888888888888888888888888888888888888888888888888888888888","image_digest":"sha256:9999999999999999999999999999999999999999999999999999999999999999","resource_limits":{"requests":{"cpu":"500m","memory":"1536Mi"},"limits":{"memory":"3Gi"}},"home_volume":{"pvc":"jenkins-home","storage_class":"longhorn","size":"50Gi","bound":true},"jenkins_version":"2.528.1","jobs":["coq-gate","coq-image","coq-map"],"argo_revision":"0123456789abcdef0123456789abcdef01234567","check_log":"$COQ_STATE/ci/jenkins-check/2026/10/0123456789ab-1.log","image_platforms":["linux/arm64","linux/amd64"],"cloud":{"container_cap":6,"jnlp_digest":"sha256:6a31d728c22ad74adbb6b9a1a210eb9ec2599f644b95edd7f8a3b8a71d20772c"}}</example>
+    <s>On failure after three attempts the node writes jenkins.unready (code 500) with the failing check named, and N-28 builds exactly one card from it.</s>
+    <s>The newest job.registered with code 201 is the precondition N-22, N-23 and N-26 read before they trigger a job; without one they write blocked 423 and do not trigger.</s>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the gitops app, JCasC, the jobs by config, the check">
+    <s>Everything Jenkins is lives in homelab-gitops under apps/jenkins/ and is deployed by the existing Argo CD app-of-apps path (L10 section 4, "GitOps pattern"); the repository already holds a JCasC seed at apps/jenkins/jenkins.yaml that nothing mounts today (L10 section 5.3: configurationPath is empty).</s>
+    <s>The parts, each a file in that directory, each read by the check in section "waits":</s>
+    <step n="1" id="m-app">Argo Application jenkins (argocd-apps/infrastructure/jenkins-app.yaml) with automated sync, prune, selfHeal and a retry block of limit 3, the same shape as resume-star.yaml; AppProject jenkins fences sourceRepos to homelab-gitops and destinations to namespace jenkins plus the cluster-scoped PriorityClass and ClusterRole it needs.</step>
+    <step n="2" id="m-deploy">Deployment jenkins with image ghcr.io/jkkelley/coq-jenkins:&lt;version&gt;@sha256:&lt;digest&gt; (a multi-arch manifest list with linux/arm64 and linux/amd64, built by N-22 from ci/jenkins/Containerfile: the official jenkins/jenkins image pinned by digest plus jenkins-plugin-cli over a pinned ci/jenkins/plugins.txt; the very first version by runbook R1), no installer init container, resources requests cpu 500m memory 1536Mi and limits memory 3Gi, env CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs, a nodeSelector that is empty so the scheduler may place it on any Pi, and serviceAccountName jenkins-controller.</step>
+    <step n="3" id="m-home">PersistentVolumeClaim jenkins-home, storageClassName longhorn, 50Gi, mounted at /var/jenkins_home; the one-time move from the CIFS share on the owner's Windows PC is ci/jenkins/migrate-home.sh (runbook step R3), after which the hostPath PV and the SMB mount are deleted by the same script's --finish step.</step>
+    <step n="4" id="m-rbac">ServiceAccount jenkins-controller with a Role in namespace jenkins (pods, pods/exec, pods/log: create get list watch delete; no secrets) and a RoleBinding in namespace coq-factory to the Role N-21 defines; the clusterrolebinding jenkins-admin-binding to cluster-admin is deleted in the same commit (L10 section 9).</step>
+    <step n="5" id="m-casc">ConfigMap jenkins-casc from apps/jenkins/jenkins.yaml: numExecutors 0; the kubernetes cloud named kubernetes with namespace coq-factory for pod templates, containerCap equal to shared/ci-capacity.xml#model container-cap, connectTimeout from retry-budget.xml#deadlines d-connect, readTimeout 15, jenkinsUrl http://jenkins.jenkins.svc.cluster.local:8080, and one base pod template coq-suite whose yaml is ci/pod/suite.pod.yaml (shared/ci-capacity.xml#pod-template), which declares the jnlp container by digest with its resources and restricted fields, so the plugin never injects an unpinned agent container; coqGate's podTemplate inherits from coq-suite; a second cloud entry for namespace jenkins used only by coq-image and coq-map; the global library coq-ci from https://github.com/jkkelley/coq-jev-herdr-plugin at branch main, implicit load off, allowVersionOverride false; the Jenkins-held credentials (shared/authority.xml#credential-matrix row jenkins-held: GHCR push token, gitops deploy key) from Vault through the existing hashicorpVault block; the Job DSL seed section pointing at apps/jenkins/jobs.groovy; buildDiscarder defaults of 30 days or 200 builds per job.</step>
+    <step n="6" id="m-jobs">apps/jenkins/jobs.groovy (Job DSL, run by JCasC at start and on every config reload) defines three parameterized pipeline jobs whose script comes from SCM at branch main of this repository: coq-gate (scriptPath ci/jenkins/gate.Jenkinsfile; parameters COQ_OP_ID, SHA, PR, KIND in pr or main, ATTEMPT, PLAN_JSON, IMAGES_JSON), coq-image (scriptPath ci/jenkins/image.Jenkinsfile; parameters COQ_OP_ID, NAME, VERSION, SHA, ATTEMPT) and coq-map (scriptPath tools/map/Jenkinsfile of this repository; parameters COQ_OP_ID, SHA, IMAGE_DIGEST, ATTEMPT; N-35). Every job has disableConcurrentBuilds off (the Go service serializes by key), quietPeriod 0, and no trigger of any kind. The Go service is the only caller and every call is an outbox effect (shared/contracts.xml#outbox): the owning node's Commit writes job.run 100 (job, parameters, attempt) and the effects row whose op_id is the operation key (N-23/gate.run/..., N-22/image.build/..., shared/retry-budget.xml#operations); the outbox worker looks for that COQ_OP_ID in GET /queue/api/json and in the job's builds list, and only when neither holds it POSTs /job/&lt;name&gt;/buildWithParameters with COQ_OP_ID among the parameters, then follows the queue item to the build number (a queue item URL expires 5 minutes after the build starts, so the parameter, not the URL, is the identity); a re-run is never a click, it is the next job.run with attempt n plus 1, written by the node that owns the work (N-23, N-26, N-22, N-35) within its own retry layer (shared/retry-budget.xml#layers), so every Jenkins build is a record before it is a build. coq-image and coq-map run their agent pods on the cloud entry of namespace jenkins (the only place the push secret and the gitops deploy key exist); coq-gate runs on the factory namespace.</step>
+    <step n="7" id="m-token">The Go service authenticates to Jenkins with credential jenkins-coq-reconciler (shared/authority.xml#credential-matrix): the API token of a Jenkins user coq-reconciler that JCasC creates from a Vault secret, stored at STATE/secrets/jenkins-coq-reconciler (coq-svc, 0600, written by the owner once from Vault) and never in a record, a seat or a pod.</step>
+    <step n="8" id="m-check">The check, ci/bin/jenkins-check.sh (also callable as a Go function in the service): reads the Argo Application status through the kube API, reads GET /api/json and the x-jenkins header, reads GET /job/coq-gate/config.xml and the two other jobs, reads the Deployment and pod status for the image digest and resources, reads the image's manifest list for its platforms (linux/arm64 must be present), reads the cloud's containerCap and base template through /manage/configuration-as-code/ view, reads the PVC for storage class and phase, and asserts the ClusterRoleBinding is gone; it prints one line per assertion, ok or FAILED, exits 0 only when every line is ok, and never writes anything to the cluster.</step>
+    <mermaid>
+flowchart LR
+  G[gitops main sha changes under apps/jenkins] --> P[N-20 gitops watch writes jenkins.config 100]
+  P --> A[Argo syncs the jenkins Application]
+  A --> W{synced and healthy at that revision within 15 min?}
+  W -- no, 3 attempts --> U[jenkins.unready 500 to N-28 card]
+  W -- yes --> C[jenkins-check.sh: version, jobs, image digest, resources, PVC, RBAC]
+  C -- every line ok --> R[job.registered 201]
+  C -- a line FAILED, 3 attempts --> U
+  R --> N22[N-22 image build may trigger]
+  R --> N23[N-23 planner may trigger coq-gate]
+  R --> N26[N-26 main verify may trigger coq-gate]
+    </mermaid>
+    <s>The library coq-ci and the three Jenkinsfiles are always read from branch main of this repository, never from the sha under test; a pull request can change what gates it only by merging first (coqGate.groovy breadcrumb item 1).</s>
+    <s>Fork guard by construction: no job has a trigger, and the only caller is the Go service, which plans only heads whose head repository equals the base repository (N-23); the CHANGE_FORK check in the old Jenkinsfile is therefore kept inside coqGate() as a second refusal and nothing else.</s>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <s>The input exists because a pull request to homelab-gitops merged; a worker seat may have written that pull request, but the node starts from the merge, which the poll (N-04) sees on its tick, never from a prompt.</s>
+    <s>The Go service's scheduler (N-07) sees a jenkins.config record with no job.registered or jenkins.unready of the same gitops_sha and dispatches the check as a system job with a lease from N-02 (key node:N-20:gitops_sha).</s>
+    <s>At service start (N-06 unit.start) the same comparison runs once, so a check lost to a crash is simply re-dispatched; nothing is remembered outside the store.</s>
+    <s>The first ever run has no record to compare against: the service treats the current gitops main sha as a jenkins.config of its own on first start, so the first job.registered is produced by the system too.</s>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait id="w1">
+      <on>Argo CD sync of Application jenkins reaching status Synced and Healthy at revision gitops_sha (Argo polls git every 120 s plus jitter, L10 section 5.4).</on>
+      <timeout>PT15M per attempt, polled through the kube API every 20 s.</timeout>
+      <fallback>Attempt ends as a failure; after 3 attempts (spaced one scheduler tick apart) the node writes jenkins.unready 500 with the Argo conditions text and N-28 posts one card.</fallback>
+    </wait>
+    <wait id="w2">
+      <on>Jenkins answering GET /api/json after a controller restart (a new image digest or a JCasC reload restarts the pod).</on>
+      <timeout>PT10M, polled every 15 s; each HTTP call has a 10 s connect and 30 s read timeout.</timeout>
+      <fallback>Same as w1: the attempt fails, 3 attempts, then jenkins.unready 500 naming the last HTTP error.</fallback>
+    </wait>
+    <wait id="w3">
+      <on>The Job DSL seed having created the three jobs (JCasC runs the seed at start; a reload is triggered by the check with POST /reload-configuration-as-code when the hashes differ from /manage/configuration-as-code/ view).</on>
+      <timeout>PT5M after the reload call, polled every 10 s on /job/coq-gate/api/json.</timeout>
+      <fallback>Attempt fails; 3 attempts; jenkins.unready 500 with the missing job named.</fallback>
+    </wait>
+    <wait id="w4">
+      <on>The Longhorn PVC jenkins-home reaching phase Bound.</on>
+      <timeout>PT10M, part of attempt 1 only, because a PVC either binds or the storage class is wrong.</timeout>
+      <fallback>jenkins.unready 500 with the PVC events text; the card names the storage class.</fallback>
+    </wait>
+    <s>No wait in this node blocks a seat or a tick: the check runs as its own job under a lease with a stall bound of PT45M (the sum of the waits plus slack) that N-12 enforces; a stalled check is killed, its lease revoked, and the attempt counted.</s>
+  </section>
+
+  <section id="retries" title="Retries, recovery and the report">
+    <s>Every HTTP and kube API call inside the check is retried by the jenkins-call layer (shared/retry-budget.xml#layers, backoff 2 s, 4 s, 8 s) before it counts as a failed assertion.</s>
+    <s>The check itself runs the jenkins-check layer's tries per jenkins.config, one per dispatch, with backoff min(10 s x 2^(n-1), 5 min) owned by N-11; attempts are counted in the record, never in memory.</s>
+    <s>After the third failure the node writes jenkins.unready 500 carrying the failed lines verbatim, and N-28 builds exactly one card (dedupe key node:N-20:gitops_sha); the system then does nothing more for that sha until a newer gitops commit arrives or the owner answers the card, which re-enters at N-03 as a fix ticket.</s>
+    <s>Nothing here loops: a jenkins.unready is terminal for its gitops_sha.</s>
+    <s>A crash of the Go service mid-check leaves a started job with a lease; on restart N-07 sees the lease expired, N-12 revokes it, and the comparison in section "start" dispatches a fresh attempt.</s>
+  </section>
+
+  <section id="many-agents-at-once" title="Many agents at once">
+    <s>Readers: any number of seats and nodes read the newest job.registered through N-01; the record is immutable once written (append-only table, a new sha is a new row), so no reader ever sees a half-written record.</s>
+    <s>Writers of the input: two gitops commits in quick succession produce two jenkins.config records with different gitops_sha; the scheduler dispatches a check for each, the second check supersedes the first by writing job.registered for the newer sha and the older check, if still running, is cancelled by N-07 (its lease is revoked with the reason superseded, code 410) because only the newest sha matters.</s>
+    <s>Two Go service instances (a restart overlap) cannot both check the same sha: the lease key node:N-20:gitops_sha with a fencing token from N-02 is taken by one; the other's commit carries a stale token and N-01 refuses it with 412 stale_token, which is logged and not retried.</s>
+    <s>Worker seats never write to apps/jenkins/ outside a ticket that declares those files, and the one-file-one-in-flight-ticket rule (N-03, N-14) refuses a second ticket on the same path, so two seats cannot race on the JCasC file.</s>
+    <s>The Jenkins controller is one pod by design; a JCasC reload while a build runs is safe because the jobs have no running state in config, and the Go service holds job triggers for N-22, N-23 and N-26 while a check is in flight (the precondition is the newest job.registered, and a check in flight means none for the new sha yet).</s>
+    <s>Collision answer in one line: one lease per gitops sha with a fencing token, append-only records, idempotent check, newest sha wins, 412 on a stale writer reported never silent.</s>
+  </section>
+
+  <section id="status-codes" title="Status codes this node emits">
+    <emits code="100" name="ACCEPTED" kind="jenkins.config">Written by this node's gitops watch; N-07 dispatches the check on its tick.</emits>
+    <emits code="100" name="ACCEPTED" kind="job.run">Written in the owning node's Commit with the effects row before every Jenkins build call (job, parameters with COQ_OP_ID, attempt); the build is followed by the Jenkins API and its outcome is the owning node's record (pod.run, image, deploy.record).</emits>
+    <emits code="201" name="PASSED" kind="job.registered">N-22, N-23 and N-26 read it as their precondition; the map shows the node green.</emits>
+    <emits code="410" name="SUPERSEDED" kind="check.superseded">Nobody acts; a newer gitops sha replaced this check.</emits>
+    <emits code="500" name="STALLED or DEAD" kind="jenkins.unready">N-28 posts one card; the owner acts; the gate and the image build hold with 423 until a newer job.registered exists.</emits>
+    <emits code="423" name="BLOCKED" kind="jenkins.blocked">Written by N-22, N-23 and N-26 when no job.registered 201 exists; N-28 posts one card per cause, deduped on the sha.</emits>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path p="$COQ_STATE/ci/jenkins-check/YYYY/MM/&lt;gitops_sha12&gt;-&lt;attempt&gt;.log" cleanup="ci/bin/cleanup-ci-state.sh --what jenkins-check --older-than 30d [--apply]" trigger="timer" acts="system">One log per check attempt, the full assertion output; the record carries the path.</path>
+    <path p="$COQ_STATE/secrets/jenkins-coq-reconciler" cleanup="ci/bin/cleanup-ci-state.sh --what jenkins-token [--apply]" trigger="owner" acts="owner">The reconciler's Jenkins API token, mode 0600 coq-svc (shared/authority.xml#credential-matrix); the cleanup script removes it only with --apply and prints how to re-create it from Vault.</path>
+    <path p="$COQ_STATE/ci/mirror/homelab-gitops.git" cleanup="ci/bin/cleanup-ci-state.sh --what gitops-mirror [--apply]" trigger="timer" acts="system">The bare gitops mirror the watch fetches; deleting it costs one re-clone on the next tick; refuses while a check runs.</path>
+    <path p="homelab-gitops: apps/jenkins/, argocd-apps/infrastructure/jenkins-app.yaml" class="tracked" retention="never" cleanup="none: tracked source, removed by a pull request" trigger="merge" acts="owner">The source of truth; not state.</path>
+    <path p="cluster: namespace jenkins, PVC jenkins-home (longhorn 50Gi), the daily Longhorn backup CronJob jenkins-daily-backup" cleanup="ci/bin/cleanup-cluster.sh --what jenkins-old-home [--apply]" trigger="owner" acts="owner">The script deletes the retired hostPath PV jenkins-local-pv and the SMB mount unit after the migration's --finish step; dry-run lists them first.</path>
+    <path p="Jenkins build history under JENKINS_HOME" cleanup="JCasC buildDiscarder (30 days or 200 builds per job); ci/bin/cleanup-cluster.sh --what jenkins-builds --older-than 30d [--apply] for a forced sweep" trigger="timer" acts="system">Jenkins' own retention is the normal path; the script exists so the owner's rule "a cleanup script for every state path" holds.</path>
+    <s>Every script above prints its plan with no flag and acts only with --apply, retries each deletion 3 times, and exits 4 with a list of what it could not remove; N-45 registers each one.</s>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <in from="N-06" href="../N-06/spec.xml#N-06" drawn="false">The scheduler tick dispatches this node's gitops watch, which writes jenkins.config itself when the gitops main sha changes; the DAG draws no edge into N-20 because the input is a commit.</in>
+    <out to="N-22" href="../N-22/spec.xml#N-22">job.registered is the precondition of the coq-image job.</out>
+    <out to="N-23" href="../N-23/spec.xml#N-23">job.registered is the precondition of planning a coq-gate run for a pull request head.</out>
+    <out to="N-26" href="../N-26/spec.xml#N-26">job.registered is the precondition of the full-set run on a main sha.</out>
+  </section>
+
+  <section id="checklist" title="Checklist with proofs">
+    <item><check>apps/jenkins/jenkins.yaml is mounted and active: /manage/configuration-as-code/ reports the file and its hash equals casc_hash.</check><proof>jenkins-check.sh line "casc: ok &lt;hash&gt;" in the check log named by job.registered.</proof></item>
+    <item><check>The controller image is pinned by digest and runs without an installer init container.</check><proof>jenkins-check.sh line "image: ok &lt;digest&gt;" and "init-containers: ok 0".</proof></item>
+    <item><check>JENKINS_HOME is a Longhorn PVC, Bound, 50Gi, and the CIFS mount is gone.</check><proof>Lines "home: ok longhorn Bound 50Gi" and "cifs: ok absent" (the check reads the pod's mounts through pods/exec of mount).</proof></item>
+    <item><check>Resources requests and limits are set on the controller container.</check><proof>Line "resources: ok cpu=500m mem=1536Mi/3Gi".</proof></item>
+    <item><check>The controller image carries linux/arm64, and the cloud's container cap and jnlp pin equal shared/ci-capacity.xml#model.</check><proof>Lines "image platform: ok linux/arm64", "cloud: ok containerCap=6 jnlp=sha256:6a31d728..." (not-run).</proof></item>
+    <item><check>The three jobs exist, are parameterized as section mechanism step 6 says, and have no trigger.</check><proof>Lines "job coq-gate: ok", "job coq-image: ok", "job coq-map: ok", each with "triggers: 0".</proof></item>
+    <item><check>The controller service account is not cluster-admin and cannot read secrets in coq-factory.</check><proof>Lines "rbac: ok no clusterrolebinding" and "can-i get secrets -n coq-factory: ok no" (kubectl auth can-i through the API).</proof></item>
+    <item><check>The global library coq-ci is registered from branch main with allowVersionOverride false.</check><proof>Line "library coq-ci: ok main override=false".</proof></item>
+    <item><check>A job.registered 201 exists for the current gitops main sha.</check><proof>The record id, shown on the machine screen (N-39) for N-20.</proof></item>
+    <item><check>Nothing in this node runs by hand: the migration script, the check and the cleanup scripts are tracked under ci/bin and ci/jenkins.</check><proof>git ls-files ci/bin/jenkins-check.sh ci/jenkins/migrate-home.sh ci/bin/cleanup-cluster.sh ci/bin/cleanup-ci-state.sh lists all four.</proof></item>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <s>The Go service: Jenkins user coq-reconciler with Overall/Read, Job/Read, Job/Build, Job/Cancel and Job/Discover only; kube access through a dedicated kubeconfig for ServiceAccount coq-reconciler (read Applications in argocd, read Deployments, Pods, PVCs, RoleBindings in jenkins and coq-factory, pods/exec in jenkins for the mount read, create pods in coq-factory for the N-21 canary); read of homelab-gitops for the watch's mirror fetch through a read-only deploy key (a gitops-read row shared/authority.xml#credential-matrix must carry; see the 1.1.0 report); no GitHub API token.</s>
+    <s>Worker seats: may edit apps/jenkins/ and ci/jenkins/ only inside a ticket that declares those files; no Jenkins token, no kubeconfig, no Argo access; the rendered seat settings (N-13) deny kubectl, jenkins-mcp and the kubernetes MCP tools for every role.</s>
+    <s>Reviewer seats: read-only on the same files; may run ci/bin/jenkins-check.sh --offline, which validates the YAML and the Groovy against their schemas and touches no cluster.</s>
+    <s>The owner: Jenkins admin through the UI for break glass only; a hand change is detected by the next check as a config_hash drift and reported as jenkins.unready with the differing section named, so the drift becomes a ticket rather than a surprise.</s>
+    <s>Pods: none of this node's work runs in a suite pod; the controller's own pod has the jenkins-controller service account and nothing else.</s>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <s>The Go service's Status call (scheduler.proto StatusResponse) exposes for N-20: last job.registered at and sha, checks in flight, unready count, the age of the newest job.registered against the gitops main sha (drift age).</s>
+    <s>Alerts (N-41): jenkins.unready written; drift age over PT30M (gitops moved and no check landed); Jenkins unreachable for 3 consecutive health ticks (N-06 includes GET /api/json in its health record with a 10 s timeout).</s>
+    <s>Map (N-38): the N-20 machine is green on a 201 for the current sha, amber while a check runs, red on jenkins.unready; the machine screen (N-39) shows the last check log path and the failed lines.</s>
+    <s>Counters feed the stats screen (N-40): checks run, attempts used, reloads triggered.</s>
+    <s>The health tick never blocks on Jenkins: the probe is a separate goroutine with its own timeout, and a missing probe result is reported as unknown, never as healthy.</s>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <step n="R1" id="r-bootstrap">First controller image: ci/image/build.sh --image coq-jenkins --platforms linux/arm64,linux/amd64 from the host (podman with qemu binfmt for the arm64 half, 3 attempts, exit 4 on failure; the --platforms flag and a coq-jenkins row in ci/config/images.json with the herdr fields optional are planned changes, build.sh today refuses both), because N-22 needs a registered job to build images and the first job needs an image; ci/image/verify.sh must show linux/arm64 before the Deployment pins the digest; after the first job.registered, N-22 builds every later version.</step>
+    <step n="R2" id="r-token">Create the coq-reconciler Jenkins user's API token: JCasC creates the user from Vault; the owner copies the token once to STATE/secrets/jenkins-coq-reconciler (0600, coq-svc); ci/bin/jenkins-check.sh --token-check verifies it with one GET.</step>
+    <step n="R3" id="r-migrate">Move JENKINS_HOME: ci/jenkins/migrate-home.sh --dry-run lists sizes and the target PVC; --apply scales the Deployment to 0, runs a migration Job that rsyncs the CIFS content into the Longhorn PVC with a sha256 manifest, verifies the manifest, scales back to 1, and waits for w2; --finish deletes the old PV and mount only after a job.registered 201 exists on the new home. Backup path before --apply: the Longhorn backup CronJob's last snapshot id is printed and must be younger than 24 h or the script refuses.</step>
+    <step n="R4" id="r-drift">On jenkins.unready with a config_hash drift: read the card, cut a ticket that restores the file or accepts the change into git; never fix it in the UI.</step>
+    <step n="R5" id="r-cleanup">Cleanup commands: ci/bin/cleanup-ci-state.sh --what jenkins-check --older-than 30d; ci/bin/cleanup-cluster.sh --what jenkins-old-home; ci/bin/cleanup-cluster.sh --what jenkins-builds --older-than 30d; each dry-runs without --apply.</step>
+    <step n="R6" id="r-break-glass">Break glass (owner only, one time): the owner may click in Jenkins to unblock a stuck controller; the next check reports the drift and R4 applies.</step>
+    <s>Record ids for the detail: the check log path in job.registered; the card id in jenkins.unready.</s>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <cite href="rebuild/investigation/03-DECISIONS.md#9-d07-ci-executor">D07 options and the recommendation, option A chosen.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl#C45">Ruling C45: Jenkins as code: job by config, pinned image, resources, Longhorn home.</cite>
+    <cite href="rebuild/investigation/03-DECISIONS.md#8-d06-how-github-events-reach-the-system">D06, ruling C44: poll each tick; no webhook into the LAN.</cite>
+    <cite href="rebuild/investigation/01-ROOT-CAUSES.md#rc7-the-ci-verdict-path-is-dark-end-to-end-and-nothing-said-so">RC7, the defect this node removes.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#52-pr-179-the-pod-gate-merged-but-its-jenkins-prerequisites-do-not-exist">The four missing prerequisites, now files in gitops.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#53-jenkins-is-the-one-platform-piece-that-is-not-gitops-and-is-tied-to-the-desktop">CIFS home, empty JCasC path, cluster-admin binding.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#9-what-to-kill">Kill list items this node executes: SMB home, imperative manifests, UI config, cluster-admin.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#4-what-works">The gitops pattern reused: app-of-apps, AppProject fence, auto-sync with prune and selfHeal.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#5-what-broke-and-why">Items 1, 2, 11: no trigger, library not registered, Jenkins a mutable pet.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#9-what-to-kill">Hand-install steps become JCasC and scripts.</cite>
+    <cite href="rebuild/investigation/S02-k8s-jobs-tekton-jenkins.md#8-what-to-carry-forward">Jenkins row: register the library, job by config, pin, resources, name the poll a poll.</cite>
+    <cite href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V11 git as the only write path for cluster config.</cite>
+    <cite href="ci/jenkins-lib/vars/coqGate.groovy#L17-L21">Breadcrumb item 1: library at a fixed ref so a pull request cannot change the code that gates it.</cite>
+    <cite href="ci/README.md#L51-L105">The setup steps that were manual, now code.</cite>
+    <cite href="~/projects/homelab-gitops/apps/jenkins/jenkins.yaml">The existing JCasC seed (system message, numExecutors 0, Vault block) this node mounts.</cite>
+    <cite href="~/projects/homelab-gitops/argocd-apps/workloads/resume-star.yaml">The Application shape with retry limit 3 and backoff that the jenkins Application copies.</cite>
+    <cite href="~/projects/homelab-gitops/argocd-apps/infrastructure/jenkins-eso/externalsecret-ghcr.yaml">ghcr-pull-secret by ESO, the existing secret path.</cite>
+    <cite href="rebuild/investigation/04-UNLANDED.md#9-merged-but-dark-and-ruled-or-ready-but-unbuilt">Row "Jenkins coq-ci library, multibranch job, webhook: LAND as JCasC and job DSL".</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md#5-owner-rulings-this-session-in-order">Ruling 13: the existing Jenkins, ghcr, gitops, Argo path, nothing new.</cite>
+    <cite href="rebuild/factory-rebuild-plan.xml#principles">no-cog and build-mode principles applied to this node.</cite>
+  </section>
+
+  <section id="rejected" title="Rejected with reason">
+    <rejected source="ci/README.md#L93-L105 GitHub webhook into Jenkins"><reason>GitHub cannot reach ${SITE_CI_LAN_ADDR} and D06 ruled a poll; the Go service calls Jenkins, so no inbound path is needed.</reason></rejected>
+    <rejected source="Jenkins pollSCM or multibranch PeriodicFolderTrigger"><reason>A second poller next to the Go service's poll; one poller gives the store the truth and the trigger a lease (RC3, K07).</reason></rejected>
+    <rejected source="Multibranch job with GitHub Branch Source (ci/README.md#L79-L89)"><reason>The job is parameterized by sha and reads its Jenkinsfile from main, so branch indexing adds nothing and would re-run every head the Go service already plans; the fork guard moves to the planner.</reason></rejected>
+    <rejected source="Installer init container and floating jenkins:lts (L10 section 5.3)"><reason>Mutable at every start; the owner's rule is digest pins (lint/Containerfile Rule 15).</reason></rejected>
+    <rejected source="JENKINS_HOME on the CIFS share of the owner's PC"><reason>Eleven bugchecks on that PC; a sleep or reboot stops every build log write (L10 section 5.3).</reason></rejected>
+    <rejected source="03-DECISIONS.md D07 options B (Argo Workflows), C (Tekton), D (ARC)"><reason>Ruled out by C45; B and C add a second engine and C reproduces the inbound-webhook gap; D is a second CI path.</reason></rejected>
+    <rejected source="plans/2026/10/20261013194800-ci-gate-design.md amendment 20:20Z gh webhook forward plus hook-listener.sh"><reason>An outbound forwarder that can die silently (D06 option B); the poll is the correctness path and the listener is folded into N-04 as a later accelerator only.</reason></rejected>
+    <rejected source="Build the controller image in the cluster on first bring-up"><reason>Circular: the image job needs a registered job; the host build.sh already builds multi-arch with qemu, so R1 uses it once with both platforms.</reason></rejected>
+    <rejected source="An amd64-only first controller image from the host leg (book 1.0.0 R1)"><reason>The controller may be scheduled on any Pi (empty nodeSelector), so an amd64 image dies with exec format error; the first image is multi-arch (verification F06).</reason></rejected>
+  </section>
+
+</volume>

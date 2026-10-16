@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-43 Status code map loader. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
+     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh. -->
+<volume id="N-43" kind="node-spec" node="N-43" group="G7" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, shared</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="mechanism">Mechanism in the Go service</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="shared-needs">What this volume needs from the shared volumes</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-43"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schema of this node</sibling>
+    <sibling href="../N-44/spec.xml#N-44" kind="node">Build-mode flag, same group</sibling>
+    <sibling href="../N-45/spec.xml#N-45" kind="node">Cleanup registry and runs, same group</sibling>
+    <sibling href="../N-46/spec.xml#N-46" kind="node">Spec book check, same group</sibling>
+    <sibling href="../N-51/spec.xml#N-51" kind="node">Exit test, same group</sibling>
+    <shared href="../../shared/status-codes.xml#status-codes">The status code map this node loads</shared>
+    <shared href="../../shared/state-store.xml#code-table">The code_table store table</shared>
+    <shared href="../../shared/principles.xml#no-cog">No cog</shared>
+    <shared href="../../dag.md#3-every-node">DAG row N-43</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>Loads the one status code map of the factory, rebuild/design/shared/status-codes.xml, into the Go service as a versioned code table so that every record put, every route, every card and every panel reads the same codes and the same "who acts" column.</is>
+    <is>Refuses a map in which any code lacks a meaning or an actor, because a code nobody acts on is a silent stall (02-MAPPING.md V01, L01 F3).</is>
+    <is-not>It does not invent codes and it does not route; N-07 dispatches on codes, N-28 builds cards from the owner-acts codes, N-37 binds panels to kinds and codes.</is-not>
+    <why>Today the code enum lives in three places at once: events/schema/event.schema.json line 12, SPEC-17 section s-codes and factory/config/routes.json, and BI01 and BI03 in 00-INVENTORY.md record the drift (the 22 verified 200 records and 21 no-route notes). One table, one hash, one loader ends that.</why>
+  </purpose>
+
+  <input id="input">
+    <record kind="forge.snapshot" from="N-04">A snapshot whose main sha differs from the sha the current code.table was loaded from and whose main diff since that sha touches rebuild/design/shared/status-codes.xml.</record>
+    <record kind="unit.start" from="N-06">The service unit starting; the loader runs before the first tick.</record>
+    <record kind="reload.request" from="gRPC Scheduler.Reload">The Reload RPC of scheduler/api/scheduler/v1/scheduler.proto line 27, called by the owner's break glass or by a test; it carries no fields (ReloadRequest, line 196).</record>
+    <schema href="record.schema.json#/$defs/input"/>
+  </input>
+
+  <output id="output">
+    <record kind="code.table" code="200">The table loaded: version hash (sha256 of the file bytes), main sha it came from, the count of codes, and every code with its name, meaning, actor and the kinds that may carry it.</record>
+    <record kind="code.table" code="400">The file failed the XSD or a code lacks meaning or actor; the previous table stays live and the record names the failing code.</record>
+    <record kind="code.table" code="503">The main mirror was unreadable after 3 attempts; the embedded copy from the build stays live and the record says so.</record>
+    <schema href="record.schema.json#/$defs/output"/>
+    <reads>N-07 (dispatch codes), N-28 (owner-acts codes), N-37 (panel binding by kind and code), N-01 (a put whose code is not in the live table is refused 400).</reads>
+  </output>
+
+  <mechanism id="mechanism">
+    <where>Go package codes inside the service (D01, D09 small cut: config, store, intake, engine; codes sits beside config).</where>
+    <step n="1">Read the bytes of rebuild/design/shared/status-codes.xml at the main sha from the service's read-only mirror (git -C &lt;mirror&gt; show &lt;sha&gt;:rebuild/design/shared/status-codes.xml). The mirror path and its fetch belong to N-04.</step>
+    <step n="2">Validate against the embedded copy of rebuild/design/schema/volume.xsd, whose strict status-code element (and the generated shared/record-kinds.xml's strict record-kind element) is the code map's schema; one XSD family for the whole book, so there is no second status-codes.xsd to drift. On failure write code.table 400 and stop; the live table is untouched.</step>
+    <step n="3">Semantic checks the XSD cannot express: every code element has value, name, meaning and acts; acts is one of system, owner, seat, nobody; codes are unique; every kind named in a code's kinds list exists in the shared record kind table (shared/record-kinds.xml, generated by bin/make-kinds.py and loaded in the same transaction); the owner-acts set is non-empty.</step>
+    <step n="4">Compute hash = sha256 of the bytes. If hash equals the live table's hash, write nothing and return the live record id (idempotent).</step>
+    <step n="5">Write code.table 200 to N-01 with expected version = live version (compare-and-swap). On 409, re-read the live table and return it; another loader instance won.</step>
+    <step n="6">Swap the in-memory table under a write lock; readers hold the previous pointer until their call returns. Export the hash on the Status RPC and the health record of N-06.</step>
+    <fallback>The binary embeds the status-codes.xml it was built from (go:embed). On first start with no mirror, or when step 1 fails three times, the embedded copy is the live table and code.table 503 says so, so the service always has a table and never waits on a file.</fallback>
+    <diagram>
+      <mermaid><![CDATA[
+flowchart LR
+  A[forge.snapshot main sha changed] --> B{path in diff?}
+  U[unit.start] --> C
+  R[Reload RPC] --> C
+  B -- yes --> C[read file at sha from mirror]
+  B -- no --> Z[no-op]
+  C -- read fails x3 --> F[code.table 503 embedded copy live]
+  C --> D{XSD + semantic checks}
+  D -- fail --> E[code.table 400 previous table stays]
+  D -- pass --> H{hash == live?}
+  H -- yes --> Z
+  H -- no --> W[CAS put code.table 200] --> S[swap in memory]
+      ]]></mermaid>
+    </diagram>
+  </mechanism>
+
+  <start id="start">
+    <s>The Go service is a systemd user unit (N-06); the loader runs in its start-up sequence before the first tick, and again on every tick whose forge.snapshot shows a new main sha that touches the map path.</s>
+    <s>The Reload RPC exists for the break glass and for tests; no agent is told to call it, and nothing waits for it.</s>
+    <s>No seat, pane or typed command is on the path from a merged status-codes.xml to a live table.</s>
+  </start>
+
+  <waits id="waits">
+    <wait id="w1" what="git show from the mirror" timeout="PT10S" fallback="retry up to 3 with 2 s between, then code.table 503 and the embedded copy stays live"/>
+    <wait id="w2" what="XSD validation" timeout="PT5S" fallback="treat as 400 with reason validator-timeout; previous table stays live"/>
+    <wait id="w3" what="store put with CAS" timeout="PT5S" fallback="N-01 contract: 409 means re-read and adopt the winner; any other failure counts as one attempt of the three"/>
+    <wait id="w4" what="in-memory swap lock" timeout="PT1S" fallback="a reader that holds the lock longer than 1 s is a defect; the swap proceeds after readers release, and the health record counts lock waits"/>
+    <cog-test>The cog that could stall this node is the mirror fetch (N-04). It cannot: the embedded copy is always live, and a stale table is reported as 503 on the health record and the Controls screen lamp.</cog-test>
+  </waits>
+
+  <retries id="retries">
+    <policy attempts="3" backoff="2 s fixed">Mirror reads and store puts.</policy>
+    <recover>After the third failure the node writes one code.table 503 or 400 record with the reason and keeps the last good table; it never loops and never blocks the tick.</recover>
+    <report>A 400 after a merge means a bad map reached main; N-28 posts one card (owner-acts) and N-46 is the gate that should have refused it, so the record names N-46 as the defect site.</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Every node in the service reads the table through one function that returns an immutable snapshot and its hash; a reader never sees a half-loaded table. Seats read the map as a volume of the spec book, not from the service.</readers>
+    <writers>Only the service writes code.table. Two service instances cannot both be live (N-06 holds the unit lock), but the put is compare-and-swap on the live version anyway, so a second loader run sees 409 and adopts the winner.</writers>
+    <collision>Two Reload calls at the same moment are serialized by a mutex; both return the same hash; the second writes nothing (idempotent by hash).</collision>
+    <collision>A record put that arrives during a swap is validated against the table live at the moment of validation; a code valid in the old table and absent in the new one is accepted for that one put, and the new table's record carries the removed codes so N-07 can finish routing them.</collision>
+    <collision>Two spec-author seats editing status-codes.xml at once is refused upstream: one file, one in-flight ticket (N-14 refuses a workspace whose declared files are claimed).</collision>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="200" kind="code.table">Table loaded; system acts (nothing to do).</emits>
+    <emits code="400" kind="code.table">Map invalid; owner acts through one card; the previous table stays.</emits>
+    <emits code="503" kind="code.table">Mirror unreadable after 3 attempts; system acts (retries next tick); the embedded copy stays.</emits>
+    <uses href="../../shared/status-codes.xml#status-codes">Meanings and actors of every code come from the map itself.</uses>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path id="N-43.table" glob="$COQ_STATE/svc/codes/table-&lt;hash&gt;.json" retention="P30D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-43.table">A JSON dump of every loaded table, for the Stats screen and for diffing two versions; the live hash is also in the store.</path>
+    <path id="N-43.log" glob="$COQ_STATE/logs/svc/codes/*.jsonl" retention="P14D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-43.log">Loader log lines.</path>
+    <rule>No path under the repository is written. The store record is the truth; the dumps are views and may be deleted at any time.</rule>
+  </state-paths>
+
+  <edges id="edges">
+    <in ref="../N-04/spec.xml#N-04">forge.snapshot (main sha and diff)</in>
+    <in ref="../N-06/spec.xml#N-06">unit.start</in>
+    <out ref="../N-07/spec.xml#N-07">code.table</out>
+    <out ref="../N-28/spec.xml#N-28">code.table (owner-acts set)</out>
+    <out ref="../N-37/spec.xml#N-37">code.table (kinds and codes for panel binding)</out>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>The service starts with no mirror and serves the embedded table.</check><proof>A unit start in a test world with the mirror path absent, the Status RPC returning a hash equal to sha256 of the embedded file, and one code.table 503 record.</proof></item>
+    <item><check>A merge that changes status-codes.xml is live within one tick.</check><proof>A test that advances the fake clock one tick after a forge.snapshot with a new sha and asserts code.table 200 with the new hash.</proof></item>
+    <item><check>A code without an actor is refused and the previous table stays.</check><proof>A test file with one code lacking acts; code.table 400 names the code; Status still reports the previous hash.</proof></item>
+    <item><check>Reload is idempotent.</check><proof>Two concurrent Reload calls in a test produce one record and equal hashes.</proof></item>
+    <item><check>A put with an unknown code is refused 400 by N-01.</check><proof>A test put with code 599 after a table load, refused with the live hash in the reason.</proof></item>
+    <item><check>Every state path above has a registry entry.</check><proof>line/bin/cleanup.sh registry lists N-43.table and N-43.log.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <may role="system" do="read the mirror, validate, put code.table, swap the table"/>
+    <may role="owner" do="call Reload through the break glass path named in the runbook"/>
+    <may-not role="seat" do="put code.table, call Reload, edit status-codes.xml outside a ticket that declares the file"/>
+    <may-not role="architect" do="edit the map by hand on main"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="codes_table_hash" kind="gauge-label">The live hash on the health record and the Stats screen.</counter>
+    <counter name="codes_loads_total" labels="result">200, 400, 503 counts.</counter>
+    <counter name="codes_table_age_seconds">Seconds since the live table's main sha was merged; over 3600 with a newer sha known is an alert record (N-41).</counter>
+    <lamp screen="Controls" name="code map">Green when the live hash equals the hash at the current main sha; amber on 503; red on 400.</lamp>
+  </monitoring>
+
+  <runbook id="runbook">
+    <step n="1" when="the lamp is red">Read the code.table 400 record; the reason names the code and line. Fix the map through a ticket; N-46 must refuse the same error on the PR.</step>
+    <step n="2" when="the lamp is amber">N-04 cannot read the mirror; follow the N-04 runbook. The embedded copy is in use, which is safe but stale.</step>
+    <step n="3" when="break glass">grpcurl -unix &lt;socket&gt; scheduler.v1.Scheduler/Reload, once, recorded as a control.action by N-42; never from a seat.</step>
+    <cleanup>line/bin/cleanup.sh --entry N-43.table and --entry N-43.log, dry run first (N-45).</cleanup>
+    <cold-start>Nothing to restore; the table is rebuilt from main on the next start.</cold-start>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/00-INVENTORY.md" anchor="#5-build-items-named-by-this-inventory">BI01 one kind table, BI03 one code for verified</source>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="#2-validated-keep">V01 one append-only log with an HTTP-shaped status code map</source>
+    <source path="rebuild/investigation/L01-line-scripts.md" anchor="#8-what-to-carry-forward">Item 1, schema-enforced status code map</source>
+    <source path="rebuild/investigation/L02-state-stores.md" anchor="#8-what-to-carry-forward">Item 1, the record schema with the enumerated code map is worth keeping whatever carries it</source>
+    <source path="events/schema/event.schema.json" anchor="/properties/code">The current enum 100 200 201 204 300 400 409 412 422 423 429 500 503</source>
+    <source path="specs/SPEC-17-orchestrator-and-agent-health.xml" anchor="#s-codes">HTTP-shaped codes and the guard families; a code is machine-routed, a note never branches a script</source>
+    <source path="scheduler/api/scheduler/v1/scheduler.proto" anchor="line 27 and line 196">Scheduler.Reload and the empty ReloadRequest</source>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="#status-codes">Every code names who acts</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#3-d01-control-plane-shape">Go service, gRPC, the proto kept</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C43">D05, codes are derived notifications, the forge holds the verdict</source>
+  </sources>
+
+  <rejected id="rejected">
+    <reject source="events/bin/event.sh line 68 and the enum in event.schema.json" reason="A bash writer that embeds the enum is a second copy; the service validates puts against the loaded table instead, and the schema file is generated from the map by N-46's tooling."/>
+    <reject source="factory/config/routes.json codes per row" reason="Routing by code stays (N-07), but the code set is read from the table, never repeated in the routes file; a routes lint (BI05) checks every row's code exists in the table."/>
+    <reject source="compaction-guard families GOV CMP RES RCV OPS (SPEC-17 s-codes)" reason="They belong to an interactive-seat guard the one-shot seat contract retires (D02, L11 F10); the families are kept as a source in shared/rejected-with-reason.xml, not loaded."/>
+    <reject source="reading the map from the owner's checkout" reason="The owner checkout is dirty by history (L05 section 5 item 5) and is the exit test's subject (N-51); the service reads the mirror at a sha, never a working tree."/>
+  </rejected>
+
+  <shared-needs id="shared-needs">
+    <need kind="volume">shared/status-codes.xml with, per code: value, name, meaning, acts (system, owner, seat, nobody), emitter rows naming the kinds; shared/record-kinds.xml generated from every node's status codes (bin/make-kinds.py); both validated by rebuild/design/schema/volume.xsd.</need>
+    <need kind="store-table">code_table: hash, main_sha, loaded_at, version, body JSON; unique on hash.</need>
+    <need kind="record-kinds">code.table, forge.snapshot (with main_sha and changed_paths), unit.start, reload.request.</need>
+    <need kind="seat-contract">A seat never writes code.table and never calls Reload.</need>
+    <need kind="n-04">The mirror path under $COQ_STATE and the guarantee that forge.snapshot carries main_sha and the changed path list since the previous snapshot.</need>
+    <need kind="n-01">A put is refused 400 when its code is not in the live table, with the live hash in the reason.</need>
+  </shared-needs>
+
+</volume>

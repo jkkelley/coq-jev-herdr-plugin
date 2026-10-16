@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-33 Rail panel. One volume of the Factory Rebuild spec book (R-03), group G5 Owner surface.
+  Written 2026-10-14 UTC by the G5 spec-author seat, round 1, against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  No em dash appears in this file. Every time is UTC.
+-->
+<volume id="N-33" kind="node-spec" node="N-33" group="G5" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC"
+        author="spec-author seat, group G5 Owner surface, round 1">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, edges</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="mechanism">Mechanism: plan seed, ledger rows, panel frame</entry>
+    <entry ref="data-model">The data model carried from the execution rail</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup scripts</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="look">The Krastorio look of the rail</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-33"/>
+    <sibling href="record.schema.json" kind="schema">JSON schema of plan.step, plan.side, ledger.row and rail.panel</sibling>
+    <sibling href="../N-31/spec.xml#N-31" relation="edge-in">Push transport: ledger rows pushed</sibling>
+    <sibling href="../N-32/spec.xml#N-32" relation="edge-out">Bearings page service: the panel lives on the page</sibling>
+    <sibling href="../N-43/spec.xml#N-43" relation="shape">Status code map loader: the plan's status codes come from the plan XML the same way</sibling>
+    <sibling href="../N-46/spec.xml#N-46" relation="validates">Spec book check validates the plan XML the rail is generated from</sibling>
+    <shared href="../../shared/status-codes.xml#plan">The plan's five status codes</shared>
+    <shared href="../../shared/state-store.xml#envelope">Record envelope</shared>
+    <shared href="../../shared/cut-over.xml#step-owner-surface" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>The rail panel shows any numbered plan on the owner's page: the current step and its last line, a progress bar, the rail of steps with their status codes, the ledger newest first, and the side panels the plan supplies, folded closed; it moves only when a ledger row lands.</is>
+    <is-not>It is not a second surface, not a claude.ai artifact, and has no publish step; the plan document stays the source of truth and the panel is its view.</is-not>
+    <why>The execution rail (owner's locked tracker, 2026-09-21) is the right data model and the wrong surface: it needed a manual republish after every ledger row, lived on a claude.ai URL the owner's standard refuses for status, and broke the global rule that bearings is the only visual surface (D20, L11 F2). Ruled on C51: the rail's plan and ledger become a bearings panel the system writes.</why>
+    <decisions>D20 C (C51), D21 push (C52), D24 repo truth (C54), D10 one store (K07 no two sources of truth), the look rule.</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="ledger.row" code="by status">
+      <field name="plan">the plan id (rebuild for the Factory Rebuild Plan; any later plan has its own)</field>
+      <field name="step">the step id (R-01 and so on)</field>
+      <field name="status">started, complete, blocked, issue, question, checkpoint (the execution rail's set)</field>
+      <field name="text">fifteen words or fewer</field>
+      <field name="by">who wrote it (a node, a seat, the architect, the owner)</field>
+      <field name="ref">an optional URL or record id</field>
+      <field name="at">UTC</field>
+    </record>
+    <text>A ledger row is written by the CLI coq ledger &lt;plan&gt; &lt;step&gt; &lt;status&gt; "&lt;text&gt;" [ref] (which replaces bin/ledger.sh of the rail skill) or by a node that ends a step (N-51 exit verdict, N-48 promotion). It reaches this node pushed (N-31). The plan's steps are seeded as plan.step records (mechanism step 1), which the panel also receives pushed.</text>
+  </input>
+
+  <output id="output">
+    <record kind="rail.panel" code="100">
+      <field name="plan">the plan id</field>
+      <field name="current">the first step with no complete row, and its last row</field>
+      <field name="progress">complete steps over total</field>
+      <field name="steps">every step with its state code: not-started, running, blocked, done, superseded (the plan's own codes), derived from its rows</field>
+      <field name="ledger">rows newest first, capped at ledger_window (config, 200)</field>
+      <field name="side">the side panels (status code map, build mode, failure cases, recovery) from plan.side</field>
+      <field name="approved">whether the plan's signal row (default GOTEAM) exists</field>
+      <field name="built_at">UTC of this frame</field>
+    </record>
+    <text>rail.panel is a frame inside the page (derived, not stored as a record of its own, the same rule as N-31's frames); the panel is rendered by the page from plan.step, plan.side and ledger.row records applied by (kind, key, version), so there is nothing to publish and nothing that can drift from the records.</text>
+  </output>
+
+  <mechanism id="mechanism">
+    <where>Go service (D01), package internal/owner/rail for the seed and the ledger CLI; the panel markup is a section of tools/bearings/assets/page.html with its own fold; plan generation stays in rebuild/bin/plan-to-rail.sh (reads factory-rebuild-plan.xml, writes plan.json and side.html, refuses on drift with --check).</where>
+    <step n="1">Seed: on coq.service start and on Reload (N-43 shape), the service reads every plan registered in tools/bearings/config/plans.json (id, plan.json path, side.html path, signal) from the checkout, validates plan.json against the rail's shape (ordered array of {id, t, who, gate, owner}) and upserts one plan.step record per step keyed plan:&lt;plan&gt;:&lt;step&gt; (compare-and-swap; unchanged steps produce no write) and one plan.side record per plan with the side HTML. A plan file that fails validation writes plan.invalid 400 and the last good seed stays.</step>
+    <step n="2">Ledger: coq ledger validates the step exists in the seeded plan, the status is one of the six, the text is fifteen words or fewer and carries no em dash, then Store.Put a ledger.row with idempotency key ledger:&lt;plan&gt;:&lt;step&gt;:&lt;at&gt;:&lt;hash of text&gt; and prints the same line the writer pastes to the owner. The TSV file of the rail skill becomes an export (coq ledger export --plan rebuild &gt; ledger.tsv), never a source (K07).</step>
+    <step n="3">Derive: the step state is a pure function of its rows: no row is not-started; a started row with no complete is running; a blocked row after the last started is blocked; a complete row is done; a superseded row (owner only) is superseded. The panel computes it client-side from the pushed rows, and the service computes the same for the health line (N-06) with one shared function, tested for equality.</step>
+    <step n="4">Render: the page's rail section draws the frame from its applied state on every frame that touches plan.* or ledger.row for a plan it shows; a plan selector lists seeded plans; the fold state is remembered per browser.</step>
+    <step n="5">Approval: a ledger row with status checkpoint and text equal to the plan's signal (GOTEAM default; GOFACTORY for the rebuild) by the owner (source: a ruling from N-29 with effect gofactory, which writes the row) sets approved; the top card stops saying the plan is waiting. No --approved flag, no marker file.</step>
+    <text>Why the rail stays one data model: the owner locked it on 2026-09-21 and uses it; only the surface and the publish step were wrong. plan.json, side.html, the six statuses, fifteen words, the rail-left ledger-right layout above 1000 px and one column on the phone are all kept.</text>
+  </mechanism>
+
+  <data-model id="data-model">
+    <plan-step>{id, t, who, gate, owner} per rebuild/plan.json, generated from the XML by plan-to-rail.sh; id pattern letter-dash-two-digits (R-01, E-01).</plan-step>
+    <ledger-row>{at_utc, step, status, text, by, ref} per the rail skill's TSV columns, now a record.</ledger-row>
+    <side>a list of {title, html} folds generated from the plan XML (status code map, build mode rule, failure cases, recovery), stored as plan.side; never hand-written (plan-to-rail.sh comment).</side>
+    <signal>the approval word, GOTEAM by default, GOFACTORY for the rebuild plan; matched exactly on a checkpoint row by the owner.</signal>
+  </data-model>
+
+  <start id="start">
+    <text>Seeding runs inside coq.service at start and on Reload; the panel is part of the page the unit serves (N-32). Nothing is typed. The node ships dark behind rail.enabled; its go-live proof is the rebuild plan seeded on dev, a ledger row written by the CLI appearing in the panel within one frame, and rebuild/rail.sh retired with the artifact URL's last row saying so.</text>
+  </start>
+
+  <waits id="waits">
+    <wait what="plan file read and validate at seed" timeout="2 s per plan" fallback="plan.invalid 400 with the reason; the last good seed stays; a fix is a pull request"/>
+    <wait what="seed upserts" timeout="3 s" fallback="retry 3 times (1, 2, 4 s); then rail.seed.failed 500 and the next Reload retries; the panel shows the last seeded version with its built_at"/>
+    <wait what="ledger Store.Put from the CLI" timeout="3 s" fallback="retry 3 times; then exit 4 with the row printed so the writer can re-run; the row is idempotent by key so a re-run after a late commit is a no-op"/>
+    <wait what="a ledger row arriving at the page" class="level-triggered" timeout="none; pushed" fallback="the page's staleness state covers a stalled stream (N-32); the rail shows built_at so a stale rail is visible"/>
+    <no-cog>The cog that could stall this node was a human republishing a page after every row; it is gone. The remaining wait is the store, bounded and reported as above.</no-cog>
+  </waits>
+
+  <retries id="retries">
+    <rule>Seed and ledger writes retry 3 times with backoff then report; Reload and the level-triggered seed on every service start are the recovery; every write is idempotent by key.</rule>
+  </retries>
+
+  <many-agents-at-once id="many-agents-at-once">
+    <readers>Any number of seats read this volume; any number of seats and nodes write ledger rows at once.</readers>
+    <workers>Build tickets touch internal/owner/rail, the coq ledger verb, tools/bearings/config/plans.json, the rail section of page.html (one ticket, since page.html is one file) and the tests; plan-to-rail.sh belongs to the rebuild tooling already on main.</workers>
+    <collision what="two writers append ledger rows for the same step in the same second">Both commit (append-only, distinct keys by text hash); the panel shows both in seq order; the derived state uses the latest by seq, which is the store's order, so two readers never disagree.</collision>
+    <collision what="two seeds at once (a Reload during a start)">Upserts by key with compare-and-swap; identical content produces no write; a changed plan.json wins by version. plan.json itself is one file edited by one ticket at a time and generated from the XML, so two seeds never carry different truths.</collision>
+    <collision what="a ledger row for a step the plan no longer has">Refused by the CLI with exit 3 naming the step; a node's row for a removed step writes ledger.rejected 400 as an alert (the plan changed under a running step, which only the owner may do).</collision>
+    <collision what="many plans shown at once">Each plan has its own key space; the page shows one at a time with a selector; frames are filtered by the plans the page lists.</collision>
+    <test>tests write 50 rows from 5 writers under the fake clock and assert the derived state on the service and on the page are equal and that every row is present once.</test>
+  </many-agents-at-once>
+
+  <status-codes id="status-codes">
+    <emits kind="plan.step" code="100" acts="the page draws; N-06 derives">seeded step</emits>
+    <emits kind="plan.side" code="100" acts="the page draws">side folds</emits>
+    <emits kind="plan.invalid" code="400" acts="N-41 alert; a fix PR">plan file failed validation</emits>
+    <emits kind="ledger.row" code="100 (started, checkpoint), 200 (complete), 423 (blocked), 500 (issue), 300 (question)" acts="the page draws; N-06 derives; a blocked row with the owner's plan is owner-acts through N-28">a row</emits>
+    <emits kind="ledger.rejected" code="400" acts="N-41 alert">a row for an unknown step or over fifteen words</emits>
+    <emits kind="rail.seed.failed" code="500" acts="N-06 counts; Reload retries">seed writes failed 3 times</emits>
+    <text>The mapping of the six rail statuses onto the HTTP-shaped codes is a row the shared author adds; the five plan step states (not-started, running, blocked, done, superseded) stay the plan XML's own and are derived, never written.</text>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path trigger="owner" acts="owner" p="store rows plan.step, plan.side, ledger.row" what="in N-01; kept for the life of the store (the plan's history is the owner's record)" cleanup="registered with N-45 as store retention class owner-surface; a retired plan's rows are exported then removed by coq ledger retire --plan &lt;id&gt; --dry-run, then --yes"/>
+    <path trigger="timer" acts="system" p="${COQ_STATE}/rebuild/2026/10/plan/ledger.tsv, page.html, .approved (today)" what="the rail skill's outputs; ledger.tsv is imported once as ledger.row records (coq ledger import --dry-run then --yes, counts match), then the three files are cleanup targets" cleanup="rebuild/bin/cleanup-rail-state.sh [--dry-run]"/>
+    <path trigger="owner" p="exports: coq ledger export writes where the caller says" retention="never" acts="owner" what="never under the repository; the caller's path" cleanup="kept on purpose: an export belongs to whoever asked for it (the owner's CLI); nothing of the system's lives there"/>
+    <path trigger="owner" p="tools/bearings/config/plans.json, rebuild/plan.json, rebuild/side.html" class="tracked" retention="never" acts="owner" what="in the repository, not state" cleanup="none: tracked source, removed by a pull request"/>
+  </state-paths>
+
+  <edges id="edges">
+    <in from="N-31" href="../N-31/spec.xml#output">plan.step, plan.side, ledger.row frames</in>
+    <out to="N-32" href="../N-32/spec.xml#input">rail.panel frame inside the page</out>
+    <writes-via href="../N-01/spec.xml#input">coq ledger and the seed write records</writes-via>
+    <reads href="../N-29/spec.xml#output">a ruling with effect gofactory writes the approval row</reads>
+  </edges>
+
+  <look id="look">
+    <rule>The rail panel is a Factorio GUI frame on the page: the step rail as a vertical belt of slot-size 40 tiles, each tile a lamp in the plan's state colour (not-started unlit grey, running orange #FAA838, blocked heat red #DA4535, done production green #2BE327, superseded dimmed with the caption colour), the progress bar as production_progressbar 24 px high in #2BE327 on #3E3D3E, the current step as a subheader_frame 36 px high with caption #FFE6C0, the ledger as rows in inside_shallow_frame #403F40 with the status word in count-font and the fifteen words in body white, side folds as tooltip-style frames #1F1E1F at 88 percent. Font Titillium Web; figures mono. One column on the phone at 430 CSS px; rail left and ledger right above 1000 px (the rail's own breakpoint, kept). No Wube or BiusArt pixel.</rule>
+    <check>Playwright asserts the lamp colour per derived state and the layout at both widths; screenshots go to the owner before the uat confirm card.</check>
+  </look>
+
+  <checklist id="checklist">
+    <item proof="dev: rebuild plan seeded; store holds 10 plan.step rows R-01 to R-10 and one plan.side">The plan seeds from the repository file</item>
+    <item proof="coq ledger rebuild R-03 checkpoint 'Volumes written for group G5' prints the line and the panel shows it within one frame">A row lands pushed, no publish</item>
+    <item proof="test: 16 words, an em dash, and an unknown step are each refused with exit 3 and the reason">The row rules are a gate</item>
+    <item proof="test: derived states match between service and page for a fixture of 50 rows">One derivation</item>
+    <item proof="import of the current ledger.tsv (dry-run count equals file rows minus header; run; export cmp equals)">The existing ledger survives</item>
+    <item proof="a ruling with effect gofactory writes the checkpoint row and approved flips">Approval is a ruling, not a flag</item>
+    <item proof="screenshots at 1280 and 430 sent to the owner; uat card confirmed; rebuild/rail.sh removed by the retire ticket with the artifact's last row pointing to the page">Rail folded in, artifact retired</item>
+  </checklist>
+
+  <permissions id="permissions">
+    <runs-as>inside coq.service for the seed; the CLI as the caller's seat identity</runs-as>
+    <may>any seat or node may write a ledger row for a step it works on (by is the socket identity, never a free field); the owner's signal row is written only by a ruling (N-29)</may>
+    <may-not>no seat may write plan.step or plan.side (the seed does, from the repository); no one hand-edits the panel markup outside the look ticket; superseded is the owner's alone</may-not>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <gauge name="plan_steps{plan,state}" on="N-40 stats, N-06 health line"/>
+    <counter name="ledger_rows_total{plan,status}" on="N-40"/>
+    <counter name="ledger_rejected_total" on="N-06; any increase is an alert"/>
+    <gauge name="plan_current_step_age_seconds{plan}" on="N-40; the time bound check of factory-rebuild-plan.xml failure case stall reads this"/>
+  </monitoring>
+
+  <runbook id="runbook">
+    <op name="write a row">coq ledger rebuild R-03 started "Spec book volumes being written by seven author seats"</op>
+    <op name="show">coq ledger show --plan rebuild [--step R-03]</op>
+    <op name="export">coq ledger export --plan rebuild &gt; /path/outside/repo/ledger.tsv</op>
+    <op name="add a plan">add a row to tools/bearings/config/plans.json pointing at its plan.json and side.html, make lint, pull request; coq reload seeds it</op>
+    <op name="change the rebuild plan">only the owner adds or removes steps (factory-rebuild-plan.xml change rule); edit the XML, run plan-to-rail.sh, pull request; the seed follows</op>
+    <op name="cleanup">rebuild/bin/cleanup-rail-state.sh --dry-run then --yes after the import; coq ledger retire for a finished plan</op>
+    <cost>A seed step in the service and a plan registry file; the rail's claude.ai page stops being updated, which the owner ruled.</cost>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/design/dag.md" anchor="3-every-node">N-33 row</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="22-d20-one-owner-surface-or-two-bearings-and-the-execution-rail">option C: the rail re-homed as a bearings panel fed from the same files, no publish step; supersedes AGENTS.md surface law for Claude seats</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C51">ruling</source>
+    <source path="~/.claude/skills/execution-rail/SKILL.md" anchor="what-it-is">plan.json shape, ledger columns and statuses, fifteen words, the page layout, the signal, mobile target</source>
+    <source path="rebuild/rail.sh" anchor="top">the wrapper; ledger, page and marker in the state directory, never the repository</source>
+    <source path="rebuild/bin/plan-to-rail.sh" anchor="top">plan.json and side.html generated from the XML; --check refuses drift</source>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="status-codes">the five step states and who acts</source>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="recovery">the ledger is the only record of what is started, done or blocked</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/ledger.tsv" anchor="header">at_utc step status text by ref</source>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="9-what-to-kill">publishing owner-facing pages as artifacts; fold the plan, ledger and step model into the board</source>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="3-dropped-by-the-field-still-carried-here-kill">K07 two sources of truth kept in sync</source>
+    <source path="AGENTS.md" anchor="law-the-surface-follows-the-runtime">the project law this node supersedes for Claude seats (the non-Claude lavish-axi exception stays, per the global rule)</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md" anchor="4-4-panel-definitions-orange-header-and-dark-steel-panel">progress bar, subheader, tooltip frame values</source>
+  </sources>
+
+  <rejected id="rejected">
+    <item what="the claude.ai artifact as the rail's surface" reason="D20 C; STD-owner-comms-001 refuses artifact links for status; a manual republish per row is a cog"/>
+    <item what="ledger.tsv as the source of truth beside the store" reason="K07; the TSV is an export now"/>
+    <item what="the .approved marker file and --approved flag" reason="approval is a ruling record from N-29"/>
+    <item what="hand-edited side.html" reason="plan-to-rail.sh rule: generated from the XML, never hand-written"/>
+    <item what="deleting the rail (D20 A)" reason="its data model is the owner's locked standard and survives; only the surface changes"/>
+    <item what="two surfaces (D20 B)" reason="the owner reads one place"/>
+  </rejected>
+</volume>

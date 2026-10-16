@@ -1,0 +1,252 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-31 Push transport. One volume of the Factory Rebuild spec book (R-03), group G5 Owner surface.
+  Written 2026-10-14 UTC by the G5 spec-author seat, round 1, against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  No em dash appears in this file. Every time is UTC.
+-->
+<volume id="N-31" kind="node-spec" node="N-31" group="G5" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC"
+        author="spec-author seat, group G5 Owner surface, round 1">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, edges</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="mechanism">Mechanism: Push.Subscribe over one Store.Tail, cursor epoch:seq, snapshot rules, the one drop rule</entry>
+    <entry ref="transport-choice">Transport choice: gRPC stream inside, SSE to browsers, measured frame budget</entry>
+    <entry ref="views">Views: derived state the screens subscribe to</entry>
+    <entry ref="frame">The frame</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup scripts</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-31"/>
+    <sibling href="record.schema.json" kind="schema">JSON schema of the frame and the pushed.frame watermark</sibling>
+    <sibling href="../N-01/spec.xml#N-01" relation="edge-in">State store: record.committed seq</sibling>
+    <sibling href="../N-32/spec.xml#N-32" relation="edge-out">Bearings page service</sibling>
+    <sibling href="../N-33/spec.xml#N-33" relation="edge-out">Rail panel</sibling>
+    <sibling href="../N-38/spec.xml#N-38" relation="edge-out">Map screen</sibling>
+    <sibling href="../N-39/spec.xml#N-39" relation="edge-out">Machine screen</sibling>
+    <sibling href="../N-40/spec.xml#N-40" relation="edge-out">Stats screen</sibling>
+    <sibling href="../N-41/spec.xml#N-41" relation="edge-out">Alerts screen</sibling>
+    <sibling href="../N-42/spec.xml#N-42" relation="edge-out">Controls screen</sibling>
+    <sibling href="../N-27/spec.xml#N-27" relation="peer">Watcher, which tails the store directly</sibling>
+    <shared href="../../shared/status-codes.xml#owner-surface">Status codes</shared>
+    <shared href="../../shared/state-store.xml#stream">The store's committed-record stream</shared>
+    <shared href="../../shared/contracts.xml#epoch-cursor">Cursor epoch and seq; cursor.expired; snapshot then tail strictly after S</shared>
+    <shared href="../../shared/contracts.xml#entity-only">Entity-only kinds: coalesced entity frames, no record per beat</shared>
+    <shared href="../../shared/outside-probe.xml#alerting">Who tells the owner when the store itself is down</shared>
+    <shared href="../../shared/cut-over.xml#step-owner-surface" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>The push transport delivers every committed record to every subscribed client as it lands, coalesced into frames at the client's rate, and makes a dropped stream harmless by letting the client resume from its last seq or re-read the whole state.</is>
+    <is-not>It is not a broker, holds no queue of its own, and never decides anything; the store is the truth, the transport is the fast path (I03 F3: events make it fast, reconciliation makes it true).</is-not>
+    <why>The live page polls /state every 2 s and re-reads the whole state each time (L08 finding 7); the WebSocket the owner accepted in bearings-v2 was never built; the map's smoothness bar (60 fps, "smooth as fuck") cannot be met in 2 s steps. Ruled on C52: push for everything, full state re-read on reconnect.</why>
+    <decisions>D21 push (C52), D10 one store no broker (C34), D01 Go service, command-center-visual-bar (state pushed live over a socket, no polling, measured frame-time budget), multi-agent-first.</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="record.committed" code="100">
+      <field name="epoch, seq">the store's epoch and its strictly increasing, not gapless, commit sequence (N-01; shared/contracts.xml#epoch-cursor)</field>
+      <field name="id, kind, code, node, tier, ticket">the committed record's envelope</field>
+      <field name="body">the record</field>
+    </record>
+    <text>The input is the store's own commit stream (shared/state-store.xml#stream): every Store.Commit notifies Tail with (epoch, seq) and the transport reads it through Store.Tail in process. There is no second source.</text>
+  </input>
+
+  <output id="output">
+    <record kind="pushed.frame" code="100">
+      <field name="client">the subscription id (one per connection: each /events connection of a page or map tab, each CLI tail)</field>
+      <field name="kind">the client's class: page, map, tail</field>
+      <field name="delivered">the cursor {epoch, seq} of the last data frame the client received</field>
+      <field name="acked">the cursor the client acknowledged (browsers ack by Last-Event-ID on reconnect and POST /ack; gRPC clients by a periodic ack message)</field>
+      <field name="connected_at, last_frame_at">UTC</field>
+      <field name="resyncs">count of snapshot frames sent to this client</field>
+    </record>
+    <record kind="card.shown" code="200">
+      <field name="card, tier, client, at">The first time a page client reports a card id as drawn: the page's POST /ack carries the card ids rendered since the last ack (N-32 routes), and the transport writes card.shown once per (card, tier), idempotent by that key.</field>
+    </record>
+    <text>card.shown is the card-level receipt the per-client watermark cannot give: acked_seq says a client received a seq, card.shown says the owner's page drew that card. N-28 reads it to stamp delivered_at on the card (the deck's delivered mark and the Controls open-cards panel), N-52 reads it to skip a phone push for a card already seen on the page, and a card with no card.shown is simply shown as not yet delivered; nothing waits on it.</text>
+    <text>pushed.frame is an entity-only kind (shared/contracts.xml#entity-only): the entity push:&lt;client&gt; is written at most once per second by compare-and-swap, and a pushed.frame record is written only on connect, resync and drop, never per frame or per second; frames themselves are not stored because they are derived from the log and a client that missed one re-reads. The entity exists so a client far behind is visible on the health line; the browser computes its own staleness locally (step 3).</text>
+  </output>
+
+  <mechanism id="mechanism">
+    <where>Go service (D01), package internal/push, gRPC service Push with Subscribe(SubscribeRequest) returns (stream Frame) and Ack(AckRequest) on /run/coq/store.sock; a second listener for browsers lives in the page service (N-32) as HTTP server-sent events, a thin adapter that opens exactly one Push.Subscribe per /events connection, and each Subscribe reads through exactly one Store.Tail cursor; there is no per-tier fan-out from memory and no shared cursor.</where>
+    <step n="1">Subscribe carries a cursor {epoch, seq} (shared/contracts.schema.json#/$defs/cursor; absent on a first open), a filter (tiers, kinds, tickets, nodes; empty means all) or a view with its params (#views), and the client class. The transport sends a snapshot instead of a replay when any of these holds: there is no cursor; the cursor's epoch is not the store's current epoch (a restore, shared/contracts.xml#restore); its seq is below min_retained_seq (retention deleted rows); its seq is above the store's high-water seq (a cursor from a lost future); or high-water minus seq is at or above push.resync_threshold (config, default 5000). Otherwise it replays from the log strictly after the cursor. Seqs are never counted for completeness: they are strictly increasing, not gapless.</step>
+    <step n="1b">Snapshot: the view's state and its seq S are read in one read transaction on a reader connection, so the snapshot is exactly the state at S; the client then receives frames for records strictly after S only. A snapshot frame carries epoch and S.</step>
+    <step n="2">Live: every committed record matching the filter is placed in the client's pending set. Each registered kind declares a coalesce_key in the kinds registry: entity-only and upsert kinds coalesce on it (a watcher.alive beat replaces the previous pending beat of the same page), append-only kinds have none and keep every record. The client applies append-only records idempotently by record id and upserts by (kind, coalesce_key, version), so a duplicate across a snapshot boundary changes nothing (shared/state-store.xml#apply). A frame is cut when the client's rate timer fires: 16 ms for class map (60 Hz), 100 ms for page, 250 ms for tail. An empty pending set cuts no frame; a frame is bounded by 500 records and 256 KiB, and a larger pending set is cut into several frames.</step>
+    <step n="3">Heartbeat: a frame with no records but epoch, the store's high-water seq and at is sent every 1 s to every client; it carries no SSE id, so Last-Event-ID always names the last data frame and a reconnect never skips a record. The browser computes its own staleness as now minus the last frame of any kind, with no server help, so a page whose stream died still shows STALE; a dead connection is found within one heartbeat plus the TCP timeout (set to 5 s by keepalive).</step>
+    <step n="4">Backpressure, the one drop rule of the book (shared/state-store.xml#stream): a client whose pending set exceeds push.max_pending (10000 records) or whose send blocks longer than push.send_timeout_s (2 s) is dropped with push.client.dropped 429 and its stream closed; it reconnects from its cursor and gets a snapshot when step 1 says so. Store.Tail's own 1 s stream.slow close is internal between N-01 and this transport, which always reads promptly into the per-client pending sets; no browser ever sees it. Dropping is cheaper and more honest than buffering without bound (K05, K08).</step>
+    <step n="5">Ack: gRPC clients send Ack(cursor) every second; browser clients cannot talk on an SSE stream, so their ack is the Last-Event-ID they present on reconnect and a lightweight POST /ack the page sends every 5 s (N-32). The entity push:&lt;client&gt; is updated from these.</step>
+    <step n="6">The SSE adapter in the page service maps each data frame to one event: id = "&lt;epoch&gt;:&lt;to_seq&gt;", event = frame (or snapshot), data = the frame JSON; heartbeats are sent as an SSE comment line with no id; retry = 1000 ms. The browser's EventSource reconnects by itself with Last-Event-ID, which the adapter parses into the cursor; an unparsable id is no cursor, so a snapshot. This is the full state re-read on reconnect of D21 with no client code beyond the standard API.</step>
+    <text>Why coalescing by key: the map wants the latest state of every machine 60 times a second, not every heartbeat record in between; the page wants every message. The pending set keyed by (kind, coalesce_key) with append-only kinds exempt gives both from one stream.</text>
+    <text>Why the transport never writes a frame record: at 60 fps for one map client that would be 5 million rows a day for nothing the log does not already say. The per-client entity once a second is an overwrite, not a row, and it is what the health line needs.</text>
+  </mechanism>
+
+  <transport-choice id="transport-choice">
+    <inside>gRPC server streaming on the unix control socket for every in-host client (page service per tier, watcher, map server, CLI tail). The proto already exists for the control plane (scheduler.proto h-proto); a stream is added to it as a ticket. h-proto-stream's "no streaming call" rule was written for the bash-era data plane and is superseded by D21; recorded in rejected.</inside>
+    <browsers>Server-sent events over HTTP/1.1 from the page service, not WebSocket. Reasons, measured against the frame budget: the page and the map need server to client only (the owner's answers and messages are POSTs that must be durable requests with retries anyway); EventSource gives reconnect and Last-Event-ID resume as standard behaviour, which is the D21 resync rule with no client code; the tailnet front door (N-34) is a plain TCP forwarder and SSE needs no upgrade handshake; one SSE connection per tab is under the browser's per-host limit. Frame budget: a map frame at 60 Hz is under 2 KB after key coalescing (50 machines times about 40 bytes), 120 KB/s, which SSE carries with room; the checklist measures it on the owner's phone over the tailnet and the result is a record.</browsers>
+    <when-websocket>If the measured frame time on the phone exceeds 16.6 ms at the 95th percentile because of text framing, the map (G6) may switch its own stream to WebSocket binary frames as a ticket of its own; the page keeps SSE. That is the only path to two transports and it is opened by a measurement record, not an opinion. This section is the one decision for every browser client, the map included; nodes/N-38/spec.xml#mechanism step 2 points here and does not restate it.</when-websocket>
+  </transport-choice>
+
+  <views id="views">
+    <s>A view is state the service derives from the log for a screen, served by the same Subscribe stream: Subscribe(view, params, cursor) returns a snapshot of the view and then deltas keyed by (view, key, version), cut at the client's class rate (mechanism step 2). A view is computed in the service from records already in the store, never written as a record of its own, so it cannot drift from the log and needs no writer node; N-37's binding check accepts a panel kind that is a record kind (shared/record-kinds.xml), one of the views below, or a static kind (nodes/N-37/spec.xml#static-kinds). What broke (gap review R-03, 2026-10-14): the screens bound panels to map.state, node.state, checklist.state and joined alert lists that no node wrote and this volume's Subscribe did not carry; the rejected alternative was a writer node per screen view, which would store derived rows the log already implies (the same reason frames are not stored, mechanism text).</s>
+    <view name="map.state" params="none" from="the newest record per node (code, at), lease rows (holder, node, token), heartbeats (age), ticket.waiting and ticket.ready counts per queue, review and merge queues, idle workspace records, flag:hold and merge.hold, the open alert count" for="N-38 map.canvas, map.tally">The whole base in one view: nodes with lamp code, heartbeat age, attempt and lease holder; queues with depth; one inserter per live lease row; crates per idle workspace; the hold lamp.</view>
+    <view name="node.state" params="node" from="the node's newest records, its input and output kinds (index.xml#nodes), the attempt and lease of its live work, the heartbeat age, the newest record in and out" for="N-39 machine.header, machine.identity, machine.io">One node's state frame; key node id.</view>
+    <view name="record" params="node, limit (default 10)" from="the records table by node, newest first" for="N-39 machine.last-records">The last records a node wrote: at, kind, code, one line.</view>
+    <view name="lease" params="node" from="the leases table, live rows only, with ticket title from the ticket entity" for="N-39 machine.ticket-seat">The node's live lease: ticket id with full title, seat id, expiry, fencing token, attempt n of 3.</view>
+    <view name="heartbeat" params="node" from="the heartbeats table of the node's live runs and the node's stall bound (N-12 config)" for="N-39 machine.status-heartbeat">Heartbeat age against the stall bound.</view>
+    <view name="checklist.state" params="node" from="the node's checklist items (static kind node.spec), the ticket records whose acceptance[].proves names those items (drafted by N-17, kept by N-18 on the accepted ticket), the review.passed record whose criteria carry the evidence for each acceptance id (N-19), and the verified record of the ticket's merge (N-10)" for="N-39 machine.checklist">Each item ticked (with the proof pointer, the ticket id with its full title and the verified record) or open; an item is ticked only when the ticket that claims it is verified on main.</view>
+    <view name="alert" params="node (optional), state open or resolved" from="records whose code the live code table marks alerting and that no later record names in recovery_of, joined with the newest N-11 attempt (retries, system_did), the N-28 card with the same source id (card_id), the first record whose recovery_of names the alert (resolved_at, nodes/N-41/spec.xml#mechanism) and the alert.ack entity (acked)" for="N-38 map.alert-chip, N-39 machine.last-alerts, N-41 alerts.*">The alert list as N-41 describes it; key alert id (the source record id), version the ack compares and swaps on.</view>
+    <view name="health" params="none" from="health:service, the tick entities, backup:latest, the push client count, front-door and page.state records of the tier" for="N-42 controls.header, controls.health">The Go service health line.</view>
+    <view name="hold.flag" params="none" from="flag:hold (the flags row) with the ruling that set it, and merge.hold with its held sha" for="N-38 map.signal-lamp, N-42 controls.signal-lamp">The hold lamp: HOLD and the owner word it waits on, with since, and the amber merge hold.</view>
+    <view name="break-glass.token" params="none" from="break-glass tokens minted from break.glass rulings (N-29 decides; the owning node applies) and consumed by control.action compare-and-swap" for="N-42 controls.break-glass">Token state and its one target.</view>
+    <view name="counters" params="window (1h, 6h, 24h, 7d)" from="the counters view of shared/state-store.xml#view-counters for the window and the previous window" for="N-40 stats.*">The counters.frame rows of one window; a window change is a new subscription.</view>
+    <view name="rail.panel" params="plan" from="plan.step, plan.side and ledger.row records of the plan (N-33)" for="N-40 stats.rail-progress, the rail panel on the page">Steps done of total with the current step.</view>
+    <view name="controls.frame" params="tier" from="the union of hold.flag, build-mode.state, watcher.alive for every tier, health, open card records and the newest ruling" for="N-42">One subscription for the whole Controls screen, so a phone opens it with one stream.</view>
+    <rule>A view is a server-side subscription filter, not a client query: the page service subscribes with the view name and its params in the query of /events (N-32 routes), the transport refuses an unknown view name with 400 view.unknown, and every view snapshot is built inside the snapshot bound of the waits below.</rule>
+  </views>
+
+  <frame id="frame">
+    <field name="epoch">the store epoch every seq in the frame belongs to</field>
+    <field name="from_seq, to_seq">the seq range the frame covers (strictly after the previous frame's to_seq); "epoch:to_seq" is the SSE event id of a data frame; a heartbeat has none</field>
+    <field name="store_seq">the store's high-water seq at cut time, so the client can show how far behind it is</field>
+    <field name="at">UTC of the cut</field>
+    <field name="kind">frame, snapshot or heartbeat</field>
+    <field name="records">the coalesced records (frame) or the full filtered state (snapshot); empty for heartbeat</field>
+    <field name="dropped">count of records collapsed by key coalescing, for the stats screen</field>
+    <example schema="record.schema.json#/$defs/frame">{"kind":"frame","epoch":2,"from_seq":120456,"to_seq":120458,"store_seq":120460,"at":"2026-10-15T10:00:01Z","records":[{"epoch":2,"seq":120458,"id":"20261015T100001Z-300-c1c2c","kind":"card","code":300,"at":"2026-10-15T10:00:01Z","node":"N-28","tier":"stable","hash":"0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f7"}]}</example>
+    <example schema="record.schema.json#/$defs/frame">{"kind":"heartbeat","epoch":2,"store_seq":120460,"at":"2026-10-15T10:00:02Z","store_stale":false}</example>
+    <example schema="record.schema.json#/$defs/pushed.frame">{"id":"20261015T100003Z-100-p4p5p","kind":"pushed.frame","code":100,"at":"2026-10-15T10:00:03Z","node":"N-31","client":"sub-a7c3e9f1","class":"page","tier":"stable","delivered":{"epoch":2,"seq":120458},"event":"resync","connected_at":"2026-10-15T09:58:00Z","resyncs":1}</example>
+  </frame>
+
+  <start id="start">
+    <text>The transport is a goroutine set of coq.service (N-06 unit.start); it is live when the service is live. It ships dark behind push.enabled; its go-live ticket's proof is the page on dev showing a card within 200 ms of its commit with the 2 s poll disabled, and a reconnect after a killed connection resuming with no missing record (the Playwright probe compares the seq set).</text>
+  </start>
+
+  <waits id="waits">
+    <wait what="log replay for a subscribe" timeout="5 s" fallback="switch to a snapshot frame (one read transaction, then strictly after S); count push_replay_timeout"/>
+    <wait what="snapshot build" timeout="5 s" fallback="retry 3 times (1, 2, 4 s); then close the stream with push.snapshot.failed 500 and let the client reconnect; three in a row is an unhealthy record from N-06"/>
+    <wait what="client send" timeout="push.send_timeout_s (2 s)" fallback="drop the client with push.client.dropped 429; the client reconnects from its cursor and resyncs when step 1 says so"/>
+    <wait what="store signal (no commit for a while)" class="level-triggered" timeout="none needed; heartbeats carry the high-water seq" fallback="if the store's own tick entity (N-06) is older than 10 s the transport sends heartbeat frames flagged store_stale=true from memory, so every screen shows STALE for the right reason; push.stalled 500 is committed once the store takes writes again (it cannot be written into a stalled store), and the owner hears of a store that stays down from the outside probe (shared/outside-probe.xml#alerting), never from this node"/>
+    <wait what="ack from a gRPC client" timeout="30 s" fallback="the watermark shows acked_seq lagging; past 60 s the client is dropped (it is dead or wedged) and reconnects"/>
+    <no-cog>The cog that could stall this node is a slow or dead client. Timeout: 2 s send, 60 s ack. Fallback: drop and resync. The transport never waits on a client to serve the others, and a client never waits on the transport to be correct (it can always re-read).</no-cog>
+  </waits>
+
+  <retries id="retries">
+    <rule>Every snapshot build retries 3 times then reports; every client drop is a record; the client's reconnect from its cursor is the retry on the other side, bounded by the browser's EventSource retry (1 s) and the gRPC client's backoff (1, 2, 4 s then steady 5 s), and it never gives up because the owner's page must come back by itself after a service restart.</rule>
+  </retries>
+
+  <many-agents-at-once id="many-agents-at-once">
+    <readers>Any number of seats read this volume.</readers>
+    <workers>Build tickets touch internal/push, the Push proto service and the SSE adapter file in the page service; the page's other files belong to N-32's tickets.</workers>
+    <collision what="hundreds of clients at once (every seat's CLI tail, several phones, the map on a wall)">Each client has its own pending set and rate timer; the store signals once per commit and the fan-out is O(clients) per commit, measured in the checklist at 500 clients and 1000 commits per second on the WSL host; the per-client watermark upsert is once a second each. No client shares a cursor with another, so no client can block another (K05).</collision>
+    <collision what="a coq.service restart">A second instance is refused at start (failure-cases.xml#duplicate-instance); a restart drops every client and each reconnects from its cursor. Seqs and epochs are the store's, so there is no disagreement about order.</collision>
+    <collision what="a record committed while a snapshot is being built">The snapshot and S come from one read transaction, so a record is either in the snapshot (seq at or below S) or in a later frame (seq strictly after S), never both and never neither; were a record delivered twice anyway, the client's apply is idempotent by record id for append-only kinds and by (kind, coalesce_key, version) for the rest (shared/state-store.xml#apply).</collision>
+    <collision what="a restore while clients are connected">The new epoch makes every cursor stale: Tail answers cursor.expired, the transport closes each stream, and each client reconnects and snapshots; no reused seq is ever replayed into an old view.</collision>
+    <collision what="two watermark writers for one client id">Client ids are minted by the transport per connection (subscription id, not a client-chosen name), so two connections are two ids; the page shows the newest.</collision>
+    <test>tests run 500 subscribers with mixed filters against a fake store at 1000 commits per second under the fake clock: every subscriber ends at store_seq, a killed subscriber resumes with no gap or gets a snapshot when the gap exceeds the threshold, a blocked subscriber is dropped within 2 s and the rest keep their rate.</test>
+  </many-agents-at-once>
+
+  <status-codes id="status-codes">
+    <emits kind="pushed.frame" code="100" storage="entity-only" coalesce-key="client" acts="N-06 reads">entity-only per-client cursor; a record only on connect, resync and drop</emits>
+    <emits kind="push.client.dropped" code="429" acts="the client reconnects; N-06 counts">backpressure or ack timeout</emits>
+    <emits kind="push.snapshot.failed" code="500" acts="N-06; three in a row is unhealthy">snapshot build failed 3 times</emits>
+    <emits kind="push.stalled" code="500" acts="N-41 alert, written after the store recovers; every screen showed STALE meanwhile">no store tick for 10 s</emits>
+    <emits kind="push.subscribed" code="100" acts="nobody; countable">a client connected (class, filter or view, cursor)</emits>
+    <emits kind="card.shown" code="200" acts="N-28 stamps delivered_at; N-52 skips a push for a seen card">a page client drew the card (first time per card and tier)</emits>
+    <emits kind="view.unknown" code="400" acts="the client's ticket: the screen asked for a view this volume does not name">Subscribe with an unknown view name</emits>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path trigger="timer" acts="system" p="store entities push:&lt;client&gt; (one per live client) and push.* records" what="in N-01; watermarks of disconnected clients expire after 1 h; events 7 days" cleanup="registered with N-45 as store retention class owner-surface"/>
+    <path trigger="timer" acts="system" p="journal of coq.service, lines prefixed push:" what="connects, drops, stalls" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
+    <text>No file of its own; the transport is memory and the store.</text>
+  </state-paths>
+
+  <edges id="edges">
+    <in from="N-01" href="../N-01/spec.xml#output">record.committed seq</in>
+    <out to="N-32" href="../N-32/spec.xml#input">frames for the page (cards, messages, acks, panels, staleness)</out>
+    <out to="N-33" href="../N-33/spec.xml#input">plan.step and ledger.row frames</out>
+    <out to="N-38" href="../N-38/spec.xml#input">map frames at 60 Hz</out>
+    <out to="N-39" href="../N-39/spec.xml#input">machine state frames</out>
+    <out to="N-40" href="../N-40/spec.xml#input">counters frames</out>
+    <out to="N-41" href="../N-41/spec.xml#input">alert record frames</out>
+    <out to="N-42" href="../N-42/spec.xml#input">controls frames (hold, build mode, lamp, health)</out>
+    <client from="N-27" href="../N-27/spec.xml#mechanism">none any more: the watcher tails the store itself (Store.Tail, N-01)</client>
+  </edges>
+
+  <checklist id="checklist">
+    <item proof="test: a committed card reaches a page-class subscriber within 100 ms plus one frame interval under the fake clock">Push is live</item>
+    <item proof="test: no cursor, a cursor of an older epoch, a cursor below min_retained_seq, a cursor above the high-water seq and a gap at the threshold each yield a snapshot; a cursor in range yields a replay strictly after it; a record committed during the snapshot appears exactly once">Resync rules hold</item>
+    <item proof="test: heartbeats carry no SSE id; a reconnect after heartbeats resumes from the last data frame; a browser with a dead stream shows STALE from its own clock">Heartbeats never move the cursor; staleness is local</item>
+    <item proof="Playwright on dev: kill the SSE connection, the page reconnects by itself and its seq set has no gap">Browsers resume by Last-Event-ID</item>
+    <item proof="test: a blocked client is dropped within push.send_timeout_s with push.client.dropped 429, a client over push.max_pending likewise, and the other clients' frame intervals do not change; no other drop rule exists">Backpressure isolates, one rule</item>
+    <item proof="load test: 500 subscribers, 1000 commits per second, all at head within 1 s, CPU of coq.service under 1 core">Fan-out scales on the host</item>
+    <item proof="measurement record on the owner's phone over the tailnet: map frame p95 under 16.6 ms, bytes per second logged">The frame budget is measured, not assumed</item>
+    <item proof="test: no store tick for 10 s yields heartbeat frames with store_stale=true and the page shows STALE; push.stalled 500 is committed once after the store recovers">Transport reports the store's staleness</item>
+    <item proof="dev page runs with the 2 s poll removed and the Playwright suite green">Polling is gone</item>
+  </checklist>
+
+  <permissions id="permissions">
+    <runs-as>inside coq-service as the service user coq-svc (shared/authority.xml#principals); the Push service is on /run/coq/store.sock</runs-as>
+    <callers>principals the store socket admits (shared/authority.xml#peer-credentials): the page services and the ctl CLI tail; the SSE adapter requires an owner or viewer session (nodes/N-32/spec.xml#web-security)</callers>
+    <may-not>no filter may leak another tier's owner records to a dev page: the page service subscribes with its own tier and the adapter never passes a client-chosen tier; pods never reach the socket</may-not>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <gauge name="push_clients{class}" on="N-06, N-40"/>
+    <counter name="push_frames_total{class}" on="N-40"/>
+    <counter name="push_records_coalesced_total" on="N-40"/>
+    <counter name="push_clients_dropped_total" on="N-06; a rate above 1 per minute is an alert"/>
+    <gauge name="push_client_lag_seq{client}" on="N-06; high-water minus the client's cursor seq within one epoch; above 1000 for 30 s is an alert"/>
+    <histogram name="push_frame_cut_micros{class}" on="N-40; the server side of the frame budget"/>
+  </monitoring>
+
+  <runbook id="runbook">
+    <op name="tail the store">coq tail --kinds card,ack (no cursor: a snapshot, then live (a tail-class subscriber; prints one line per record; the only way a seat watches state, never a pane read)</op>
+    <op name="a screen says STALE">read push.stalled and the N-06 health line; the transport is reporting the store's silence, not its own fault; the fix is the service unit runbook</op>
+    <op name="a client is dropped repeatedly">its lag gauge says why (slow link or a pending set too large); raise push.max_pending only by a config ticket with the measurement attached</op>
+    <op name="cleanup">store retention by N-45; journal by tools/bearings/bin/cleanup-journal.sh</op>
+    <cost>A stream per client held open; a snapshot build on every large gap; the proto gains a streaming call.</cost>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/design/dag.md" anchor="1-how-to-read-this-dag">the push transport is the carrier of every page-bound record</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="23-d21-page-transport-polling-or-push">push for everything with full state read on reconnect; SSE or WebSocket from a measured frame budget</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C52">ruling</source>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="5-what-broke-and-why">finding 7: WebSocket accepted but never built; the page polls every 2 s</source>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="6-waits-polls-sleeps-and-leases">page.html polls /state every 2 s; owner-page.html polls 2 s</source>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal">T03 level-triggered reconcile with events as accelerators</source>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="3-dropped-by-the-field-still-carried-here-kill">K05 shared coordination state between workers; K08 events alone as the path to state</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="12-d10-durable-queue-or-broker">one store, no broker</source>
+    <source path="scheduler/api/scheduler/v1/scheduler.proto" anchor="h-proto-stream">no streaming call existed; superseded here by D21</source>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/command-center-visual-bar.md" anchor="rule">canvas or WebGL at 60 fps, state pushed live over a socket, no polling, measured frame-time budget</source>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md" anchor="rule">no shared cursor; idempotent apply</source>
+    <source path="~/tools/bearings-v2/DESIGN.md" anchor="communication-and-runtime">replay on reconnect; do not equate socket delivery with consumption (cited through L08 section 8)</source>
+  </sources>
+
+  <rejected id="rejected">
+    <item what="2 s polling of /state for everything (D21 A)" reason="cannot meet the smoothness bar; re-reads the whole state each poll"/>
+    <item what="polling for cards and push only for the map (D21 C)" reason="two transports to build and keep in step"/>
+    <item what="WebSocket as the browser transport for the page" reason="bidirectional is not needed (answers are durable POSTs); EventSource gives reconnect and Last-Event-ID resume as standard; kept as the map's own option on a measurement"/>
+    <item what="a broker (NATS JetStream, Redis Streams) behind the push" reason="D10 ruled one store; the store's log is the stream"/>
+    <item what="storing every frame as a record" reason="millions of rows a day that the log already implies; the watermark once a second is enough"/>
+    <item what="buffering a slow client without bound" reason="K05: one slow client must never slow the rest; drop and resync is honest"/>
+    <item what="herdr events.subscribe as the owner page's transport" reason="D08: herdr is the owner's window only; the store is the source"/>
+  </rejected>
+</volume>

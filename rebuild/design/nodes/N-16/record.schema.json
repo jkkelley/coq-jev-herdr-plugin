@@ -1,0 +1,285 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-16/record.schema.json",
+  "title": "N-16 Worker run: structured output and output record",
+  "description": "Book 1.1.0. Input: seat.result done for a worker run (../N-15/record.schema.json#/$defs/seat.result) with its bundle and workspace. The seat returns worker.result as structured output (N-13 copies this def into the bundle's output.schema.json). The close-out, in the service as coq-svc with credential forge-pr, writes the outbox effects branch.push and pr.open and, after reading the PR back, pr.opened on the shared committed envelope (operation key N-16/pr.open/<ticket>@<attempt>/r1 on the request). After three failed close-out passes it writes phase.failed (../N-15/record.schema.json#/$defs/phase.failed, node N-16). pr.opened is also N-23's input shape (repo, base_ref, head_repo, source).",
+  "$defs": {
+    "utc": {
+      "$ref": "../../shared/contracts.schema.json#/$defs/at"
+    },
+    "sha1": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "ticket_id": {
+      "$ref": "../../shared/contracts.schema.json#/$defs/wo_id"
+    },
+    "observation": {
+      "type": "object",
+      "required": [
+        "path",
+        "saw",
+        "expected"
+      ],
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "saw": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "expected": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "criterion",
+        "command",
+        "observed_exit"
+      ],
+      "properties": {
+        "criterion": {
+          "type": "string",
+          "description": "the acceptance criterion id from the ticket"
+        },
+        "command": {
+          "type": "string"
+        },
+        "observed_exit": {
+          "type": "integer"
+        },
+        "runs_in": {
+          "enum": [
+            "host",
+            "pod"
+          ]
+        },
+        "note": {
+          "type": "string",
+          "maxLength": 500
+        }
+      }
+    },
+    "worker.result": {
+      "type": "object",
+      "description": "The seat's structured output. Exactly one of ready or blocked.",
+      "oneOf": [
+        {
+          "required": [
+            "ready",
+            "commit_sha",
+            "summary",
+            "evidence",
+            "files_changed"
+          ],
+          "properties": {
+            "ready": {
+              "const": true
+            },
+            "commit_sha": {
+              "$ref": "#/$defs/sha1"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 20,
+              "maxLength": 4000
+            },
+            "evidence": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/evidence"
+              }
+            },
+            "files_changed": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "breadcrumb_at": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "path:line of each breadcrumb comment"
+            }
+          },
+          "not": {
+            "required": [
+              "blocked"
+            ]
+          }
+        },
+        {
+          "required": [
+            "blocked"
+          ],
+          "properties": {
+            "ready": {
+              "const": false
+            },
+            "blocked": {
+              "type": "object",
+              "required": [
+                "reason",
+                "observations",
+                "repro"
+              ],
+              "properties": {
+                "reason": {
+                  "enum": [
+                    "cannot_finish_inside_files",
+                    "acceptance_cannot_run",
+                    "conflict_outside_files",
+                    "ticket_contradicts_design",
+                    "other"
+                  ]
+                },
+                "observations": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "$ref": "#/$defs/observation"
+                  }
+                },
+                "repro": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "pr.opened": {
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope"
+        }
+      ],
+      "required": [
+        "ticket",
+        "run_id",
+        "attempt",
+        "lease",
+        "repo",
+        "base_ref",
+        "head_repo",
+        "source",
+        "branch",
+        "pr",
+        "head_sha",
+        "base_sha",
+        "files",
+        "evidence",
+        "url"
+      ],
+      "properties": {
+        "kind": {
+          "const": "pr.opened"
+        },
+        "code": {
+          "const": 100
+        },
+        "node": {
+          "const": "N-16"
+        },
+        "ticket": {
+          "$ref": "#/$defs/ticket_id"
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^d-[0-9]{14}-[a-z0-9]{6}$"
+        },
+        "attempt": {
+          "$ref": "../../shared/contracts.schema.json#/$defs/attempt"
+        },
+        "lease": {
+          "$ref": "../../shared/contracts.schema.json#/$defs/lease_ref",
+          "description": "the worker lease the close-out Commit carries and releases"
+        },
+        "repo": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+          "description": "the dispatch repo slug"
+        },
+        "base_ref": {
+          "const": "main"
+        },
+        "head_repo": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$",
+          "description": "equals repo: branches are pushed to the same repository"
+        },
+        "source": {
+          "const": "seat",
+          "description": "N-23's source value for a PR opened by a seat close-out"
+        },
+        "branch": {
+          "type": "string",
+          "pattern": "^wo/WO-[0-9]{8}-[0-9a-f]{4}$"
+        },
+        "pr": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_sha": {
+          "$ref": "#/$defs/sha1"
+        },
+        "base_sha": {
+          "$ref": "#/$defs/sha1",
+          "description": "origin/main at push time"
+        },
+        "files": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string"
+          },
+          "description": "git diff --name-only base..head, every path inside the ticket's live claims"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "url": {
+          "type": "string",
+          "pattern": "^https://github\\.com/"
+        },
+        "session_id": {
+          "type": "string"
+        },
+        "effects": {
+          "type": "array",
+          "items": {
+            "$ref": "../../shared/contracts.schema.json#/$defs/operation_key"
+          },
+          "description": "the op ids of the branch.push and pr.open effects this record closes"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/worker.result"
+    },
+    {
+      "$ref": "#/$defs/pr.opened"
+    }
+  ]
+}

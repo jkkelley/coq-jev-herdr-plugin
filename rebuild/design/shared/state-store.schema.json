@@ -1,0 +1,92 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/shared/state-store.schema.json",
+  "title": "State store shared definitions",
+  "description": "Book 1.1.0. The ONE record envelope every kind carries (shared/state-store.xml#envelope): identity, kind, code and writing node, plus at, seq, epoch and hash that N-01 sets at commit. A record on input may omit at and has no seq or epoch; a committed record has seq, at and epoch (committed_envelope). The operation key, the lease reference, preconditions and entity writes are not envelope fields: they ride on the commit request (contracts.schema.json#/$defs/commit_request, shared/contracts.xml#batch). Node schemas $ref #/$defs/envelope (or committed_envelope) and add their body fields. The id form is the UTC-stamp form N-01 owns; see rejected-with-reason.xml#envelope-id-form for the r-prefixed form that was rejected.",
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$",
+      "description": "UTC stamp, the status code, five lowercase alphanumerics; unique per writer"
+    },
+    "at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC, second precision; assigned by N-01 at commit when absent on input"
+    },
+    "kind": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*(\\.[a-z][a-z0-9_-]*)*$",
+      "description": "lowercase, dotted where it has parts (lease.granted); a line-op kind such as dispatch or merge is one segment; registered in state-store.xml#record-kinds-registry"
+    },
+    "code": {
+      "type": "integer",
+      "enum": [100, 200, 201, 204, 206, 300, 400, 403, 404, 409, 410, 412, 422, 423, 429, 500, 502, 503, 504],
+      "description": "a value of shared/status-codes.xml#codes; N-01 validates against the live code table, this enum is the book's copy"
+    },
+    "node": {
+      "type": "string",
+      "pattern": "^N-[0-9]{2}$"
+    },
+    "attempt": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3,
+      "description": "0 when no attempt applies; never 4"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "ticket": {
+      "type": "string",
+      "pattern": "^(WO-[0-9]{8}-[0-9a-f]{4}|CR-[a-z0-9._-]+)$",
+      "description": "A work order id, or CR-<request id> for a cut request that N-03 admitted from a ticket.request (nodes/N-03/spec.xml#input)"
+    },
+    "lease_token": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "fencing token from entity counter:lease_token; only grows; an INTEGER everywhere (leases.token, heartbeats.token); the commit request carries it in lease {key, token} (contracts.schema.json#/$defs/lease_ref, shared/contracts.xml#fencing)"
+    },
+    "idempotency_key": {
+      "$ref": "contracts.schema.json#/$defs/operation_key",
+      "description": "the operation key, node/operation/subject/rREVISION (shared/contracts.xml#operation-keys); kept under this name for node schemas that already $ref it; same request hash replays 200, a different hash is 409 idempotency_mismatch"
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "the store epoch the record was committed in (shared/contracts.xml#epoch-cursor); set by N-01 at commit, never trusted on input"
+    },
+    "schema_version": {
+      "const": "2.0.0",
+      "description": "optional marker of the envelope generation; when present it is 2.0.0"
+    },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "node"],
+      "properties": {
+        "schema_version": { "$ref": "#/$defs/schema_version" },
+        "id": { "$ref": "#/$defs/id" },
+        "at": { "$ref": "#/$defs/at" },
+        "kind": { "$ref": "#/$defs/kind" },
+        "code": { "$ref": "#/$defs/code" },
+        "node": { "$ref": "#/$defs/node" },
+        "by": { "type": "string", "description": "the caller N-01 derived from the peer credential (shared/authority.xml#role-derivation); differs from node when a statement owner's kind is written by another node" },
+        "attempt": { "$ref": "#/$defs/attempt" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "seq": { "type": "integer", "minimum": 1, "description": "assigned by N-01 at commit; never on input; strictly increasing, not gapless" },
+        "epoch": { "$ref": "#/$defs/epoch" },
+        "recovery_of": { "$ref": "#/$defs/id", "description": "optional; on a 2xx record, the id of the alerting record it resolves (nodes/N-41/spec.xml)" },
+        "note": { "type": "string", "maxLength": 240 },
+        "hash": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "committed_envelope": {
+      "description": "The envelope as stored and read back: seq, at and epoch are present (N-01 assigns them and hash at commit; hash is required on record.committed, nodes/N-01/record.schema.json#/$defs/record_committed)",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "type": "object", "required": ["seq", "at", "epoch"] }
+      ]
+    }
+  }
+}

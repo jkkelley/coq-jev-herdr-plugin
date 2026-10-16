@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Node volume N-25 Gate status post. Written by the G4 spec-author seat, 2026-10-14T04:39Z UTC, against brief C and dag.md section 3 row N-25.
+     Validated by rebuild/design/check.sh against rebuild/design/schema/ once the shared author lands them. -->
+<volume id="N-25" kind="node-spec" node="N-25" group="G4" name="Gate status post" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input records: pod.run and check.verdict for one head sha</entry>
+    <entry ref="output">Output: the coq/gate commit status and the gate.run record</entry>
+    <entry ref="mechanism">Mechanism: the verdict rule, the status post, the page link, supersession, the required check</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and the report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-25"/>
+    <dag href="../../dag.md#3-every-node" row="N-25"/>
+    <schema href="record.schema.json"/>
+    <sibling node="N-20" href="../N-20/spec.xml#N-20">Jenkins as code</sibling>
+    <sibling node="N-21" href="../N-21/spec.xml#N-21">Factory namespace</sibling>
+    <sibling node="N-22" href="../N-22/spec.xml#N-22">Image build</sibling>
+    <sibling node="N-23" href="../N-23/spec.xml#N-23">Suite planner</sibling>
+    <sibling node="N-24" href="../N-24/spec.xml#N-24">Pod run</sibling>
+    <sibling node="N-26" href="../N-26/spec.xml#N-26">Main verify pipeline</sibling>
+    <shared href="../../shared/status-codes.xml#status-codes">Status code map</shared>
+    <shared href="../../shared/principles.xml#no-cog">No cog principle</shared>
+    <shared href="../../shared/state-store.xml#records">State store record envelope and tables</shared>
+    <shared href="../../shared/seat-contract.xml#verdict-read-only">The verdict the agent reads and cannot edit</shared>
+    <shared href="../../shared/authority.xml#github-app">The coq-gate GitHub App, the required check and the protection check</shared>
+    <shared href="../../shared/authority.xml#credential-matrix">Credential matrix</shared>
+    <shared href="../../shared/retry-budget.xml#layers">Retry layers: plan-attempt and status-post</shared>
+    <shared href="../../shared/contracts.xml#outbox">Outbox: the status post and its read-back</shared>
+    <shared href="../../shared/cut-over.xml#step-ci" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <section id="purpose" title="Purpose">
+    <s>N-25 is the one writer of the GitHub commit status coq/gate on a head sha: success when every planned unit passed, failure when a unit failed, error when the infrastructure ran out or a newer head superseded the run; with the required status check on main (D05, ruling C43) GitHub itself refuses a merge without a green gate, and an agent can read the verdict but never edit it; only the coq-gate GitHub App writes the context, and the required check names its app_id, so no other writer can satisfy it (shared/authority.xml#github-app).</s>
+    <s>It closes the loop the investigation found open: no status had ever been posted, main required no check, and the only gate was a script reading records (RC3 item 7, RC7, L07 section 5 item 3).</s>
+    <s>Input to output: the set of pod.run records (N-24) and check.verdict records (N-46) for one head sha and plan attempt starts it; the posted status plus a gate.run record ends it; N-04 sees the status on its next poll and N-08 reads the verdict from the snapshot.</s>
+  </section>
+
+  <section id="input" title="Input records: pod.run and check.verdict for one head sha">
+    <record kind="pod.run | check.verdict" code="201|422|500|410" schema="record.schema.json#/$defs/input">
+      <s>The node reads the newest suite.plan (or main.plan) for the head sha and attempt, and the result record per entry: pod.run for kind pod (N-24), check.verdict for kind spec-check (N-46); the input is complete when every entry has a result record or the plan's bound has passed.</s>
+      <field name="head_sha" type="string" required="true">The commit.</field>
+      <field name="pr" type="integer" required="true">The pull request or 0 for main.</field>
+      <field name="plan_attempt" type="integer" required="true">The attempt, 1 or 2.</field>
+      <field name="results" type="array" required="true">name, kind, code, outcome, log and the per-test outcomes per entry.</field>
+      <field name="expected_red" type="array" required="true">The rows of tests/expected-red.json (planned) at the head sha that apply (record.schema.json#/$defs/expected_red_row), possibly empty.</field>
+    </record>
+  </section>
+
+  <section id="output" title="Output: the coq/gate commit status and the gate.run record">
+    <s>The status: POST /repos/jkkelley/coq-jev-herdr-plugin/statuses/&lt;head_sha&gt; with context coq/gate, state pending while the plan runs, then success, failure or error, a description of at most 140 characters (N pods passed; &lt;unit&gt; failed plus K more; infrastructure failed after the ladder: &lt;reason&gt;; superseded by &lt;sha12&gt;; plan refused: &lt;reason&gt;), and target_url the gate page link.</s>
+    <record kind="gate.run" code="201|422|500|410|412" schema="record.schema.json#/$defs/output">
+      <field name="head_sha" type="string" required="true">The commit.</field>
+      <field name="pr" type="integer" required="true">The pull request or 0.</field>
+      <field name="plan_attempt" type="integer" required="true">The attempt whose results this verdict is from.</field>
+      <field name="state" type="string" required="true">success, failure, error.</field>
+      <field name="description" type="string" required="true">As posted.</field>
+      <field name="target_url" type="string" required="true">The gate page link.</field>
+      <field name="counts" type="object" required="true">pass, fail, timeout, infra, superseded, spec_check_pass, spec_check_fail, expected_red.</field>
+      <field name="first_failure" type="object" required="false">name and log of the unit the description names.</field>
+      <field name="posted" type="object" required="true">GitHub status id, created_at, the app_id that created it, and attempts used to post.</field>
+      <field name="op_id" type="string" required="true">N-25/status.post/&lt;sha&gt;@coq/gate@&lt;plan_attempt&gt;/r1.</field>
+    </record>
+    <example schema="record.schema.json#/$defs/output">{"id":"20261015T064000Z-201-s7t8u","at":"2026-10-15T06:40:00Z","seq":4200,"epoch":1,"kind":"gate.run","code":201,"node":"N-25","head_sha":"89abcdef0123456789abcdef0123456789abcdef","pr":57,"plan_attempt":1,"plan_kind":"pr","context":"coq/gate","state":"success","description":"12 units passed; 1 expected red","target_url":"https://jenkins.invalid/job/coq-gate/412/","counts":{"pass":11,"fail":0,"timeout":0,"infra":0,"superseded":0,"spec_check_pass":1,"spec_check_fail":0,"expected_red":1},"op_id":"N-25/status.post/89abcdef0123456789abcdef0123456789abcdef@coq/gate@1/r1","posted":{"ok":true,"status_id":901,"created_at":"2026-10-15T06:40:01Z","app_id":123456,"attempts":1}}</example>
+    <example schema="record.schema.json#/$defs/status_post_failed">{"id":"20261015T064500Z-500-v9w0x","at":"2026-10-15T06:45:00Z","seq":4210,"epoch":1,"kind":"status.post.failed","code":500,"node":"N-25","head_sha":"89abcdef0123456789abcdef0123456789abcdef","pr":57,"context":"coq/gate","plan_attempt":1,"op_id":"N-25/status.post/89abcdef0123456789abcdef0123456789abcdef@coq/gate@1/r1","state_wanted":"success","error":"502 from api.github.com three times","attempts":3}</example>
+    <example schema="record.schema.json#/$defs/expected_red_row">{"path":"factory/tests/cases/31-claims.test.sh","test_id":"claims-overlap-refused","content_sha256":"3333333333333333333333333333333333333333333333333333333333333333","ticket":"WO-20261015-ab12","expected_failure":{"kind":"message","match":"claim_overlap not refused"}}</example>
+    <s>The gate page link: the Jenkins build page of the plan's build (http://${SITE_JENKINS_HOST}/job/coq-gate/N/, the host from the owner's site file) which holds every unit log and is reachable on the owner's LAN and tailnet; the bearings page (N-32) also shows the gate.run record per pull request, and the map's machine screen (N-39) links both.</s>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the verdict rule, the status post, the page link, supersession, the required check">
+    <step n="1" id="m-pending">When N-23 or N-26 writes the plan with a build number, this node posts coq/gate pending with description "running N units" (an outbox effect, operation key N-25/status.post/&lt;sha&gt;@coq/gate@&lt;plan_attempt&gt;/r1 with state pending in the request hash); when a plan is refused (412) it posts error with the refusal's reason, so the worker sees why there is no run.</step>
+    <step n="2" id="m-verdict">The verdict rule, pure over the result set (finish() of coqGate.groovy, moved into the Go service): any result with outcome infra or code 500 and no later successful attempt available means error; else any fail, timeout or check fail means failure, and the description names the first failing unit by plan order plus the count of the rest; else every entry has a pass and the state is success with the pod count; a result set with a superseded unit is error superseded; an empty plan (nothing to run) is success "nothing to run".</step>
+    <step n="2b" id="m-expected-red">The expected-red manifest (F19): tests/expected-red.json (planned) at the head sha lists tests that must fail, each with test_ref (path, test_id, content_sha256), the ticket and expected_failure (kind, match) taken from the ticket's acceptance (nodes/N-17/spec.xml); a row is honoured only when the test file's sha256 equals content_sha256 and, for a row this head adds, when it equals an acceptance test_ref of the head's ticket (ticket A lands the test and its row). A listed test that fails with a matching failure counts expected_red and does not make the gate red; a listed test that fails otherwise is failure (wrong failure reason); a listed test that passes is failure "unexpected pass: remove the row" (ticket B flips the code and removes the row in one head); a unit whose runner reported no per-test outcomes cannot prove an expected failure and counts as fail.</step>
+    <step n="3" id="m-attempts">Error from infrastructure is not final at once: the gate run has plan-attempt tries (shared/retry-budget.xml#layers, max 2); on infra the node asks N-23 (or N-26) to plan attempt 2, a fresh build with its own operation key, and the status stays pending with "retrying attempt 2"; after attempt 2's infra the status is error and one card is posted by N-28 (dedupe key node:N-25:head_sha); the gate phase is never re-dispatched after that (gate-phase layer, max 1).</step>
+    <step n="4" id="m-post">The post: the verdict's Commit writes gate.run and the effects row of operation status.post (shared/retry-budget.xml#operations) together; the outbox worker posts with an installation token of the coq-gate GitHub App (shared/authority.xml#credential-matrix row coq-gate), 10 s timeout per call, retried only by the status-post layer; before any repost it reads GET /repos/jkkelley/coq-jev-herdr-plugin/commits/&lt;sha&gt;/statuses for context coq/gate created by that app, and equal state and description is done (the read-back, never the snapshot); the status id and app id go into gate.run posted.</step>
+    <step n="5" id="m-superseded">Supersession: N-07's tick compares each open pull request's head in forge.snapshot with the newest plan; when the head moved, N-07 writes plan.superseded 410 for the old sha, the Go service stops the old build, and this node posts error "superseded by &lt;new sha12&gt;" on the old sha, so no sha is ever left pending (the abortPrevious semantic of the old Jenkinsfile, now owned by the scheduler).</step>
+    <step n="6" id="m-required">The required check: branch protection on main requires context coq/gate with app_id forge.gate_app_id and strict true, applied once by the owner with forge-admin (shared/authority.xml#github-app); this node never applies or removes protection. The protection check is not this node's: N-04 reads main's protection with forge-read and is the only writer of protection.observed 200 and protection.drift 412 (shared/authority.xml#github-app); N-09 and this node read them.</step>
+    <step n="7" id="m-record">gate.run is the derived notification and the audit trail; the authority is the status on GitHub (D05), which N-08 reads from forge.snapshot; no node reads gate.run in place of the status.</step>
+    <mermaid>
+flowchart LR
+  P[plan with build number] --> S0[post coq/gate pending]
+  R[every entry has a pod.run or check.verdict] --> V{verdict rule}
+  V -- all pass --> OK[post success; gate.run 201]
+  V -- a fail or timeout --> F[post failure naming the unit; gate.run 422]
+  V -- infra on attempt 1 --> A[plan attempt 2; pending]
+  V -- infra on attempt 2 --> E[post error; gate.run 500; one card]
+  N[newer head on the same PR] --> X[stop old build; post error superseded; gate.run 410]
+  OK --> N04[N-04 poll sees the status]
+  F --> N04
+  E --> N04
+  X --> N04
+  N04 --> N08[N-08 gate check reads the verdict]
+    </mermaid>
+    <s>The merge path after this node: N-08 reads green, N-19's review.passed lands on the same head, N-09 merges by machine (D15, ruling C50); GitHub enforces the check independently of every record.</s>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <s>N-07 dispatches the verdict as a system job under the plan's lease when every entry of a plan attempt has a result record, or when the plan's bound has passed (then the missing results are infra, N-24 section waits w6); the comparison is level-triggered, so a result that arrives late or a crash before the post is settled on the next tick.</s>
+    <s>The pending post is dispatched by the same rule the moment a plan has a build number.</s>
+    <s>At service start, every plan with results and no gate.run of the same attempt is re-evaluated; a status already on GitHub is read from the snapshot and not re-posted.</s>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait id="w1"><on>Every entry's result record arriving.</on><timeout>retry-budget.xml#deadlines d-plan-attempt per attempt; the whole gate run within d-gate-run.</timeout><fallback>Missing results become infra (N-24 writes them with reason result-missing); the verdict rule runs on what exists; attempts and the card as in section retries.</fallback></wait>
+    <wait id="w2"><on>GitHub answering the status POST from the coq-gate App.</on><timeout>10 s per call; the status-post layer (shared/retry-budget.xml#layers) bounds the tries and #deadlines d-status-post the whole post.</timeout><fallback>An unknown outcome is looked up by the statuses read before any repost; after the last try status.post.failed 500 with the head sha and one card; gate.run stays with posted.ok false.</fallback></wait>
+    <wait id="w3"><on>The old build stopping on supersession.</on><timeout>60 s for POST /stop to take effect, polled on the build's building flag.</timeout><fallback>The status on the old sha is posted regardless; a build that keeps running ends on its own bound and its results are written as superseded 410 and ignored.</fallback></wait>
+    
+  </section>
+
+  <section id="retries" title="Retries, recovery and the report">
+    <s>Infrastructure results re-trigger the plan once (plan-attempt max 2; the pod ladder inside each attempt is the inner layer and retries pod failures only); test failures never re-trigger anything.</s>
+    <s>The post is retried by the status-post layer alone (max 3 tries in all, never per tick), each preceded by the statuses read-back, then status.post.failed and one card; nothing loops, because the operation key makes every retry the same post.</s>
+    <s>After the second plan attempt's infra the status is error with the reason and one card; the pull request stays red until a new head; the worker lane sees the reason on the pull request and in the record.</s>
+    <s>Recovery after a crash: records and the GitHub status are the only state; the start comparison re-posts what is missing and skips what is present.</s>
+  </section>
+
+  <section id="many-agents-at-once" title="Many agents at once">
+    <s>One writer: only the coq-gate GitHub App can post a status that satisfies the required check (app_id), and only coq-svc holds its key; seats hold no forge credential and cannot reach the forge (shared/authority.xml#seat-isolation) and the reviewer reads gh pr checks; a seat cannot post, edit or delete a status, which is the T04 property the field calls a verdict the agent reads and cannot change.</s>
+    <s>Many heads at once: statuses are per sha and the key includes the sha and attempt; two pull requests never share a status; two attempts of one sha post in attempt order because the verdict job holds the plan lease.</s>
+    <s>Two Go service instances: the lease's fencing token; the loser's gate.run commit is 412 stale_token, so no effects row of its own exists and nothing is posted.</s>
+    <s>A seat that pushes while the gate runs: the new head is planned, the old run is superseded and says so on the old sha; the reviewer reading the pull request sees pending on the new head and never a stale green.</s>
+    <s>The reviewer and the gate on one head: review.passed and coq/gate are independent records on the same sha; N-09 requires both; neither waits on the other, so a review posted before green simply waits in the store.</s>
+    <s>Collision answer in one line: single status writer with a lease per plan, content-keyed idempotent posts, per-sha statuses, supersession owned by the scheduler, 409 on a stale writer.</s>
+  </section>
+
+  <section id="status-codes" title="Status codes this node emits">
+    <emits code="100" name="ACCEPTED" kind="gate.pending">The status pending was posted; nobody acts.</emits>
+    <emits code="201" name="PASSED" kind="gate.run">coq/gate success; N-08 reads green; N-09 may merge with review.passed.</emits>
+    <emits code="422" name="FAILED" kind="gate.run">coq/gate failure; the worker lane acts on the named unit's log; a new head re-enters.</emits>
+    <emits code="500" name="STALLED or DEAD" kind="gate.run">coq/gate error after the last plan attempt; N-28 posts one card.</emits>
+    <emits code="410" name="SUPERSEDED" kind="gate.run">coq/gate error superseded; nobody acts.</emits>
+    <emits code="412" name="GATE_FAILED" kind="gate.run">coq/gate error plan refused (fork, no image, planner error); the worker lane acts.</emits>
+    <emits code="500" name="STALLED or DEAD" kind="status.post.failed">The coq/gate post failed after the status-post layer; one card; the head stays without a terminal status until the next post succeeds.</emits>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path p="$COQ_STATE/ci/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;.json" cleanup="ci/bin/cleanup-ci-state.sh --what gate-verdicts --older-than 90d [--apply]" trigger="timer" acts="system">The verdict input set and the post request and response bodies, for audit.</path>
+    <path p="GitHub commit statuses on jkkelley/coq-jev-herdr-plugin" retention="never" cleanup="kept on purpose: GitHub keeps statuses with the commit; nothing to delete, and a status is never edited after a terminal state" trigger="owner" acts="owner">Not a host path; listed so the rule holds.</path>
+    <path p="GitHub branch protection of main" retention="never" cleanup="none: applied and removed only by the owner with forge-admin (shared/authority.xml#github-app); this node holds no credential that can change it" trigger="owner" acts="owner">Listed so the rule holds.</path>
+    <s>The script dry-runs by default, acts with --apply, retries 3 times and exits 4 listing what remains; N-45 registers it.</s>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <in from="N-24" href="../N-24/spec.xml#N-24">pod.run per unit.</in>
+    <in from="N-46" href="../N-46/spec.xml#N-46">check.verdict for a spec-check unit.</in>
+    <out to="N-04" href="../N-04/spec.xml#N-04">The posted status appears in the next forge.snapshot.</out>
+  </section>
+
+  <section id="checklist" title="Checklist with proofs">
+    <item><check>coq/gate is a required status check on main with strict true and app_id forge.gate_app_id.</check><proof>The newest protection.observed 200 of N-04 names the context and the app id (not-run).</proof></item>
+    <item><check>A listed expected-red test failing as expected keeps the gate green; the same test passing turns it red.</check><proof>Verdict rule fixtures expected-red-hit, expected-red-wrong-reason, unexpected-pass, row-added-without-acceptance (not-run).</proof></item>
+    <item><check>Every planned head ends with a terminal status: no sha stays pending past its bound.</check><proof>A daily query over forge.snapshot: zero heads with coq/gate pending older than PT3H; the alert in section monitoring.</proof></item>
+    <item><check>The verdict rule is pure and tested: success, first failure named, infra error, superseded, empty plan.</check><proof>Go unit tests in the service package for the rule with the five fixtures; go test exit 0 in the scheduler suite's pod.run.</proof></item>
+    <item><check>A post is idempotent on content.</check><proof>Scenario repost in the fake forge: two verdict runs on one result set produce one status.</proof></item>
+    <item><check>A newer head supersedes the old run and the old sha reads error superseded.</check><proof>Scenario supersede: old sha status error with the new sha12 in the description; the old build's stop was called.</proof></item>
+    <item><check>No seat holds a credential that can post a status, and a status from any writer other than the coq-gate App does not satisfy the required check.</check><proof>shared/authority.xml#credential-matrix has no seat row for a forge credential; a test status posted with forge-read-like scope is ignored by protection (not-run).</proof></item>
+    <item><check>The target_url opens the build with the unit logs.</check><proof>A GET on the target_url from the tailnet returns 200 and lists units/*.log.</proof></item>
+    <item><check>The first live pull request after cut-over carries a coq/gate status.</check><proof>gh pr checks on that pull request shows coq/gate with a state; the gate.run record id in the ledger.</proof></item>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <s>The Go service (coq-svc): the coq-gate GitHub App key, whose installation token has commit statuses write only, for the post; forge-read for the statuses read-back (shared/authority.xml#credential-matrix); no administration write credential.</s>
+    <s>Jenkins: no GitHub credential for the gate; Jenkins posts nothing to GitHub (shared/authority.xml#credential-matrix row jenkins-held covers only the image and map pipelines).</s>
+    <s>Seats: no forge credential and no route to the forge (shared/authority.xml#seat-isolation); the verdict reaches them in their brief and in records.</s>
+    <s>The owner: branch protection is applied, changed or removed only with forge-admin from the owner's keyring as break glass; protection.drift (written by N-04) reports any change and carries one card until protection is back.</s>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <s>Status fields: pending heads and their age, verdicts by state in the last 24 h, post failures, attempts used per head, time from pr.opened to a terminal status (p50 and p95), protection state.</s>
+    <s>Alerts (N-41): a head pending past its bound; status.post.failed; protection.drift (N-04) or the context missing; verdict error rate above 10 percent in a day (infrastructure trouble).</s>
+    <s>Map: N-25 is the lamp on every pull request item on the belt; the stats screen shows time-to-verdict.</s>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <step n="R1" id="r-red">A red pull request: the description names the unit; the log is behind the target_url and in the pod.run record; the fix is a new commit, which replans; nobody re-runs a failed assertion.</step>
+    <step n="R2" id="r-error">An error status: superseded needs nothing; infrastructure after the ladder has a card; the N-24 runbook names the cause classes.</step>
+    <step n="R3" id="r-protection">Protection drift: the protection.drift 412 card (written by N-04) names what differs; the owner re-applies it with forge-admin (shared/authority.xml#github-app); this node changes nothing.</step>
+    <step n="R4" id="r-post-failed">status.post.failed: the card names the GitHub error; once GitHub answers, the next verdict tick posts through a new effect after the statuses read-back.</step>
+    <step n="R5" id="r-cleanup">Cleanup: ci/bin/cleanup-ci-state.sh --what gate-verdicts --older-than 90d.</step>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <cite href="rebuild/investigation/03-DECISIONS.md#7-d05-where-a-gate-verdict-lives">D05 options and the recommendation B: the status is the authority, records are derived.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl#C43">Ruling C43.</cite>
+    <cite href="rebuild/investigation/03-DECISIONS.md#17-d15-human-in-the-merge-path">D15, ruling C50: machine verdict merges; green gate plus reviewer record.</cite>
+    <cite href="rebuild/investigation/01-ROOT-CAUSES.md#rc3-state-lives-in-many-copies-with-no-authority-joined-by-polling-and-by-hand">RC3 item 7: GitHub carried no verdict; main protection required no checks.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#5-what-broke-and-why">Items 3 (no status ever posted), 4 (consumers do not exist), 12 (the gate-page cross-link the cluster could not meet).</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#8-what-to-carry-forward">Status-on-sha as the verdict channel; the page as another status is replaced by records now that the host posts.</cite>
+    <cite href="ci/jenkins-lib/vars/coqGate.groovy#L96-L120">finish(): the verdict rule moved into the Go service unchanged in meaning.</cite>
+    <cite href="ci/jenkins-lib/vars/coqGate.groovy#L190-L195">postStatus retried 3 times; kept as the post's shape.</cite>
+    <cite href="ci/README.md#L124-L135">The statuses table of the old design: pending, success, failure, error superseded, error after the ladder.</cite>
+    <cite href="Jenkinsfile#L21-L23">abortPrevious semantics, now owned by the scheduler's supersession.</cite>
+    <cite href="rebuild/investigation/04-UNLANDED.md#9-merged-but-dark-and-ruled-or-ready-but-unbuilt">Row WO-20261013-3217: merge.sh keys on coq/gate plus review.passed; landed as N-08 and N-09 reading this node's status with the trigger changed to the tick (D06 C).</cite>
+    <cite href="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal">T04 a verdict the agent can read and cannot edit.</cite>
+    <cite href="rebuild/investigation/I03-oss-factories-and-clones.md#43-open-source-factories-that-match-the-owners-needs">F8a: a number the agent can read but not change.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013194800-ci-gate-design.md#status-codes">The old status table, carried with the orchestrator replaced by the worker lane and a card.</cite>
+    <cite href="line/bin/merge.sh#L12-L25">The hold and held outcomes merge.sh reads; N-09 keeps the shape over the status.</cite>
+  </section>
+
+  <section id="rejected" title="Rejected with reason">
+    <rejected source="coqGate.groovy postStatus and the coq/gate-page second status"><reason>Two writers on one context would race; the cluster no longer needs to reach the line because the host writes the records and the status; the page is a card from the record (N-28).</reason></rejected>
+    <rejected source="line/config/hook.json handlers ci/bin/pr-gate-hook.sh and main-gate.sh on a webhook event"><reason>D06 ruled the poll; the handlers never existed; their job is this node and N-08 on the tick.</reason></rejected>
+    <rejected source="03-DECISIONS.md D05 option A, records as the authority"><reason>GitHub cannot refuse a merge on a record; three-way drift (L06 section 5.8).</reason></rejected>
+    <rejected source="03-DECISIONS.md D05 option C, both independently"><reason>Two sources of truth.</reason></rejected>
+    <rejected source="A PR comment or Slack page for the ladder's rung 5"><reason>A token with write scope in the pod's reach, or a new secret; the card path exists.</reason></rejected>
+    <rejected source="A fine-grained service token as the coq/gate writer (book 1.0.0)"><reason>Any holder of statuses write could satisfy a required check with no app_id; the coq-gate App plus app_id in protection makes the gate unforgeable (shared/authority.xml#github-app).</reason></rejected>
+    <rejected source="GitHub Checks API check runs instead of commit statuses"><reason>The App could post either; statuses keep the existing context coq/gate and one post per state; a later switch changes only the post call.</reason></rejected>
+  </section>
+
+</volume>

@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-47 Drive publish. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
+     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh. -->
+<volume id="N-47" kind="node-spec" node="N-47" group="G7" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, shared</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="naming">Version naming and immutability</entry>
+    <entry ref="mechanism">Mechanism: a script, rclone, a one-time token</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="shared-needs">What this volume needs from the shared volumes</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-47"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schema of this node</sibling>
+    <sibling href="../N-46/spec.xml#N-46" kind="node">Spec book check; only a checked book is published</sibling>
+    <sibling href="../N-45/spec.xml#N-45" kind="node">Cleanup registry, which retains this node's manifests</sibling>
+    <shared href="../../shared/principles.xml#repo-is-truth">The repository spec book is the truth (D24)</shared>
+    <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
+    <shared href="../../shared/state-store.xml#leases">Leases</shared>
+    <shared href="../../index.xml#book-version">The book version element the index carries</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>After every merge that touches rebuild/design, copies the spec book to the owner's Google Drive as immutable, version-named files in a folder named for the book version and the UTC date, and records the file ids, so the owner keeps the Drive reading habit without a second truth (D24 B).</is>
+    <is-not>It never reads Drive as an input, never overwrites a copy, never publishes an unchecked book, and never runs inside an agent session.</is-not>
+    <why>The PROCESS-SEED rule made Drive the truth and the repo the fallback; the Drive then had no factory write after 2026-10-06 and the whole current iteration was absent from it (L15 section 2, D24 facts). The owner's own compaction-guard-publish skill shows the version-named, never-overwritten shape; its defect is that it runs through MCP tools inside a Claude session, which is an agent typing.</why>
+  </purpose>
+
+  <input id="input">
+    <record kind="merge" from="N-09">A merge record whose changed paths include rebuild/design/**; the merge sha is the book version's commit.</record>
+    <condition>The merge sha has a check.verdict 201 from N-46 (it must, because coq/gate was green to merge; the node verifies the record exists before publishing).</condition>
+    <schema href="record.schema.json#/$defs/input"/>
+  </input>
+
+  <output id="output">
+    <record kind="drive.copy" code="201">The folder id, the book version, the merge sha, and one row per published file: repository path, Drive title, file id, bytes, sha256 and md5 of the repository file, and the md5 and sha256 Drive reports (rclone lsjson --hash), equal or not.</record>
+    <record kind="drive.copy" code="409">A title already in the version folder whose Drive hash differs from the repository file's (reason content-conflict): the copy is not written, not trashed and not overwritten; one owner card names the title, both hashes and the file id (review F24).</record>
+    <record kind="drive.copy" code="204">Nothing to publish: every title for this version already exists (a re-run after an unknown outcome).</record>
+    <record kind="drive.copy" code="423">Three attempts failed; the rows that failed and the last error; owner acts only when the error is auth (token revoked or missing), which is the one thing only the owner can fix.</record>
+    <record kind="drive.copy" code="503">The publisher is not set up (rclone binary or token absent); one owner card the first time, then a counter until it is fixed.</record>
+    <schema href="record.schema.json#/$defs/output"/>
+    <example schema="record.schema.json#/$defs/output"><![CDATA[
+{ "id": "20261015T070000Z-409-d5r1v", "at": "2026-10-15T07:00:00Z", "kind": "drive.copy", "code": 409, "node": "N-47",
+  "body": { "merge_sha": "4f9abed01c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f", "book_version": "1.1.0", "reason": "content-conflict", "owner_acts": true,
+            "rows": [ { "path": "rebuild/design/nodes/N-47/spec.xml", "title": "nodes - N-47 - spec v1.1.0.xml", "file_id": "drive-file-id-example",
+                        "bytes": 15012, "sha256": "0d4c6a2b9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b",
+                        "md5": "9e107d9d372bb6826bd81d3542a419d6", "drive_md5": "e4d909c290d0fb1ca068ffaddf22cbd0", "result": "conflict" } ] } }
+    ]]></example>
+  </output>
+
+  <naming id="naming">
+    <folder>coq spec book v&lt;book-version&gt; &lt;YYYY-MM-DD&gt; &lt;sha7&gt; under the owner's spec book folder (config drive.folder_id, the owner supplies it once at set-up).</folder>
+    <title>&lt;path under rebuild/design with slashes replaced by a space-dash-space&gt; v&lt;book-version&gt;.&lt;ext&gt;, for example nodes - N-47 - spec v1.3.0.xml and shared - status-codes v1.3.0.xml.</title>
+    <book-version>index.xml carries book-version; a merge that changes any volume bumps it in the same PR (the value lives in bin/make-index.py); the bump is checked here, at publish, because check.sh in a pod sees one sha and no base: when the version's Drive folder already holds a manifest whose volume hashes differ from this merge's, the publish is drive.copy 423 reason version-not-bumped and N-11 requests a bump ticket; a second publish of the same version with the same hashes finds every title present (204).</book-version>
+    <immutable>A title that exists in the folder is never written again. A change is a new version with a new folder. A present title counts as published only when its Drive md5 and sha256 equal the repository file's; a present title with a different hash is drive.copy 409 content-conflict and one card, never skipped as present and never overwritten. Nothing is ever trashed by this node except a copy this run created whose hash does not match, inside the same run, before the run is reported (the skill's rule, kept and strengthened from size to hash).</immutable>
+    <manifest>Every run also uploads manifest v&lt;version&gt;.json and a README v&lt;version&gt;.md that says the repository is the truth and names the merge sha. The manifest has one row per file: repository path, title, bytes, sha256 and md5 of the bytes at the merge sha. sha256 is the book's hash (the one index.xml and the records use); md5 is the hash Drive computes for every binary file, so the comparison needs no download.</manifest>
+  </naming>
+
+  <mechanism id="mechanism">
+    <where>rebuild/design/bin/publish-drive.sh in the repository, run by the service as an Executor.Run verb publish-drive with a 10 minute timeout; it calls rclone (shelf tool, pinned version and sha256 in images.json, installed under $COQ_STATE/bin by the same checksum-verified pattern as the pod binaries) with a Drive remote whose OAuth token lives in $COQ_STATE/secrets/rclone.conf (mode 0600, never in the repository, never in a record).</where>
+    <step n="1">Take lease publish:drive (fence, 15 minute expiry). A held lease means another merge is publishing; this run waits on the lease up to its timeout, then re-queues on the next tick (the merge record is still the input; the node keeps a publish cursor of the last published sha in the store).</step>
+    <step n="2">Verify check.verdict 201 exists for the merge sha; read book-version from index.xml at the merge sha from the mirror; export the book tree at that sha to $COQ_STATE/publish/&lt;sha&gt;/ with git archive.</step>
+    <step n="3">Compute sha256 and md5 of every exported file into the manifest rows. rclone lsjson the owner folder; create the version folder if absent (rclone mkdir); rclone lsjson --hash --hash-type MD5 --hash-type SHA-256 the version folder for existing titles and their hashes.</step>
+    <step n="4">For every present title: equal hashes is row present; a different hash is row conflict, and the run ends drive.copy 409 content-conflict with one card (owner acts: the owner decides whether the folder copy or the version number is wrong; the system never writes over it). For every absent title: rclone copyto with --drive-import-formats none (no conversion to Google Docs types; the file stays xml, json, md, sh); then lsjson --hash the title and compare md5 and sha256 with the manifest row; a mismatch on a copy this run created is deleted (rclone deletefile) and retried as part of the three attempts.</step>
+    <step n="5">Upload manifest and README (hash-checked the same way); write drive.copy 201 with the rows; advance the publish cursor; release the lease.</step>
+    <setup-once>The owner authorizes rclone once (rclone config create drive-coq drive scope=drive.file, browser consent on the owner's machine, recorded as a control.action by N-42 with no token in the record); the token refreshes itself. Scope drive.file limits the token to files this app created plus the folder the owner shares with it. This is the only owner step, done once; its absence is the 503 path, never a loop.</setup-once>
+    <diagram>
+      <mermaid><![CDATA[
+flowchart LR
+  M[merge touching rebuild/design] --> V{check.verdict 201 for sha?}
+  V -- no --> X[drive.copy 423 reason unchecked]
+  V -- yes --> L[lease publish:drive]
+  L --> E[git archive at sha]
+  E --> F[rclone lsjson folder, mkdir version folder]
+  F --> C[present titles hash-checked; copyto each missing title; md5 and sha256 compare]
+  C -- all present, hashes equal --> N[drive.copy 204]
+  C -- present title, other hash --> K[drive.copy 409 + one card]
+  C --> R[drive.copy 201 with file ids]
+      ]]></mermaid>
+    </diagram>
+  </mechanism>
+
+  <start id="start">
+    <s>The merge record from N-09 starts it; the service runs the verb; no agent and no owner action is on the path after the one-time token set-up.</s>
+    <s>A merge that lands while the publisher is unavailable is not lost: the publish cursor lags the main sha and the daily tick re-runs the node for the newest sha above the cursor, so the Drive catches up to the latest version (older skipped versions are not back-filled, by design; the repository has them).</s>
+  </start>
+
+  <waits id="waits">
+    <wait id="w1" what="lease publish:drive" timeout="PT10M" fallback="re-queue on the next tick; the cursor remembers; no record is lost"/>
+    <wait id="w2" what="rclone lsjson, mkdir, copyto per call" timeout="PT2M per call" fallback="count one attempt of three; then drive.copy 423 with the rows that failed"/>
+    <wait id="w3" what="the whole verb" timeout="PT10M" fallback="killed; files already present are fine (immutable titles); the next run skips them (204 or a partial 201)"/>
+    <wait id="w4" class="owner-decision" what="the owner authorizing the token" timeout="none; the system does not wait" fallback="503 once as a card, then a counter and a Controls lamp; publishing resumes when the token exists; the repository remains the truth throughout"/>
+    <cog-test>The cog that could stall this node is a Claude session with Drive MCP tools (the current skill). rclone under the service removes it; the only human step is one consent click, once.</cog-test>
+  </waits>
+
+  <retries id="retries">
+    <policy attempts="3" backoff="min(10 s x 2^(n-1), 5 min)">Per failed file row; successful rows are not re-uploaded (title exists).</policy>
+    <recover>After three failures: drive.copy 423, lease released, cursor not advanced; the daily tick retries the newest sha. A 403 or 401 from Drive is classed auth and goes to the owner once.</recover>
+    <report>A 423 for a non-auth reason is an alert record (N-41); auth is one card (N-28); a size mismatch that persists three times is a 423 with the row and never a silent bad copy.</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Any agent may read the Drive copies, but no agent builds from them; a volume's own pointers say the repository path is the truth, and the README in every folder says so.</readers>
+    <writers>Only the service's verb writes to Drive, under one lease; two merges minutes apart publish in order; a merge that bumps the version while a publish of the previous version runs waits for the lease and then publishes its own folder.</writers>
+    <collision>Two runs for the same sha (unknown outcome after a kill): the second finds titles present with equal hashes and writes 204; a half-uploaded file (hash mismatch) is deleted and re-uploaded by whichever run holds the lease.</collision>
+    <collision>A human creating a file with the same title in the version folder: equal hashes is present; any other content is drive.copy 409 content-conflict and one card naming the title and both hashes; the file is never deleted, because the run did not create it.</collision>
+    <collision>Seven spec authors merging seven PRs in one hour: seven version bumps, seven folders, in order; the daily catch-up never skips a merged version while the publisher is healthy, because each merge record is its own trigger.</collision>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="201" kind="drive.copy">Published; system acts (nothing).</emits>
+    <emits code="204" kind="drive.copy">Already published, every hash equal; system acts (nothing).</emits>
+    <emits code="409" kind="drive.copy">A present title with a different hash; owner acts (one card); nothing is overwritten.</emits>
+    <emits code="423" kind="drive.copy">Failed after 3; system acts (alert, daily retry); owner acts only for reason auth.</emits>
+    <emits code="503" kind="drive.copy">Publisher not set up; owner acts once (token), then system counts.</emits>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path id="N-47.export" glob="$COQ_STATE/publish/*/" retention="P7D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-47.export">The git archive export per sha.</path>
+    <path id="N-47.manifests" glob="$COQ_STATE/publish/manifests/*.json" retention="P365D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-47.manifests">Manifest per version (the record holds it too).</path>
+    <path id="N-47.log" glob="$COQ_STATE/logs/publish/*.jsonl" retention="P30D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-47.log">rclone output per run.</path>
+    <path id="N-47.secret" glob="$COQ_STATE/secrets/rclone.conf" retention="never" trigger="owner" acts="owner" cleanup="line/bin/cleanup.sh --entry N-47.secret from the owner CLI only (token revoke)">The token; removed only by the owner from the owner CLI (revoke), never by a timer or a trigger record.</path>
+    <path id="N-47.bin" glob="$COQ_STATE/bin/rclone-*" retention="P90D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-47.bin">Pinned rclone binaries; the current one is held by a lease while in use.</path>
+  </state-paths>
+
+  <edges id="edges">
+    <in ref="../N-09/spec.xml#N-09">merge (paths include rebuild/design)</in>
+    <out ref="../../dag.md#2-the-dag">None drawn: drive.copy is a sink; N-28 reads 503 and auth 423 by code; N-40 counts.</out>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>A merge publishes a version folder with one file per volume plus manifest and README.</check><proof>A test against a local rclone remote (rclone serve or the local backend) listing the folder after a merge record; row count equals volume count plus 2; drive.copy 201.</proof></item>
+    <item><check>A second run for the same sha writes nothing and records 204.</check><proof>Run twice; the second record is 204; file count unchanged.</proof></item>
+    <item><check>A hash mismatch on this run's copy is deleted and retried, then reported.</check><proof>A fault-injecting remote that flips one byte once (same size); the row shows one retry and equal md5 and sha256; a remote that always corrupts yields 423 with the row.</proof></item>
+    <item><check>A present title with other content is 409, never skipped or overwritten.</check><proof>A test folder pre-seeded with one title of different bytes; drive.copy 409 content-conflict, one card, the foreign file's id and hash unchanged after the run.</proof></item>
+    <item><check>No token means 503 once and no loop.</check><proof>A test world with no rclone.conf; one drive.copy 503 and one card request; the next tick adds a counter, not a card.</proof></item>
+    <item><check>An unchecked sha is never published.</check><proof>A merge record with no check.verdict 201; drive.copy 423 reason unchecked; no rclone call.</proof></item>
+    <item><check>The token never appears in a record or log.</check><proof>grep of the test world's records and logs for the token string finds nothing.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <may role="system" do="run the verb; read the mirror; write under $COQ_STATE/publish; call Drive with the token"/>
+    <may role="owner" do="authorize the token once; revoke it; read the Drive copies"/>
+    <may-not role="seat" do="run publish-drive.sh; read $COQ_STATE/secrets; write to Drive"/>
+    <may-not role="system" do="overwrite or trash a Drive file outside the same run's mismatch rule; count a present title as published without equal hashes; publish an unchecked sha; read Drive as an input"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="drive_publish_total" labels="result"/>
+    <counter name="drive_publish_lag" kind="gauge">Merges touching rebuild/design above the publish cursor; over 0 for 24 hours is an alert.</counter>
+    <counter name="drive_publish_bytes_total"/>
+    <lamp screen="Controls" name="drive publish">Green when lag is 0; amber when lag over 0; red on 503 (not set up) or auth 423.</lamp>
+  </monitoring>
+
+  <runbook id="runbook">
+    <step n="1" when="first set-up">On the host, as the owner: install the pinned rclone (the verb does it from images.json), then rclone config create drive-coq drive scope=drive.file config_is_local=true with the browser consent; move the config to $COQ_STATE/secrets/rclone.conf mode 0600; set drive.folder_id in the service config; the next merge or daily tick publishes.</step>
+    <step n="2" when="the lamp is red for auth">Re-run step 1's consent; nothing else.</step>
+    <step n="3" when="a mismatch row persists">Compare the manifest md5 and sha256 with the Drive hashes in the row; a file with invalid UTF-8 is still copied as bytes by rclone (no conversion), so a persistent mismatch is a Drive-side problem; open the N-41 alert.</step>
+    <step n="4" when="a 409 content-conflict card">The folder holds a title with other bytes: either someone wrote into the version folder (move the file out on Drive, answer the card, the next tick publishes) or the version was not bumped (the bump ticket path); the system never decides which.</step>
+    <step n="5" when="revoking">The owner runs line/bin/cleanup.sh --entry N-47.secret from the owner CLI; the lamp goes red by design until re-authorized.</step>
+    <cleanup>line/bin/cleanup.sh --entry N-47.export, N-47.manifests, N-47.log, N-47.bin; N-47.secret only by the owner.</cleanup>
+    <cold-start>The cursor is in the store; the daily tick publishes the newest version above it.</cold-start>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#26-d24-google-drive-or-the-repository-as-the-source-of-truth-for-plans">D24 B: repo truth, a script publishes immutable version-named copies as compaction-guard-publish does</source>
+    <source path="$HOME/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C54">D24 ruled</source>
+    <source path="$HOME/.claude/skills/compaction-guard-publish/SKILL.md" anchor="Steps and Never">Version-named titles, folder per release and date, skip existing titles, size compare after upload, trash only a mismatched copy inside the run, never overwrite, never publish a document whose version does not match the file</source>
+    <source path="rebuild/investigation/L15-google-drive-designs.md" anchor="#8-what-to-carry-forward">Item 23 stable pointer: an artifact bumps only when its content changes; item 7 of section 4: one unversioned INDEX as the commit point</source>
+    <source path="rebuild/investigation/L15-google-drive-designs.md" anchor="#9-what-to-kill">Item 7: hand-written Drive index snapshots by a Sonnet steward</source>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="#3-dropped-by-the-field-still-carried-here-kill">K07 two sources of truth kept in sync</source>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="#principles">Shelf first: proven open source over own code (rclone)</source>
+    <source path="rebuild/investigation/L07-ci-and-pods.md" anchor="#8-what-to-carry-forward">Digest pins and checksum-verified binaries in images.json, one config</source>
+  </sources>
+
+  <rejected id="rejected">
+    <reject source="$HOME/.claude/skills/compaction-guard-publish/SKILL.md as the runner (MCP Google Drive tools inside a Claude session)" reason="An agent typing; cannot be started by a systemd unit; the naming and the size-compare rules are kept, the runner is rclone under the service."/>
+    <reject source="PROCESS-SEED: Drive is the truth, the repo is the fallback" reason="Superseded by D24; a gate can only check what it can read."/>
+    <reject source="Google Docs conversion of the volumes" reason="A converted copy is not the bytes the check passed; files stay xml, json and md (rclone --drive-import-formats none)."/>
+    <reject source="back-filling every skipped version after an outage" reason="The repository holds every version; Drive is a reading surface; the newest version is what the owner reads."/>
+    <reject source="a Drive service account with domain-wide delegation" reason="Needs a Workspace domain; the owner's account is a personal Gmail (L15 section 2); OAuth with scope drive.file is the least privilege available."/>
+    <reject source="the Drive folder as the publish cursor" reason="Reading Drive to decide what to do makes it an input; the cursor is a store record."/>
+  </rejected>
+
+  <shared-needs id="shared-needs">
+    <need kind="principle">principles.xml#repo-is-truth (D24) with the sentence every Drive README carries.</need>
+    <need kind="index">index.xml carries book-version (semver), generated from bin/make-index.py; this node checks the bump at publish (version-not-bumped 423).</need>
+    <need kind="store-table">publish_cursor: last_published_sha, version, at; leases publish:drive.</need>
+    <need kind="record-kinds">drive.copy, merge (with changed paths), control.action (token consent recorded without the token).</need>
+    <need kind="status-codes">201 published, 204 nothing to publish, 409 content-conflict (owner acts, one card), 423 failed after 3 (owner acts only for auth), 503 not set up (owner acts once).</need>
+    <need kind="config">drive.folder_id, drive.remote_name, drive.rclone_version and sha256 in images.json, publish.timeout PT10M.</need>
+    <need kind="executor-verb">publish-drive with the 10 minute timeout.</need>
+    <need kind="secrets">A $COQ_STATE/secrets convention: mode 0700 directory, 0600 files, listed in the cleanup registry with acts owner, never read by seats (the seat deny list covers the path).</need>
+  </shared-needs>
+
+</volume>

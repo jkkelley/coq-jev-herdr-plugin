@@ -1,0 +1,453 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-23/record.schema.json",
+  "title": "N-23 Suite planner: input pr.opened and output suite.plan",
+  "description": "Book 1.1.0 (F16, F26, NF-E2, review C new 9 and 10). Envelope: shared/state-store.schema.json#/$defs/envelope (UTC-stamp ids; the operation key N-23/gate.run/<pr>@<head_sha>@<plan_attempt>/r1 rides the commit request and the COQ_OP_ID build parameter). N-26 reuses $defs/output with kind main.plan; N-24 $defs/input refs $defs/entry. UTC everywhere.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/input"
+    },
+    {
+      "$ref": "#/$defs/output"
+    },
+    {
+      "$ref": "#/$defs/refused"
+    }
+  ],
+  "$defs": {
+    "envelope": {
+      "$ref": "../../shared/state-store.schema.json#/$defs/envelope"
+    },
+    "sha40": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "entry": {
+      "type": "object",
+      "required": [
+        "name",
+        "suite",
+        "image",
+        "workdir",
+        "cmd",
+        "budget_minutes",
+        "kind",
+        "skip",
+        "plan_attempt",
+        "records"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+(:[A-Za-z0-9._-]+)?$",
+          "description": "suite or suite:case"
+        },
+        "suite": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$"
+        },
+        "image": {
+          "type": "object",
+          "required": [
+            "name",
+            "digest"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "digest": {
+              "$ref": "#/$defs/digest"
+            }
+          }
+        },
+        "workdir": {
+          "type": "string",
+          "pattern": "^/repo(/.*)?$"
+        },
+        "cmd": {
+          "type": "string",
+          "minLength": 1,
+          "not": {
+            "pattern": "(^| )make lint( |$)"
+          }
+        },
+        "budget_minutes": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 30
+        },
+        "budget_source": {
+          "type": "string",
+          "enum": [
+            "suite.budget",
+            "tests.json",
+            "default"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "pod",
+            "spec-check"
+          ],
+          "description": "spec-check is a pod unit whose result N-46 reads (check.verdict)"
+        },
+        "skip": {
+          "const": false
+        },
+        "plan_attempt": {
+          "$ref": "#/$defs/plan_attempt"
+        },
+        "records": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/import_kind"
+          },
+          "description": "the record kinds this unit may hand to the host through records/<name>.jsonl, copied from the suite's row in factory/config/suites.json; empty for most units; N-24's import refuses any other kind (artifact.refused 412)"
+        }
+      }
+    },
+    "input": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "repo",
+            "pr",
+            "head_sha",
+            "base_ref",
+            "head_repo",
+            "source"
+          ],
+          "properties": {
+            "kind": {
+              "const": "pr.opened"
+            },
+            "code": {
+              "const": 100
+            },
+            "node": {
+              "enum": [
+                "N-16",
+                "N-07"
+              ]
+            },
+            "repo": {
+              "const": "jkkelley/coq-jev-herdr-plugin"
+            },
+            "pr": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "head_sha": {
+              "$ref": "#/$defs/sha40"
+            },
+            "base_ref": {
+              "const": "main"
+            },
+            "head_repo": {
+              "type": "string"
+            },
+            "ticket": {
+              "type": "string",
+              "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$"
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "seat",
+                "poll"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "output": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "head_sha",
+            "pr",
+            "plan_kind",
+            "merge_base",
+            "changed_paths",
+            "map_sha",
+            "full_set",
+            "entries",
+            "build",
+            "plan_log",
+            "plan_attempt",
+            "op_id"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "suite.plan",
+                "main.plan"
+              ]
+            },
+            "code": {
+              "const": 100
+            },
+            "node": {
+              "enum": [
+                "N-23",
+                "N-26"
+              ]
+            },
+            "head_sha": {
+              "$ref": "#/$defs/sha40"
+            },
+            "pr": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "plan_kind": {
+              "type": "string",
+              "enum": [
+                "pr",
+                "main"
+              ]
+            },
+            "merge_base": {
+              "$ref": "#/$defs/sha40"
+            },
+            "changed_paths": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "map_sha": {
+              "$ref": "#/$defs/sha40"
+            },
+            "full_set": {
+              "type": "boolean"
+            },
+            "entries": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/entry"
+              }
+            },
+            "build": {
+              "type": "object",
+              "required": [
+                "job",
+                "number",
+                "url"
+              ],
+              "properties": {
+                "job": {
+                  "const": "coq-gate"
+                },
+                "number": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "0 while planned and not yet triggered"
+                },
+                "url": {
+                  "type": "string"
+                }
+              }
+            },
+            "plan_log": {
+              "type": "string"
+            },
+            "plan_attempt": {
+              "$ref": "#/$defs/plan_attempt"
+            },
+            "op_id": {
+              "$ref": "../../shared/contracts.schema.json#/$defs/operation_key",
+              "description": "the gate.run operation key, also the COQ_OP_ID build parameter"
+            }
+          }
+        }
+      ]
+    },
+    "refused": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "head_sha",
+            "pr",
+            "reason"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "plan.refused",
+                "plan.blocked",
+                "plan.superseded"
+              ]
+            },
+            "code": {
+              "enum": [
+                412,
+                423,
+                410
+              ]
+            },
+            "node": {
+              "enum": [
+                "N-23",
+                "N-26",
+                "N-07"
+              ]
+            },
+            "head_sha": {
+              "$ref": "#/$defs/sha40"
+            },
+            "pr": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "fork",
+                "no-image",
+                "planner-error",
+                "diff-unavailable",
+                "jenkins-queue",
+                "no-job-registered",
+                "no-namespace-ready",
+                "no-image-record",
+                "newer-head",
+                "budget"
+              ]
+            },
+            "detail": {
+              "type": "string",
+              "maxLength": 2000
+            },
+            "plan_log": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "plan_attempt": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 2,
+      "description": "shared/retry-budget.xml#layers plan-attempt"
+    },
+    "import_kind": {
+      "type": "object",
+      "required": [
+        "kind",
+        "for_node"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "art.inventory",
+            "sprite.sheet",
+            "binding.record",
+            "check.verdict",
+            "test.proof"
+          ]
+        },
+        "for_node": {
+          "type": "string",
+          "pattern": "^N-[0-9]{2}$"
+        },
+        "schema": {
+          "type": "string",
+          "description": "the consumer def the import validates each line against, e.g. nodes/N-36/record.schema.json#/$defs/art.inventory"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "art.inventory",
+                  "sprite.sheet"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "for_node": {
+                "const": "N-36"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "binding.record"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "for_node": {
+                "const": "N-37"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "check.verdict"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "for_node": {
+                "const": "N-46"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "test.proof"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "for_node": {
+                "const": "N-24"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

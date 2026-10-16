@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Node volume N-26 Main verify pipeline. Written by the G4 spec-author seat, 2026-10-14T04:39Z UTC, against brief C and dag.md section 3 row N-26.
+     Validated by rebuild/design/check.sh against rebuild/design/schema/ once the shared author lands them. -->
+<!-- N-26 book 1.1.0, 2026-10-15T06:00:00Z (review F13, C new 7 and 10, E NF-E5).
+     What broke: the input required parent_main and an r- id no merge record carried; the output lacked the merge_seq and
+     suites N-10 requires; the run bound was not nested in N-10's verify bound; merges were assumed to wait for a verdict
+     though N-09 never did. The fix: input and output by reference to N-09 and for N-10, the shared envelope, bounds from
+     shared/retry-budget.xml#deadlines, and N-09's awaiting-verify step as the rule that keeps one merge in play. -->
+<volume id="N-26" kind="node-spec" node="N-26" group="G4" name="Main verify pipeline" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: merge</entry>
+    <entry ref="output">Output record: main.gate.status</entry>
+    <entry ref="mechanism">Mechanism: the full set, coalescing to the newest main, the range, the status on main</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and the report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-26"/>
+    <dag href="../../dag.md#3-every-node" row="N-26"/>
+    <schema href="record.schema.json"/>
+    <sibling node="N-20" href="../N-20/spec.xml#N-20">Jenkins as code</sibling>
+    <sibling node="N-21" href="../N-21/spec.xml#N-21">Factory namespace</sibling>
+    <sibling node="N-22" href="../N-22/spec.xml#N-22">Image build</sibling>
+    <sibling node="N-23" href="../N-23/spec.xml#N-23">Suite planner</sibling>
+    <sibling node="N-24" href="../N-24/spec.xml#N-24">Pod run</sibling>
+    <sibling node="N-25" href="../N-25/spec.xml#N-25">Gate status post</sibling>
+    <shared href="../../shared/status-codes.xml#status-codes">Status code map</shared>
+    <shared href="../../shared/principles.xml#no-cog">No cog principle</shared>
+    <shared href="../../shared/state-store.xml#records">State store record envelope and tables</shared>
+    <shared href="../../shared/seat-contract.xml#roles">Seat contract: no verifier or merger seat; code verifies</shared>
+    <shared href="../../shared/cut-over.xml#step-verify" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <section id="purpose" title="Purpose">
+    <s>N-26 runs the full suite set on every new main sha as pods and posts coq/gate on that main sha, so that the question "is main green" has one answer that the machine wrote, GitHub holds, and N-10 reads to post verified or rejected and to set the merge hold.</s>
+    <s>It is the owner's ruling made code: verify belongs to the system, never a seat or the architect (D11, ruling C39; HANDOFF ruling H04 replaced; SPEC-17 O4 superseded), the full suite runs once on main not per pull request (roadmap ruling 18:32Z), and verification coalesces to the newest main sha with a green verifying the whole range (roadmap ruling 19:41Z).</s>
+    <s>Input to output: a merge record (N-09) starts it; a main.gate.status record ends it; N-10 decides verified, rejected and the hold.</s>
+  </section>
+
+  <section id="input" title="Input record: merge">
+    <record kind="merge" code="200" schema="record.schema.json#/$defs/input">
+      <s>Written by N-09 when a pull request merges; the schema is N-09's merge record by reference (../N-09/record.schema.json#/$defs/merge: shared envelope and UTC-stamp id). The level-triggered tick also treats any main sha in the forge:snapshot entity newer than the last main.gate.status as a main to verify (a push outside the factory or a lost record); that main has no merge record, so its status carries merge_seq 0 and N-10 fails closed on it.</s>
+      <field name="merge_sha, merge_seq" type="string, integer" required="true">The new main commit and its order key.</field>
+      <field name="pr, ticket" type="integer, string" required="true">The pull request merged and its WO id.</field>
+      <field name="parent_main" type="string" required="true">The main sha this merge landed on (N-09 reads it back), the start of the range when the previous main is verified.</field>
+    </record>
+  </section>
+
+  <section id="output" title="Output record: main.gate.status">
+    <record kind="main.gate.status" code="201|422|500|410" schema="record.schema.json#/$defs/output">
+      <field name="main_sha" type="string" required="true">The main commit verified.</field>
+      <field name="merge_seq" type="integer" required="true">The merge_seq of the merge record whose merge_sha is main_sha, 0 when none; N-10 orders by it.</field>
+      <field name="suites" type="array" required="true">Every suite of suites.json full with its exit code, result and log url.</field>
+      <field name="state" type="string" required="true">success, failure, error (as posted on coq/gate for main_sha).</field>
+      <field name="range_from" type="string" required="true">The last main sha with a success, exclusive; the range this verdict covers.</field>
+      <field name="merges" type="array" required="true">Every merge record (sha, pr, ticket) in range_from..main_sha, so N-10 can post one verified per pull request or one rejected naming them all.</field>
+      <field name="plan_attempt" type="integer" required="true">The attempt whose results produced the verdict.</field>
+      <field name="counts" type="object" required="true">As in gate.run.</field>
+      <field name="first_failure" type="object" required="false">The unit and log N-10 names in the rejected record.</field>
+      <field name="gate_run" type="string" required="true">The gate.run record id (N-25) for the main sha.</field>
+      <field name="superseded_by" type="string" required="false">The newer main sha when this run was coalesced away (code 410, state error); N-10 accepts it and writes nothing.</field>
+    </record>
+    <example schema="record.schema.json#/$defs/output">{"id":"20261014T093000Z-201-v8m2s","at":"2026-10-14T09:30:00Z","kind":"main.gate.status","code":201,"node":"N-26","epoch":1,"seq":5600,"main_sha":"a71d0b4e2c9f8a6d5b3e1c7f9a2d4b6e8c0f1a3d","merge_seq":93,"state":"success","suites":[{"name":"herdr","exit_code":0,"result":"pass","log_url":"http://jenkins.jenkins.svc.cluster.local:8080/job/coq-gate/420/artifact/herdr.log","seconds":1210},{"name":"scheduler","exit_code":0,"result":"pass","seconds":340}],"range_from":"4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7","merges":[{"sha":"a71d0b4e2c9f8a6d5b3e1c7f9a2d4b6e8c0f1a3d","pr":201,"merge_seq":93,"ticket":"WO-20261014-ab12"}],"plan_attempt":1,"counts":{"pass":68,"fail":0,"timeout":0,"infra":0,"superseded":0,"spec_check_pass":1,"spec_check_fail":0},"gate_run":"20261014T071500Z-100-g4r7t"}</example>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the full set, coalescing to the newest main, the range, the status on main">
+    <step n="1" id="m-pre">Preconditions as in N-23 step 1: job.registered, namespace.ready and an image record for every image; a missing one writes main.plan.blocked 423 with one card; the merge stays unverified and the hold question is N-10's (a main with no verdict is not green).</step>
+    <step n="2" id="m-coalesce">Coalescing: on every tick the node takes the newest main sha in forge.snapshot; if a main.plan is in flight for an older sha, it is superseded (410), its build stopped, its status on that older sha posted error superseded by N-25, and a new plan starts for the newest; so at most one main run is in flight and it is always the newest main.</step>
+    <step n="3" id="m-plan">The plan: N-23's code with kind main: suites.sh full from the map at main_sha (for main the map and the head are the same commit), expanded to units with images and budgets, written as main.plan with pr 0, handed to coq-gate with KIND=main; the plan always contains every suite in suites.json full, so a suite with no image refuses the plan (412) and the card names it, never a silent skip.</step>
+    <step n="4" id="m-run">N-24 runs every unit; N-25 posts coq/gate pending then the verdict on the main sha with the same rule and the same plan attempts for infrastructure (shared/retry-budget.xml#plan-attempt).</step>
+    <step n="5" id="m-range">The range: range_from is the newest main sha with a main.gate.status success; merges is every merge record whose merge_sha is an ancestor of main_sha and not an ancestor of range_from (git merge-base --is-ancestor in the mirror, 3 tries), each with its merge_seq; with N-09's awaiting-verify step the range is the one merge whose parent_main is range_from, and the ancestry check proves it rather than assumes it (verify-main.sh breadcrumb item 2).</step>
+    <step n="6" id="m-record">main.gate.status is written from the gate.run of the main sha with merge_seq, suites and the range attached; N-10 reads it: success means verified 201 for each merge in the range and the hold lifts when the held sha is in the range; failure or error means rejected 422 plus merge.hold with the first failure and the merges named. N-10 does not bisect (nodes/N-10/spec.xml#rejected r-bisect): N-09 lets at most one unverified merge onto main (nodes/N-09/spec.xml#m-awaiting-verify), so a red range is one merge; a longer range happens only after a push outside the line, and it is named whole in the rejected record.</step>
+    <step n="7" id="m-priority">Priority: a main run is triggered before any waiting pull request plan (N-23 section many-agents), because every ready merge waits merge.held awaiting-verify until this run's verdict.</step>
+    <mermaid>
+flowchart LR
+  M[merge record or newer main sha in the snapshot] --> C{a main run in flight for an older sha?}
+  C -- yes --> X[supersede it: stop build, status error superseded]
+  C -- no --> P
+  X --> P[main.plan: suites.sh full at main sha, every suite has an image]
+  P --> R[N-24 pods, N-25 verdict on the main sha]
+  R --> S[main.gate.status with range_from and merges]
+  S --> N10[N-10: verified per merge, or rejected plus merge.hold]
+    </mermaid>
+    <s>Why the status lives on the main sha too: branch protection reads pull request heads, but the owner's rule is that main must be proven after the merge (merge-with-target can differ from the head; a suite outside the plan can break), and a status on main is the same channel N-08 already reads, so N-10 needs no second mechanism.</s>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <s>N-09's machine merge writes the merge record; the tick plans the newest main within one tick; a push to main by anyone else is seen by the poll and verified the same way; nothing is typed.</s>
+    <s>At service start the comparison runs once: the newest main sha without a main.gate.status and without a plan in flight is planned.</s>
+    <s>A verifier seat, a merger seat and the architect have no part: the roles are retired (D11), and the route rows that woke them are deleted in the seat contract.</s>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait id="w1"><on>The full set finishing: about 68 units at 4 per build on a Pi cluster (L07 section 5 item 8 counted 61 case pods plus the other suites).</on><timeout>main.run_bound_seconds, d-main-run of shared/retry-budget.xml#deadlines (the planner bound plus N-25's gate run bound: the build bound d-build times the plan attempts of shared/retry-budget.xml#plan-attempt); N-10's verify bound d-verify is derived from it plus 600 s, so N-10 never declares a run missing while it is inside its own bound.</timeout><fallback>Missing results are infra; N-25's plan attempts (shared/retry-budget.xml#plan-attempt); after the last, error on the main sha, main.gate.status 500, N-10 sets the hold and one card goes up, because an unverifiable main must not take merges.</fallback></wait>
+    <wait id="w2" class="level-triggered"><on>A newer main arriving while a run is in flight.</on><timeout>None: supersession is immediate on the tick that sees the newer sha.</timeout><fallback>Not a wait; the older run's partial results are kept as records with 410 for the stats screen.</fallback></wait>
+    <wait id="w3"><on>The mirror answering git merge-base for the range.</on><timeout>30 s, 3 tries.</timeout><fallback>The record is written with merges empty and range_from unknown and code 500 reason range-unavailable; N-10 treats it as rejected for safety (the hold is the safe side, verify-main.sh breadcrumb item 3); the next tick retries the range computation and rewrites a new record when it succeeds.</fallback></wait>
+    <s>Every other wait is N-23's, N-24's and N-25's, with their bounds.</s>
+  </section>
+
+  <section id="retries" title="Retries, recovery and the report">
+    <s>Infrastructure: N-25's plan attempts (shared/retry-budget.xml#plan-attempt) over N-24's pod ladder, the innermost layer retrying (shared/retry-budget.xml#innermost); results never retried; a red main is fixed by a fix ticket cut at N-03 through N-10's re-entry (dag.md section 4), up to 3 fix attempts then the owner's card.</s>
+    <s>Coalescing is not a retry: a superseded run counts no attempt against the newer sha.</s>
+    <s>After a crash the newest main sha without a verdict is planned again; a build that ran meanwhile is re-attached by its number in the main.plan record.</s>
+    <s>The report: a main.gate.status 422 or 500 always carries the merges it covers and the first failure, so the card N-10 raises names the tickets.</s>
+  </section>
+
+  <section id="many-agents-at-once" title="Many agents at once">
+    <s>Many merges at once: N-09 merges one at a time (its own lease), but two merges can land within one tick; the newest main is the one verified and its range carries both merges, so no merge is ever unverified and no main is verified twice.</s>
+    <s>A merge during a main run cannot come from the line: N-09 holds every merge awaiting-verify while a merge on main has neither verified nor rejected (nodes/N-09/spec.xml#m-awaiting-verify), the fix pull request included, so the line never supersedes its own main run and verification cannot be starved (F13). A push outside the line still supersedes (410) and the newer main carries both in its range; N-51 counts that push.</s>
+    <s>Pull request runs and the main run share the pod quota: two runs in flight, main first; a pull request plan waits in the store and the map shows it.</s>
+    <s>Two Go service instances: the plan lease with a fencing token; the loser's writes are 409.</s>
+    <s>Seats: none take part; a worker whose merge is in a rejected range sees the rejected record and the fix ticket; nobody re-verifies by hand.</s>
+    <s>Collision answer in one line: one main run at a time keyed by the newest sha, supersession on the tick, ranges carry every merge, lease with fencing, merges held by N-09 while main is unverified.</s>
+  </section>
+
+  <section id="status-codes" title="Status codes this node emits">
+    <emits code="100" name="ACCEPTED" kind="main.plan">N-24 runs the units; N-25 posts pending on the main sha.</emits>
+    <emits code="201" name="PASSED" kind="main.gate.status">N-10 posts verified per merge and lifts the hold when the held sha is in the range.</emits>
+    <emits code="422" name="FAILED" kind="main.gate.status">N-10 posts rejected naming the merges and sets merge.hold; a fix ticket re-enters at N-03.</emits>
+    <emits code="500" name="STALLED or DEAD" kind="main.gate.status">Infrastructure after the last plan attempt or range unavailable: N-10 sets the hold; one card.</emits>
+    <emits code="410" name="SUPERSEDED" kind="main.gate.status">Coalesced away by a newer main; nobody acts.</emits>
+    <emits code="412" name="GATE_FAILED" kind="main.plan.refused">A suite without an image: one card; the hold stays until fixed.</emits>
+    <emits code="423" name="BLOCKED" kind="main.plan.blocked">A precondition missing: one card.</emits>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path acts="system" trigger="timer" p="$COQ_STATE/ci/plan/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;.json and $COQ_STATE/ci/logs/gate/YYYY/MM/&lt;sha12&gt;-&lt;attempt&gt;/" cleanup="ci/bin/cleanup-ci-state.sh --what plan-logs --older-than 30d and --what gate-logs --older-than 30d [--apply]">Shared with N-23 and N-24; a main run is a plan with pr 0.</path>
+    <path acts="system" trigger="timer" p="$COQ_STATE/ci/verify/YYYY/MM/&lt;sha12&gt;-range.json" cleanup="ci/bin/cleanup-ci-state.sh --what verify-ranges --older-than 90d [--apply]">The range computation input and output for audit.</path>
+    <path acts="system" trigger="timer" p="&lt;run tree&gt;/merge-hold.json (today's hold file, line/bin/verify-main.sh)" cleanup="ci/bin/cleanup-ci-state.sh --what legacy-hold [--apply] after N-10 owns the hold as a record">Retired with the host verify; the script removes it only when a merge.hold record table exists (shared/cut-over.xml#step-verify).</path>
+    <path acts="system" trigger="timer" p="$COQ_CACHE/verify/ (verify-main.sh worktrees)" cleanup="ci/bin/cleanup-ci-state.sh --what legacy-verify-worktrees [--apply]">Retired; dry-run lists them, --apply prunes them and their git worktree entries.</path>
+    <s>Every script dry-runs by default, acts with --apply, retries 3 times and exits 4 listing what remains; N-45 registers them.</s>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <in from="N-09" href="../N-09/spec.xml#N-09">merge record.</in>
+    <in from="N-20" href="../N-20/spec.xml#N-20">job.registered as a precondition.</in>
+    <in from="N-21" href="../N-21/spec.xml#N-21">namespace.ready as a precondition.</in>
+    <in from="N-22" href="../N-22/spec.xml#N-22" drawn="false">image records as a precondition, through N-23's plan code.</in>
+    <out to="N-10" href="../N-10/spec.xml#N-10">main.gate.status.</out>
+    <out to="N-24" href="../N-24/spec.xml#N-24" drawn="false">main.plan entries run as pods; drawn through N-23 and N-24 in the DAG.</out>
+  </section>
+
+  <section id="checklist" title="Checklist with proofs">
+    <item><check>Every merge to main is followed by a main.gate.status that covers it.</check><proof>A daily query: every merge record's sha is in some main.gate.status merges array within main.run_bound_seconds (d-main-run); the alert otherwise.</proof></item>
+    <item><check>Only the newest main is run; an older in-flight run is superseded.</check><proof>Scenario coalesce in ci/tests/cases/02-gate-pipeline.test.sh with the fake Jenkins: two merges, one stop call, the older sha's status error superseded, the newer sha's range has both merges.</proof></item>
+    <item><check>The full set runs every suite in suites.json full, each with an image.</check><proof>The main.plan entries cover every suite name; main.plan.refused when a mapping is missing (scenario no-image-main).</proof></item>
+    <item><check>A green main lifts a hold only when the held sha is in the range.</check><proof>N-10's test fixture using a main.gate.status from this node with the held sha outside the range: hold stays.</proof></item>
+    <item><check>No seat and no architect verifies main.</check><proof>The seat contract has no verifier or merger role; routes carry no row for merged; grep routes.json for merged returns nothing after cut-over.</proof></item>
+    <item><check>A red main names the first failure and every merge in the range.</check><proof>The main.gate.status 422 fields first_failure and merges in the rejected card's record.</proof></item>
+    <item><check>The 31 herdr cases and every other suite pass on the current main.</check><proof>The main.gate.status 201 record id for the current main sha in the ledger.</proof></item>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <s>The Go service: the same Jenkins and GitHub permissions as N-23 and N-25; read of the mirror for the range.</s>
+    <s>Seats: none; a seat may read main.gate.status and the hold record.</s>
+    <s>The owner: may set a hold or lift it by a ruling record (N-29) only; the Controls screen (N-42) exposes it as a lamp and a one-time break glass.</s>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <s>Status fields: the newest main sha and its verdict age, runs superseded in the last day, time from merge to verdict (p50 and p95), the hold state and its age.</s>
+    <s>Alerts (N-41): main red; main unverified past main.run_bound_seconds; a hold older than PT2H with no fix ticket in flight; three supersessions in a row (a merge storm).</s>
+    <s>Map: the main lamp on the Map screen (green, red, grey for unknown) is this node's verdict; the Controls screen shows the hold.</s>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <step n="R1" id="r-red">Main red: N-10 cut the fix ticket; the first failure and the merges are in the record; the hold lifts on the next green that covers the held sha.</step>
+    <step n="R2" id="r-unknown">Main unverified past its bound: the card names the cause (Jenkins, namespace, images, or the ladder); fix the cause, nothing here is re-run by hand; the tick re-plans.</step>
+    <step n="R3" id="r-cutover">Cut-over from line/bin/verify-main.sh: the host script stays callable but no route calls it; its hold file is read by N-10 until the merge.hold record exists, then removed by the cleanup script at the first main.gate.status 201, the step shared/cut-over.xml#step-verify names (the one cut-over order of the book).</step>
+    <step n="R4" id="r-cleanup">Cleanup: ci/bin/cleanup-ci-state.sh --what verify-ranges --older-than 90d; --what legacy-hold; --what legacy-verify-worktrees; plus N-23's and N-24's.</step>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <cite href="rebuild/investigation/03-DECISIONS.md#13-d11-which-llm-roles-remain">D11, ruling C39: verify is code.</cite>
+    <cite href="rebuild/investigation/03-DECISIONS.md#7-d05-where-a-gate-verdict-lives">D05: the status on the sha is the authority; applied to the main sha too.</cite>
+    <cite href="rebuild/investigation/03-DECISIONS.md#24-d22-which-steps-stay-on-the-wsl-host-and-which-go-to-pods">D22: the full set runs as pods, not on the host.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261012212500-roadmap.md#L324">Ruling 19:41Z: verify only the newest main; green verifies the range; red bisects (the bisect half is rejected with reason in nodes/N-10/spec.xml#rejected r-bisect).</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261012212500-roadmap.md#L304">Ruling 18:32Z: the full suite is the main verify's job.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261012212500-roadmap.md#L236">Cause l: PR 94 merged onto red main because the hold was prose; the hold is a record.</cite>
+    <cite href="line/bin/verify-main.sh#L1-L40">The host verify: its breadcrumb items 1 (every suite runs), 2 (one rejected per run naming the pull requests), 3 (a green lifts a hold only for an ancestor), 4 (a timeout is red) carried here; the script retired.</cite>
+    <cite href="line/bin/merge.sh#L61-L75">The hold reader; N-09 keeps the semantics over a record.</cite>
+    <cite href="specs/SPEC-17-orchestrator-and-agent-health.xml#s-orchestrator">O4 and X02: the merger verifies, the orchestrator owns; superseded by code under D11, cited so nothing is lost.</cite>
+    <cite href="specs/SPEC-17-orchestrator-and-agent-health.xml#s-codes">200 DONE merged and 201 PASSED verified semantics kept for N-10's records.</cite>
+    <cite href="rebuild/investigation/04-UNLANDED.md#9-merged-but-dark-and-ruled-or-ready-but-unbuilt">Rows line/bin/verify-main.sh LAND as reconciler action; WO-20261013-aff2 CI gate 4 landed here with the tick as trigger; WO-20261013-48f2 and 612d SUPERSEDED.</cite>
+    <cite href="rebuild/investigation/04-UNLANDED.md#3-remote-branches-not-merged-to-main">PR 29 verifier seat SUPERSEDE; PR 15 tester, reviewer and merger seats SUPERSEDE.</cite>
+    <cite href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V03 merge and verify as pure functions of records and the head, three attempts, a hold for a red main.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#5-what-broke-and-why">Item 8: a full run is about 68 pods; the bound derives from measured budgets.</cite>
+    <cite href="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261013194800-ci-gate-design.md#design">On main a green gate posts verified for the range since the last verified sha; a red posts rejected and sets the hold.</cite>
+  </section>
+
+  <section id="rejected" title="Rejected with reason">
+    <rejected source="line/bin/verify-main.sh as the live verify on the host"><reason>Serial on the host at about 20 minutes a run and queued one behind another (ci-gate-design.md Problem); D22 puts the suites in pods; its rules are kept, its runner retired.</reason></rejected>
+    <rejected source="A verifier seat (PR 29, WO-20261012-72a0) or the merger verifying (card C18, SPEC-17 O4)"><reason>D11 retires the roles; a seat reading a suite log is the stall class the owner named.</reason></rejected>
+    <rejected source="Verifying every merge sha in order without coalescing"><reason>Ruling 19:41Z; the queue of older runs delayed the only verdict that mattered.</reason></rejected>
+    <rejected source="Running the full set on every pull request instead of main"><reason>Ruling 18:32Z and the test-speed design: suites cannot be the bottleneck; the plan runs on the pull request, the full set once on main.</reason></rejected>
+    <rejected source="Skipping the main verify because branch protection already ran the gate on the head"><reason>The merge commit can differ from the head and a suite outside the plan can break; main is proven after the merge (verify-main.sh header).</reason></rejected>
+    <rejected source="Holding merges in prose or a chat ruling"><reason>Cause l; the hold is a record N-10 writes and N-09 reads.</reason></rejected>
+  </section>
+
+</volume>

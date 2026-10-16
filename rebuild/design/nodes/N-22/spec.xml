@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Node volume N-22 Image build. Written by the G4 spec-author seat, 2026-10-14T04:39Z UTC, against brief C and dag.md section 3 row N-22.
+     Validated by rebuild/design/check.sh against rebuild/design/schema/ once the shared author lands them. -->
+<volume id="N-22" kind="node-spec" node="N-22" group="G4" name="Image build" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: image.config</entry>
+    <entry ref="output">Output record: image</entry>
+    <entry ref="mechanism">Mechanism: images.json, the two legs, the manifest, the pin</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and the report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-22"/>
+    <dag href="../../dag.md#3-every-node" row="N-22"/>
+    <schema href="record.schema.json"/>
+    <sibling node="N-20" href="../N-20/spec.xml#N-20">Jenkins as code</sibling>
+    <sibling node="N-21" href="../N-21/spec.xml#N-21">Factory namespace</sibling>
+    <sibling node="N-23" href="../N-23/spec.xml#N-23">Suite planner</sibling>
+    <sibling node="N-24" href="../N-24/spec.xml#N-24">Pod run</sibling>
+    <sibling node="N-25" href="../N-25/spec.xml#N-25">Gate status post</sibling>
+    <sibling node="N-26" href="../N-26/spec.xml#N-26">Main verify pipeline</sibling>
+    <shared href="../../shared/status-codes.xml#status-codes">Status code map</shared>
+    <shared href="../../shared/principles.xml#no-cog">No cog principle</shared>
+    <shared href="../../shared/state-store.xml#records">State store record envelope and tables</shared>
+    <shared href="../../shared/ci-capacity.xml#builder-pin">The builder pin: Kaniko fork by digest, fallback, cool-off</shared>
+    <shared href="../../shared/retry-budget.xml#layers">Retry layers: image-job and host-build</shared>
+    <shared href="../../shared/contracts.xml#outbox">Outbox: the image.build effect and its COQ_OP_ID lookup</shared>
+    <shared href="../../shared/seat-contract.xml#mechanical-pr">Mechanical pull request clause</shared>
+  </pointers>
+
+  <section id="purpose" title="Purpose">
+    <s>N-22 builds every container image the factory runs (the suite images, the lint image, the Jenkins controller image and the map app image coq-map, whose image record starts N-35's coq-map job, nodes/N-35/spec.xml#mechanism) from one config, ci/config/images.json, pushes them to ghcr.io/jkkelley by digest, verifies every binary inside by checksum, and writes an image record that every consumer pins to.</s>
+    <s>It removes three defects: floating tags that let a node reuse a cached amd64 image under the same tag (exec format error, Jenkinsfile breadcrumb), suites with no pod image that fail open (L07 section 5 item 7, S02 B6), and an image build that is a hand step on the host (L07 section 9).</s>
+    <s>Input to output: an image.config record starts it; an image record (or image.failed) ends it; N-24 reads the newest image record per name to run pods, and N-35 reads the map app image.</s>
+  </section>
+
+  <section id="input" title="Input record: image.config">
+    <record kind="image.config" code="100" schema="record.schema.json#/$defs/input">
+      <s>Written by this node from the CI mirror N-23 keeps fresh ($COQ_STATE/ci/mirror/repo.git) when a main sha of this repository changes ci/config/images.json, ci/images/&lt;name&gt;/** (the per-image Containerfile and its files), lint/Containerfile or ci/jenkins/Containerfile; one record per image whose inputs changed, computed by ci/bin/images.sh changed --base &lt;prev main&gt; --head &lt;sha&gt;.</s>
+      <field name="sha" type="string" required="true">The main commit.</field>
+      <field name="name" type="string" required="true">The image name in images.json: coq-test, coq-lint, coq-go, coq-bearings, coq-jenkins, coq-map.</field>
+      <field name="version" type="string" required="true">The version string from images.json; a build input change without a version bump is refused (412) by ci/bin/images.sh check, which lint runs on every pull request.</field>
+      <field name="platforms" type="array" required="true">linux/arm64 always; linux/amd64 when the host also runs the image (coq-jenkins carries both: the controller may land on any Pi and the bootstrap build runs on the host).</field>
+      <field name="inputs_hash" type="string" required="true">sha256 over the Containerfile, its context files, the base digest and the binary checksums; the idempotency key with name and version.</field>
+      <field name="base" type="string" required="true">The base image with digest.</field>
+      <field name="binaries" type="array" required="true">name, version, sha256 per platform of every downloaded binary (herdr, kubectl, node, go), read from images.json.</field>
+    </record>
+  </section>
+
+  <section id="output" title="Output record: image">
+    <record kind="image" code="201" schema="record.schema.json#/$defs/output">
+      <field name="name" type="string" required="true">The image name.</field>
+      <field name="version" type="string" required="true">The version built.</field>
+      <field name="inputs_hash" type="string" required="true">Equal to the input's hash, so a consumer can prove the pin matches the config.</field>
+      <field name="manifest_digest" type="string" required="true">The digest of the manifest list (or the single-arch image when platforms has one entry); this is what every pod template uses as image@digest.</field>
+      <field name="per_platform" type="array" required="true">platform, digest, built_on (host or cluster), build_log path, duration_s.</field>
+      <field name="checksums_verified" type="boolean" required="true">True only when every binary's sha256sum -c passed inside the build; a false value never reaches a 201.</field>
+      <field name="pushed_at" type="string" required="true">UTC.</field>
+    </record>
+    <example schema="record.schema.json#/$defs/output">{"id":"20261015T070000Z-201-b3c4d","at":"2026-10-15T07:00:00Z","seq":4300,"epoch":1,"kind":"image","code":201,"node":"N-22","name":"coq-test","version":"1.4.0","inputs_hash":"5555555555555555555555555555555555555555555555555555555555555555","manifest_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","per_platform":[{"platform":"linux/arm64","digest":"sha256:6666666666666666666666666666666666666666666666666666666666666666","built_on":"cluster","build_log":"https://jenkins.invalid/job/coq-image/88/console","duration_s":612},{"platform":"linux/amd64","digest":"sha256:7777777777777777777777777777777777777777777777777777777777777777","built_on":"host","build_log":"$COQ_STATE/ci/image/2026/10/coq-test-1.4.0-amd64-1.log","duration_s":301}],"checksums_verified":true,"pushed_at":"2026-10-15T06:59:30Z","builder":{"tool":"kaniko","digest":"sha256:738807f0e31daf07743f89260a95956dcc6ee4f62553f4f6344c990cabab8675"}}</example>
+    <s>The pin: the newest image record with code 201 for a name and version is the pin; N-24 and N-20 pass image@manifest_digest into the job; no floating tag is ever referenced by a running pod, and the two third-party images the CI runs, the jnlp agent and the builder, are pinned by digest too (shared/ci-capacity.xml#model and #builder-pin).</s>
+    <s>On failure after three attempts the node writes image.failed (422 when a checksum or a build step failed with evidence; 500 when the infrastructure never produced a result) and N-28 posts one card.</s>
+  </section>
+
+  <section id="mechanism" title="Mechanism: images.json, the two legs, the manifest, the pin">
+    <s>ci/config/images.json stays the one config (schema ci/config/images.schema.json, extended): per image a version, a containerfile path, a base with digest, a platforms list, a binaries list with per-platform sha256, and a suites list naming which suites run in this image, so that every suite in factory/config/suites.json full is mapped to exactly one image and ci/bin/images.sh check fails lint when one is not.</s>
+    <s>The images at the first cut: coq-test (herdr, factory, events, line, loop: herdr 0.9.0 with both checksums, as today), coq-lint (lint, sitrep, reindex: jq, python3 jsonschema, shellcheck, plus a vendored copy of the work-order skill scripts under ci/images/coq-lint/skills so reindex no longer depends on a gitignored path), coq-go (scheduler, scheduler-host: a pinned Go toolchain), coq-bearings (bearings: node and playwright with the arm64 chromium build, pinned), coq-jenkins (the controller, N-20), coq-map (the map app, N-35).</s>
+    <step n="1" id="m-trigger">The Go service sees an image.config with no image or image.failed for its inputs_hash and dispatches the build as a system job with a lease (key node:N-22:name:version:inputs_hash), only when the newest job.registered (N-20) is a 201.</step>
+    <step n="2" id="m-cluster-leg">Cluster leg, linux/arm64: the Go service triggers Jenkins job coq-image with parameters NAME, VERSION, SHA, ATTEMPT, PLATFORM=linux/arm64 (POST /job/coq-image/buildWithParameters, then follows the queue item to the build number); the trigger is an outbox effect carrying COQ_OP_ID, looked up in the queue and builds before any repost (shared/retry-budget.xml#operations image.build); ci/jenkins/image.Jenkinsfile runs one Kaniko pod from the image pinned at shared/ci-capacity.xml#builder-pin (by digest, never a tag) in namespace jenkins (the owner's buildKaniko pattern from jenkins-shared-lib, with the one ESO-synced push secret ghcr-push-secret mounted as the docker config, never a per-build kubectl create secret), context fetched by sha from the public repository, build args from images.json, --reproducible, destination ghcr.io/jkkelley/&lt;name&gt;:&lt;version&gt;-arm64, and archives kaniko's digest file as an artifact; the Containerfile's sha256sum -c lines fail the build on a mismatch.</step>
+    <step n="3" id="m-host-leg">Host leg, linux/amd64 (only when platforms lists it): the Go service runs ci/image/build.sh --image NAME --platforms linux/amd64 (the --platforms flag is a planned change; build.sh today builds the images.json platforms with qemu and rejects unknown flags) as a host job (podman on the WSL host, native for amd64), which pushes ghcr.io/jkkelley/&lt;name&gt;:&lt;version&gt;-amd64 and prints the digest; the script's own loop is the host-build layer and retries only push and registry timeouts (shared/retry-budget.xml#layers), exit 4 on failure.</step>
+    <step n="4" id="m-manifest">Join: when every leg has a digest, the Go service runs ci/image/manifest.sh --image NAME --version VERSION --digest linux/arm64=sha256:... [--digest linux/amd64=sha256:...] on the host (podman manifest create and push, by digest references), which prints the manifest list digest; a single-platform image skips the list and uses the leg's digest.</step>
+    <step n="5" id="m-verify">Verify: ci/image/verify.sh --ref ghcr.io/jkkelley/NAME@MANIFEST pulls the manifest, checks each platform's config for the expected base digest label and the binary checksum labels the Containerfile writes (LABEL org.coq.herdr.sha256.arm64=...), and runs one smoke command per image in a pod (coq-test: herdr --version; coq-lint: shellcheck --version; coq-go: go version; coq-bearings: npx playwright --version) through a Jenkins coq-image stage on arm64 and podman on the host for amd64.</step>
+    <step n="6" id="m-record">The image record is written with every digest, the build log paths and checksums_verified true; N-24 picks it up on the next plan.</step>
+    <step n="7" id="m-retention">ci/bin/cleanup-ghcr.sh --image NAME lists then deletes old versions through the GitHub packages API, never a version in the keep-set, which is the union, computed fresh at apply time: the newest 5 versions; the current pin (the newest 201 image record per name); every digest referenced on homelab-gitops main and in its last 3 releases (coq-jenkins, coq-map and anything else the manifests name); every digest named by an unfinished plan (a suite.plan or main.plan without a gate.run outcome); every digest in the newest backup's image list (the store snapshot's image records, so a restore can still pull what it names); and every digest named by an image record with code 201 younger than 30 days. A digest outside the union is deleted only if the keep-set computed at apply time still excludes it; no floating tag is ever kept as a reference. The daily tick runs it with --dry-run and the weekly tick with --apply (review F24).</step>
+    <mermaid>
+flowchart LR
+  C[main sha changes an image input] --> I[N-22 writes image.config 100]
+  I --> J{job.registered 201 exists?}
+  J -- no --> B[image.blocked 423, one card]
+  J -- yes --> L1[cluster leg: Jenkins coq-image, Kaniko arm64]
+  J -- yes, amd64 listed --> L2[host leg: build.sh amd64 in podman]
+  L1 --> M[manifest.sh: list by digests]
+  L2 --> M
+  M --> V[verify.sh: labels, checksums, smoke]
+  V -- ok --> R[image 201: the pin]
+  V -- fail --> F[image.failed 422 or 500, one card]
+  R --> N24[N-24 pods use image@digest]
+  R --> N35[N-35 map deploy uses image@digest]
+    </mermaid>
+    <s>Why two legs: every factory pod runs on the arm64 Pis, so the cluster builds arm64 natively; the host's local podman runs on amd64 (bin/test-cases.sh and make lint use the same images), and the cluster has no amd64 node and Kaniko cannot emulate, so the amd64 half is the one routine build that stays on the host, as a system job under the same retry layers. The host has qemu binfmt and ci/image/build.sh already builds multi-arch with it; routine builds do not use it because the native arm64 leg is faster and proven.</s>
+    <s>The Jenkins controller image is the one chicken-and-egg: its first version is built on the host for both platforms, linux/arm64 through qemu and linux/amd64 natively (ci/image/build.sh --image coq-jenkins --platforms linux/arm64,linux/amd64, planned flag; nodes/N-20/spec.xml#r-bootstrap; shared/cut-over.xml step 3), because the controller may be scheduled on any Pi; every later version goes through this node's two legs (verification F06).</s>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <s>A merge to main that changes an image input is the trigger; the poll writes image.config; N-07 dispatches the build job; nothing waits for a person.</s>
+    <s>At service start the comparison runs again, so an image.config without a result is rebuilt; the inputs_hash key makes a repeat harmless (the registry returns the same digest for a reproducible build, and the record put is idempotent on the key).</s>
+    <s>The daily tick runs ci/bin/images.sh verify-pins, which checks that every image in images.json has a 201 record for its version and that the digest still exists in GHCR (HEAD on the manifest); a missing one re-dispatches a build and a vanished one writes image.failed 500 so the gate never plans a pod against a digest that cannot pull.</s>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait id="w1"><on>The Jenkins queue item becoming a build (POST returns a queue location; the build number appears when an executor slot is free).</on><timeout>PT10M, polled every 10 s on /queue/item/N/api/json.</timeout><fallback>The queue item is cancelled (POST /queue/cancelItem), the attempt fails as infrastructure, and the ladder in section retries applies.</fallback></wait>
+    <wait id="w2"><on>The coq-image build reaching a result (SUCCESS, FAILURE, ABORTED).</on><timeout>PT45M (a Pi builds coq-bearings with chromium in about 25 minutes; the job's own timeout is 40 minutes so the job ends first), polled every 20 s on /job/coq-image/N/api/json.</timeout><fallback>POST /job/coq-image/N/stop, attempt fails as infrastructure (a stall), ladder applies.</fallback></wait>
+    <wait id="w3"><on>The host leg build.sh finishing.</on><timeout>PT30M, enforced by the Go service's process group kill.</timeout><fallback>Attempt fails; the script's own 3 attempts are inside this bound; ladder applies at the job level.</fallback></wait>
+    <wait id="w4"><on>GHCR accepting the manifest push and answering HEAD on the digest.</on><timeout>60 s per call, 3 calls.</timeout><fallback>Attempt fails as infrastructure; ladder applies.</fallback></wait>
+    <wait id="w5"><on>The smoke pod reaching Succeeded.</on><timeout>PT5M.</timeout><fallback>A smoke failure is a failed build (422), never retried, with the pod log attached; a Pending pod past PT2M is infrastructure.</fallback></wait>
+    <s>The job's stall bound under N-12 is PT90M; a stalled build job is killed, its Jenkins build stopped, its lease revoked and the attempt counted.</s>
+  </section>
+
+  <section id="retries" title="Retries, recovery and the report">
+    <s>Two kinds of failure, sorted where they happen (V05): a checksum mismatch, a Containerfile step that exits non-zero or a smoke command that fails is a result, image.failed 422, never retried, with the log path; a pod that does not schedule, a queue that never starts, a registry that times out, a Jenkins build that aborts, or a host podman that dies is infrastructure and climbs the ladder.</s>
+    <s>The ladder: the image-job layer's tries per image.config (shared/retry-budget.xml#layers) with N-11 backoff, each a fresh Jenkins build and a fresh host process; build.sh's own loop retries only push and registry timeouts (host-build layer), so no failure class is retried by both; after the last try the node writes image.failed 500 with the last error and N-28 posts one card (dedupe key node:N-22:name:version:inputs_hash).</s>
+    <s>A partial success is recorded as such: a leg that succeeded keeps its digest in the attempt record, and the next attempt skips a leg whose digest already exists in GHCR for this inputs_hash (the registry is the memo), so the retry rebuilds only what is missing.</s>
+    <s>Nothing loops: an image.failed is terminal for its inputs_hash; a new commit or a ruling re-enters at N-03.</s>
+  </section>
+
+  <section id="many-agents-at-once" title="Many agents at once">
+    <s>Readers: N-24 and N-35 read the newest 201 image per name; records are immutable and a new build is a new row, so a plan that started on digest A finishes on digest A even when B lands mid-run (the plan entry carries the digest).</s>
+    <s>Two image.config records for the same name from two merges: both build in order of their sha; the second supersedes the first as the pin because it is newer and both have records; nothing is lost and nothing is cancelled, because an image is content-addressed and a superseded digest harms nothing in GHCR until retention removes it.</s>
+    <s>Two attempts at once for one inputs_hash cannot happen: one lease with a fencing token per key; a stale writer's commit is 412 stale_token.</s>
+    <s>Many images at once: the Go service caps image builds in flight at 2 (one cluster leg uses most of a Pi's memory under Kaniko) through a per-node concurrency table in config; the rest wait in the store as image.config with no attempt, which the map shows as a queue depth.</s>
+    <s>Seats never build images: a worker that edits a Containerfile opens a pull request; the build runs only after the merge, from main, by the system; a pull request that wants to prove its image builds runs ci/image/build.sh --no-push locally in its own podman, which touches no registry.</s>
+    <s>Collision answer in one line: one lease per inputs hash, content-addressed digests, registry as the memo across attempts, newest record is the pin, 412 on a stale writer, retention against a keep-set computed at apply time.</s>
+  </section>
+
+  <section id="status-codes" title="Status codes this node emits">
+    <emits code="100" name="ACCEPTED" kind="image.config">Nobody acts; N-07 dispatches.</emits>
+    <emits code="201" name="PASSED" kind="image">N-24 and N-35 read it as the pin; the map shows the node green.</emits>
+    <emits code="412" name="GATE_FAILED" kind="image.refused">Written by lint on a pull request that changes an image input without a version bump, or leaves a suite without an image; the worker lane acts.</emits>
+    <emits code="422" name="FAILED" kind="image.failed">A checksum, build step or smoke failed with evidence; N-28 posts one card; a fix ticket re-enters at N-03.</emits>
+    <emits code="423" name="BLOCKED" kind="image.blocked">No job.registered 201; one card.</emits>
+    <emits code="500" name="STALLED or DEAD" kind="image.failed">Infrastructure after the ladder; one card.</emits>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path p="$COQ_STATE/ci/image/YYYY/MM/&lt;name&gt;-&lt;version&gt;-&lt;platform&gt;-&lt;attempt&gt;.log" cleanup="ci/bin/cleanup-ci-state.sh --what image-logs --older-than 60d [--apply]" trigger="timer" acts="system">Host leg, manifest and verify logs; the cluster leg's log is the Jenkins build log, whose path is the build URL in the record.</path>
+    <path p="$COQ_CACHE/ci/image/&lt;name&gt;/" cleanup="ci/bin/cleanup-ci-state.sh --what image-cache [--apply]" trigger="timer" acts="system">podman build cache for the host leg; safe to delete at any time.</path>
+    <path p="$COQ_STATE/ci/image/authfile-&lt;pid&gt;.json" cleanup="removed by build.sh on exit; ci/bin/cleanup-ci-state.sh --what image-authfiles [--apply] reaps leftovers" trigger="timer" acts="system">The throw-away push credential file from gh auth token (build.sh header); never persists past a run.</path>
+    <path p="ghcr.io/jkkelley/&lt;name&gt; package versions" cleanup="ci/bin/cleanup-ghcr.sh --image NAME [--apply]" trigger="timer" acts="system">Retention of old digests against the keep-set union of step m-retention, recomputed at apply time.</path>
+    <path p="cluster: namespace jenkins, Kaniko pods of coq-image" cleanup="ci/bin/cleanup-cluster.sh --what image-pods --older-than 2h [--apply]" trigger="timer" acts="system">The plugin deletes its pods; the script reaps a stuck one.</path>
+    <s>Every script dry-runs by default, acts with --apply, retries each deletion 3 times and exits 4 listing what remains; N-45 registers them.</s>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <in from="N-20" href="../N-20/spec.xml#N-20">job.registered is the precondition of the cluster leg (the coq-image job).</in>
+    <in from="N-23" href="../N-23/spec.xml#N-23" drawn="false">image.config is written by this node from the CI mirror N-23 owns, when main changes an image input.</in>
+    <out to="N-24" href="../N-24/spec.xml#N-24">image is the pin every suite pod runs.</out>
+    <out to="N-35" href="../N-35/spec.xml#N-35">image is the pin the map hello page deploys.</out>
+  </section>
+
+  <section id="checklist" title="Checklist with proofs">
+    <item><check>Every suite in factory/config/suites.json full names an image in images.json, and lint fails when one does not.</check><proof>ci/bin/images.sh check exit 0 on main; a test case in ci/tests/cases that removes a mapping and asserts exit 3.</proof></item>
+    <item><check>Every pod template uses image@digest from an image record; no floating tag appears in ci/ or the Jenkinsfiles.</check><proof>grep -rn 'coq-[a-z]*:[0-9]' ci/jenkins ci/pod returns nothing; the plan entry's image field carries sha256.</proof></item>
+    <item><check>Checksums are verified inside the build and recorded as labels.</check><proof>verify.sh line "labels: ok" and the record's checksums_verified true.</proof></item>
+    <item><check>Both legs run as system jobs: the cluster leg in Jenkins, the host leg under the Go service, neither by hand.</check><proof>The image record's per_platform built_on values and the two log paths.</proof></item>
+    <item><check>Per-build push secrets are gone: the coq-image job mounts the ESO secret and creates none.</check><proof>kubectl get secrets -n jenkins shows no kaniko-ghcr-* younger than the first coq-image build; the Jenkinsfile has no kubectl create secret.</proof></item>
+    <item><check>A failed checksum is a 422 with evidence and is never retried.</check><proof>A test case that alters a sha256 in a scratch images.json and asserts one attempt and code 422.</proof></item>
+    <item><check>Retention runs by the tick and never deletes a pinned digest.</check><proof>cleanup-ghcr.sh --dry-run output on the daily tick record with one "kept (reason)" line per keep-set member (newest-5, pin, gitops, plan, backup, record-30d); a fixture where a gitops-referenced digest is older than the newest 5 asserts it is kept (not-run).</proof></item>
+    <item><check>The builder and the jnlp agent run by digest, and verify-pins alerts when either vanishes or the builder's checked date is older than 90 days.</check><proof>images.sh verify-pins lines "builder: ok sha256:738807f0..." and "jnlp: ok sha256:6a31d728..." (shared/ci-capacity.xml; not-run).</proof></item>
+    <item><check>Image records exist for every name in images.json at the current main.</check><proof>images.sh verify-pins exit 0 in the daily tick record.</proof></item>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <s>The Go service: Jenkins Job/Build and Job/Cancel on coq-image; podman on the host as the service's own user; gh auth token with write:packages for the host push and delete:packages for retention (the one token, read from the gh keyring, never written to a record).</s>
+    <s>Jenkins coq-image job: the ESO-synced ghcr-push-secret in namespace jenkins as a docker config mount; pods in namespace jenkins through the jenkins-controller service account; no GitHub token.</s>
+    <s>Seats: may edit ci/config/images.json and ci/images/** inside a declaring ticket; may run build.sh --no-push locally; no registry push, no Jenkins token.</s>
+    <s>Pods built by this node: inherit nothing; the images contain no credential and the Containerfiles are linted for secrets by lint/lint.sh.</s>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <s>Status fields: builds in flight, queue depth, last image per name with age, attempts used, retention last run.</s>
+    <s>Alerts (N-41): image.failed; an image.config older than PT2H with no result; verify-pins reporting a vanished digest; a build duration above 2x its p95.</s>
+    <s>Map: one N-22 machine with a lamp per image name on the machine screen; the stats screen counts images built and bytes pushed.</s>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <step n="R1" id="r-add">Adding an image: a ticket edits images.json (name, version, containerfile, base digest, binaries with checksums, suites) and adds ci/images/&lt;name&gt;/Containerfile; lint proves the mapping; the merge builds it.</step>
+    <step n="R2" id="r-bump">Bumping a binary: change the version and both checksums in images.json and the image version; the Containerfile reads them as build args; never edit a checksum in a script.</step>
+    <step n="R3" id="r-failed">On image.failed 422: read the log path in the record, fix the Containerfile or the checksum in a ticket; on 500: read the last error; if Jenkins or GHCR is down the N-20 or N-06 alerts say so and the next attempt is automatic after the fix.</step>
+    <step n="R4" id="r-cleanup">Cleanup: ci/bin/cleanup-ci-state.sh --what image-logs --older-than 60d; --what image-cache; --what image-authfiles; ci/bin/cleanup-ghcr.sh --image NAME (keep-set union); ci/bin/cleanup-cluster.sh --what image-pods --older-than 2h.</step>
+    <step n="R5" id="r-bootstrap">Bootstrap when no registry image exists at all: ci/image/build.sh --image coq-jenkins --platforms linux/arm64,linux/amd64 from the host with qemu binfmt (N-20 R1; planned flag), verify.sh shows linux/arm64, then every image through this node.</step>
+    <step n="R6" id="r-builder">Moving the builder pin: after the 14-day cool-off a ticket changes shared/ci-capacity.xml#builder-pin and ci/config/images.json together; the BuildKit fallback is taken only on the condition that row states.</step>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <cite href="rebuild/investigation/03-DECISIONS.md#24-d22-which-steps-stay-on-the-wsl-host-and-which-go-to-pods">D22, ruling C38: tests, lint and image builds as pods; the amd64 leg is the stated exception with its reason.</cite>
+    <cite href="~/.bearings/coq-stable/answers.jsonl#C38">Ruling C38 text.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#4-what-works">Digest and checksum pins in images.json; build.sh retries 3 then exit 4; multi-arch image proven on arm64.</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#5-what-broke-and-why">Items 6 (make lint and reindex cannot run in the pod), 7 (no image for scheduler and bearings), 9 (Makefile push bug).</cite>
+    <cite href="rebuild/investigation/L07-ci-and-pods.md#9-what-to-kill">Fail-open hostOnly; make lint in CI units; the Makefile double definition.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#54-small-leaks-and-drift">Per-build kaniko secrets leaking; replaced by one ESO secret.</cite>
+    <cite href="rebuild/investigation/L10-cluster-and-gitops.md#8-what-to-carry-forward">Item 1: arm64 is the constraint, every image multi-arch where the host also runs it.</cite>
+    <cite href="rebuild/investigation/S02-k8s-jobs-tekton-jenkins.md#8-what-to-carry-forward">The multi-arch pinned image with checksums as a keep; Jenkins pod agents and Kaniko as the working executor.</cite>
+    <cite href="ci/config/images.json">The config this node extends (platforms, suites per image).</cite>
+    <cite href="ci/config/images.schema.json">The schema extended with platforms per image, binaries and suites.</cite>
+    <cite href="ci/image/build.sh#L1-L10">The host build with 3 attempts and exit 4, reused as the amd64 leg.</cite>
+    <cite href="Jenkinsfile#L1-L30">The exec format error breadcrumb and the hostOnly list this node ends.</cite>
+    <cite href="~/projects/jenkins-shared-lib/vars/buildKaniko.groovy">The owner's Kaniko pattern reused for the cluster leg, minus the per-build secret.</cite>
+    <cite href="~/projects/jenkins-shared-lib/vars/updateGitOpsManifest.groovy">The tag-bump-by-commit pattern, kept for the map app (N-35) and rejected for the gate pin (see rejected).</cite>
+    <cite href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V05 infrastructure retried, results never.</cite>
+    <cite href="lint/Containerfile#L2">Rule 15 digest pins cited by the lint image.</cite>
+  </section>
+
+  <section id="rejected" title="Rejected with reason">
+    <rejected source="Floating tags ghcr.io/jkkelley/coq-test:1 in Jenkinsfile and coqGate.groovy"><reason>A node reused a cached amd64 image under the same tag and died with exec format error; image@digest from a record removes the class of fault.</reason></rejected>
+    <rejected source="hostOnly fail-open for scheduler and bearings (Jenkinsfile, ci/README.md)"><reason>Green with silent skips teaches nothing (L07 section 9); every suite now has an image and the plan refuses otherwise.</reason></rejected>
+    <rejected source="A repo-side lock file ci/config/images.lock.json updated by a bot pull request per build"><reason>Two sources of truth (K07); the image record is the pin and the pod template reads it at plan time; the Jenkins build URL and the record are the audit trail.</reason></rejected>
+    <rejected source="Kaniko on the cluster for linux/amd64"><reason>No amd64 node and Kaniko cannot emulate; the host leg is the honest exception to D22, bounded and recorded like every other job.</reason></rejected>
+    <rejected source="Baking the repository into the image (ci/pod/herdr-suite.pod.yaml breadcrumb)"><reason>The image would change with every commit; pods fetch the sha instead.</reason></rejected>
+    <rejected source="jenkins-shared-lib buildKaniko.groovy per-build kubectl create secret"><reason>Leaks on abort (nine found); one ESO-synced secret mounted by the job replaces it.</reason></rejected>
+    <rejected source="Building images inside the gate run for a pull request that changes a Containerfile"><reason>A pull request could then push to the registry; builds run from main only, after the merge, and a pull request proves its Containerfile with --no-push locally.</reason></rejected>
+  </section>
+
+</volume>

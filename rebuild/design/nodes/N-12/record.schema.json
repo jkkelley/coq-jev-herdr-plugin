@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-12/record.schema.json",
+  "title": "N-12 Stall timer: input and output records",
+  "description": "Book 1.1.0. Inputs: the leases table (../../shared/contracts.schema.json#/$defs/lease_row), the heartbeats row of each run (../N-15/record.schema.json#/$defs/seat.heartbeat), N-02 lease.expired, the tick:stall entity (../N-06/record.schema.json#/$defs/tick) and herdr agent.status for long-lived seats. Outputs: the stall record and the kill:<run_id> entity, written in one Commit with Lease.Revoke (shared/contracts.xml#kill-authority, operation key N-12/kill/<run_id>@<lease_version>/r1 on the request); stall.kill.failed; prompt.parked and prompt.cleared. Every record is on the shared committed envelope; the stall record carries ../../shared/contracts.schema.json#/$defs/failure_body so N-11 reads it as it is.",
+  "oneOf": [
+    { "$ref": "../../shared/contracts.schema.json#/$defs/lease_row" },
+    { "$ref": "../N-15/record.schema.json#/$defs/seat.heartbeat" },
+    { "$ref": "../N-02/record.schema.json#/$defs/lease_expired" },
+    { "$ref": "../N-06/record.schema.json#/$defs/tick" },
+    { "$ref": "#/$defs/agent_status" },
+    { "$ref": "#/$defs/stall" },
+    { "$ref": "#/$defs/kill" },
+    { "$ref": "#/$defs/stall_kill_failed" },
+    { "$ref": "#/$defs/prompt_parked" },
+    { "$ref": "#/$defs/prompt_cleared" }
+  ],
+  "$defs": {
+    "at": { "$ref": "../../shared/contracts.schema.json#/$defs/at" },
+    "envelope": { "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" },
+    "run_id": { "type": "string", "pattern": "^d-[0-9]{14}-[a-z0-9]{6}$", "description": "equals the dispatch_id" },
+    "seat_lease": {
+      "description": "a seat-class lease_ref: WO worker, reviewer or gate, or CR spec",
+      "allOf": [
+        { "$ref": "../../shared/contracts.schema.json#/$defs/lease_ref" },
+        { "properties": { "key": { "$ref": "../../shared/contracts.schema.json#/$defs/seat_lease_key" } } }
+      ]
+    },
+    "stall": {
+      "description": "The failure record of a killed run, appended in the Revoke Commit (or, for lease-expired, in the Commit that writes only the kill entity, since the row is already expired). failure_kind stall, outcome killed. The fenced seat.result that follows is an echo (shared/contracts.xml#terminal-report).",
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "$ref": "../../shared/contracts.schema.json#/$defs/failure_body" }
+      ],
+      "required": ["run_id", "role", "lease", "lease_version", "reason", "end_reason", "age_seconds", "bound_seconds", "bound_key", "signalled_by"],
+      "properties": {
+        "kind": { "const": "stall" },
+        "code": { "const": 500 },
+        "node": { "const": "N-12" },
+        "outcome": { "const": "killed" },
+        "failure_kind": { "const": "stall" },
+        "run_id": { "$ref": "#/$defs/run_id" },
+        "dispatch_id": { "$ref": "#/$defs/run_id" },
+        "role": { "enum": ["worker", "reviewer", "spec-author"] },
+        "lease": { "$ref": "#/$defs/seat_lease" },
+        "lease_version": { "type": "integer", "minimum": 1, "description": "the leases row version N-12 judged; Revoke is a compare-and-swap on it" },
+        "reason": { "enum": ["no-progress", "launcher-dead", "lease-expired", "ruling"] },
+        "end_reason": { "enum": ["revoked-stall", "revoked-launcher-lost", "revoked-ruling", "expired"] },
+        "last_heartbeat_at": { "$ref": "#/$defs/at" },
+        "last_progress_at": { "$ref": "#/$defs/at" },
+        "age_seconds": { "type": "integer", "minimum": 0 },
+        "bound_seconds": { "type": "integer", "minimum": 1 },
+        "bound_key": { "type": "string", "pattern": "^(stall\\.seconds\\.(worker|reviewer|spec-author)|lease\\.heartbeat_seconds|lease\\.ttl_seconds|ruling)$", "description": "the shared/contracts.xml#timing key the bound came from" },
+        "signalled_by": { "enum": ["launcher", "N-12"], "description": "N-12 only when the launcher is gone (shared/contracts.xml#kill-authority)" },
+        "ruling_ref": { "type": "string", "description": "the owner kill ruling (N-42) for reason ruling" }
+      },
+      "if": { "properties": { "reason": { "const": "ruling" } } },
+      "then": { "required": ["ruling_ref"] }
+    },
+    "kill": {
+      "description": "Entity kill:<run_id>, written with precondition absent in the Revoke Commit; the launcher (N-15) watches kill:* and stops unit coq-seat-<run_id>.",
+      "type": "object",
+      "required": ["entity", "reason", "lease_version", "at", "version"],
+      "properties": {
+        "entity": { "type": "string", "pattern": "^kill:d-[0-9]{14}-[a-z0-9]{6}$" },
+        "reason": { "enum": ["no-progress", "launcher-dead", "lease-expired", "ruling"] },
+        "lease_version": { "type": "integer", "minimum": 1 },
+        "at": { "$ref": "#/$defs/at" },
+        "version": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "stall_kill_failed": {
+      "description": "The unit was still active kill.grace_seconds after the stop, three times; a host fault for the owner. The lease stays revoked.",
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "required": ["run_id", "unit", "lease", "attempts", "owner_acts"],
+      "properties": {
+        "kind": { "const": "stall.kill.failed" },
+        "code": { "const": 500 },
+        "node": { "const": "N-12" },
+        "run_id": { "$ref": "#/$defs/run_id" },
+        "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/ticket" },
+        "unit": { "type": "string", "pattern": "^coq-seat-d-[0-9]{14}-[a-z0-9]{6}\\.service$" },
+        "lease": { "$ref": "#/$defs/seat_lease" },
+        "attempts": { "const": 3 },
+        "owner_acts": { "const": true }
+      }
+    },
+    "agent_status": {
+      "description": "herdr pane.agent_status_changed for a registered long-lived seat; input only, section prompt-parked",
+      "type": "object",
+      "properties": {
+        "kind": { "const": "agent.status" },
+        "pane_id": { "type": "string" },
+        "seat": { "type": "string" },
+        "session_id": { "type": "string" },
+        "status": { "enum": ["idle", "working", "blocked", "done"] },
+        "message": { "type": "string", "description": "the harness Notification text; matched by code against prompt-rules.json, never read from the pane" },
+        "at": { "$ref": "#/$defs/at" }
+      },
+      "required": ["kind", "pane_id", "seat", "session_id", "status", "at"]
+    },
+    "prompt_parked": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "prompt.parked" },
+        "code": { "const": 423 },
+        "node": { "const": "N-12" },
+        "episode": { "type": "string", "description": "seat, colon, session id, colon, the UTC second the blocked status began; the subject of the operation key N-12/prompt.parked/<episode>" },
+        "seat": { "type": "string" },
+        "pane_id": { "type": "string" },
+        "session_id": { "type": "string" },
+        "rule": { "type": "string", "description": "the id of the matching prompt-rules.json rule, or unmatched" },
+        "action": { "enum": ["card", "answer", "down"] },
+        "answer_model": { "type": "string" },
+        "message": { "type": "string" },
+        "blocked_since": { "$ref": "#/$defs/at" },
+        "detected_at": { "$ref": "#/$defs/at" },
+        "age_seconds": { "type": "integer", "minimum": 0 },
+        "recard_count": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["episode", "seat", "pane_id", "session_id", "rule", "action", "blocked_since", "detected_at", "age_seconds", "recard_count"]
+    },
+    "prompt_cleared": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "prompt.cleared" },
+        "code": { "const": 200 },
+        "node": { "const": "N-12" },
+        "episode": { "type": "string" },
+        "seat": { "type": "string" },
+        "session_id": { "type": "string" },
+        "cleared_at": { "$ref": "#/$defs/at" },
+        "parked_seconds": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["episode", "seat", "session_id", "cleared_at", "parked_seconds"]
+    }
+  }
+}

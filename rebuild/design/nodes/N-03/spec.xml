@@ -1,0 +1,276 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-03 Ticket intake and readiness. Node volume of the Factory Rebuild spec book, group G1 Store and leases.
+     Written 2026-10-14T04:34Z UTC by the G1 spec-author seat, round 1, against brief C.
+     Canonical by owner ruling C42; older specs cited below are sources, never authority (D14).
+     Round 2 (2026-10-14) replaced dead shared pointers by declared needs; those needs now resolve. -->
+<!-- N-03 book 1.1.0, 2026-10-15T06:00:00Z.
+     What broke (review dispositions F12, F13; verification NF5, NF6, NF9, NF10, NF11):
+     this volume kept its own transition diagram, which contradicted the shared list (in_flight to waiting, a gate waiting
+     reason no schema allowed); a retried ticket waited on its own claims; the claims table keyed on the path could not
+     detect herdr/bin/* against herdr/bin/seat.sh, and a second claim authority (N-14 file_claims) existed beside it; a ticket
+     went done at merge before main was verified; the gate phase and the cut request's source_request had no shape; the
+     ticket N-18 writes was rejected by this node's own ticket def.
+     The fix: statuses and transitions live only in shared/contracts.xml#ticket-transitions and this volume cites them;
+     one claims table owned here with two-way prefix containment checked inside the Commit, own claims excluded; a merged
+     status (written by N-09) between merge and verified main, done only on verified main; the input ticket is N-18's def; ticket.ready accepts the gate phase. -->
+<volume id="N-03" kind="node-spec" node="N-03" group="G1" version="1.2.0" written="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG, principles and the shared contracts</entry>
+    <entry ref="shared-needs">Shared needs: the shared anchors this node relies on</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input records: ticket, ticket.request and the transition triggers</entry>
+    <entry ref="output">Output records: ticket.ready, ticket.waiting and the terminal records</entry>
+    <entry ref="mechanism">Mechanism: tickets and claims as node-owned tables, evaluated every tick</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, and who owns them</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples (checked by C22)</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-03"/>
+    <sibling href="record.schema.json" role="schema">JSON schema of the ticket row, claims, ticket.ready, ticket.waiting and the terminal records</sibling>
+    <sibling href="../N-01/spec.xml#N-01" role="node">N-01 State store</sibling>
+    <sibling href="../N-02/spec.xml#N-02" role="node">N-02 Lease service</sibling>
+    <sibling href="../N-04/spec.xml#N-04" role="node">N-04 GitHub poll</sibling>
+    <sibling href="../N-05/spec.xml#N-05" role="node">N-05 Backups</sibling>
+    <sibling href="../N-06/spec.xml#N-06" role="node">N-06 Service units, clock and health</sibling>
+    <sibling href="../N-18/record.schema.json#/$defs/ticket" role="schema">The ticket N-18 accepts: the one ticket shape this node admits</sibling>
+    <shared href="../../dag.md#4-re-entries" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 1 (a ticket declares what starts and ends it) and rule 4 (tickets live in the store, never the repository)</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, conflicts that report</principle>
+    <shared href="../../shared/contracts.xml#ticket-transitions" role="contract">The one ticket status set and transition table; this volume never restates it</shared>
+    <shared href="../../shared/contracts.xml#claims" role="contract">The one claim authority: this node's claims table</shared>
+    <shared href="../../shared/contracts.xml#statements" role="contract">Registered statements on node-owned tables</shared>
+    <shared href="../../shared/contracts.xml#dispatch" role="contract">GrantDispatch moves a ready ticket to in_flight in N-07's Commit</shared>
+    <shared href="../../shared/contracts.xml#retry-owner" role="contract">Who decides attempt n+1, fresh or resumed, charged or not</shared>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <rule>Each need names the shared volume and anchor that holds the rule; check.sh resolves it. The status set is shared/contracts.schema.json#/$defs/ticket_status; the transitions are shared/contracts.xml#ticket-transitions (check C24 refuses a second table).</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for ticket.admitted 100; ticket.waiting 100; intake.recovered 100; ticket.ready 200; ticket.done 204; ticket.cancelled 204; ticket.transition_refused 412 (a transition not in the table; 409 is kept for version and idempotency conflicts only); ticket.refused 422; ticket.stale 500; intake.failed 500; intake.orphan 500; intake.slow 500. Owner-acts: ticket.stale; intake.orphan at three in a day.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-tickets">tickets(id PRIMARY KEY, status, phase, attempt, priority, role, target_node, files JSON, deps JSON, body JSON, source_request, waiting_reason, cut_at, ready_at, merged_at, done_at, version); status in shared/contracts.schema.json#/$defs/ticket_status.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-claims">claims(id INTEGER PRIMARY KEY, ticket, pattern, prefix, taken_at, released_at); a claim is live while released_at is null; a partial index on prefix WHERE released_at IS NULL. table-file-claims is deleted (shared/contracts.xml#claims).</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="flag-hold">Entity flag:hold; read at the start of every tick; ticks and monitoring never stop under hold.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="one-file-one-in-flight">One file, one in-flight ticket: files declared at cut, refused at ready, claim rows as the proof (V07).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="tickets-are-small">One concern, a few files, a diff read in minutes.</need>
+    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="ticket-shape">The ticket as data; a seat reads it through its bundle and never changes it.</need>
+    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">intake.stale_days 7, intake.evaluate_seconds 2, intake.keep_days 90; the aggregate exemption list factory/config/claims.json carried as data.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="stale-ticket">A ticket waiting past intake.stale_days: ticket.stale 500, one card; the owner cancels or re-cuts through N-29.</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <is>N-03 holds every ticket as a row of its tickets table (D04 option C, C35: tickets in the state root, never in git), applies the ticket transitions whose owner is N-03 in shared/contracts.xml#ticket-transitions, and decides on every tick which tickets are ready: every dependency done, and no declared path claimed by another ticket.</is>
+    <is>It is the one claim authority (shared/contracts.xml#claims): it takes a ticket's claims in the same Commit that makes the ticket ready, so two tickets can never hold overlapping paths (V07), and it releases them in the Commit of the transition the table marks as releasing.</is>
+    <is-not>It does not cut tickets (N-17), does not validate them (N-18), does not dispatch (N-07 moves ready to in_flight inside GrantDispatch), does not decide retries (N-11), and never reads a ticket from a branch or a checkout (RC3, K07). N-14 only verifies that a ticket holds its claims.</is-not>
+    <decisions>D04 (C35), D16 (C48), V07, V09; review dispositions F12, F13.</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="ticket" schema="../N-18/record.schema.json#/$defs/ticket">
+      <who>N-18 validator (accepted tickets; every new work order enters here and only here); N-29 (a ruling that moves a dead ticket back per the table, attempt reset). The shape is N-18's def; this node never restates it. The DAG node a ticket is about is target_node, never the envelope's node (NF11).</who>
+      <rule>Admit refuses: empty files, a file on the aggregate list (factory/config/claims.json), an unknown dep, a dep cycle (Kahn over deps plus the existing graph). A refused ticket is a row with status refused and ticket.refused 422; N-17 retries with the refusal attached.</rule>
+    </record>
+    <record kind="ticket.request" schema="record.schema.json#/$defs/ticket_request">
+      <who>N-10 (fix for a held main), N-30 (a cut: or ticket: message), N-49 (one per LAND row), N-50 (the archive ticket).</who>
+      <rule>Admit turns a request into a cut request CR-&lt;request id&gt; with phase spec, role spec-author, attempt 1, no files and no claims, status per the table's admit row, and appends ticket.ready for the spec phase; N-07 grants CR-&lt;id&gt;:spec:n. The cut request is closed by source_request: when N-18 commits ticket-set.accepted naming source_request equal to the request id, N-03 moves CR-&lt;id&gt; to done in the same pass (and to dead after three validator.refused, N-11). A second request with the same id replays; a fix request naming a hold that already has a live cut request is refused 412.</rule>
+    </record>
+    <also kind="ticket-set.accepted" from="N-18" schema="../N-18/record.schema.json#/$defs/ticket-set.accepted" note="its source_request closes the cut request"/>
+    <also kind="pr.opened, gate.verdict, review.passed, merge, main.verified, main.rejected, attempt, ticket.dead, ruling, cancel" from="N-16, N-08, N-19, N-09, N-10, N-11, N-29, N-50" note="the triggers of the rows whose owner is N-03 in shared/contracts.xml#ticket-transitions; N-03 reads the row and applies it"/>
+    <also kind="scheduler tick" from="N-06" note="every tick re-evaluates every cut and waiting ticket (level-triggered)"/>
+  </input>
+
+  <output id="output">
+    <record kind="ticket.ready" code="200" schema="record.schema.json#/$defs/ticket_ready">
+      <field name="ticket, phase, attempt, role">What a seat lease is keyed on. phase is shared/contracts.schema.json#/$defs/phase: worker for a new ticket, spec for a cut request (role spec-author), reviewer after gate.verdict green on the current head, and gate for the code run N-07 performs in process (role gate, never a seat; NF10).</field>
+      <field name="claims">The patterns claimed (worker phase) or confirmed held (other phases) in the same Commit.</field>
+      <field name="brief_inputs">The ticket row key and the design anchor N-13 renders.</field>
+    </record>
+    <record kind="ticket.waiting" code="100" schema="record.schema.json#/$defs/ticket_waiting">
+      <field name="reason">deps (the ids not done), files (the patterns and the holder ticket), hold (flag:hold set), validation (schema failure at intake, with the path). Written once per change of reason, never every tick.</field>
+    </record>
+    <record kind="ticket.done" code="204" schema="record.schema.json#/$defs/ticket_terminal">N-10's verified record for a main sha that contains the merge moves the ticket from merged (written by N-09) to done and releases its claims; until then the ticket is merged and its dependents keep waiting (F13). For a cut request, the accepted ticket set naming its source_request closes it.</record>
+    <record kind="ticket.cancelled" code="204" schema="record.schema.json#/$defs/ticket_terminal">A ruling or the cut-over cancel set cancelled the ticket; live claims released.</record>
+    <record kind="ticket.refused" code="422" schema="record.schema.json#/$defs/ticket_refused">Cycle, unknown dep, empty files, aggregate file or schema; N-17 retries with the refusal attached, up to 3.</record>
+    <record kind="ticket.transition_refused" code="412" schema="record.schema.json#/$defs/ticket_transition_refused">A trigger asked for a move the table does not hold from the ticket's current status; nothing changed.</record>
+  </output>
+
+  <mechanism id="mechanism">
+    <component name="package">Go package scheduler/internal/intake: Admit, Evaluate, Apply(trigger), Recover; pure functions for the cycle check (Kahn), the prefix of a pattern and the readiness predicate. Every write is one Commit on N-01 through the statements below.</component>
+    <component name="tables">tickets and claims in coq.db, owned here (needs above). The ticket row is record.schema.json#/$defs/ticket_row; the claim row is record.schema.json#/$defs/claim.</component>
+    <component name="statements">Registered with N-01 (shared/contracts.xml#statements): tickets.insert, tickets.transition (refuses a pair not in the table, a caller other than the row's owner or a from status no longer current with 412 precondition and ticket.transition_refused), claims.acquire, claims.release. N-07, N-09, N-11 and N-16 call tickets.transition for their own rows. N-14 reads the claims table (a read, not a statement) and refuses 412 claim_missing when the ticket holds no live claim covering a file.</component>
+    <transitions>The status set and every transition, with its trigger, owner and whether it keeps, takes or releases claims, are the rows of shared/contracts.xml#ticket-transitions. This node applies the rows whose owner is N-03 and no others; tickets.transition refuses any other move. A local diagram is not kept, because a second table drifts (C24).</transitions>
+    <step n="1">Admit: a ticket (N-18's def) or a ticket.request; validate, refuse empty files and aggregate files, check deps exist, run the cycle check; tickets.insert writes the row with status cut, or refused with ticket.refused 422; ticket.admitted 100.</step>
+    <step n="2">Evaluate, every scheduler tick and after every Admit and release: for every ticket whose status the table lets N-03 make ready, in priority then cut_at order: deps_done is true when every dep has status done (merged is not done, so dependents wait for verified main); files_free is true when no live claim of another ticket overlaps a declared pattern; hold is flag:hold.</step>
+    <step n="3">Ready: when deps_done and files_free and not hold, one Commit with operation key N-03/ticket.transition/&lt;ticket&gt;@&lt;version&gt;/r1: claims.acquire when the row says acquire, tickets.transition to ready at the read version, append ticket.ready 200. An overlap found inside the Commit refuses the whole Commit (412 precondition, reason files-claimed) and the ticket waits with reason files this tick.</step>
+    <step n="4">Waiting: when not ready, compute the reason; if it differs from the row's waiting_reason, tickets.transition or update it and append ticket.waiting 100; else write nothing.</step>
+    <step n="5">Triggers: for each trigger record of a row owned by N-03, read the ticket at its version and apply the row with tickets.transition; when the row releases claims, claims.release runs in the same Commit. N-10's verified record moves merged to done (ticket.done 204, claims released); the other rows follow the table.</step>
+    <claims>
+      <rule>A claim row is (id, ticket, pattern, prefix, taken_at, released_at). prefix is the literal part of the pattern before its first glob character; a bare directory or a trailing / claims the subtree; `*` crosses / (factory/bin/claims.sh header, kept as the rule).</rule>
+      <rule>Overlap is two-way prefix containment: a new prefix P overlaps a live prefix Q when P starts with Q or Q starts with P. herdr/bin/* (prefix herdr/bin/) and herdr/bin/seat.sh overlap; herdr/bin/a.sh and herdr/bin/b.sh do not.</rule>
+      <rule>claims.acquire runs inside the ready Commit: one SELECT over live claims (released_at IS NULL) of other tickets whose prefix is a prefix of P, or of which P is a prefix, per pattern; any row means 412 precondition (reason files-claimed) naming the holder, and nothing is written. Own live claims are excluded and a pattern the ticket already holds is not inserted twice, so a retried ticket never waits on itself (NF6).</rule>
+      <rule>claims.release sets released_at on every live claim of the ticket; rows are never deleted while live, and released rows are history for N-45 and the Machine screen. A released prefix is claimable again at once.</rule>
+      <rule>This is the only claim authority; N-14 keeps no claim table; it reads this one and refuses 412 claim_missing.</rule>
+    </claims>
+    <ordering>Priority first, then cut_at; within one tick the evaluation is a single pass, so a lower-priority ticket cannot take a path a higher one needs in the same tick.</ordering>
+  </mechanism>
+
+  <start id="start">
+    <rule>Nothing starts by an agent typing. Admit runs when a ticket or request commits (N-01 Tail in-process); Evaluate runs on every scheduler tick from N-06 and after each Admit and release.</rule>
+    <step n="1">At service start, after the store opens: Recover releases every live claim whose ticket is done, dead, cancelled or refused, appending intake.recovered 100 with the count.</step>
+    <step n="2">Tickets in status ready with no reserved or running lease stay ready; N-07's first tick dispatches them.</step>
+  </start>
+
+  <waits id="waits">
+    <wait name="deps" class="level-triggered" on="a dep ticket reaching done" timeout="none held here: the ticket waits as data; ticket.waiting carries the ids" fallback="the daily tick reports a ticket waiting over intake.stale_days as ticket.stale 500 to N-28; the owner decides cancel or re-cut"/>
+    <wait name="files" class="level-triggered" on="an overlapping claim releasing" timeout="none held here" fallback="same as deps: stale report after intake.stale_days; the holder's lease and stall timers bound how long a claim is held in flight"/>
+    <wait name="verify" class="level-triggered" on="main.verified or main.rejected for a merged ticket" timeout="none held here: N-10's verify bound (shared/retry-budget.xml#deadlines) ends it" fallback="N-10 rejects or verifies within its bound; the ticket stays merged and its dependents wait until then"/>
+    <wait name="hold" class="owner-decision" on="flag:hold clearing" timeout="none held here" fallback="the owner clears it through N-42 and N-29; the Controls screen shows the hold lamp"/>
+    <wait name="commit" on="the store" timeout="5 s" fallback="503; the ticket is evaluated again next tick with the same operation key"/>
+    <wait name="evaluate" on="one pass over cut and waiting tickets" timeout="intake.evaluate_seconds per tick" fallback="a pass over the bound is cut at the bound, intake.slow 500 is reported once, and the rest are evaluated next tick in order"/>
+  </waits>
+
+  <retries id="retries">
+    <rule>Who retries is decided in shared/contracts.xml#retry-owner. N-03 retries its own Commits; it never decides an attempt.</rule>
+    <step name="admit">A store 503 is retried 3 times with 1, 2, 4 s; the fourth failure appends intake.failed 500 and the record is re-admitted on the next Tail re-read, because Admit is idempotent by ticket id and operation key.</step>
+    <step name="ready">A 412 files-claimed is not an error: the ticket waits with reason files; next tick re-evaluates.</step>
+    <step name="refused">A refused ticket goes back to its author as data: N-17 retries with the refusal attached up to 3 times, then N-11 writes dead and N-28 raises one card.</step>
+    <step name="trigger">A merge or verify record whose ticket cannot be found appends intake.orphan 500 with the PR number and does not fail the merge; a card only at three orphans in a day.</step>
+  </retries>
+
+  <many-agents id="many-agents">
+    <reading>Seats read their ticket only through their bundle (N-13); nodes read the tickets table through N-01.</reading>
+    <working>Many N-17 runs admit at once: each Admit is one Commit keyed by ticket id; a ticket set is admitted exactly once.</working>
+    <collision name="two-tickets-one-subtree">WO-a declares herdr/bin/* and WO-b declares herdr/bin/seat.sh, both eligible in one tick: the single pass takes WO-a's claim; WO-b's claims.acquire finds herdr/bin/ is a prefix of herdr/bin/seat.sh and the Commit is 412 files-claimed; WO-b waits with reason files naming WO-a (NF5 closed).</collision>
+    <collision name="retry-own-claims">WO-a's worker attempt 1 failed and N-11 moved it to retry_wait keeping its claims; at ready again claims.acquire excludes WO-a's own live claims and inserts nothing new; WO-a is ready at once (NF6 closed).</collision>
+    <collision name="claim-vs-release">A merge releases claims while Evaluate runs: both are Commits behind the single writer; Evaluate sees the released row and claims, or sees the live row and waits one tick. Never two tickets on overlapping paths.</collision>
+    <collision name="ruling-vs-dead">N-29 moves a dead ticket while N-11 writes dead for attempt 3: tickets.transition carries the read from status; the loser gets 412 precondition and re-reads; the table decides which move is legal from the status it finds.</collision>
+    <collision name="merged-dependent">WO-b depends on WO-a; WO-a merges: N-09 moves WO-a to merged, not done, so WO-b waits until N-10 verifies main; a rejected main never leaves WO-b built on an unverified change (F13).</collision>
+    <test>100 tickets over 20 overlapping patterns with random deps and no cycle, admitted by 4 concurrent writers, evaluated over 50 ticks with merges, verifies and retries at random: at no tick do two tickets hold overlapping live claims; no ticket waits on its own claim; every ticket reaches ready exactly once per phase and attempt (not-run).</test>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="100" kind="ticket.admitted" acts="nobody; the next Evaluate"/>
+    <emits code="100" kind="ticket.waiting" note="reason deps, files, hold, validation; once per reason change" acts="nobody; N-38 shows the queue depth"/>
+    <emits code="100" kind="intake.recovered" acts="nobody; monitoring"/>
+    <emits code="200" kind="ticket.ready" acts="N-07 grants and dispatches (N-02 statements)"/>
+    <emits code="204" kind="ticket.done" acts="N-45 (branch and worktree release), N-51 (the day's verified count), dependents through Evaluate"/>
+    <emits code="204" kind="ticket.cancelled" acts="N-45"/>
+    <emits code="412" kind="ticket.transition_refused" acts="the caller re-reads; evidence"/>
+    <emits code="422" kind="ticket.refused" acts="N-17 (retry with the refusal attached)"/>
+    <emits code="500" kind="ticket.stale" acts="owner, one card from N-28"/>
+    <emits code="500" kind="intake.failed" acts="N-06 health; re-admitted on re-read"/>
+    <emits code="500" kind="intake.orphan" acts="monitoring; a card at three in a day"/>
+    <emits code="500" kind="intake.slow" acts="N-06 health"/>
+    <rule>ticket.dead is written by N-11, not here. Every code above must exist in ../../shared/status-codes.xml#codes.</rule>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path p="STATE/store/coq.db (tables tickets, claims)" writer="N-03 through N-01" cleanup="scheduler/host/bin/cleanup-tickets.sh: --dry-run lists done, cancelled and refused tickets older than intake.keep_days and their released claims; --apply deletes them after N-05 confirms a verified backup newer than their done_at" registry="N-45" trigger="owner" acts="owner"/>
+    <path p="STATE/tickets/export/WO-*.md" writer="`scheduler ctl ticket export` only, a read-only rendering for humans; never read by any node" cleanup="scheduler/host/bin/cleanup-tickets.sh --exports deletes the directory" registry="N-45" trigger="timer" acts="system"/>
+    <rule>work-orders/ in the repository stops being a ticket store at GOFACTORY (N-50); existing files are rendered into the store once by N-49, and the directory holds no status thereafter.</rule>
+  </state-paths>
+
+  <edges id="edges">
+    <in from="N-01" record="committed ticket records" href="../N-01/spec.xml#output"/>
+    <in from="N-06" record="scheduler tick" href="../N-06/spec.xml#output"/>
+    <out to="N-02" record="ticket.ready (ticket, phase, attempt, role)" href="../N-02/spec.xml#input"/>
+    <re-entry from="N-18" note="accepted tickets, and ticket-set.accepted closing a cut request by source_request" href="../../dag.md#4-re-entries"/>
+    <re-entry from="N-10" note="a fix ticket request after rejected main; verified main moves merged to done" href="../../dag.md#4-re-entries"/>
+    <re-entry from="N-29" note="a ruling that moves a dead ticket" href="../../dag.md#4-re-entries"/>
+    <re-entry from="N-30" note="a message turned into a ticket request" href="../../dag.md#4-re-entries"/>
+    <re-entry from="N-49" note="land tickets, one per LAND row" href="../../dag.md#4-re-entries"/>
+  </edges>
+
+  <examples id="examples">
+    <example schema="record.schema.json#/$defs/ticket_ready">{"id":"20261015T062950Z-200-q8w2e","at":"2026-10-15T06:29:50Z","kind":"ticket.ready","code":200,"node":"N-03","epoch":1,"ticket":"WO-20261014-ab12","phase":"worker","attempt":1,"role":"worker","claims":["scheduler/internal/store/"],"brief_inputs":{"entity_key":"ticket:WO-20261014-ab12","design_anchor":"rebuild/design/nodes/N-01/spec.xml#mechanism"}}</example>
+    <example schema="record.schema.json#/$defs/ticket_ready">{"id":"20261015T063100Z-200-c7r1q","at":"2026-10-15T06:31:00Z","kind":"ticket.ready","code":200,"node":"N-03","epoch":1,"ticket":"CR-msg-20261015-0612","phase":"spec","attempt":1,"role":"spec-author","claims":[],"brief_inputs":{"entity_key":"ticket:CR-msg-20261015-0612","design_anchor":"rebuild/design/nodes/N-30/spec.xml#input"}}</example>
+    <example schema="record.schema.json#/$defs/ticket_ready">{"id":"20261015T070500Z-200-g4t8e","at":"2026-10-15T07:05:00Z","kind":"ticket.ready","code":200,"node":"N-03","epoch":1,"ticket":"WO-20261014-ab12","phase":"gate","attempt":1,"role":"gate","claims":["scheduler/internal/store/"],"brief_inputs":{"entity_key":"ticket:WO-20261014-ab12","design_anchor":"rebuild/design/nodes/N-01/spec.xml#mechanism"}}</example>
+    <example schema="record.schema.json#/$defs/ticket_waiting">{"id":"20261015T062900Z-100-w1f5h","at":"2026-10-15T06:29:00Z","kind":"ticket.waiting","code":100,"node":"N-03","epoch":1,"ticket":"WO-20261014-cd34","reason":"files","files_held":[{"pattern":"herdr/bin/seat.sh","holder":"WO-20261014-ab12","holder_pattern":"herdr/bin/*"}]}</example>
+    <example schema="record.schema.json#/$defs/ticket_terminal">{"id":"20261015T081500Z-204-d0n3x","at":"2026-10-15T08:15:00Z","kind":"ticket.done","code":204,"node":"N-03","epoch":1,"ticket":"WO-20261014-ab12","by":"20261015T081450Z-201-vrf02","claims_released":0}</example>
+    <example schema="record.schema.json#/$defs/claim">{"id":7,"ticket":"WO-20261014-ab12","pattern":"herdr/bin/*","prefix":"herdr/bin/","taken_at":"2026-10-15T06:29:50Z"}</example>
+  </examples>
+
+  <checklist id="checklist">
+    <item><check>A ticket with empty files, an unknown dep or a dep cycle is refused 422 with the reason.</check><proof>Go test intake/admit_test.go (not-run).</proof></item>
+    <item><check>tickets.transition refuses a move that is not a row of shared/contracts.xml#ticket-transitions, or whose from status is no longer current, with 412 and ticket.transition_refused.</check><proof>Go test generated from the table rows (not-run).</proof></item>
+    <item><check>herdr/bin/* and herdr/bin/seat.sh overlap both ways; herdr/bin/a.sh and herdr/bin/b.sh do not; the claims.sh overlap cases pass as fixtures.</check><proof>Go test intake/claims_test.go (not-run).</proof></item>
+    <item><check>ticket.ready takes every claim in one Commit; an overlap on one pattern leaves none taken.</check><proof>Go test with a pre-taken subtree (not-run).</proof></item>
+    <item><check>A retried ticket holding its own claims is ready at once and inserts no duplicate claim.</check><proof>Go test (not-run).</proof></item>
+    <item><check>A ticket merged by N-09 keeps its claims; dependents stay waiting until N-10's verified record moves it to done and releases them.</check><proof>Go test (not-run).</proof></item>
+    <item><check>A cut request moves to done when ticket-set.accepted names it as source_request.</check><proof>Go test (not-run).</proof></item>
+    <item><check>ticket.ready validates for the worker, reviewer, spec and gate phases.</check><proof>C22 on #examples (worker, spec, gate).</proof></item>
+    <item><check>ticket.waiting is appended only when the reason changes.</check><proof>Go test: 10 ticks, one record (not-run).</proof></item>
+    <item><check>Concurrency test: never two tickets on overlapping live claims.</check><proof>scheduler/tests/intake_concurrency.sh output (not-run).</proof></item>
+    <item><check>No node reads work-orders/ for status.</check><proof>grep over scheduler/ for work-orders returns only the export renderer (not-run).</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <actor name="N-18 validator (code)" may="Admit accepted tickets"/>
+    <actor name="N-10, N-29, N-30, N-49, N-50 (code)" may="Admit their re-entry kinds; N-29 may set priority and apply ruling rows"/>
+    <actor name="N-07, N-09, N-11, N-16 (code)" may="tickets.transition for the rows of the table they own, in their own Commits"/>
+    <actor name="N-14 (code)" may="read claims"/>
+    <actor name="seat (the model)" may="nothing here; its bundle carries the ticket; it cannot change status, files or deps"/>
+    <actor name="owner" may="cancel, reprioritize and unblock through cards (N-29); `scheduler ctl ticket export` for reading"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <gauge name="tickets.by_status" by="status"/>
+    <gauge name="tickets.waiting_by_reason" by="reason"/>
+    <gauge name="tickets.oldest_waiting_seconds" alarm="over intake.stale_days"/>
+    <gauge name="tickets.merged_unverified" alarm="over 1: main safety allows at most one unverified merge"/>
+    <gauge name="claims.live"/>
+    <counter name="tickets.refused_total" alarm="3 in an hour: the cutter is producing bad data"/>
+    <counter name="intake.evaluate_ms" kind="histogram" alarm="p99 over intake.evaluate_seconds"/>
+    <surface>Map screen (N-38) shows queue depth per status; Machine screen (N-39) shows one ticket's deps and claims; Alerts (N-41) shows ticket.stale.</surface>
+  </monitoring>
+
+  <runbook id="runbook">
+    <task name="why is a ticket waiting">`scheduler ctl ticket get WO-ID` prints status, phase, reason, the dep ids not done and the patterns with their holders.</task>
+    <task name="who holds a path">`scheduler ctl claim get PATH` prints every live claim whose prefix contains PATH or is contained by it.</task>
+    <task name="render tickets for reading">`scheduler ctl ticket export --dir STATE/tickets/export`; the directory is disposable.</task>
+    <task name="cancel or reprioritize">Through a card and N-29, never by editing the store; the ruling record is the audit.</task>
+    <task name="cleanup">scheduler/host/bin/cleanup-tickets.sh --dry-run, then --apply.</task>
+  </runbook>
+
+  <rejected id="rejected">
+    <item source="rebuild/investigation/03-DECISIONS.md#6-d04-where-tickets-and-their-status-live" what="tickets in work-orders/ in git with a status field (A), status in a store with body in git (B), or GitHub issues (D)" reason="C35 ruled option C; every RC3 symptom came from status on a branch"/>
+    <item source="factory/bin/claims.sh" what="finding live tickets through `git worktree list` and open PRs" reason="the claim is a row here; the overlap rule and the aggregate exemption are kept as data"/>
+    <item source="queue/bin/queue.sh" what="a directory queue with claim by atomic rename" reason="three queues meant three truths (K05); the tickets table with priority order is the one queue"/>
+    <item source="line/bin/board.sh" what="the second directory queue, read by the board" reason="the board reads the tickets table through N-31"/>
+    <item source="line/bin/aq.sh" what="the third directory queue, the architect's" reason="an architect never holds a queue; rulings are records through N-29"/>
+    <item source="bin/wo-start.sh" what="start flips status on the ticket's branch" reason="status never lives in git again (K07)"/>
+    <item source="nodes/N-03/spec.xml" what="a local status diagram and a claims table keyed on the path (book 1.0)" reason="the diagram contradicted the shared table and a path key cannot see a glob overlap (F12, NF5); the table lives in shared/contracts.xml and claims carry a prefix"/>
+    <item source="nodes/N-14/spec.xml" what="a second claim table (file_claims) with a unique prefix index" reason="a unique index catches only equal prefixes and a partial index cannot read another table (report A, p09_claims); one authority, checked inside the Commit"/>
+    <item source="nodes/N-03/spec.xml" what="done at merge (book 1.0)" reason="a dependent could start on a change main later rejected (F13); merged holds until verified"/>
+  </rejected>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="6-d04-where-tickets-and-their-status-live"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="18-d16-may-an-llm-decompose-work-into-tickets"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep" note="V07, V09, V10"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="3-dropped-by-the-field-still-carried-here-kill" note="K05, K07"/>
+    <source path="rebuild/investigation/01-ROOT-CAUSES.md" anchor="rc3-state-lives-in-many-copies-with-no-authority-joined-by-polling-and-by-hand"/>
+    <source path="rebuild/investigation/L01-line-scripts.md" anchor="8-what-to-carry-forward" note="item 6: claims.sh and wo-start.sh"/>
+    <source path="rebuild/investigation/L02-state-stores.md" anchor="7-decisions-an-llm-makes-that-a-rule-could-make" note="items 1, 5, 6, 9"/>
+    <source path="rebuild/investigation/L11-governance-layer.md" anchor="8-what-to-carry-forward" note="claims check, work-order concepts"/>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="12-ordering-and-trigger"/>
+    <source path="factory/bin/claims.sh" anchor="header" note="overlap rule, aggregate exemption, choice 1"/>
+    <source path="rebuild/design/dag.md" anchor="4-re-entries"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C35"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C48"/>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/one-file-one-in-flight-ticket.md" note="one-page memory rule"/>
+    <source path="~/.claude/CLAUDE.md" anchor="hard-rule-never-name-a-ticket-without-its-title"/>
+  </sources>
+</volume>

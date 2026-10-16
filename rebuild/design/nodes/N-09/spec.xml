@@ -1,0 +1,332 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-09 Merge. Node volume of the factory rebuild spec book, group G2 Scheduler and verdicts.
+     Written 2026-10-14T04:50Z UTC by the spec-author seat for group G2, round 1, against brief C;
+     revised 2026-10-14T06:40Z UTC by the round 3 spec-author seat against the round 2 review verdict (every reason named there is fixed in this revision)
+     (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+     Every time in this volume is UTC. No em dash appears in this volume. Pointers are path plus anchor, never prose. -->
+<!-- N-09 book 1.1.0, 2026-10-15T06:00:00Z (review F08, F09, F10, F13, F16 merge part, C new 1, 3, 7).
+     What broke: the merge used N-04's read-only token; mergeable_state and files were never fetched, so behind and
+     owner-locked paths could not be decided; a strict-protection refusal was retried three times on the same head;
+     merges never waited on a verify, so main could carry many unverified merges and N-26 could be starved; a lost merge
+     was looked for in the open list it had already left; merge.lock 120 s was shorter than one call plus read-back.
+     The fix: decide by mergeable_state (update-branch when behind), the forge-merge credential, at most one unverified
+     merge on main, protection and files read before any call, one merge call per head through the outbox, recovery
+     through forge.pr_closed, merge.lock 300 s, and the bootstrap merge path. Rejected: the o71ee merge train (below). -->
+<volume id="N-09" kind="node-spec" node="N-09" group="G2" title="Merge" version="1.2.0" issued="2026-10-15T06:00:00Z" timezone="UTC" author="spec-author seat, group G2, round 3; book 1.1.0 amendment">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, schema, shared volumes</entry>
+    <entry ref="purpose">Purpose and the one sentence</entry>
+    <entry ref="input">Input records: gate.verdict green plus review.passed on one head</entry>
+    <entry ref="output">Output records: merge, merge.conflict, merge.failed</entry>
+    <entry ref="mechanism">Mechanism: merge.sh lifted into the Go service, with the fix-ticket exception under a hold</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries: three attempts, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once: the collision answer</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths written and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="schema">Schema: record.schema.json</entry>
+    <entry ref="checklist">Checklist with proof per item</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent path="../../index.xml" anchor="N-09"/>
+    <dag path="../../dag.md" anchor="3-every-node"/>
+    <sibling node="N-07" path="../N-07/spec.xml" anchor="contents"/>
+    <sibling node="N-08" path="../N-08/spec.xml" anchor="contents"/>
+    <sibling node="N-10" path="../N-10/spec.xml" anchor="contents"/>
+    <sibling node="N-11" path="../N-11/spec.xml" anchor="contents"/>
+    <sibling node="N-12" path="../N-12/spec.xml" anchor="contents"/>
+    <related node="N-10" path="../N-10/spec.xml" anchor="m-fix" note="the fix path whose pull request this node merges under a hold"/>
+    <related node="N-03" path="../N-03/spec.xml" anchor="input" note="the ticket entity whose hold_id field names the hold a fix ticket was cut for"/>
+    <schema path="record.schema.json" anchor="/$defs/merge"/>
+    <shared path="../../shared/status-codes.xml" anchor="code-200"/>
+    <shared path="../../shared/status-codes.xml" anchor="code-409"/>
+    <shared path="../../shared/status-codes.xml" anchor="code-412"/>
+    <shared path="../../shared/status-codes.xml" anchor="code-423"/>
+    <shared path="../../shared/status-codes.xml" anchor="code-500"/>
+    <shared path="../../shared/principles.xml" anchor="machine-verdict-merges"/>
+    <shared path="../../shared/principles.xml" anchor="three-attempts"/>
+    <shared path="../../shared/state-store.xml" anchor="table-leases"/>
+    <shared path="../../shared/state-store.xml" anchor="idempotency"/>
+    <shared path="../../shared/seat-contract.xml" anchor="review-record"/>
+    <shared path="../../shared/failure-cases.xml" anchor="conflict"/>
+    <shared href="../../shared/cut-over.xml#step-scheduler" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+    <shared href="../../shared/authority.xml#credential-matrix" role="authority">forge-merge is this node's credential and no other node's</shared>
+    <shared href="../../shared/authority.xml#github-app" role="authority">The protection N-09 requires before any merge call</shared>
+    <shared href="../../shared/contracts.xml#outbox" role="contract">The merge and update-branch calls are effects rows written in the deciding Commit</shared>
+    <shared href="../../shared/contracts.xml#ticket-transitions" role="contract">pr_open to merged here; merged to done only on a verified main (N-03, N-10)</shared>
+    <shared href="../../shared/contracts.xml#timing" role="contract">merge.lock_seconds 300</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <sentence>When the newest head of a pull request carries a green coq/gate verdict and a review.passed record, main has no unverified merge, protection is verified and no hold stands, the Go service squash-merges it on GitHub with the forge-merge credential and writes one merge record with the merge sha and its parent on main, or brings the branch up to date, or writes one merge.conflict 409, and no seat is involved.</sentence>
+    <is>A pure function of records, the forge:snapshot entity and the clock (V03): the same inputs give the same decision, so two runs cannot disagree.</is>
+    <is>The machine verdict merge of D15: green gate plus reviewer record; the owner holds the line through cards and the Controls screen, never through the per pull request path, except for the owner-locked page assets (../N-48/spec.xml#owner-confirm).</is>
+    <is>One unverified merge at a time (F13): a merge waits until every earlier merge on main has a verified or rejected record, so a main run is never superseded by the line's own merges and a red range is exactly one merge.</is>
+    <is-not>Not a merger seat: 43 of 92 merges were hand merges by an LLM seat that took about fifteen minutes each (L13 section 7 D11; merge.sh breadcrumb); the seat is retired (D11, C39).</is-not>
+    <is-not>Not a merge train: the roadmap ruling o71ee (never wait on a verify between merges) is superseded by the owner's pick for F13 and rejected below.</is-not>
+    <is>Under a merge.hold (N-10) exactly one kind of merge is allowed: the fix pull request whose ticket entity names the standing hold id (the hold exception, ../N-10/spec.xml#m-fix). Under the owner hold (flag:hold) exactly one kind is allowed: a pull request whose ticket belongs to the current bootstrap step (the bootstrap merge path, shared/cut-over.xml#bootstrap-merge); the owner's break-glass merge through N-42 is the alternative.</is>
+    <decisions>D05 (C43), D11 (C39), D15 (C50), V03, T08, F13 owner pick (at most one unverified merge).</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="gate.verdict" code="201" from="N-08" schema="../N-08/record.schema.json#/$defs/gate_verdict">
+      <field name="pr, head_sha, ticket, status_updated_at">The pull request, its current head, its ticket and the status observation that made it green.</field>
+    </record>
+    <record kind="review.passed" code="201" from="N-19" schema="record.schema.json#/$defs/review_passed">
+      <field name="pr, head_sha, ticket">Must equal the verdict's; a review on an older head is held, never merged (merge.sh choice 1; gate.sh heads_match).</field>
+      <field name="run_id, lease">The reviewer run and its lease (shared/contracts.schema.json#/$defs/lease_ref, key and integer token, as N-19 writes it); N-01 refused the record with 412 if the token was not current, so this node trusts the record.</field>
+    </record>
+    <reads>The forge:snapshot entity (mergeable, mergeable_state, base_sha, draft, head_sha, detail_at, deferred; ../N-04/spec.xml#output); forge_pr_files for (pr, head_sha); forge.pr_closed records; the newest protection.observed and protection.drift (N-04); merge records with no verified or rejected record (N-10); the newest merge.hold (N-10); flag:hold and the entity bootstrap:state (shared/cut-over.xml#bootstrap); the ticket entity (N-03: hold_id, bootstrap step); the halt record; the merge.lock lease (N-02); the effects rows of this node (shared/contracts.xml#outbox).</reads>
+    <starts-when>Both records exist for the same (pr, head_sha): the second to commit starts the traversal; every scheduler tick (N-07) re-examines every pull request with both records and no merge record, and every effects row of this node in sent or unknown, so a lost start or a lost reply is caught (level-triggered).</starts-when>
+  </input>
+
+  <output id="output">
+    <record kind="merge" code="200" to="N-03 N-10 N-26 N-45" schema="record.schema.json#/$defs/merge">
+      <field name="idempotency_key">N-09/merge/&lt;pr&gt;@&lt;head_sha&gt;/r1 (shared/contracts.xml#operation-keys); one merge record per head, ever.</field>
+      <field name="pr, ticket, head_sha, base_sha">Copied; base_sha is the PR's base.sha from the snapshot at the decision.</field>
+      <field name="merge_sha, parent_main">The squash commit on main and its first parent (the main sha it landed on), read back from GitHub.</field>
+      <field name="merge_seq">Next value of N-01's counter in the same transaction; with linear history it orders merges on main (N-10).</field>
+      <field name="branch">The head branch, for N-45's branch deletion and worktree release.</field>
+      <field name="paths">forge_pr_files of (pr, head_sha), never truncated (step 3); N-47 and N-48 read them when N-10 verifies the merge.</field>
+      <field name="fix_for_hold_id, bootstrap_step">At most one: the hold id when the merge landed by the hold exception; the bootstrap state when it landed by the bootstrap merge path.</field>
+    </record>
+    <record kind="branch.update" code="100" to="N-39" schema="record.schema.json#/$defs/branch_update">
+      <field name="pr, head_sha, main_sha, updates_this_hour">GitHub accepted update-branch (it answers 202) for expected_head_sha head_sha; the new head it pushes needs its own gate verdict and review (step 5).</field>
+    </record>
+    <record kind="merge.conflict" code="409" to="N-11" schema="record.schema.json#/$defs/merge_conflict">
+      <field name="idempotency_key">N-09/merge.conflict/&lt;pr&gt;@&lt;head_sha&gt;/r1; once per head (merge.sh choice 4); a new head re-arms it.</field>
+      <field name="pr, ticket, head_sha, base_sha, source">The conflict named, from mergeable_state dirty or from an update-branch refusal; carries the failure body of shared/contracts.schema.json#/$defs/failure_body.</field>
+    </record>
+    <record kind="merge.failed" code="500" to="N-41 N-28" schema="record.schema.json#/$defs/merge_failed">
+      <field name="reason">github-unreachable, refused-by-branch-rule, unknown-outcome, read-back-failed or closed-unmerged; a system-lane fault, never a worker attempt (merge is not a ticket phase, shared/contracts.xml#roles).</field>
+    </record>
+    <record kind="merge.held" code="423" to="N-39 N-41" schema="record.schema.json#/$defs/merge_held">
+      <field name="reason">merge-hold, owner-hold, stale-review, draft, not-mergeable-unknown, awaiting-owner-confirm (../N-48/spec.xml#owner-confirm), awaiting-verify, protection-unverified, protection-mismatch, files-unknown, update-branch-limit, dark (merge.enabled false); written once per (pr, head, reason) so the Machine screen shows why a green pull request waits; it is not a failure.</field>
+    </record>
+    <record kind="merge.hold.aged" code="500" to="N-41 N-28" schema="record.schema.json#/$defs/merge_hold_aged">
+      <field name="hold_id, held_sha, age_seconds, held_prs">Written once per hold id when a hold has stood longer than merge.hold_age_alert_seconds (wait w-hold); N-28 coalesces it with N-10's card by hold id.</field>
+    </record>
+    <example schema="record.schema.json#/$defs/merge">{"id":"20261014T070410Z-200-m5a0r","at":"2026-10-14T07:04:10Z","kind":"merge","code":200,"node":"N-09","epoch":1,"seq":5301,"idempotency_key":"N-09/merge/201@3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92/r1","pr":201,"ticket":"WO-20261014-ab12","head_sha":"3f9c2e7a1b04d6e58c9f20b7e4a1d3c6f8b05e92","base_sha":"4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7","merge_sha":"a71d0b4e2c9f8a6d5b3e1c7f9a2d4b6e8c0f1a3d","parent_main":"4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7","merge_seq":93,"branch":"wo/WO-20261014-ab12","paths":["scheduler/internal/lease/lease.go","scheduler/internal/lease/lease_test.go"],"gate_verdict_id":"20261014T065130Z-201-q7c4n","review_record_id":"20261014T070122Z-201-v6t2b"}</example>
+    <example schema="record.schema.json#/$defs/branch_update">{"id":"20261015T070000Z-100-b4u2d","at":"2026-10-15T07:00:00Z","kind":"branch.update","code":100,"node":"N-09","epoch":1,"seq":5502,"idempotency_key":"N-09/branch.update/202@9a1b2c3d4e5f60718293a4b5c6d7e8f901234567/r1","pr":202,"ticket":"WO-20261014-cd34","head_sha":"9a1b2c3d4e5f60718293a4b5c6d7e8f901234567","base_sha":"4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7","main_sha":"a71d0b4e2c9f8a6d5b3e1c7f9a2d4b6e8c0f1a3d","updates_this_hour":1}</example>
+    <example schema="record.schema.json#/$defs/merge_held">{"id":"20261015T070100Z-423-h8w1q","at":"2026-10-15T07:01:00Z","kind":"merge.held","code":423,"node":"N-09","epoch":1,"seq":5503,"idempotency_key":"N-09/merge.held/203@0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c@awaiting-verify/r1","pr":203,"ticket":"WO-20261014-ef56","head_sha":"0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c","reason":"awaiting-verify","unverified_merge_seq":93}</example>
+    <example schema="record.schema.json#/$defs/merge_conflict">{"id":"20261015T071000Z-409-c2n7v","at":"2026-10-15T07:10:00Z","kind":"merge.conflict","code":409,"node":"N-09","epoch":1,"seq":5510,"idempotency_key":"N-09/merge.conflict/204@1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d/r1","pr":204,"ticket":"WO-20261014-6a78","head_sha":"1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d","base_sha":"4f7f44c0d2a9e1b6c3f8a5d7e9b2c4a6f1d3e5b7","source":"mergeable-state-dirty","phase":"worker","attempt":1,"outcome":"conflict","failure_kind":"merge.conflict","instruction":"merge-main"}</example>
+    <example schema="record.schema.json#/$defs/merge_failed">{"id":"20261015T072000Z-500-f3k8z","at":"2026-10-15T07:20:00Z","kind":"merge.failed","code":500,"node":"N-09","epoch":1,"seq":5520,"idempotency_key":"N-09/merge.failed/205@2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e/r1","pr":205,"ticket":"WO-20261014-9b90","head_sha":"2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e","reason":"refused-by-branch-rule","github_status":405,"attempts":1,"effect_op_id":"N-09/merge/205@2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e/r1"}</example>
+    <ends-when>A merge, branch.update, merge.conflict or merge.failed record names the head; a merge.held ends this traversal and the next matching tick starts a new one.</ends-when>
+  </output>
+
+  <mechanism id="mechanism">
+    <where>Go package merge inside the service, a port of line/bin/merge.sh with the same choices; every GitHub write goes through the outbox (shared/contracts.xml#outbox) with the forge-merge credential (shared/authority.xml#credential-matrix: contents and pull requests write), which no other node holds; reads come from N-04's entity, so this node issues no poll of its own.</where>
+    <step n="1" id="m-match">Load the pull request's current head from the forge:snapshot entity (fresh: not stale, detail_at within forge.stale_after_seconds, nothing deferred for it; otherwise end, the next tick retries); load the newest gate.verdict and the newest review.passed for the ticket. Both must name that head and the verdict must be green; otherwise merge.held stale-review and end (gate.sh heads_match lifted).</step>
+    <step n="2" id="m-hold">Holds, read before any GitHub call and again inside the step 7 Commit, because N-10 and N-29 can write them during a slow traversal (merge.sh hold choice 2). flag:hold (the owner hold set by USERHALT through N-44, the hold lamp): merge.held owner-hold, except in bootstrap mode (shared/cut-over.xml#bootstrap-merge, path default): from the proof of cut-over step 3 until B8, a pull request whose ticket has build-mode scope rebuild and belongs to a step the current entity bootstrap:state allows merges; its merge record carries bootstrap_step and every later step still applies (green gate and review on the same head, awaiting-verify, protection). Before step 3's proof no machine verdict exists, so those pull requests are the owner's break glass, one card each (path pre-gate); this node merges nothing for them. merge.hold (N-10, a red main): merge.held merge-hold, except the pull request whose ticket entity carries hold_id equal to the standing hold's hold_id (the fix N-10 step 5 cut, ../N-10/spec.xml#m-fix); that merge record carries fix_for_hold_id. A hold_id naming a lifted or unknown hold is a normal ticket.</step>
+    <step n="3" id="m-awaiting-verify">At most one unverified merge on main (F13): if any merge record has neither a verified nor a rejected record (N-10), merge.held awaiting-verify with unverified_merge_seq, and end; no exception passes this step, the fix pull request included, because a fix on an unverified main would be judged in the same range. The wait is bounded by N-10's verify bound (shared/retry-budget.xml#deadlines d-verify): past it N-10 writes main.verify.missing and N-28 posts one card; this node keeps holding (fail closed).</step>
+    <step n="4" id="m-protection">Protection: the newest protection.observed (N-04) must be younger than two protection.check_seconds and no protection.drift may be newer (shared/authority.xml#github-app); otherwise merge.held protection-unverified and end. N-10 relies on the same record for linear history.</step>
+    <step n="5" id="m-files">Files: forge_pr_files must hold the rows of (pr, head_sha) with files_truncated false; otherwise merge.held files-unknown and end (N-04 reads them on the next poll; a truncated list, over 3000 files, stays held and N-28 posts one card, because the owner-confirm rule cannot be decided on a partial list). Owner confirm: a pull request whose paths touch promotion.confirm_paths with no promotion.confirm ruling naming its current head is merge.held awaiting-owner-confirm (the one rule: ../N-48/spec.xml#owner-confirm).</step>
+    <step n="6" id="m-lock">Take the merge.lock lease from N-02 (class work, merge.lock_seconds 300 from shared/contracts.xml#timing, one per repository, fencing token): it covers one call, its read-back and the acquire. Not granted: end; the next tick retries. Under the owner hold N-02 grants merge.lock only for the bootstrap merge path (shared/contracts.xml#lease-machine; shared/cut-over.xml#bootstrap-merge).</step>
+    <step n="7" id="m-state">Decide by mergeable_state from the entity, the one vocabulary of ../N-04/spec.xml#output. clean, unstable or has_hooks: step 8. dirty: merge.conflict 409 source mergeable-state-dirty to N-11 (a worker attempt with merge-main, shared/contracts.xml#retry-owner) and end. behind: step 7b. blocked with a green gate and a passed review: merge.held protection-mismatch, a poll_now to N-04 so protection is read again, and end (protection asks for something the line does not provide). draft: merge.held draft. unknown or mergeable null: merge.held not-mergeable-unknown; GitHub computes it on its own time and N-04 reads it again next poll.</step>
+    <step n="7b" id="m-update">behind (strict protection, main moved): PUT pulls/N/update-branch with expected_head_sha equal to head_sha, as an effects row with key N-09/branch.update/&lt;pr&gt;@&lt;head_sha&gt;/r1 written in the Commit that decides it. 202: branch.update 100; GitHub pushes a new head, which needs its own gate verdict and review.passed like any pushed head, so the line re-gates it. 422 expected head mismatch: end (the snapshot moves). 422 merge conflict: merge.conflict source update-branch-conflict. At most merge.update_branch_per_hour 3 per pull request; past it merge.held update-branch-limit until the hour rolls (a busy main is visible, not looped).</step>
+    <step n="8" id="m-merge">One merge call per head: the effects row N-09/merge/&lt;pr&gt;@&lt;head_sha&gt;/r1 (provider github, action pull.merge) is written in the Commit that re-reads the holds of step 2; then PUT pulls/N/merge with merge_method squash and sha equal to head_sha (GitHub refuses a head that moved, 409). 200: step 9. A refusal (405 not mergeable, 409 head moved, 422) is final for this head: the row is failed, the call is never sent again on the unchanged head; 405 writes merge.failed refused-by-branch-rule and a poll_now so N-04 reads protection and mergeable_state again, and the next decision is made on fresh state (behind goes to step 7b, blocked to protection-mismatch). A transport failure or timeout leaves the row unknown: step 8b.</step>
+    <step n="8b" id="m-already">Reconcile before any repeat (shared/contracts.xml#outbox): read GET pulls/N with forge-merge, or the forge.pr_closed record N-04 wrote when the PR left the open list. merged with merge_commit_sha: the merge landed; step 9 with already_merged true. Open, unmerged, same head: the call never took effect; it is sent again on the same row (attempts at most 3, shared/contracts.schema.json#/$defs/effect_row). Closed unmerged: merge.failed closed-unmerged. Unreadable after three reads: merge.failed unknown-outcome and the next tick reconciles again; the row stays unknown, so nothing is sent blind.</step>
+    <step n="9" id="m-record">Read back the merge commit and its first parent; in one Commit write the merge record (merge_sha, parent_main, base_sha, merge_seq from N-01's counter, branch, paths from forge_pr_files), tickets.transition pr_open to merged (shared/contracts.xml#ticket-transitions; done comes only with N-10's verified), the effects row done with the merge sha as external id, and release merge.lock; then poll_now. The merge record is the input of N-26 and N-45; N-47, N-48 and N-35 act on N-10's verified for it, never on the merge (F13).</step>
+    <step n="10" id="m-cleanup-not-here">No branch deletion, no worktree, no slot return, no checkout of main here: those are N-45's cleanup.run with its own three attempts, because a cleanup that fails must never withhold a merge record (merge.sh post_merge_clean; SPEC-17 s-orchestrator O3 and H12).</step>
+    <invariant>One merge record per head, one merge call per unchanged head, one merge.conflict per head, written by the service only; no seat holds forge-merge and N-01 refuses kind merge from any principal but the service.</invariant>
+    <invariant>GitHub is the second guard: a merge without green coq/gate from the coq-gate app is refused by the forge whatever this node does (D05, shared/authority.xml#github-app).</invariant>
+    <diagram format="mermaid">flowchart TD
+  I["gate.verdict green + review.passed on head H"] --> M{"both name the current head?"}
+  M -- no --> HS["merge.held stale-review"]
+  M -- yes --> HO{"halt, owner hold or merge.hold?"}
+  HO -- "yes, no exception" --> HH["merge.held owner-hold or merge-hold"]
+  HO -- "no, or bootstrap step, or the fix PR" --> UV{"a merge on main unverified?"}
+  UV -- yes --> HV["merge.held awaiting-verify"]
+  UV -- no --> PR{"protection.observed fresh, no drift?"}
+  PR -- no --> HP["merge.held protection-unverified"]
+  PR -- yes --> FL{"files known, owner confirm satisfied?"}
+  FL -- no --> HF["merge.held files-unknown or awaiting-owner-confirm"]
+  FL -- yes --> L{"merge.lock granted?"}
+  L -- no --> E["end, next tick"]
+  L -- yes --> MS{"mergeable_state"}
+  MS -- dirty --> C["merge.conflict 409 to N-11"]
+  MS -- behind --> UB["update-branch, branch.update 100; new head re-gated"]
+  MS -- blocked --> HB["merge.held protection-mismatch"]
+  MS -- "unknown or draft" --> HU["merge.held"]
+  MS -- "clean, unstable, has_hooks" --> G["one merge call, sha = H (outbox)"]
+  G -- merged --> R["merge 200, ticket merged"]
+  G -- "no answer" --> RC["reconcile: GET pulls/N or forge.pr_closed"]
+  RC -- merged --> R
+  G -- refused --> F["merge.failed, never resent on H"]
+  R --> N26["N-26 verify main; N-10 verified then N-47, N-48, N-35"]</diagram>
+  </mechanism>
+
+  <start id="start">
+    <sentence>Nothing here starts by an agent typing.</sentence>
+    <by>The commit of the second of the two input records (N-01 record.committed) starts a traversal in the service; the scheduler tick (N-07) re-examines every pull request with both records and no merge record, and every effects row of this node not done, every tick, so a traversal lost to a crash restarts within one tick.</by>
+    <restart>After a crash step 8b finds a merge that landed before the record was written (an effects row in sent or unknown) and writes the record once.</restart>
+    <never>No make merge target in the line path (T15 is an owner entry point only), no merger seat, no hand gh pr merge.</never>
+  </start>
+
+  <waits id="waits">
+    <wait id="w-lock" on="merge.lock lease from N-02" timeout="2 s to acquire" fallback="end the traversal; the next tick retries; a lease held longer than merge.lock_seconds 300 expires by itself (N-02) so a crashed holder never blocks merges"/>
+    <wait id="w-github-merge" on="GitHub merge or update-branch call" timeout="20 s (gate.sh and route.sh used timeout 20 for gh; L01 section 6)" fallback="the effects row goes unknown and step 8b reconciles before any repeat; never a blind retry"/>
+    <wait id="w-github-readback" on="reading the PR or the merge commit after a merge or an unknown outcome" timeout="20 s" fallback="three reads with 2, 4, 6 s backoff inside merge.lock_seconds; then merge.failed read-back-failed or unknown-outcome; the next tick reconciles again; the merge stands"/>
+    <wait id="w-unknown" class="level-triggered" on="mergeable leaving null (mergeable_state unknown)" timeout="none held: re-read every poll by N-04" fallback="merge.held not-mergeable-unknown once per head, re-written once with count 3 after three polls so N-41 shows it; GitHub computes mergeability on its own time, so the fallback is visibility, not a guess"/>
+    <wait id="w-verify" on="the previous merge on main reaching verified or rejected (N-10)" timeout="N-10's verify bound, shared/retry-budget.xml#deadlines d-verify" fallback="N-10 writes main.verify.missing and N-28 posts one card; this node keeps merge.held awaiting-verify (fail closed) until N-10 writes a verdict or the owner's break glass through N-42"/>
+    <wait id="w-protection" on="a fresh protection.observed" timeout="two protection.check_seconds" fallback="merge.held protection-unverified; N-04's protection.drift card asks the owner to repair protection with forge-admin"/>
+    <wait id="w-hold" on="merge.hold lifted by N-10 (a green main after the fix merge)" timeout="merge.hold_age_alert_seconds, default 14400" fallback="the wait is never on a person: the fix pull request merges under the hold by the step 2 exception; at the bound merge.hold.aged 500 is written once per hold id to N-41 and N-28 (coalesced with N-10's card by hold id) and non-fix merges stay held, because a red main must fail closed"/>
+    <rule>Every GitHub call carries a context deadline and its operation key; a repeat after an unknown outcome goes through step 8b, never a blind retry (doc 31: reconcile by stable idempotency key before replaying a mutation, L14 section 4.6).</rule>
+  </waits>
+
+  <retries id="retries">
+    <step name="GitHub merge call" attempts="1 per unchanged head; a transport failure is re-sent on the same effects row only after step 8b proves it never took effect (at most 3 sends)" backoff="2 s, 4 s, 6 s" then="merge.failed 500 to N-41 and one card by N-28; a refusal is never repeated on the same head"/>
+    <step name="update-branch" attempts="merge.update_branch_per_hour 3 per pull request" backoff="the hour" then="merge.held update-branch-limit; N-41 shows it"/>
+    <step name="read back" attempts="3" backoff="2 s, 4 s, 6 s" then="merge.failed read-back-failed; the next traversal completes the record (step 8b)"/>
+    <step name="record write" attempts="3 (shared/retry-budget.xml#store-commit)" backoff="1 s, 2 s, 4 s" then="store.unreachable 500 once; the next traversal rewrites it from the read back with the same operation key"/>
+    <not-retried>A merge.conflict is not retried by this node: the fix is a worker attempt n plus 1 with the merge-main instruction (shared/contracts.xml#retry-owner), and the new head re-arms this node.</not-retried>
+    <not-retried>A refusal by a branch rule is not retried on the same head (F10): strict protection with main moved is behind and goes to update-branch on fresh state; any other refusal is a system-lane fault shown by N-41 and one card.</not-retried>
+    <not-retried>A merge.held is not a failure and is not retried by this node: every held pull request is re-examined on every tick.</not-retried>
+    <report>Every then clause is a record; nothing is silent and nothing loops (merge.sh choice 6: a gh outage posts one blocked record, not one per pull request).</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Any number of seats read merge records; a worker brief for a merge-main attempt cites the merge.conflict id.</readers>
+    <two-traversals>Two traversals for the same head both try the merge.lock lease; one gets it, the other ends. If the lock expires mid-call, the second holder finds the effects row N-09/merge/pr@head/r1 already present and reconciles it (step 8b) instead of sending; the operation key makes the record write a replay.</two-traversals>
+    <two-pulls>Two pull requests ready at once: the first merges; the second is merge.held awaiting-verify until N-10 verifies or rejects the first, then reads a fresh mergeable_state (behind goes to update-branch and a new head, which is re-gated and re-reviewed; dirty goes to its worker). This is the one-file one-in-flight rule's safety net, not its replacement: N-03 refuses overlapping claims before any seat starts (V07).</two-pulls>
+    <stale-review>A review.passed posted with a token that is not current is refused by N-01 (412); this node never sees it. A review on an older head is held, never merged.</stale-review>
+    <hold-race>N-10 writes merge.hold, or N-44 sets flag:hold on an N-29 ruling, while a traversal is between step 2 and step 8: the step 8 Commit re-reads both as preconditions and refuses; the remaining window is closed by GitHub, which requires coq/gate on the head.</hold-race>
+    <fix-under-hold>Two fix pull requests naming one hold cannot both exist: N-03 refuses a second fix ticket naming a hold until the first is verified or dead (../N-10/spec.xml#many-agents). If one still appears, step 3 lets only one merge before N-10 judges it.</fix-under-hold>
+    <conflict-reports>Every 409 on a key and every lease refusal is logged with the key; never a silent overwrite.</conflict-reports>
+    <test>Test case two-traversals-one-merge: two Merge calls with a fake forge and one lease write one merge record, one merge call and one lease refusal (checklist c-one-merge).</test>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="200" kind="merge" acts="N-26 verifies main; N-45 cleans up; N-03 moves the ticket to merged" shared="../../shared/status-codes.xml#code-200"/>
+    <emits code="100" kind="branch.update" acts="nobody; the new head is gated and reviewed as any pushed head; N-39 shows it" shared="../../shared/status-codes.xml#code-100"/>
+    <emits code="409" kind="merge.conflict" acts="N-11 schedules the worker's merge-main attempt" shared="../../shared/status-codes.xml#code-409"/>
+    <emits code="423" kind="merge.held" acts="nobody; N-39 and N-41 show it" shared="../../shared/status-codes.xml#code-423"/>
+    <emits code="500" kind="merge.failed" acts="N-41 alerts; N-28 one card (system lane)" shared="../../shared/status-codes.xml#code-500"/>
+    <emits code="500" kind="store.unreachable" acts="N-28 one card; N-06 health" shared="../../shared/status-codes.xml#code-500"/>
+    <emits code="500" kind="merge.hold.aged" acts="N-41 alerts; N-28 coalesces with N-10's card by hold id" shared="../../shared/status-codes.xml#code-500"/>
+    <reads code="423" kind="merge.hold" acts="this node merges only the fix pull request whose ticket entity names the hold id; every other merge is held" shared="../../shared/status-codes.xml#code-423"/>
+    <reads code="503" kind="halt" acts="this node merges nothing while it stands" shared="../../shared/status-codes.xml#code-503"/>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <root>$COQ_STATE as in ../N-07/spec.xml#state-paths; path elements in N-45's generator form.</root>
+    <path acts="owner" id="N-09.store" glob="$COQ_STATE/store/coq.db" retention="owned by N-01" trigger="owner" cleanup="line/bin/cleanup.sh --entry N-01.store">Rows: merge, branch.update, merge.conflict, merge.held, merge.failed records; this node's effects rows; the merge.lock lease; the merge_seq counter. Merge records are never pruned before their verified record and the retention window.</path>
+    <path acts="system" id="N-09.logs" glob="$COQ_STATE/logs/merge/*/*/*-pr-*-*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-09.logs">One line per step with the GitHub response status; rotated daily.</path>
+    <never>No worktree, no checkout of main, no branch deletion here (N-45 owns those paths and their cleanup); no file under the repository.</never>
+  </state-paths>
+
+  <edges id="edges">
+    <in from="N-08" record="gate.verdict green" path="../N-08/spec.xml" anchor="output"/>
+    <in from="N-19" record="review.passed" path="../N-19/spec.xml" anchor="output"/>
+    <in from="N-04" record="forge:snapshot entity, forge_pr_files, forge.pr_closed, protection.observed, protection.drift" path="../N-04/spec.xml" anchor="output" drawn="false" note="read, not consumed"/>
+    <in from="N-10" record="merge.hold, verified, rejected" path="../N-10/spec.xml" anchor="output" note="read, not consumed: the hold and the awaiting-verify step"/>
+    <in from="N-03" record="ticket entity (hold_id, bootstrap step)" path="../N-03/spec.xml" anchor="input" note="read, not consumed; decides the two exceptions"/>
+    <out to="N-11" record="merge.conflict" path="../N-11/spec.xml" anchor="input"/>
+    <out to="N-26" record="merge" path="../N-26/spec.xml" anchor="input"/>
+    <out to="N-45" record="merge" path="../N-45/spec.xml" anchor="input"/>
+    <out to="N-41" record="merge.failed, merge.held, merge.hold.aged" path="../N-41/spec.xml" anchor="input" drawn="false"/>
+  </edges>
+
+  <schema id="schema">
+    <file path="record.schema.json"/>
+    <defs>review_passed (the fields of N-19's record this node relies on, with lease as lease_ref), merge (parent_main, base_sha, fix_for_hold_id, bootstrap_step), branch_update, merge_conflict, merge_failed, merge_held, merge_hold_aged; base ../N-07/record.schema.json#/$defs/base.</defs>
+  </schema>
+
+  <checklist id="checklist">
+    <item id="c-pure" proof="go test ./internal/merge -run TestDecision over a table of records, entities and heads; same inputs, same decision">The merge is a pure function of records and the head.</item>
+    <item id="c-stale-review" proof="test TestStaleReviewHeld: a review on an older head yields merge.held stale-review and no GitHub call">A head pushed after the review is held.</item>
+    <item id="c-hold" proof="test TestHoldBeforeAndAfter: a hold written between step 2 and step 8 refuses the step 8 Commit">The hold is read twice.</item>
+    <item id="c-hold-exception" proof="test TestFixMergesUnderHold: with a standing hold H, a pull request whose ticket entity has hold_id H merges and carries fix_for_hold_id H; a sibling and one with a lifted hold's id are held">Only the fix pull request merges under a hold.</item>
+    <item id="c-bootstrap" proof="test TestBootstrapMerge: under flag:hold with bootstrap:state B4, a ticket of step B4 merges with bootstrap_step B4; a ticket of B5 and a product ticket are held owner-hold; not-run">The bootstrap merge path is exactly one step wide.</item>
+    <item id="c-one-unverified" proof="test TestAwaitingVerify (AT-F13): merges fed faster than the main run; each waits merge.held awaiting-verify until N-10's verdict; a red main lets only its fix merge; not-run">At most one unverified merge on main.</item>
+    <item id="c-behind" proof="test TestBehindUpdates (AT-F10): two disjoint PRs at one base, both green; the first merges, the second gets one update-branch, a new head, a new gate and review, then merges; no merge call on the stale head; not-run">Behind is brought up to date, never retried.</item>
+    <item id="c-protection" proof="test TestProtectionUnverified: a protection.drift newer than the observed record, and an observed record older than two check intervals, each hold every merge">Protection is verified before any call.</item>
+    <item id="c-files" proof="test TestFilesUnknown: no forge_pr_files rows, and files_truncated true, each hold files-unknown; owner-locked paths without a promotion.confirm ruling hold awaiting-owner-confirm">The owner-confirm rule never runs on an empty list.</item>
+    <item id="c-hold-aged" proof="test TestHoldAged with the fake clock: a hold standing past merge.hold_age_alert_seconds writes one merge.hold.aged and a second tick writes none">The hold wait has a bound and reports once.</item>
+    <item id="c-one-merge" proof="test TestTwoTraversalsOneMerge writes one merge record and sends one merge call">One merge record per head.</item>
+    <item id="c-already" proof="test TestLostReply (AT-F16): a timeout after GitHub merged; step 8b finds it through forge.pr_closed and through GET pulls/N and writes once; no second call">A lost reply is reconciled, not repeated.</item>
+    <item id="c-conflict-once" proof="test TestConflictOncePerHead: three traversals on one dirty head write one 409">merge.conflict once per head.</item>
+    <item id="c-credential" proof="the forge-merge token is read only by internal/merge; a grep of every other package for COQ_FORGE_MERGE_TOKEN returns nothing; against a scratch repository the forge-read token's merge call answers 403 (AT-F08); not-run">Only this node can merge.</item>
+    <item id="c-no-cleanup" proof="grep of internal/merge finds no git worktree, branch delete or checkout call">Cleanup is N-45's.</item>
+    <item id="c-waits" proof="every GitHub call in internal/merge carries a context deadline of 20 s; no time.Sleep">Every wait has a timeout.</item>
+    <item id="c-dark" proof="config key merge.enabled false until the go-live ticket; while false the node writes merge.held reason dark and merges nothing">Ships dark.</item>
+  </checklist>
+
+  <permissions id="permissions">
+    <process>The Go service user unit (coq-svc) with the forge-merge credential (shared/authority.xml#credential-matrix: contents and pull requests write on the one repository; no administration, no statuses, no secrets, no workflow).</process>
+    <reads>gate.verdict, review.passed, forge.pr_closed, protection.observed, protection.drift, merge.hold, verified, rejected, halt records; the forge:snapshot entity and forge_pr_files; flag:hold and bootstrap:state; the ticket entity; the merge.lock lease; this node's effects rows.</reads>
+    <writes>merge, branch.update, merge.conflict, merge.held, merge.failed, merge.hold.aged, store.unreachable records; tickets.transition pr_open to merged; effects rows; the merge log; at most one merge call per head and at most merge.update_branch_per_hour update-branch calls per pull request.</writes>
+    <never>No branch deletion, no worktree, no local git, no herdr call, no pane, no protection change, no status post, no edit of any record.</never>
+    <seat>No seat holds forge-merge; the seat layer (N-13) denies gh pr merge and the merge API; N-01 refuses kind merge from any principal but the service.</seat>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="merge_total" from="merge records" screen="N-40"/>
+    <counter name="merge_conflict_total" from="merge.conflict records" screen="N-40, N-41"/>
+    <counter name="merge_failed_total" from="merge.failed records" screen="N-41"/>
+    <counter name="branch_update_total" from="branch.update records" screen="N-40"/>
+    <gauge name="merge_ready_held" from="pull requests with green plus review and a merge.held newest, by reason" screen="N-38 belt, N-41"/>
+    <gauge name="merge_held_age_seconds" from="now minus the oldest merge.held at" screen="N-39"/>
+    <lamp name="merge" green="no merge.held older than 2 x tick other than awaiting-verify inside its bound, and no merge.failed open" amber="a merge.hold stands (N-10) or a merge awaits verify" red="merge.failed open, protection-unverified, or store unreachable" screen="N-38, N-42"/>
+    <alert kind="merge.failed" code="500" to="N-41 and one card by N-28"/>
+    <alert kind="merge.held merge-hold" code="423" to="N-41 with the hold's sha and age; the card is N-10's"/>
+    <alert kind="merge.held protection-unverified" code="423" to="N-41; the card is N-04's protection.drift"/>
+    <alert kind="merge.hold.aged" code="500" to="N-41; N-28 coalesces with N-10's card by hold id"/>
+  </monitoring>
+
+  <runbook id="runbook">
+    <bring-up>N-08 live, N-19 posting review.passed, N-25's coq-gate app and the owner's protection in place with a protection.observed from N-04; forge-merge in STATE/secrets/forge-merge; set merge.enabled true; proof: a merge record whose merge_sha is the head of main on GitHub and whose parent_main equals the previous main.</bring-up>
+    <read-status>Scheduler.Status lists pull requests ready, held with reason, conflicting and merged in the last hour; the Machine screen shows one pull request's path.</read-status>
+    <recover-github-down>Nothing by hand: unknown effects rows are reconciled by step 8b when N-04 polls succeed; a merged-but-unrecorded pull request is completed from forge.pr_closed.</recover-github-down>
+    <recover-stuck-lock>A merge.lock lease expires after merge.lock_seconds 300 on its own; never delete a lease by hand.</recover-stuck-lock>
+    <recover-red-main>Nothing by hand: N-10 cuts the fix ticket through a spec-author run and this node merges its pull request under the hold (step 2 exception); a green main lifts the hold. After three failed fixes the owner's one card carries the recommendation.</recover-red-main>
+    <recover-protection>A protection-unverified hold clears by itself when N-04 writes a protection.observed; repairing protection is the owner's forge-admin task (N-04 runbook protection.drift card).</recover-protection>
+    <break-glass>A merge the owner wants despite a hold, or a hold the owner wants lifted, is a control.action through N-42 (one time, recorded); a hand gh pr merge leaves no merge record, and N-10 fails closed on a sha the store does not know (N-10 step 6); N-51 counts it.</break-glass>
+    <cleanup entry="N-09.logs" command="line/bin/cleanup.sh --entry N-09.logs" mode="dry-run first, then --apply"/>
+    <registry>Generated into shared/cleanup-registry.json from the state-paths element (../N-45/spec.xml#state-paths); branch and worktree cleanup entries are N-45's own.</registry>
+  </runbook>
+
+  <sources id="sources">
+    <source path="line/bin/merge.sh" anchor="header" use="outcomes, exit codes, choices 1 to 6, the hold choices 1 to 4, post_merge_clean: lifted nearly unchanged (L01 section 8 item 3)"/>
+    <source path="factory/bin/gate.sh" anchor="same-head" use="heads_match and same-head predicates; events/ excluded from the tree compare"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="17-d15-human-in-the-merge-path" use="option B: machine verdict merges, owner holds via cards"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="7-d05-where-a-gate-verdict-lives" use="GitHub refuses a merge without a green gate"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="13-d11-which-llm-roles-remain" use="merger retired into code"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep" use="V03 merge and verify as pure functions with a hold file; V07 one file one in-flight ticket"/>
+    <source path="rebuild/investigation/L01-line-scripts.md" anchor="8-what-to-carry-forward" use="item 3 merge.sh as the template; item 4 gate.sh predicates; item 6 claims"/>
+    <source path="rebuild/investigation/L13-llms-doing-scheduler-work.md" anchor="7-decisions-an-llm-makes-that-a-rule-could-make" use="D11 merge a PR with both gate records: 43 of 92 by hand; D20 merger seat"/>
+    <source path="rebuild/investigation/I01-production-agent-fleets.md" anchor="8-what-to-carry-forward" use="do not build a global-lock merge queue first; conflict repair by a fresh seat"/>
+    <source path="rebuild/investigation/L14-go-grpc-control-plane.md" anchor="46-google-doc-31-grpc-go-rust-and-requirements-driven-tooling" use="reconcile by idempotency key before replaying a mutation"/>
+    <source path="rebuild/investigation/L06-owner-retros-and-plans.md" anchor="8-what-to-carry-forward" use="merge.sh, verify-main.sh and the hold carried forward"/>
+    <source path="factory/config/routes.json" anchor="/routes/9" use="merge.conflict 409 wakes the worker with merge-main"/>
+    <source path="specs/SPEC-17-orchestrator-and-agent-health.xml" anchor="s-codes" use="409 CONFLICT acts and retry; 200 DONE merged"/>
+    <source path="specs/SPEC-17-orchestrator-and-agent-health.xml" anchor="s-orchestrator" use="O3 cleanup after verified runs from the checkout; a cleanup failure never withholds the merge record"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261012212500-roadmap.md" anchor="2026-10-13-0010z---c24-drain-and-design-owner-do-it-fast" line="231" at="2026-10-13T14:02:37Z" use="ruling o71ee merge train: superseded by the F13 owner pick; rejected item r-merge-train"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C50" use="machine verdict merges"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C39" use="code does mechanical jobs"/>
+  </sources>
+
+  <rejected id="rejected">
+    <item id="r-merger-seat" source="roles/merger.json; factory/config/routes.json row 6; specs/exports/factory-spec.xml#S1-021 and #S2-059 (branch origin/feat/factory-design-spec-v2-0-every-agent-workflow-ru, the PR 35 snapshot, not in this worktree, read with git show); specs/SPEC-17-orchestrator-and-agent-health.xml#n-merge" reason="a Haiku merger seat took about fifteen minutes per merge and asked the architect twice before merging (roadmap 22:04Z, 22:07Z); the decision is mechanical (merge.sh breadcrumb). D11 and C39 retire it; the overturned card C12 (keep seats) is superseded by C39."/>
+    <item id="r-test-passed-gate" source="line/bin/merge.sh header (test.passed 201 and review.passed 201 on the same sha); specs/exports/factory-spec.xml#S1-084 (branch origin/feat/factory-design-spec-v2-0-every-agent-workflow-ru, the PR 35 snapshot, not in this worktree, read with git show)" reason="the test half of the gate is now the coq/gate status read by N-08 (D05); the review half stays a record. The same-head rule survives unchanged."/>
+    <item id="r-make-merge-target" source="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal T15; 00-INVENTORY.md BI04 (make merge PR=)" reason="an owner entry point may call the service's control socket, but a Make recipe that merged on its own would be a second merge path with no lease and no record; D01 placed the decision in the Go service."/>
+    <item id="r-auto-merge-setting" source="line/bin/merge.sh breadcrumb (a GitHub auto-merge setting rejected)" reason="GitHub auto-merge knows the gate but not the review.passed record, the hold or the halt; the merge must read the store."/>
+    <item id="r-merge-queue" source="rebuild/investigation/I01-production-agent-fleets.md#8-what-to-carry-forward" reason="a global lock merge queue is not replicated at agent scale and became load-bearing elsewhere; the short merge.lock lease serialises the call only, and the queue question stays open until volume forces it."/>
+    <item id="r-merge-train" source="~/.local/state/coq/coq-jev-herdr-plugin/plans/2026/10/20261012212500-roadmap.md ruling o71ee (merge train: never wait on a verify between merges); this volume at 1.0.0 to 1.1.0 purpose" reason="merges landing faster than a full main run supersede every main run, so main is never verified and a red range holds many merges (review F13); the owner's pick is at most one unverified merge on main (step 3). Cost: merge throughput is one per main run; the bound is d-verify of shared/retry-budget.xml#deadlines."/>
+    <item id="r-retry-refusal" source="this volume at 1.1.0 step 5 and retries (the merge call retried three times on a refusal)" reason="under strict protection a behind head is refused every time; repeating the call on the unchanged head only burns the attempt budget (review F10). A refusal is final for the head; behind goes to update-branch on fresh state."/>
+    <item id="r-shared-token" source="this volume at 1.1.0 where (the same token N-04 polls with) and permissions (repo scope)" reason="N-04's credential is read-only, so it could not merge, and one token for read and write makes a poll bug a write bug (review F08); forge-merge is this node's alone (shared/authority.xml#credential-matrix)."/>
+    <item id="r-lock-file" source="line/bin/merge.sh choice 3 (no lock file because a lock directory needs a README)" reason="the lease in N-02 replaces the lock file and has a TTL, so a crashed holder never blocks; the shell script's reason (no new artifact tree) is met because the lease is a store row."/>
+    <item id="r-hold-blocks-everything" source="line/bin/merge.sh hold choice 2 (a hold stops every merge until the file is removed by hand); this volume at version 1.0.0 wait w-hold (timeout none, lifted by the owner)" reason="a hold with no machine exit made the owner a gate on every red main and the fix pull request could never land, which contradicted N-10 step 5; the round 2 review failed it. The exception is now exactly one standing hold wide (ticket entity hold_id), the wait has a bound and a report, and the owner stays an escalation after three failed fixes."/>
+    <item id="r-blocked-423-to-orchestrator" source="line/bin/merge.sh held (merge hold) outcome: ONE blocked 423 to the orchestrator lane" reason="the orchestrator seat is retired (D11); the hold is shown by N-41 and N-42 and its card is N-10's."/>
+  </rejected>
+
+</volume>

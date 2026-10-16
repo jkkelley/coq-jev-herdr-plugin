@@ -1,0 +1,664 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-03/record.schema.json",
+  "title": "N-03 Ticket intake and readiness records",
+  "description": "Book 1.1.0. Input ticket ($ref ../N-18/record.schema.json#/$defs/ticket, the one ticket shape) and ticket.request; the ticket row and claim row of the tables this node owns; output ticket.ready, ticket.waiting, ticket.refused, ticket.admitted, ticket.done, ticket.cancelled, ticket.transition_refused (412), ticket.stale and the intake reports of node N-03. Statuses, phases, roles and ticket ids are shared/contracts.schema.json defs; transitions live only in shared/contracts.xml#ticket-transitions. Parent volume: spec.xml#N-03. UTC everywhere.",
+  "$defs": {
+    "envelope": {
+      "$ref": "../N-01/record.schema.json#/$defs/envelope"
+    },
+    "at": {
+      "$ref": "../N-01/record.schema.json#/$defs/at"
+    },
+    "id": {
+      "$ref": "../N-01/record.schema.json#/$defs/id"
+    },
+    "ticket_id": {
+      "$ref": "../../shared/contracts.schema.json#/$defs/ticket"
+    },
+    "phase": {
+      "$ref": "../../shared/contracts.schema.json#/$defs/phase"
+    },
+    "status": {
+      "$ref": "../../shared/contracts.schema.json#/$defs/ticket_status"
+    },
+    "path": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 240,
+      "pattern": "^[^\\s]+$"
+    },
+    "acceptance_command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "command",
+        "exit_code"
+      ],
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "exit_code": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      }
+    },
+    "ticket": {
+      "description": "the ticket N-18 accepts; this node never restates it (NF11: the DAG node is target_node)",
+      "$ref": "../N-18/record.schema.json#/$defs/ticket"
+    },
+    "ticket_ready": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "ticket",
+            "phase",
+            "attempt",
+            "role",
+            "claims",
+            "brief_inputs"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ticket.ready"
+            },
+            "code": {
+              "const": 200
+            },
+            "node": {
+              "const": "N-03"
+            },
+            "ticket": {
+              "$ref": "#/$defs/ticket_id"
+            },
+            "phase": {
+              "$ref": "#/$defs/phase"
+            },
+            "attempt": {
+              "$ref": "../../shared/contracts.schema.json#/$defs/attempt"
+            },
+            "role": {
+              "$ref": "#/$defs/role"
+            },
+            "claims": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/path"
+              },
+              "description": "the patterns claimed or confirmed held in the same Commit; empty for a cut request and for the gate phase reads of a ticket without files"
+            },
+            "brief_inputs": {
+              "type": "object",
+              "required": [
+                "entity_key",
+                "design_anchor"
+              ],
+              "properties": {
+                "entity_key": {
+                  "type": "string",
+                  "pattern": "^ticket:(WO-[0-9]{8}-[0-9a-f]{4}|CR-[a-z0-9._-]+)$"
+                },
+                "design_anchor": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        {
+          "$ref": "../../shared/contracts.schema.json#/$defs/phase_role"
+        }
+      ]
+    },
+    "ticket_waiting": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "ticket",
+            "reason"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ticket.waiting"
+            },
+            "code": {
+              "const": 100
+            },
+            "node": {
+              "const": "N-03"
+            },
+            "ticket": {
+              "$ref": "#/$defs/ticket_id"
+            },
+            "reason": {
+              "enum": [
+                "deps",
+                "files",
+                "hold",
+                "validation"
+              ]
+            },
+            "deps_pending": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/ticket_id"
+              }
+            },
+            "files_held": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "pattern",
+                  "holder"
+                ],
+                "properties": {
+                  "pattern": {
+                    "$ref": "#/$defs/path"
+                  },
+                  "holder": {
+                    "$ref": "#/$defs/ticket_id"
+                  },
+                  "holder_pattern": {
+                    "$ref": "#/$defs/path"
+                  }
+                }
+              }
+            },
+            "path": {
+              "type": "string",
+              "description": "validation only: the failing JSON pointer"
+            }
+          }
+        }
+      ]
+    },
+    "ticket_refused": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "ticket",
+            "reason"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ticket.refused"
+            },
+            "code": {
+              "const": 422
+            },
+            "node": {
+              "const": "N-03"
+            },
+            "ticket": {
+              "$ref": "#/$defs/ticket_id"
+            },
+            "reason": {
+              "enum": [
+                "cycle",
+                "unknown_dep",
+                "empty_files",
+                "aggregate_file",
+                "schema"
+              ]
+            },
+            "detail": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        }
+      ]
+    },
+    "ticket_terminal": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "ticket",
+            "by",
+            "claims_released"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "ticket.done",
+                "ticket.cancelled"
+              ]
+            },
+            "code": {
+              "const": 204
+            },
+            "node": {
+              "const": "N-03"
+            },
+            "ticket": {
+              "$ref": "#/$defs/ticket_id"
+            },
+            "by": {
+              "$ref": "#/$defs/id",
+              "description": "the verified record (done), the accepted ticket set (a cut request done) or the ruling or cut-over record (cancelled)"
+            },
+            "claims_released": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      ]
+    },
+    "ticket_admitted": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "ticket",
+            "status"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ticket.admitted"
+            },
+            "code": {
+              "const": 100
+            },
+            "node": {
+              "const": "N-03"
+            },
+            "ticket": {
+              "$ref": "#/$defs/ticket_id"
+            },
+            "status": {
+              "$ref": "#/$defs/status"
+            }
+          }
+        }
+      ]
+    },
+    "ticket_transition_refused": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "ticket",
+            "from",
+            "to"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ticket.transition_refused"
+            },
+            "code": {
+              "const": 412
+            },
+            "node": {
+              "const": "N-03"
+            },
+            "ticket": {
+              "$ref": "#/$defs/ticket_id"
+            },
+            "from": {
+              "$ref": "#/$defs/status"
+            },
+            "to": {
+              "$ref": "#/$defs/status"
+            },
+            "trigger": {
+              "type": "string",
+              "maxLength": 80
+            },
+            "caller": {
+              "type": "string",
+              "pattern": "^N-[0-9]{2}$"
+            }
+          }
+        }
+      ]
+    },
+    "ticket_stale": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "ticket",
+            "waiting_since",
+            "reason"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ticket.stale"
+            },
+            "code": {
+              "const": 500
+            },
+            "node": {
+              "const": "N-03"
+            },
+            "ticket": {
+              "$ref": "#/$defs/ticket_id"
+            },
+            "waiting_since": {
+              "$ref": "#/$defs/at"
+            },
+            "reason": {
+              "enum": [
+                "deps",
+                "files",
+                "hold"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "intake_report": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "enum": [
+                "intake.recovered",
+                "intake.failed",
+                "intake.orphan",
+                "intake.slow"
+              ]
+            },
+            "code": {
+              "enum": [
+                100,
+                500
+              ]
+            },
+            "node": {
+              "const": "N-03"
+            },
+            "count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pr": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 240
+            }
+          }
+        }
+      ]
+    },
+    "ticket_request": {
+      "description": "A request to cut tickets, admitted by N-03 as a cut request CR-<id> at phase spec (nodes/N-03/spec.xml#input); writers N-10, N-30, N-49, N-50",
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "required": [
+            "request_id",
+            "source",
+            "title",
+            "brief"
+          ],
+          "properties": {
+            "kind": {
+              "const": "ticket.request"
+            },
+            "code": {
+              "const": 100
+            },
+            "request_id": {
+              "type": "string",
+              "pattern": "^[a-z0-9._-]+$",
+              "description": "idempotency key: one per message id, LAND row, fix-<hold_id>-<n> or cancel set"
+            },
+            "source": {
+              "type": "string",
+              "description": "the id of the record that caused the request"
+            },
+            "anchor": {
+              "type": "string",
+              "description": "the design anchor or 04-UNLANDED row it is about"
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "brief": {
+              "type": "string",
+              "minLength": 1
+            },
+            "files": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/path"
+              }
+            },
+            "acceptance": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/acceptance_command"
+              }
+            },
+            "hold_id": {
+              "type": "string"
+            },
+            "rejected_id": {
+              "type": "string"
+            },
+            "lane": {
+              "enum": [
+                "rebuild",
+                "product"
+              ]
+            },
+            "priority": {
+              "type": "integer"
+            }
+          }
+        }
+      ]
+    },
+    "role": {
+      "$ref": "../../shared/contracts.schema.json#/$defs/role"
+    },
+    "ticket_row": {
+      "description": "a row of the tickets table (shared/state-store.xml#table-tickets)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "status",
+        "phase",
+        "attempt",
+        "priority",
+        "role",
+        "files",
+        "deps",
+        "version"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/ticket_id"
+        },
+        "status": {
+          "$ref": "#/$defs/status"
+        },
+        "phase": {
+          "$ref": "#/$defs/phase"
+        },
+        "attempt": {
+          "$ref": "../../shared/contracts.schema.json#/$defs/attempt"
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9
+        },
+        "role": {
+          "$ref": "#/$defs/role"
+        },
+        "target_node": {
+          "type": "string",
+          "pattern": "^N-[0-9]{2}$"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 200
+        },
+        "files": {
+          "type": "array",
+          "maxItems": 12,
+          "items": {
+            "$ref": "#/$defs/path"
+          }
+        },
+        "deps": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "$ref": "#/$defs/ticket_id"
+          }
+        },
+        "source_request": {
+          "type": "string",
+          "description": "cut requests: the ticket.request id; ticket-set.accepted naming it closes the cut request"
+        },
+        "waiting_reason": {
+          "enum": [
+            "deps",
+            "files",
+            "hold",
+            "validation"
+          ]
+        },
+        "design_anchor": {
+          "type": "string"
+        },
+        "cut_at": {
+          "$ref": "#/$defs/at"
+        },
+        "ready_at": {
+          "$ref": "#/$defs/at"
+        },
+        "merged_at": {
+          "$ref": "#/$defs/at"
+        },
+        "done_at": {
+          "$ref": "#/$defs/at"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "claim": {
+      "description": "a row of the claims table (shared/contracts.xml#claims): live while released_at is absent; overlap is two-way prefix containment",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "ticket",
+        "pattern",
+        "prefix",
+        "taken_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "ticket": {
+          "$ref": "#/$defs/ticket_id"
+        },
+        "pattern": {
+          "$ref": "#/$defs/path"
+        },
+        "prefix": {
+          "type": "string",
+          "maxLength": 240,
+          "description": "the literal part of the pattern before its first glob character"
+        },
+        "taken_at": {
+          "$ref": "#/$defs/at"
+        },
+        "released_at": {
+          "$ref": "#/$defs/at"
+        }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ticket_row"
+    },
+    {
+      "$ref": "#/$defs/claim"
+    },
+    {
+      "$ref": "#/$defs/ticket_request"
+    },
+    {
+      "$ref": "#/$defs/ticket_ready"
+    },
+    {
+      "$ref": "#/$defs/ticket_waiting"
+    },
+    {
+      "$ref": "#/$defs/ticket_refused"
+    },
+    {
+      "$ref": "#/$defs/ticket_terminal"
+    },
+    {
+      "$ref": "#/$defs/ticket_admitted"
+    },
+    {
+      "$ref": "#/$defs/ticket_transition_refused"
+    },
+    {
+      "$ref": "#/$defs/ticket_stale"
+    },
+    {
+      "$ref": "#/$defs/intake_report"
+    }
+  ]
+}

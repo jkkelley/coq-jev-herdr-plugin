@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-47/record.schema.json",
+  "title": "N-47 Drive publish: input and output records",
+  "description": "Parent: ../../index.xml#N-47. Sibling: spec.xml. Book 1.1.0: shared envelope through ../N-43/record.schema.json#/$defs/envelope (NF-A12); rows and manifest carry sha256 and md5, compared with rclone lsjson --hash (F24).",
+  "oneOf": [{"$ref": "#/$defs/input"}, {"$ref": "#/$defs/output"}],
+  "$defs": {
+    "sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "semver": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "envelope": {"$ref": "../N-43/record.schema.json#/$defs/envelope"},
+    "input": {
+      "title": "merge (from N-09) touching rebuild/design",
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": {"const": "merge"},
+        "body": {
+          "type": "object",
+          "required": ["pr", "merge_sha", "changed_paths"],
+          "properties": {
+            "pr": {"type": "integer"},
+            "branch": {"type": "string"},
+            "merge_sha": {"$ref": "#/$defs/sha"},
+            "ticket": {"type": "string"},
+            "changed_paths": {"type": "array", "items": {"type": "string"}, "contains": {"pattern": "^rebuild/design/"}}
+          }
+        }
+      }
+    },
+    "file-row": {
+      "type": "object",
+      "required": ["path", "title", "sha256", "md5", "result"],
+      "properties": {
+        "path": {"type": "string", "pattern": "^rebuild/design/"},
+        "title": {"type": "string"},
+        "file_id": {"type": "string"},
+        "bytes": {"type": "integer", "minimum": 0},
+        "sha256": {"$ref": "#/$defs/sha256", "description": "of the repository bytes at the merge sha"},
+        "md5": {"$ref": "#/$defs/md5", "description": "of the repository bytes at the merge sha"},
+        "drive_sha256": {"$ref": "#/$defs/sha256", "description": "as rclone lsjson --hash reports it"},
+        "drive_md5": {"$ref": "#/$defs/md5"},
+        "result": {"type": "string", "enum": ["uploaded", "present", "mismatch-retried", "conflict", "failed"]},
+        "attempts": {"type": "integer", "minimum": 0, "maximum": 3},
+        "error": {"type": "string", "maxLength": 240}
+      }
+    },
+    "output": {
+      "title": "drive.copy",
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": {"const": "drive.copy"},
+        "code": {"enum": [201, 204, 409, 423, 503]},
+        "body": {
+          "type": "object",
+          "required": ["merge_sha", "book_version"],
+          "properties": {
+            "merge_sha": {"$ref": "#/$defs/sha"},
+            "book_version": {"$ref": "#/$defs/semver"},
+            "folder_id": {"type": "string"},
+            "folder_title": {"type": "string"},
+            "rows": {"type": "array", "items": {"$ref": "#/$defs/file-row"}},
+            "manifest_file_id": {"type": "string"},
+            "reason": {
+              "type": "string",
+              "enum": ["unchecked", "auth", "network", "mismatch", "content-conflict", "version-not-bumped", "not-set-up", "lease-timeout"]
+            },
+            "owner_acts": {"type": "boolean"},
+            "manifest_sha256": {"$ref": "#/$defs/sha256"}
+          }
+        },
+        "node": {"const": "N-47"}
+      }
+    },
+    "sha256": {"$ref": "../../shared/state-store.schema.json#/$defs/sha256"},
+    "md5": {"type": "string", "pattern": "^[0-9a-f]{32}$"}
+  }
+}

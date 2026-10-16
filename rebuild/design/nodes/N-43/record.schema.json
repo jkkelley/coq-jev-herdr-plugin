@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-43/record.schema.json",
+  "title": "N-43 Status code map loader: input and output records",
+  "description": "Parent: ../../index.xml#N-43. Sibling: spec.xml. Book 1.1.0: $defs.envelope is a $ref to the shared envelope (shared/state-store.schema.json#/$defs/envelope); the r- id form and the required key, by and attempt fields are gone (review NF-A12).",
+  "oneOf": [
+    { "$ref": "#/$defs/input" },
+    { "$ref": "#/$defs/output" }
+  ],
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "envelope": {
+      "$ref": "../../shared/state-store.schema.json#/$defs/envelope",
+      "description": "The one shared envelope (shared/state-store.xml#envelope): UTC-stamp id, no r- ids; the operation key, the fencing token and the expected version ride on the Commit request (shared/contracts.schema.json#/$defs/commit_request), never on the record. Every G7 schema (N-43 to N-51) reaches the envelope through this def."
+    },
+    "input": {
+      "oneOf": [
+        {
+          "title": "forge.snapshot (from N-04)",
+          "allOf": [ { "$ref": "#/$defs/envelope" } ],
+          "properties": {
+            "kind": { "const": "forge.snapshot" },
+            "body": {
+              "type": "object",
+              "required": ["main_sha", "changed_paths"],
+              "properties": {
+                "main_sha": { "$ref": "#/$defs/sha" },
+                "previous_main_sha": { "$ref": "#/$defs/sha" },
+                "changed_paths": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        },
+        {
+          "title": "unit.start (from N-06)",
+          "allOf": [ { "$ref": "#/$defs/envelope" } ],
+          "properties": { "kind": { "const": "unit.start" }, "body": { "type": "object", "required": ["unit", "pid"], "properties": { "unit": { "type": "string" }, "pid": { "type": "integer" } } } }
+        },
+        {
+          "title": "reload.request (gRPC Scheduler.Reload)",
+          "allOf": [ { "$ref": "#/$defs/envelope" } ],
+          "properties": { "kind": { "const": "reload.request" }, "body": { "type": "object", "properties": { "caller": { "type": "string", "enum": ["break-glass", "test"] } } } }
+        }
+      ]
+    },
+    "code-entry": {
+      "type": "object",
+      "required": ["value", "name", "meaning", "acts"],
+      "properties": {
+        "value": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "name": { "type": "string", "minLength": 1 },
+        "meaning": { "type": "string", "minLength": 1, "maxLength": 240 },
+        "acts": { "type": "string", "enum": ["system", "owner", "seat", "nobody"] },
+        "kinds": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "output": {
+      "title": "code.table",
+      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "properties": {
+        "kind": { "const": "code.table" },
+        "code": { "enum": [200, 400, 503] },
+        "body": {
+          "type": "object",
+          "required": ["hash", "source"],
+          "properties": {
+            "hash": { "$ref": "#/$defs/sha256" },
+            "main_sha": { "$ref": "#/$defs/sha" },
+            "source": { "type": "string", "enum": ["mirror", "embedded"] },
+            "count": { "type": "integer", "minimum": 1 },
+            "codes": { "type": "array", "items": { "$ref": "#/$defs/code-entry" } },
+            "removed_codes": { "type": "array", "items": { "type": "integer" }, "description": "codes present in the previous table and absent here; N-07 may finish routing records that carry them" },
+            "reason": { "type": "string", "maxLength": 240, "description": "required when code is 400 or 503" },
+            "failing_code": { "type": "integer" },
+            "defect_site": { "type": "string", "pattern": "^N-[0-9]{2}$" }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-40/record.schema.json",
+  "title": "N-40 Stats screen: input and output records",
+  "description": "Input counters.frame (computed by the Go service, pushed by N-31) and rail.panel (N-33); output stats.frame (drawn, not stored). Shared envelope: $defs.envelope is a $ref to shared/state-store.schema.json#/$defs/envelope (book 1.1.0). UTC everywhere.",
+  "$defs": {
+    "utc": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "nodeId": {"type": "string", "pattern": "^N-[0-9]{2}$"},
+    "code": {"type": "integer", "minimum": 100, "maximum": 599},
+    "window": {"enum": ["1h", "6h", "24h", "7d"]},
+    "envelope": {
+      "$ref": "../../shared/state-store.schema.json#/$defs/envelope",
+      "description": "The one shared envelope (shared/state-store.xml#envelope): the status code field is code; the operation key, expected version and lease token ride on the Commit request, never on the record; seq is added by N-01 at commit (book 1.1.0)."
+    },
+    "stages": {
+      "type": "object",
+      "required": ["cut", "started", "tested", "reviewed", "merged"],
+      "properties": {
+        "cut": {"type": "integer", "minimum": 0},
+        "started": {"type": "integer", "minimum": 0},
+        "tested": {"type": "integer", "minimum": 0},
+        "reviewed": {"type": "integer", "minimum": 0},
+        "merged": {"type": "integer", "minimum": 0}
+      }
+    },
+    "counts": {
+      "type": "object",
+      "required": ["records", "jobs", "wakes", "seats", "pods"],
+      "properties": {
+        "records": {"type": "integer", "minimum": 0},
+        "records_by_kind": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+        "jobs": {"type": "integer", "minimum": 0},
+        "wakes": {"type": "integer", "minimum": 0},
+        "seats": {"type": "integer", "minimum": 0},
+        "pods": {"type": "integer", "minimum": 0}
+      }
+    },
+    "cost": {
+      "type": "object",
+      "required": ["seat_turns", "seat_tokens", "pod_minutes"],
+      "properties": {
+        "seat_turns": {"type": "integer", "minimum": 0},
+        "seat_tokens": {"type": "integer", "minimum": 0},
+        "api_usd": {"type": "number", "minimum": 0, "description": "Pod seats on an API key (D03); absent while seats are on the subscription"},
+        "pod_minutes": {"type": "number", "minimum": 0},
+        "cap_usd": {"type": "number", "minimum": 0}
+      }
+    },
+    "windowCounters": {
+      "type": "object",
+      "required": ["from", "to", "stages", "bringup", "stalls_per_node", "counts", "cost"],
+      "properties": {
+        "from": {"$ref": "#/$defs/utc"},
+        "to": {"$ref": "#/$defs/utc"},
+        "stages": {"$ref": "#/$defs/stages"},
+        "bringup": {
+          "type": "object",
+          "required": ["median_s", "p95_s", "bound_s", "last"],
+          "properties": {
+            "median_s": {"type": "number", "minimum": 0},
+            "p95_s": {"type": "number", "minimum": 0},
+            "bound_s": {"type": "number", "minimum": 0},
+            "last": {"type": "array", "maxItems": 12, "items": {"type": "number", "minimum": 0}}
+          }
+        },
+        "stalls_per_node": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["node", "stalls"],
+            "properties": {"node": {"$ref": "#/$defs/nodeId"}, "stalls": {"type": "integer", "minimum": 0}}
+          }
+        },
+        "counts": {"$ref": "#/$defs/counts"},
+        "cost": {"$ref": "#/$defs/cost"}
+      }
+    },
+    "counters.frame": {
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "type": "object",
+      "required": ["window", "current", "previous", "tick_minute"],
+      "properties": {
+        "kind": {"const": "counters.frame"},
+        "node": {"const": "N-06"},
+        "window": {"$ref": "#/$defs/window"},
+        "tick_minute": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}Z$"},
+        "current": {"$ref": "#/$defs/windowCounters"},
+        "previous": {"$ref": "#/$defs/windowCounters"},
+        "compute_ms": {"type": "integer", "minimum": 0},
+        "code": {"enum": [201, 504]}
+      }
+    },
+    "rail.panel": {
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "type": "object",
+      "required": ["steps_total", "steps_done", "current_step", "current_name"],
+      "properties": {
+        "kind": {"const": "rail.panel"},
+        "node": {"const": "N-33"},
+        "steps_total": {"type": "integer", "minimum": 1},
+        "steps_done": {"type": "integer", "minimum": 0},
+        "current_step": {"type": "string", "pattern": "^R-[0-9]{2}$"},
+        "current_name": {"type": "string"},
+        "ledger_rows": {"type": "integer", "minimum": 0}
+      }
+    },
+    "stats.frame": {
+      "type": "object",
+      "description": "The drawn frame; not a store record.",
+      "required": ["window", "delivered_seq", "state", "status"],
+      "properties": {
+        "window": {"$ref": "#/$defs/window"},
+        "delivered_seq": {"type": "integer", "minimum": 0},
+        "state": {"enum": ["default", "empty", "loading", "error", "offline"]},
+        "error_class": {"enum": ["not-found", "timeout", "validation"]},
+        "status": {"enum": [200, 422, 503, 504]},
+        "reading": {"type": "string", "maxLength": 160}
+      }
+    }
+  },
+  "oneOf": [{"$ref": "#/$defs/counters.frame"}, {"$ref": "#/$defs/rail.panel"}, {"$ref": "#/$defs/stats.frame"}]
+}

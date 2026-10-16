@@ -1,0 +1,270 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-18 Validator. Volume of the Factory Rebuild spec book (R-03), group G3 Seats.
+  Written 2026-10-14T05:40:00Z by the G3 spec-author seat against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  Rulings: D16 (C48) a validator runs the acceptance commands on main before a cut is allowed, D04 (C35),
+  D11 (C39) code does mechanical jobs, D22 (C38) tests as pods, one file one in-flight ticket (owner 2026-10-12).
+  No em dash appears in this file. Every time is UTC.
+-->
+<!--
+  Round 2, 2026-10-14T05:04:00Z, by the G3 spec-author seat, after the R-03 review seat failed round 1 on pointers.
+  What broke: this volume pointed at ../N-xx/spec.xml#N-xx-spec while every volume in the book declares
+  root id="N-xx" and links with #N-xx, and it pointed at ../../shared/*.xml anchors that no author has
+  written (shared/ belongs to the shared author, not this seat).
+  Why it mattered: a dangling pointer fails check.sh, and the architect reads nothing until the book passes.
+  The fix: root id is now the node id; every sibling, upstream, downstream and edge anchor is #N-xx; the
+  shared anchors are declared in <shared-needs> with no href so the shared author can write them and
+  check.sh can match them when shared/ lands; the principles this node obeys point at dag.md sections 7
+  and 8, which exist. The parent stays ../../index.xml#N-18 because the brief names the index volume as
+  every node's parent and the anchor is the node id, the one anchor every node is guaranteed.
+  Rejected: writing shared/ or index.xml from this seat (two authors on one file is the one-file,
+  one-in-flight-ticket collision the book forbids); leaving the hrefs to resolve later (a failing volume
+  blocks the book now).
+  Cost: a declared need is not a live pointer until shared/ lands.
+-->
+<volume id="N-18" node="N-18" kind="node-spec" group="G3" version="1.2.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: ticket-set.draft</entry>
+    <entry ref="output">Output records: ticket (accepted) and ticket-set.accepted, or validator.refused</entry>
+    <entry ref="mechanism">Mechanism: the checks, in order</entry>
+    <entry ref="acceptance-run">Running the acceptance commands on main</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="checklist">Checklist with proof</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with the reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-18"/>
+    <dag href="../../dag.md#3-every-node">The DAG row of this node: input record and output record</dag>
+    <principle href="../../dag.md#7-rules-every-node-obeys">Rules 1 to 9: input to output, no cog, three attempts, one store, code does mechanical jobs, the verdict the agent cannot edit, herdr is the owner's window, build mode, ships dark</principle>
+    <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, timed-out stalls, a 409 that reports</principle>
+    <needs href="spec.xml#shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <sibling href="record.schema.json" kind="schema">JSON schema of ticket, ticket-set.accepted and validator.refused; the input is ../N-17/record.schema.json#/$defs/ticket-set.draft</sibling>
+    <sibling href="../N-13/spec.xml#N-13">Seat layer render</sibling>
+    <sibling href="../N-14/spec.xml#N-14">Workspace provision: the verify workspace this node borrows</sibling>
+    <sibling href="../N-15/spec.xml#N-15">One-shot seat launcher</sibling>
+    <sibling href="../N-16/spec.xml#N-16">Worker run: the consumer of accepted tickets, after N-03</sibling>
+    <sibling href="../N-17/spec.xml#N-17">Spec-author run: the writer of the draft</sibling>
+    <sibling href="../N-19/spec.xml#N-19">Reviewer run</sibling>
+    <downstream href="../N-03/spec.xml#N-03">Ticket intake and readiness: accepted tickets re-enter there</downstream>
+    <downstream href="../N-22/spec.xml#N-22">Image build: the pinned test image the acceptance container uses</downstream>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <text>Every shared anchor below is live in book 1.1.0; this volume cites them and restates none of their numbers.</text>
+    <need volume="../../shared/contracts.xml" anchor="operation-keys" kind="contract">N-18/ticket-set.accept/{set_id}: the one key of a set's verdict, accepted or refused</need>
+    <need volume="../../shared/contracts.xml" anchor="batch" kind="contract">Store.Do: the verdict, the id mint and the set row commit all or none; limits per Commit</need>
+    <need volume="../../shared/contracts.xml" anchor="statements" kind="contract">ticket_sets.upsert and id_mint.reserve (owner N-18); tickets.insert stays N-03's</need>
+    <need volume="../../shared/contracts.xml" anchor="retry-owner" kind="contract">validator.refused rides rows output_rejected (422) and schema_invalid (400): N-11 charges the spec phase</need>
+    <need volume="../../shared/contracts.xml" anchor="ticket-transitions" kind="contract">a ticket enters at status cut; N-03 owns every move after</need>
+    <need volume="../../shared/contracts.schema.json" anchor="/$defs/failure_body" kind="schema">the body every failure routed to N-11 carries</need>
+    <need volume="../../shared/retry-budget.xml" anchor="layers" kind="contract">layer validator: the validator's own infrastructure retries, never a seat attempt</need>
+    <need volume="../../shared/state-store.xml" anchor="table-ticket-sets" kind="store-table">ticket_sets, mode cas, owner N-18</need>
+    <need volume="../../shared/state-store.xml" anchor="table-id-mint" kind="store-table">id_mint, append-only, unique on (set_id, key) and on id</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-201" kind="status-code">ticket, ticket-set.accepted</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-400" kind="status-code">validator.refused schema</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-422" kind="status-code">validator.refused with the check and the command</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">validator.failed</need>
+    <need volume="../../shared/ci-capacity.xml" anchor="admission" kind="contract">the arm64 pod path runs under the CI admission budget like any gate pod</need>
+    <need volume="../../shared/principles.xml" anchor="tickets-are-small" kind="principle">one concern, a few files, a diff a reviewer reads in minutes</need>
+    <need volume="../../shared/principles.xml" anchor="code-does-mechanical-jobs" kind="principle">validation is code with tests</need>
+  </shared-needs>
+
+  <section id="purpose" title="Purpose">
+    <text>N-18 is code that decides whether a drafted ticket may exist. It runs every acceptance command on main and records the observed exit code, refuses a ticket whose acceptance cannot run, whose files are undeclared or overlap inside the set, whose input and output records are not declared, or whose size breaks the small-ticket rule, and mints ids only for tickets that pass. Nothing an LLM wrote becomes a ticket until this node has run it (rebuild/investigation/03-DECISIONS.md#18-d16-may-an-llm-decompose-work-into-tickets option B).</text>
+    <text>The rule it enforces was written in rime as R3 and never built: "The architect runs every acceptance command against origin/main before a ticket is cut and records the observed exit code in the ticket. A ticket whose acceptance cannot be run is not cut" (rebuild/investigation/L09-earlier-factory-iterations.md#7-decisions-an-llm-makes-that-a-rule-could-make); five of seven supersedes in that iteration were acceptance that could not be satisfied. Here it is a function with a test.</text>
+  </section>
+
+  <section id="input" title="Input record: ticket-set.draft">
+    <text>Kind ticket-set.draft, code 100, from N-17; schema ../N-17/record.schema.json#/$defs/ticket-set.draft. The node reads set_id (equal to run_id), cut_request, source_request, anchor, repo_sha, tickets (at most 15, so a whole set plus its accepted record fits one Commit's record limit, shared/contracts.xml#batch) and verdict_refs. Each drafted ticket names target_node (the DAG node it builds; the envelope's node is the writer, F37), files, new_paths, and acceptance entries with runs_in, expect_exit, regression_guard, test_ref, expected_failure and arch_sensitive.</text>
+  </section>
+
+  <section id="output" title="Output records: ticket (accepted) and ticket-set.accepted, or validator.refused">
+    <text>record.schema.json#/$defs/ticket is THE ticket shape of the book. N-03 (intake), N-07 (dispatch) and N-13 (briefs) $ref it and restate nothing; a tickets row read back is the same shape with its row columns (status, phase, row_attempt, not_before, version) filled. On a pass, one ticket per drafted ticket, kind ticket, code 201: a minted id WO-&lt;yyyymmdd&gt;-&lt;4 hex&gt; from id_mint, every drafted field, lane build, status cut, set_id, cut_request, source_request, depends_on_ids, cut_at, and for every acceptance entry what this node saw on main: observed_exit_on_main, platform, classification (guard_pass or expected_match), observed_at_sha, log_path and runs (two when arch_sensitive). Then one ticket-set.accepted, code 201, listing the ids and the platforms. N-03 reads the tickets as new work (tickets.insert is N-03's statement) and closes the cut request by source_request.</text>
+    <text>On a refusal, one validator.refused: committed envelope plus shared failure_body (ticket the cut request, phase spec, the draft's attempt, outcome refused, failure_kind output_rejected for 422 or schema_invalid for 400), with set_id, run_id, check, reason, the ticket key, the acceptance id, the command, the refusing run and the log path. N-11 consumes it as the spec phase's failure and dispatches spec-author attempt n+1 with it attached. A refusal refuses the whole set; nothing is minted.</text>
+    <text>On the validator's own infrastructure failure, validator.failed 500; it is not a failure of the draft and never reaches N-11 (#retries).</text>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the checks, in order">
+    <text>Package scheduler/internal/validator (planned), hosted by coq-service as principal coq-svc acting as N-18. Validate(ctx, draft) runs the checks below in order and stops at the first failure; cheap deterministic checks run before the one that runs commands. Every check writes one line to the set's validate.log with its name, result and duration.</text>
+    <mermaid>flowchart TD
+  D[ticket-set.draft] --> C0{schema}
+  C0 -- fail --> R400[validator.refused 400 schema]
+  C0 --> C1{anchor at repo_sha is current on main}
+  C1 -- moved --> R1[validator.refused 422 anchor_moved]
+  C1 --> C2{files and new_paths}
+  C2 -- fail --> R2[validator.refused 422 files]
+  C2 --> C3{records: kinds exist}
+  C3 -- fail --> R3[validator.refused 422 records]
+  C3 --> C4{depends_on acyclic}
+  C4 -- fail --> R4[validator.refused 422 depends]
+  C4 --> C5{size}
+  C5 -- fail --> R5[validator.refused 422 size]
+  C5 --> C6{duplicate}
+  C6 -- fail --> R6[validator.refused 422 duplicate]
+  C6 --> C7[run and classify every acceptance command]
+  C7 -- not admitted --> R7[validator.refused 422 acceptance]
+  C7 --> M[Store.Do accept: mint, tickets, set row, ticket-set.accepted 201]</mermaid>
+    <step n="C0">Schema: the draft validates against ../N-17/record.schema.json; N-01 already validated it at commit, so a failure here is a defect of two checks disagreeing and is also reported on N-15.</step>
+    <step n="C1">Anchor: git -C mirror rev-list -1 origin/main -- &lt;anchor volume path&gt; must not be newer than draft.repo_sha; else anchor_moved.</step>
+    <step n="C2">Files (F19): every ticket has at least one file; no path is an aggregate (CHANGELOG.md, work-orders/INDEX.md, CONTEXT_STATE.md, generated READMEs) or a runtime path (events/, logs/, anything under the state root); the overlap rule of shared/contracts.xml#claims finds no pair across the tickets of the set; at most 6 files. Every pattern matches an existing path on main, or is covered by new_paths: a new_paths entry must match a pattern of files (else new_path_outside_files) and must not exist on main; its parent directory need not exist, so a brand new package or directory is admitted. A pattern that matches nothing on main and no new_paths entry is unknown_path (a typo is refused, not discovered by a worker).</step>
+    <step n="C3">Records: input_record and output_record name kinds in shared/record-kinds.xml; a dark build's output may be test.proof.</step>
+    <step n="C4">Depends: keys resolve inside the set, ids exist with a status that is not cancelled, dead or refused, and the set plus existing tickets is acyclic (Kahn's algorithm); a go_live ticket depends on its build ticket.</step>
+    <step n="C5">Size: files.count equals len(files); diff_lines_estimate within the draft schema's bound; the set holds at most 15 tickets (too_many_tickets). The reviewer judges concern; the validator checks counts.</step>
+    <step n="C6">Duplicate: no ticket with a status other than dead, cancelled or refused on the same target_node with the same file set and the same acceptance commands; a duplicate is refused naming the existing id.</step>
+    <step n="C7">Acceptance: section acceptance-run.</step>
+    <step n="M" id="m-accept">Accept in one Store.Do under operation key N-18/ticket-set.accept/{set_id}/r1 (shared/contracts.xml#batch): precondition entity cut.accepted:&lt;cut_request&gt; absent; id_mint.reserve for every (set_id, key) (unique, so a resumed mint returns the same ids); ticket_sets.upsert set row drafted to accepted at its expected version; the entity cut.accepted:&lt;cut_request&gt; written with the set_id; the ticket records and ticket-set.accepted. A refusal uses the same operation key with the validator.refused record and the set row to refused, so a set has exactly one verdict: a second, different verdict is 409 idempotency_mismatch and the first stands.</step>
+  </section>
+
+  <section id="acceptance-run" title="Running the acceptance commands on main">
+    <text>The validator borrows a read-only verify workspace from N-14 (role validator, base_ref origin/main, no claims; run_id v-&lt;set_id&gt;) and runs every acceptance command of every ticket by the entry's runs_in. runs_in pod: one podman container on the host from the pinned test image (ci/images.json, N-22), platform amd64, workspace mounted read-only at /work, --network none, no secrets. runs_in host: a transient systemd unit (systemd-run --wait --pipe --collect, DynamicUser=yes, PrivateNetwork=yes, BindReadOnlyPaths=&lt;workspace&gt;:/work), so a host-only proof is run on the host and not silently moved into a container. arch_sensitive true: the command also runs on the arm64 pod path, one pod through the N-24 executor on an arm64 node with the same multi-arch image digest, under the CI admission budget (shared/ci-capacity.xml#admission); both runs are recorded and must classify the same, else arch_mismatch.</text>
+    <text>Hermetic and writable scratch (C7): every path gets a tmpfs HOME (/tmp/home), TMPDIR (/tmp) and caches (XDG_CACHE_HOME=/tmp/cache, GOCACHE=/tmp/cache/go, npm_config_cache=/tmp/cache/npm) on tmpfs; the module and package caches the image bakes in are read-only and complete, because the network is off. A read-only error on /work or a cache that is not on tmpfs is therefore the command's own non-hermetic write, classified infra with signature readonly_cache or readonly_fs, and refused: the gate would see the same failure.</text>
+    <text>Classification of each run, in order (record.schema.json#/$defs/classification):</text>
+    <rule name="timeout">the command ran past its timeout_seconds (default 300): refused.</rule>
+    <rule name="cannot_run">exit 126 or 127, "No rule to make target", or a script path that is missing on main and not in new_paths: refused, with signature tool_missing, no_rule or script_missing.</rule>
+    <rule name="infra">the output matches an infrastructure signature (read-only file system or cache, network unreachable, permission denied outside /work) whatever the exit: refused 422, because the run proves nothing about the ticket.</rule>
+    <rule name="guard_pass">regression_guard true and the exit is 0: admitted, recorded as a guard.</rule>
+    <rule name="already_passing">regression_guard false and the exit equals expect_exit: refused; a command that already passes proves nothing.</rule>
+    <rule name="expected_match">expected_failure is present, the exit equals expected_failure.exit and the output matches expected_failure.match: admitted; the matched line is recorded. A red test that already exists on main must also be listed in tests/expected-red.json (planned; the manifest the gate honours, nodes/N-24/spec.xml) or it is unlisted_red; a test_ref under new_paths needs no entry.</rule>
+    <rule name="wrong_failure_reason">expected_failure is present and the exit or the output does not match: refused 422 wrong_failure_reason; the test fails, but not for the reason the ticket fixes.</rule>
+    <rule name="unexpected_red">a non-zero exit with no expected_failure and no guard: refused; the author must say why it is red.</rule>
+    <rule name="runs_in_pod_unknown">runs_in is pod and the command's suite is not in N-23's suites.json: refused.</rule>
+    <text>What is recorded per run: platform, path, image digest, exit, classification, signature, matched line, duration, stdout and stderr tails, log path, observed_at_sha. Commands run in parallel up to seats.json validator_parallel (default 4); the whole step is bounded by seats.json validator_total_seconds (default 1800), past which the set is refused validator_timeout naming the commands still running.</text>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <text>The validator controller runs on every scheduler tick (tick.scheduler_seconds, shared/contracts.xml#timing): it lists ticket_sets rows in status drafted with no verdict and validates each, at most seats.json validator_workers (default 2) at once. A draft is the only trigger; there is no approve verb. A judged set is never re-judged: its verdict is the operation key's one result.</text>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait what="store reads and the accept Store.Do" timeout="store.commit_ms inside the transaction (shared/contracts.xml#timing); 5 s per call" attempts="3, layer validator" fallback="validator.failed 500 store_unreachable; nothing was minted"/>
+    <wait what="the verify workspace from N-14" timeout="N-14's bounds" attempts="3 by N-14" fallback="validator.failed 500 workspace"/>
+    <wait what="one acceptance run" timeout="timeout_seconds of the entry, default 300, max 1800" attempts="1; a command's exit is never retried" fallback="classification timeout, refused 422"/>
+    <wait what="podman, the host unit or the arm64 pod failing to start" timeout="60 s to start" attempts="3, layer validator, 10 s, 30 s, 90 s" fallback="validator.failed 500 podman, host_unit or pod_arm64"/>
+    <wait what="the whole acceptance step" timeout="validator_total_seconds, default 1800" attempts="1" fallback="validator.refused 422 validator_timeout"/>
+    <wait what="pull of the pinned test image" timeout="300 s" attempts="3, layer validator" fallback="validator.failed 500 image; N-22 owns the pin"/>
+    <text>No wait depends on a person.</text>
+  </section>
+
+  <section id="retries" title="Retries up to 3, then recover and report">
+    <text>A validator.refused is the author's failure: N-11 charges the spec phase (shared/contracts.xml#retry-owner rows output_rejected and schema_invalid) and dispatches spec-author attempt n+1 with the refusal attached; after the third the cut request is dead and one card is posted.</text>
+    <text>A validator.failed is the validator's own failure and keeps its own retries (shared/retry-budget.xml#layers row validator): the next tick retries the same set after next_try_at, up to 3 attempts; at attempts 3 the record is a defect, N-28 posts one card about the infrastructure, and no seat attempt is charged. Recovery after a restart: the tick re-lists unjudged sets; id_mint returns the same ids for a resumed accept; a left-over verify workspace is released by N-14's cleanup.</text>
+  </section>
+
+  <section id="many-agents" title="Many agents at once">
+    <text>Many sets validate at once, each in its own verify workspace and runs. Main is read-only to all of them.</text>
+    <text>Collision 1, two validations of one set (restart overlap): both send operation key N-18/ticket-set.accept/{set_id}/r1; the same request replays 200, a different one is 409 idempotency_mismatch and the first verdict stands. The loser's runs are wasted work bounded by the timeouts, counted.</text>
+    <text>Collision 2, two sets of one cut request both pass C6 before either commits: the accept Store.Do holds precondition cut.accepted:&lt;cut_request&gt; absent; the loser gets 412 precondition and commits validator.refused 422 duplicate naming the winner's set. No lease is needed: the store's single writer is the serialization point.</text>
+    <text>Collision 3, two sets with overlapping files across sets: allowed; N-03 serializes them by claims. Overlap is refused only inside one set.</text>
+    <text>Collision 4, main moves during C7: observed_at_sha records the sha the runs saw; a command that stops running on a newer main surfaces at the gate with the command named.</text>
+    <text>Collision 5, id suffix collision: id_mint is unique on id; the random suffix is redrawn up to 3 times inside the transaction.</text>
+  </section>
+
+  <section id="codes" title="Status codes this node emits">
+    <code value="201" kind="ticket">A ticket exists with its observed runs. Acts: N-03 (intake, tickets.insert).</code>
+    <code value="201" kind="ticket-set.accepted">The set is cut. Acts: N-03 closes the cut request by source_request.</code>
+    <code value="400" kind="validator.refused">The draft failed its schema; failure_kind schema_invalid. Acts: N-11; plus a defect on N-15.</code>
+    <code value="422" kind="validator.refused">A check failed with evidence; failure_kind output_rejected. Acts: N-11 dispatches the author's next attempt.</code>
+    <code value="500" kind="validator.failed">Infrastructure of the validator. Acts: N-18's next tick, then N-28 at attempts 3.</code>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path id="N-18.logs" dir="$COQ_STATE/validator/&lt;set_id&gt;/" writes="validate.log, one &lt;key&gt;-&lt;acceptance id&gt;-&lt;platform&gt;.log per run with argv, exit, duration, stdout and stderr" cleanup="scheduler/host/bin/cleanup-validator.sh" retention="30 days after the verdict; a set with a live ticket is kept" trigger="timer" acts="system">Dry run by default; --apply deletes; registered in N-45's cleanup registry as validator-logs.</path>
+    <path id="N-18.containers" dir="podman containers labelled coq.validator=&lt;set_id&gt;" writes="container state under coq-svc's podman storage" cleanup="scheduler/host/bin/cleanup-validator.sh --containers" retention="podman rm --force at the end of each run; any labelled container older than 1 hour is removed" trigger="timer" acts="system"/>
+    <path id="N-18.units" dir="transient units coq-validate-&lt;set_id&gt;-&lt;key&gt;-&lt;acceptance id&gt;" writes="nothing persistent (DynamicUser, tmpfs HOME and TMPDIR)" cleanup="systemd-run --collect; scheduler/host/bin/cleanup-validator.sh --units stops a unit past its RuntimeMaxSec" retention="the run" trigger="unit-stop" acts="system"/>
+    <text>The verify workspace is N-14's (N-14.workspace). Tickets live in the store (tables tickets, ticket_sets, id_mint); retention is N-45's. Nothing is written into the repository.</text>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <text>coq-service as principal coq-svc acting as N-18: Commits of ticket, ticket-set.accepted, validator.refused and validator.failed; statements ticket_sets.upsert and id_mint.reserve; podman run with the pinned image, read-only mount, --network none, no secrets; start transient DynamicUser units (a polkit rule scoped to coq-validate-* units, shared/authority.xml); submit arm64 pods through the N-24 executor; read the mirror. No forge token, no write to any workspace. No seat is involved: the spec-author cannot run the validator; the worker reads only the observed runs on its ticket.</text>
+  </section>
+
+  <section id="checklist" title="Checklist with proof">
+    <item id="c-new-package" proof="go test ./internal/validator -run TestNewPackageAdmitted: a draft whose files name scheduler/internal/newpkg/*.go, new_paths the two new files, and expected_failure {exit 1, match 'no Go files|directory .* does not exist|cannot find'} is admitted with classification expected_match and the matched line recorded">A brand new package is admitted (F19).</item>
+    <item id="c-wrong-reason" proof="go test TestRedWithoutMatchRefused: exit 1 whose output does not match expected_failure.match yields validator.refused 422 reason wrong_failure_reason with failure_kind output_rejected">A red run for the wrong reason is refused.</item>
+    <item id="c-readonly-cache" proof="go test TestReadOnlyCacheRefused: a command that writes $(go env GOMODCACHE) and fails 'read-only file system' yields 422 reason infra signature readonly_cache, not validator.failed">A non-hermetic command is refused as infra.</item>
+    <item id="c-tmpfs" proof="probe: inside every path HOME, TMPDIR, XDG_CACHE_HOME and GOCACHE are tmpfs and writable, /work is read-only, curl to github.com fails">C7 runs hermetic with writable scratch.</item>
+    <item id="c-arch" proof="probe: an arch_sensitive entry yields two runs, platform amd64 (container) and arm64 (pod-arm64), with one image digest; differing classifications yield arch_mismatch">arch_sensitive uses the arm64 pod path.</item>
+    <item id="c-host" proof="go test TestRunsInHostUsesUnit: runs_in host executes through systemd-run with DynamicUser and records path host">runs_in host is honoured.</item>
+    <item id="c-already" proof="go test TestAlreadyPassingRefused: exit equals expect_exit with regression_guard false yields already_passing; regression_guard true yields guard_pass">A passing command proves nothing unless it is a guard.</item>
+    <item id="c-overlap" proof="go test TestOverlapInsideSetRefused: two tickets of one set on line/bin/* and line/bin/merge.sh are refused files overlap; two sets with the same overlap are both accepted">Overlap inside a set is a cut defect.</item>
+    <item id="c-cycle" proof="go test TestCycleRefused: t1 on t2 and t2 on t1 is refused depends cycle; a go_live ticket without its build dependency is refused">The graph is acyclic and go-live follows build.</item>
+    <item id="c-one-verdict" proof="go test TestOneVerdict: Validate twice on one set (the first crashed after the mint) yields the same ids and one ticket-set.accepted; a different second verdict gets 409 idempotency_mismatch">A set has one verdict and a resumed mint keeps its ids.</item>
+    <item id="c-cr-race" proof="go test TestTwoSetsOneCutRequest: two sets of one cut request racing to accept: one commits, the other gets 412 precondition and commits validator.refused 422 duplicate">One accepted set per cut request.</item>
+    <item id="c-all-or-nothing" proof="go test TestAllOrNothing: a set whose last ticket fails C7 mints nothing">A set is cut together or not at all.</item>
+    <item id="c-ticket-shape" proof="check C22: every example of record.schema.json#/$defs/ticket validates, and N-03, N-07 and N-13 $ref the def">One ticket shape for the book (F37).</item>
+    <item id="c-cleanup" proof="scheduler/host/bin/cleanup-validator.sh --dry-run lists sets older than 30 days with no live ticket and keeps a set with a ready ticket; --apply removes the first only">Cleanup keeps evidence of live tickets.</item>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <text>Counters: sets_validated, sets_accepted, sets_refused_by_check, tickets_minted, acceptance_commands_run, acceptance_cannot_run, acceptance_already_passing, validate_seconds histogram, validator_failed_by_reason. The Stats screen (N-40) shows the refusal rate by check; the Alerts screen (N-41) shows validator.failed (infrastructure) and a cannot_run rate above seats.json cannot_run_alert (default 0.3 over 10 sets), because that means the brief template or the make targets drifted. The Machine screen (N-39) for N-18 shows sets in validation with the command currently running and its elapsed time.</text>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <text>See why a set was refused: the validator.refused record names the check and the command; the log is $COQ_STATE/validator/&lt;set_id&gt;/&lt;key&gt;-&lt;a&gt;.log.</text>
+    <text>A cannot_run on a real make target: the test image lacks a tool; the fix is N-22 (image config) and a ticket there, never a host run of the command to "prove" it.</text>
+    <text>Re-run a validation by hand: not a path; a set has one verdict. A changed draft is a new spec-author run (N-17) and a new set.</text>
+    <text>Infrastructure failed 3 times: the card names store, workspace, podman or image; after the fix the next tick revalidates the set without any hand step.</text>
+    <text>Cleanup: scheduler/host/bin/cleanup-validator.sh [--apply] [--containers]; registered in N-45.</text>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <edge dir="in" from="../N-17/spec.xml#N-17" record="ticket-set.draft"/>
+    <edge dir="out" to="../N-11/spec.xml#N-11" record="validator.refused 400 and 422 (failure_body)"/>
+    <edge dir="re-entry" to="../N-03/spec.xml#N-03" record="ticket and ticket-set.accepted enter intake (../../dag.md#4-re-entries)"/>
+    <text>validator.failed goes to N-28 as a defect card at attempts 3; N-18 borrows a workspace from N-14 by a library call, the image digest from N-22 and the arm64 pod path from N-24's executor; none is a drawn edge.</text>
+  </section>
+
+  <section id="examples" title="Examples">
+    <example schema="record.schema.json#/$defs/ticket">{"id":"20261014T083000Z-201-t1k9a","at":"2026-10-14T08:30:00Z","kind":"ticket","code":201,"node":"N-18","seq":5702,"epoch":1,"ticket":"WO-20261014-7c3e","set_id":"d-20261014071500-s3c9vb","cut_request":"CR-req-0042","source_request":"20261014T071000Z-100-m4n5b","lane":"build","status":"cut","key":"t1","title":"Map frame renderer for the belt lanes","target_node":"N-38","anchor":"rebuild/design/nodes/N-38/spec.xml#frames","concern":"Render the belt lanes as frames from the snapshot.","files":["tools/bearings/map/frames/*.ts"],"new_paths":["tools/bearings/map/frames/lanes.ts","tools/bearings/map/frames/lanes.test.ts"],"input_record":"snapshot","output_record":"frame","acceptance":[{"id":"a1","command":"make -C tools/bearings test-frames","runs_in":"pod","expect_exit":0,"proves":"c-frames","test_ref":"tools/bearings/map/frames/lanes.test.ts::renders lanes","expected_failure":{"exit":1,"match":"Cannot find module .*lanes"},"arch_sensitive":true,"observed_exit_on_main":1,"platform":"amd64","classification":"expected_match","observed_at":"2026-10-14T08:24:00Z","observed_at_sha":"89abcdef0123456789abcdef0123456789abcdef","log_path":"$COQ_STATE/validator/d-20261014071500-s3c9vb/t1-a1-amd64.log","expected_red_entry":false,"runs":[{"platform":"amd64","path":"container","image_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","exit":1,"classification":"expected_match","matched":"Error: Cannot find module './lanes'","duration_seconds":21.4,"observed_at":"2026-10-14T08:24:00Z","observed_at_sha":"89abcdef0123456789abcdef0123456789abcdef","log_path":"$COQ_STATE/validator/d-20261014071500-s3c9vb/t1-a1-amd64.log"},{"platform":"arm64","path":"pod-arm64","image_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","exit":1,"classification":"expected_match","matched":"Error: Cannot find module './lanes'","duration_seconds":48.0,"observed_at":"2026-10-14T08:27:30Z","observed_at_sha":"89abcdef0123456789abcdef0123456789abcdef","log_path":"$COQ_STATE/validator/d-20261014071500-s3c9vb/t1-a1-arm64.log"}]}],"depends_on":[],"depends_on_ids":[],"role":"worker","size":{"files":2,"diff_lines_estimate":180},"steps":["Add lanes.ts that maps snapshot lanes to frames.","Add lanes.test.ts covering three lanes."],"cut_at":"2026-10-14T08:30:00Z"}</example>
+    <example schema="record.schema.json#/$defs/ticket-set.accepted">{"id":"20261014T083000Z-201-s4m2b","at":"2026-10-14T08:30:00Z","kind":"ticket-set.accepted","code":201,"node":"N-18","seq":5703,"epoch":1,"ticket":"CR-req-0042","set_id":"d-20261014071500-s3c9vb","run_id":"d-20261014071500-s3c9vb","cut_request":"CR-req-0042","source_request":"20261014T071000Z-100-m4n5b","anchor":"rebuild/design/nodes/N-38/spec.xml#frames","tickets":[{"key":"t1","ticket":"WO-20261014-7c3e","title":"Map frame renderer for the belt lanes"}],"observed_at_sha":"89abcdef0123456789abcdef0123456789abcdef","platforms":["amd64","arm64"],"validate_seconds":412.5}</example>
+    <example schema="record.schema.json#/$defs/validator.refused">{"id":"20261014T091500Z-422-w7r1c","at":"2026-10-14T09:15:00Z","kind":"validator.refused","code":422,"node":"N-18","seq":5790,"epoch":1,"ticket":"CR-req-0043","phase":"spec","attempt":1,"outcome":"refused","failure_kind":"output_rejected","run_id":"d-20261014083000-q1w2e3","set_id":"d-20261014083000-q1w2e3","check":"acceptance","reason":"wrong_failure_reason","ticket_key":"t2","acceptance_id":"a1","command":"go test ./scheduler/internal/merge/ -run TestRebaseFence","expected_failure":{"exit":1,"match":"stale token"},"run":{"platform":"amd64","path":"container","image_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","exit":1,"classification":"wrong_failure_reason","duration_seconds":9.2,"observed_at":"2026-10-14T09:14:40Z","observed_at_sha":"89abcdef0123456789abcdef0123456789abcdef","log_path":"$COQ_STATE/validator/d-20261014083000-q1w2e3/t2-a1-amd64.log","stderr_tail":"merge_test.go:41: undefined: fenceRebase"},"detail":"exit 1 but the output does not match 'stale token': the test fails to compile, not for the reason the ticket fixes","log_path":"$COQ_STATE/validator/d-20261014083000-q1w2e3/t2-a1-amd64.log"}</example>
+    <example schema="record.schema.json#/$defs/validator.refused">{"id":"20261014T094500Z-422-c8d2e","at":"2026-10-14T09:45:00Z","kind":"validator.refused","code":422,"node":"N-18","seq":5811,"epoch":1,"ticket":"CR-req-0044","phase":"spec","attempt":2,"outcome":"refused","failure_kind":"output_rejected","run_id":"d-20261014090000-z9x8c7","set_id":"d-20261014090000-z9x8c7","check":"acceptance","reason":"infra","ticket_key":"t1","acceptance_id":"a1","command":"make -C scheduler vendor-check","run":{"platform":"amd64","path":"container","image_digest":"sha256:1111111111111111111111111111111111111111111111111111111111111111","exit":1,"classification":"infra","infra_signature":"readonly_cache","duration_seconds":3.1,"observed_at":"2026-10-14T09:44:50Z","observed_at_sha":"89abcdef0123456789abcdef0123456789abcdef","log_path":"$COQ_STATE/validator/d-20261014090000-z9x8c7/t1-a1-amd64.log","stderr_tail":"go: writing go.sum in /go/pkg/mod/cache: open: read-only file system"},"detail":"the command writes the read-only module cache; it is not hermetic and proves nothing","log_path":"$COQ_STATE/validator/d-20261014090000-z9x8c7/t1-a1-amd64.log"}</example>
+    <example schema="record.schema.json#/$defs/validator.failed">{"id":"20261014T100000Z-500-f3g4h","at":"2026-10-14T10:00:00Z","kind":"validator.failed","code":500,"node":"N-18","seq":5840,"epoch":1,"ticket":"CR-req-0045","set_id":"d-20261014093000-h5j6k7","reason":"pod_arm64","attempts":2,"next_try_at":"2026-10-14T10:00:30Z","stderr_tail":"0/3 nodes are available: 3 node(s) didn't match Pod's node affinity"}</example>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <source href="rebuild/investigation/03-DECISIONS.md#18-d16-may-an-llm-decompose-work-into-tickets">D16 option B: the validator's four checks</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#6-d04-where-tickets-and-their-status-live">D04 option C</source>
+    <source href="rebuild/investigation/L09-earlier-factory-iterations.md#7-decisions-an-llm-makes-that-a-rule-could-make">R3 and the unbuilt cut-check.sh; F-PL3 five of seven supersedes</source>
+    <source href="rebuild/investigation/L13-llms-doing-scheduler-work.md#7-decisions-an-llm-makes-that-a-rule-could-make">D01 approve by rule: lint, files field, no contradicted node, evidence method per criterion, DAG input and output declared</source>
+    <source href="rebuild/investigation/L11-governance-layer.md#52-findings-f1-to-f18">F3 the stamp, F4 cut PRs</source>
+    <source href="rebuild/investigation/L07-ci-and-pods.md#8-what-to-carry-forward">pod-per-case isolation and the pinned test image; infrastructure retried, assertions never</source>
+    <source href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V04, V05, V06, V07, V09</source>
+    <source href="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal">T04 a verdict the agent can read and cannot edit; T13 enforcement before the model call</source>
+    <source href="factory/bin/claims.sh">set, start, diff, ids verbs: the files field, overlap rule, aggregate refusal, unique doc numbers</source>
+    <source href="bin/mint-id.sh">the id shape and uniqueness, carried into the store's mint table</source>
+    <source href="specs/SPEC-17-orchestrator-and-agent-health.xml#n-cut">the cut checklist: files declared, test plan runs through a repository target, no overlap</source>
+    <source href="specs/SPEC-03-dag-and-node-contract.xml#s-locks">dequeue refuses a ticket whose depends_on is not done; carried to N-03, with the acyclic check here</source>
+    <source href="~/.claude/CLAUDE.md">tickets are small: one concern, a few files, a diff read in minutes; every node carries a checklist with proof</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/build-mode-rule.md">a node ships dark and goes live by its own ticket with a named proof</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/graph-sh-source-colon-truncation.md">the graph tool's defect; the dependency graph is now rows in the store</source>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C48</source>
+    <source href="~/.bearings/coq-stable/answers.jsonl">C35, C38, C39</source>
+  </section>
+
+  <rejected id="rejected">
+    <item source="roles/architect.json approve and .claude/skills/work-order/scripts/work-order.sh approve" what="an approval verb with a reason string" reason="L11 F3: a free-text field typed by an LLM and no check; the validator's checks replace it"/>
+    <item source="graph/ and graph.sh" what="a graph tool over ticket files" reason="depends_on is rows in the store; graph.sh truncated sources on ':' (memory graph-sh-source-colon-truncation)"/>
+    <item source="rime-bootstrap F-53 bin/cut-check.sh" what="banning greps over the ticket's code blocks" reason="never built; running the commands is the check"/>
+    <item source="L13 D01 'graph.sh find shows no contradicted DEC node'" what="a contradiction check against decision nodes" reason="decisions are rulings in the store (N-29) and the spec book; a ticket cites an anchor, and anchor_moved catches a stale read; a semantic contradiction is the reviewer's judgement"/>
+    <item source="specs/SPEC-17-orchestrator-and-agent-health.xml#n-cut retry" what="a refused start as a 412 item back to the architect lane" reason="a refusal goes to N-11 and a fresh spec-author run; the architect hears about the third only, through a card"/>
+    <item source="rebuild/investigation/03-DECISIONS.md#18 option C" what="mechanical derivation of tickets" reason="the validator is the mechanical half; the decomposition stays an LLM judgement (D16)"/>
+  </rejected>
+</volume>

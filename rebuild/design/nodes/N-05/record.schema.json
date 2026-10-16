@@ -1,0 +1,301 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-05/record.schema.json",
+  "title": "N-05 Backups records",
+  "description": "Book 1.1.0. Input backup tick (../N-06/record.schema.json#/$defs/tick), backup.now and the Snapshot reply (../N-01/record.schema.json#/$defs/snapshot_reply); output backup, backup.failed, backup.busy, backup.mirror_failed, backup.rotten, backup.disk, backup.started of node N-05. $defs/backup is the one backup record shape; N-45 $refs it (NF-D1). Columns per shared/state-store.xml#table-backups. Parent volume: spec.xml#N-05. UTC everywhere.",
+  "$defs": {
+    "envelope": {
+      "$ref": "../N-01/record.schema.json#/$defs/envelope"
+    },
+    "at": {
+      "$ref": "../N-01/record.schema.json#/$defs/at"
+    },
+    "sha256": {
+      "$ref": "../N-01/record.schema.json#/$defs/sha256"
+    },
+    "retention_class": {
+      "enum": [
+        "tick",
+        "daily",
+        "monthly",
+        "manual"
+      ]
+    },
+    "backup_path": {
+      "type": "string",
+      "pattern": "^.+/backup/store/[0-9]{4}/[0-9]{2}/[0-9]{8}T[0-9]{6}Z-coq\\.db\\.zst$"
+    },
+    "stage": {
+      "enum": [
+        "snapshot",
+        "compress",
+        "verify",
+        "write",
+        "mirror"
+      ]
+    },
+    "backup_tick": {
+      "$ref": "../N-06/record.schema.json#/$defs/tick"
+    },
+    "backup_now": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "by",
+        "reason"
+      ],
+      "properties": {
+        "by": {
+          "enum": [
+            "N-49",
+            "N-50",
+            "N-01",
+            "ctl"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "maxLength": 240
+        }
+      }
+    },
+    "backup": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/n05_record"
+        },
+        {
+          "type": "object",
+          "required": [
+            "path",
+            "checksum",
+            "checksum_raw",
+            "bytes",
+            "epoch",
+            "high_water_seq",
+            "row_count",
+            "min_retained_seq",
+            "retention_class",
+            "verified",
+            "snapshot_at",
+            "run_seconds"
+          ],
+          "properties": {
+            "kind": {
+              "const": "backup"
+            },
+            "code": {
+              "const": 201
+            },
+            "node": {
+              "const": "N-05"
+            },
+            "path": {
+              "$ref": "#/$defs/backup_path"
+            },
+            "checksum": {
+              "$ref": "#/$defs/sha256",
+              "description": "sha256 of the compressed file"
+            },
+            "checksum_raw": {
+              "$ref": "#/$defs/sha256",
+              "description": "sha256 of the uncompressed database"
+            },
+            "bytes": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "retention_class": {
+              "$ref": "#/$defs/retention_class"
+            },
+            "verified": {
+              "const": true,
+              "description": "integrity_check ok, count = row_count, max = high_water_seq, min at or above min_retained_seq, epoch matches"
+            },
+            "snapshot_at": {
+              "$ref": "#/$defs/at"
+            },
+            "run_seconds": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "mirror": {
+              "type": "object",
+              "required": [
+                "path",
+                "checksum"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "checksum": {
+                  "$ref": "#/$defs/sha256"
+                }
+              },
+              "description": "the off-host copy, read back equal; absent when the mirror is not configured or failed",
+              "additionalProperties": false
+            },
+            "epoch": {
+              "$ref": "#/$defs/epoch",
+              "description": "the store epoch of the copy (store:epoch inside it)"
+            },
+            "high_water_seq": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "max(seq) in the copy; records of this epoch after it are not in the backup"
+            },
+            "row_count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "count(*) of records in the copy; seq is not gapless, so this is never derived from seqs"
+            },
+            "min_retained_seq": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "the retention floor at copy time; min(seq) in the copy is at or above it"
+            }
+          }
+        }
+      ]
+    },
+    "backup_failed": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/n05_record"
+        },
+        {
+          "type": "object",
+          "required": [
+            "stage",
+            "reason",
+            "attempts",
+            "retention_class"
+          ],
+          "properties": {
+            "kind": {
+              "const": "backup.failed"
+            },
+            "code": {
+              "const": 500
+            },
+            "node": {
+              "const": "N-05"
+            },
+            "stage": {
+              "$ref": "#/$defs/stage"
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "attempts": {
+              "const": 3
+            },
+            "retention_class": {
+              "$ref": "#/$defs/retention_class"
+            },
+            "newest_verified_at": {
+              "$ref": "#/$defs/at"
+            }
+          }
+        }
+      ]
+    },
+    "backup_report": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/n05_record"
+        },
+        {
+          "type": "object",
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "backup.started",
+                "backup.busy",
+                "backup.mirror_failed",
+                "backup.rotten",
+                "backup.disk"
+              ]
+            },
+            "code": {
+              "enum": [
+                100,
+                423,
+                500,
+                503
+              ]
+            },
+            "node": {
+              "const": "N-05"
+            },
+            "reason": {
+              "type": "string",
+              "maxLength": 240
+            },
+            "path": {
+              "type": "string"
+            },
+            "age_seconds": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "free_mib": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "attempts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 3
+            }
+          }
+        }
+      ]
+    },
+    "epoch": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "n05_record": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "node": {
+              "const": "N-05"
+            },
+            "epoch": {
+              "$ref": "#/$defs/epoch"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/backup_tick"
+    },
+    {
+      "$ref": "#/$defs/backup_now"
+    },
+    {
+      "$ref": "#/$defs/backup"
+    },
+    {
+      "$ref": "#/$defs/backup_failed"
+    },
+    {
+      "$ref": "#/$defs/backup_report"
+    }
+  ]
+}

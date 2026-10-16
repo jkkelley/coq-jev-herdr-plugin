@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-19 Reviewer run. Volume of the Factory Rebuild spec book (R-03), group G3 Seats.
+  Written 2026-10-14T05:40:00Z by the G3 spec-author seat against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  Rulings: D15 (C50) machine verdict merges on green gate plus reviewer record, D05 (C43) coq/gate on the head sha,
+  D11 (C39) the semantic half of review stays an LLM, D02 (C36), V15 a separate reviewer from the writer.
+  No em dash appears in this file. Every time is UTC.
+-->
+<!--
+  Round 2, 2026-10-14T05:04:00Z, by the G3 spec-author seat, after the R-03 review seat failed round 1 on pointers.
+  What broke: this volume pointed at ../N-xx/spec.xml#N-xx-spec while every volume in the book declares
+  root id="N-xx" and links with #N-xx, and it pointed at ../../shared/*.xml anchors that no author has
+  written (shared/ belongs to the shared author, not this seat).
+  Why it mattered: a dangling pointer fails check.sh, and the architect reads nothing until the book passes.
+  The fix: root id is now the node id; every sibling, upstream, downstream and edge anchor is #N-xx; the
+  shared anchors are declared in <shared-needs> with no href so the shared author can write them and
+  check.sh can match them when shared/ lands; the principles this node obeys point at dag.md sections 7
+  and 8, which exist. The parent stays ../../index.xml#N-19 because the brief names the index volume as
+  every node's parent and the anchor is the node id, the one anchor every node is guaranteed.
+  Rejected: writing shared/ or index.xml from this seat (two authors on one file is the one-file,
+  one-in-flight-ticket collision the book forbids); leaving the hrefs to resolve later (a failing volume
+  blocks the book now).
+  Cost: a declared need is not a live pointer until shared/ lands.
+-->
+<volume id="N-19" node="N-19" kind="node-spec" group="G3" version="1.2.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
+    <entry ref="shared-needs">Shared needs: the shared anchors this volume cites</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input: the reviewer brief inside a seat run</entry>
+    <entry ref="output">Output record: review.passed 201 or review.changes 422 on the head sha</entry>
+    <entry ref="mechanism">Mechanism: the brief, the run, the verdict committed by code</entry>
+    <entry ref="judgement">What the reviewer judges and what code already checked</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="checklist">Checklist with proof</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with the reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-19"/>
+    <dag href="../../dag.md#3-every-node">The DAG row of this node: input record and output record</dag>
+    <principle href="../../dag.md#7-rules-every-node-obeys">Rules 1 to 9: input to output, no cog, three attempts, one store, code does mechanical jobs, the verdict the agent cannot edit, herdr is the owner's window, build mode, ships dark</principle>
+    <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, timed-out stalls, a 409 that reports</principle>
+    <needs href="spec.xml#shared-needs">The shared anchors this volume cites</needs>
+    <sibling href="record.schema.json" kind="schema">review.result (the seat's structured output), review.passed and review.changes (review_record is either)</sibling>
+    <sibling href="../N-13/spec.xml#N-13">Seat layer render: the reviewer brief and the read-only fence</sibling>
+    <sibling href="../N-14/spec.xml#N-14">Workspace provision: detached at the head sha</sibling>
+    <sibling href="../N-15/spec.xml#N-15">One-shot seat launcher: the run and seat.result</sibling>
+    <sibling href="../N-16/spec.xml#N-16">Worker run: the writer this reviewer is separate from</sibling>
+    <sibling href="../N-17/spec.xml#N-17">Spec-author run</sibling>
+    <sibling href="../N-18/spec.xml#N-18">Validator: where the observed exits the reviewer compares come from</sibling>
+    <upstream href="../N-08/spec.xml#N-08">Gate check: gate.verdict green makes the ticket's reviewer phase dispatchable</upstream>
+    <downstream href="../N-09/spec.xml#N-09">Merge: the consumer of review.passed with the green gate on the same head sha</downstream>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <text>Every shared anchor below is live in book 1.1.0; this volume cites them and restates none of their numbers.</text>
+    <need volume="../../shared/contracts.xml" anchor="operation-keys" kind="contract">N-19/review.verdict/{pr}@{head_sha}@{run_id}</need>
+    <need volume="../../shared/contracts.xml" anchor="dispatch" kind="contract">the dispatch body; run_id equals dispatch_id; target pr and head_sha</need>
+    <need volume="../../shared/contracts.xml" anchor="fencing" kind="contract">the verdict Commit carries the reviewer lease; a stale token is 412</need>
+    <need volume="../../shared/contracts.xml" anchor="run-states" kind="contract">result_committed to closed_out by N-19 in the verdict Commit</need>
+    <need volume="../../shared/contracts.xml" anchor="retry-owner" kind="contract">rows review.changes and phase.failed</need>
+    <need volume="../../shared/contracts.xml" anchor="ticket-transitions" kind="contract">the ticket's moves after a verdict</need>
+    <need volume="../../shared/contracts.xml" anchor="outbox" kind="contract">the GitHub review mirror is an effect row, never a call inside the Commit</need>
+    <need volume="../../shared/contracts.xml" anchor="timing" kind="contract">stall.seconds.reviewer and run.deadline_seconds.reviewer</need>
+    <need volume="../../shared/contracts.schema.json" anchor="/$defs/failure_body" kind="schema">the body review.changes carries to N-11</need>
+    <need volume="../../shared/authority.xml" anchor="credential-matrix" kind="authority">forge-read for the head check; the mirror's pull request write</need>
+    <need volume="../../shared/seat-contract.xml" anchor="launch-flags" kind="seat-contract">the reviewer seat's argv and structured output</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-201" kind="status-code">review.passed</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-422" kind="status-code">review.changes</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">phase.failed</need>
+  </shared-needs>
+
+  <section id="purpose" title="Purpose">
+    <text>N-19 is where an LLM judges a diff. It is the semantic half of review: are the acceptance criteria evidenced, does the change fit the design anchor, is the breadcrumb at the fix site, is the ticket's one concern the only thing that changed. The mechanical half (the diff stays inside the declared files, no aggregate, lint, the suites) is code before the reviewer ever runs: N-16's close-out, N-23 to N-25's gate (rebuild/investigation/L13-llms-doing-scheduler-work.md#7-decisions-an-llm-makes-that-a-rule-could-make D21).</text>
+    <text>The reviewer is separate from the writer and shares no context with it (rebuild/investigation/02-MAPPING.md#2-validated-keep V15; the generator-verifier split works best with no shared context). It runs after the gate is green on the head sha, so it never re-runs tests (roles/reviewer.json breadcrumb WO-20261013-b6f3: a reviewer ran suites for 12 minutes on PR 145 for no new evidence). Its verdict is a record on the head sha that the merge (N-09) reads together with coq/gate; the owner holds the line through cards, never through the per-PR path (D15).</text>
+  </section>
+
+  <section id="input" title="Input: the reviewer brief inside a seat run">
+    <text>The dispatch's target names pr and head_sha; the gate.verdict green for that head is the record that caused the dispatch. N-13 renders bundle_dir/brief.md with:</text>
+    <field name="ticket">id and full title, concern, the design anchor text (the node volume section the ticket builds), the declared files, the acceptance commands with observed_exit_on_main (N-18) and expect_exit.</field>
+    <field name="pull request">number, head sha, title, body (the worker's summary and evidence table from pr.opened), the diff (git diff base_sha..head_sha, rendered into the brief when under seats.json brief_diff_max_bytes, default 200 KB, else the reviewer reads it from the workspace).</field>
+    <field name="gate">the gate.verdict green record id and the gate page link (coq/gate-page status), with the suites that ran; informational, so the reviewer knows what was proved by code.</field>
+    <field name="rules">what to judge (section judgement); the output contract; "run nothing"; a changes verdict needs at least one observation with path, line, saw, expected; a passed verdict needs every criterion marked evidenced with the evidence line.</field>
+    <field name="prior review">on a second review of the same ticket (a new head after review.changes), the prior review.changes record, so the reviewer checks that each observation was answered.</field>
+    <text>The workspace is read-only, detached at head_sha (N-14 base_ref refs/pull/&lt;pr&gt;/head, refused as head_moved if the ref no longer resolves to head_sha).</text>
+  </section>
+
+  <section id="output" title="Output record: review.passed 201 or review.changes 422 on the head sha">
+    <text>The seat's structured output, review.result (record.schema.json#/$defs/review.result): verdict, head_sha as the reviewer saw it, criteria (one per acceptance id: evidenced with the evidence line, or the gap), observations (path, line, saw, expected; at least one for changes), design_fit, summary.</text>
+    <text>The node's record, committed by the close-out after the head check: review.passed, code 201 (record.schema.json#/$defs/review.passed), or review.changes, code 422 (#/$defs/review.changes). Both carry ticket, pr, head_sha, base_sha, run_id, dispatch_id (equal), attempt, lease (the reviewer seat lease, shared lease_ref, which N-09 requires and N-01 fences), gate_verdict_ref, criteria, observations, design_fit, summary and session_id. review.changes also carries shared failure_body: phase reviewer, outcome changes, failure_kind review.changes, so N-11 consumes it as it stands. ../N-09/record.schema.json#/$defs/review_passed is a subset of review.passed; every review.passed this node writes validates there (checked by the example below). Each criteria entry names the acceptance id it evidences, so through the ticket's acceptance[].proves it ticks a checklist item (nodes/N-31/spec.xml#views). The record is on the head sha: a new head gets a new review. A GitHub pull request review mirrors the verdict for the owner's reading; the store record is what the merge reads.</text>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the brief, the run, the verdict committed by code">
+    <mermaid>flowchart LR
+  G[gate.verdict green on head_sha] --> L[N-07 GrantDispatch phase reviewer]
+  L --> B[N-13 brief; N-14 workspace detached at head_sha]
+  B --> R[N-15 seat run, read-only]
+  R --> S[seat.result done, run result_committed]
+  S --> H{close-out: head check and output rules}
+  H -- passed --> A[Commit review.passed 201, lease released, run closed_out]
+  H -- changes --> C[Commit review.changes 422, lease released, run closed_out]
+  H -- rejected --> X[phase.failed step head.check, output_rejected]
+  A --> M[effect review.mirror to GitHub]
+  C --> M</mermaid>
+    <step n="1">The run: the reviewer reads the brief, the diff and the changed files in the workspace; it runs no test, suite, lint, make target or podman command (denied by the fence: the gate already proved them); it returns review.result. N-15 commits seat.result done and the run reaches result_committed.</step>
+    <step n="2" id="m-closeout">Close-out, function closeout(run) in scheduler/internal/closeout/reviewer.go, in the service as principal coq-svc acting as N-19, level-triggered on run entities in result_committed with a done reviewer seat.result. Head check: review.result.head_sha equals dispatch target head_sha, and the forge (credential forge-read) still reports that head for the pull request. Output rules: a changes verdict has at least one observation; a passed verdict has every criterion evidenced. A moved head is phase.failed step head.check with failure_kind head_moved (free, nothing charged, shared/contracts.xml#retry-owner); a failure of either output rule is phase.failed step head.check with failure_kind output_rejected and the reason (no_observations or open_criterion_on_pass); the same Commit releases the lease and moves the run to closed_out.</step>
+    <step n="3" id="m-verdict">The verdict Commit, one Store.Do under operation key N-19/review.verdict/{pr}@{head_sha}@{run_id}/r1, fenced by the reviewer lease (shared/contracts.xml#fencing): the review.passed or review.changes record; Lease.Release of TICKET:reviewer:N; run:RUN_ID to closed_out with phase_record_ref the record id; an effects row in state intent for the mirror (provider github, action review.mirror). On review.passed the same Commit moves the ticket in_flight to pr_open so N-09 can merge it (a row shared/contracts.xml#ticket-transitions must add, owner N-19, trigger review.passed). On review.changes the ticket stays in_flight and N-11's attempt Commit moves it (row in_flight to retry_wait). A replay of the key returns the first reply; a stale token is 412 and nothing is written.</step>
+    <step n="4">Mirror: after the Commit the outbox worker posts gh pr review --approve or --request-changes with the summary and observations, and advances the effect to done. A mirror that fails after its retries is phase.failed step review.mirror; it never undoes the record and never blocks the merge.</step>
+    <text>Model: roles/reviewer.json model.claude; argv only from ../../shared/seat-contract.xml#launch-flags; stall and wall clock by keys stall.seconds.reviewer and run.deadline_seconds.reviewer (../../shared/contracts.xml#timing); max turns and budget from seats.json reviewer.</text>
+  </section>
+
+  <section id="judgement" title="What the reviewer judges and what code already checked">
+    <table id="split">
+      <row what="the diff stays inside the declared files; no aggregate; no runtime file" who="code: N-16 close-out before the push; N-25 gate pr-files"/>
+      <row what="lint, the suites, the acceptance commands' exits" who="code: N-23 to N-25, coq/gate on the head sha"/>
+      <row what="no em dash, UTC, contents element in long documents, no literal where config belongs" who="code: lint in the gate (lint/lint.sh rules carried into the suite)"/>
+      <row what="every acceptance criterion is evidenced by the pull request body and the diff, not only claimed" who="the reviewer"/>
+      <row what="the change does what the anchor says and nothing else; one concern" who="the reviewer"/>
+      <row what="a breadcrumb comment sits at the fix site with what broke, why it mattered, why this fix, what it costs" who="the reviewer (presence is judgement; a lint can only find the word)"/>
+      <row what="a regression guard still guards; a flipped acceptance flips for the right reason" who="the reviewer, reading observed_exit_on_main against the evidence"/>
+      <row what="the design was not changed to fit the code (a ticket that edits a volume of this book to pass its own acceptance)" who="the reviewer, and the validator's anchor_moved on the next cut"/>
+      <row what="an owner-surface change carries its screenshot proof" who="code checks the file exists (N-48); the reviewer judges that the picture shows the change"/>
+    </table>
+    <text>The reviewer never fixes the code (roles/reviewer.json forbidden, carried forward): an observation names path, line, saw, expected; the worker's next attempt answers it.</text>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <text>gate.verdict green (N-08) on the pull request's head makes the ticket's reviewer phase desired: N-07 grants TICKET:reviewer:N by GrantDispatch (pr_open to in_flight); N-13 and N-14 prepare; N-15 runs. No one posts pr.opened to a reviewer, wakes a pane, or asks the architect. A review.changes reaches N-11, which charges the worker phase and re-enters N-07 through retry_wait.</text>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait what="the run" timeout="run.deadline_seconds.reviewer and stall.seconds.reviewer (../../shared/contracts.xml#timing)" attempts="1 per run" fallback="N-12 kills a stalled run; N-15 commits the blocked seat.result; N-11 retries the review within the reviewer phase's attempts"/>
+    <wait what="the forge head check" timeout="30 s" attempts="3 per pass, 3 passes" fallback="phase.failed 500 step head.check reason forge_unreachable; no verdict is committed"/>
+    <wait what="the verdict Commit" timeout="5 s per call" attempts="3 per pass, 3 passes" fallback="phase.failed 500 step verdict.put; idempotent by the operation key"/>
+    <wait what="the GitHub review mirror" timeout="30 s" attempts="3, by the outbox worker" fallback="phase.failed 500 step review.mirror; the record stands and the merge proceeds"/>
+    <text>The reviewer waits for nothing: the gate was green before it started and the merge happens after it is gone.</text>
+  </section>
+
+  <section id="retries" title="Retries up to 3, then recover and report">
+    <text>A blocked review run (limits, stall, crash, no result) and a phase.failed output_rejected are retried by N-11 as a fresh reviewer run on the same head, charged to the reviewer phase (shared/contracts.xml#retry-owner); the rejection rides in the next brief. The close-out's own failures (head check unreachable, verdict put) are retried by the close-out in three passes, then phase.failed to N-11, charged once (row phase.failed). After the third charged failure the ticket is dead and N-28 posts one card (a reviewer on a stronger model by ruling, merge on the gate alone as an owner ruling for that head, or close).</text>
+    <text>A review.changes is not a retry of the review: it is the worker phase's attempt n+1, session resume-if-done (row review.changes). A review on a new head is a new grant with the prior review.changes attached.</text>
+  </section>
+
+  <section id="many-agents" title="Many agents at once">
+    <text>Many reviewers run at once, one per pull request head, each read-only in its own slot. A reviewer never resumes a worker's session and never shares a workspace with one (V15).</text>
+    <text>Collision 1, two reviewers for one head: GrantDispatch refuses a second reserved or running lease for the ticket and phase; a reviewer whose lease was revoked or expired has its verdict Commit refused 412 stale_token, so one head gets one verdict per live lease.</text>
+    <text>Collision 2, the head moves during the review (a worker push or N-09's update-branch): the head check refuses the stale review as head_moved; the new head's green gate leads to a new grant. No verdict is ever written on a head that is not the pull request's head.</text>
+    <text>Collision 3, the merge races the review: N-09 requires gate.verdict green and review.passed on the same head sha; a review.passed on an older head never merges a newer head.</text>
+    <text>Collision 4, two close-out passes for one run: both send the same operation key; the second replays the first reply.</text>
+    <text>Collision 5, the owner comments on the pull request: the reviewer reads only its brief; the owner holds through a card or the Controls hold; N-04's poll surfaces the comment as a record for the Alerts screen.</text>
+  </section>
+
+  <section id="codes" title="Status codes this node emits">
+    <code value="201" kind="review.passed">Every criterion evidenced, on the head sha. Acts: N-09 merges when the gate is green on the same head.</code>
+    <code value="422" kind="review.changes">At least one observation, on the head sha. Acts: N-11 charges the worker phase, attempt n+1.</code>
+    <code value="500" kind="phase.failed">step head.check (head_moved, free; output_rejected: no_observations, open_criterion_on_pass), verdict.put or review.mirror. Acts: N-11; a mirror-only failure never blocks the merge.</code>
+    <text>A blocked review run is N-15's seat.result 423, not this node's record.</text>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path id="N-19.runs" dir="$COQ_STATE/seats/runs/&lt;run_id&gt;/" writes="result.json with review.result, transcript.jsonl, closeout.log" cleanup="scheduler/host/bin/cleanup-seat-runs.sh (N-15)" retention="7 days; 30 for a dead ticket" trigger="timer" acts="system"/>
+    <path id="N-19.ws" dir="$COQ_CACHE/ws/&lt;slot&gt;/ (read-only, detached)" writes="nothing" cleanup="scheduler/host/bin/cleanup-workspaces.sh (N-14)" retention="freed when the run is closed_out" trigger="timer" acts="system"/>
+    <text>Review records live in the store on the head sha; the GitHub pull request review is a mirror. Nothing is written into the repository.</text>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <text>The reviewer seat (fence from N-13, user coq-seat-NN): Read, Grep, Glob, Bash read-only (git diff|log|show|blame, rg, ls, cat); denied: Write, Edit, Agent, Task, make *, podman *, any test or lint command, gh of any kind, git push, git checkout|switch. The seat holds no forge credential and no store socket.</text>
+    <text>The close-out (coq-svc acting as N-19): Commits of review.passed, review.changes and phase.failed; Lease.Release of the reviewer lease; forge-read for the head check; the mirror's pull request review write through the outbox with a pull-requests-write credential (forge-pr names only N-16 today: shared/authority.xml#credential-matrix must add N-19 to its users).</text>
+  </section>
+
+  <section id="checklist" title="Checklist with proof">
+    <item id="c-runs-nothing" proof="probe: a reviewer seat on a fixture pull request whose brief contains a trap line asking it to run make test ends with a permission denial naming make, and the verdict is still produced">A reviewer runs nothing.</item>
+    <item id="c-head-moved" proof="go test ./internal/closeout -run TestReviewHeadMoved: a fake forge whose head differs from the dispatched head yields phase.failed step head.check reason head_moved and no review record">A stale review is never recorded on a moved head.</item>
+    <item id="c-output-rules" proof="go test TestChangesNeedObservations and TestPassNeedsAllCriteria: changes with zero observations and passed with an unevidenced criterion both yield phase.failed output_rejected">Kickback without evidence and approval with an open criterion are refused.</item>
+    <item id="c-one-commit" proof="go test TestVerdictCommit: one Store.Do writes the record, releases the lease, closes the run out and inserts the mirror effect; a replay of the key commits nothing new; a stale token is 412 with nothing written">The verdict, the release and the close-out are one Commit.</item>
+    <item id="c-n09" proof="check C22: the review.passed example validates against ../N-09/record.schema.json#/$defs/review_passed">N-09 can consume review.passed.</item>
+    <item id="c-n11" proof="check C22: the review.changes example validates against ../N-11/record.schema.json#/$defs/failure">N-11 can consume review.changes.</item>
+    <item id="c-mirror" proof="go test TestMirrorFailureDoesNotBlock (N-09 fixture): a review.passed whose mirror effect failed still merges when the gate is green">The store is the truth; the GitHub review is a view.</item>
+    <item id="c-rereview" proof="probe: the brief of a second review of a ticket contains the prior review.changes observations and the criteria entries reference them">A re-review checks that the prior observations were answered.</item>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <text>Counters: reviews_passed, reviews_changes, reviews_blocked_by_reason, review_seconds histogram, review_cost_usd, observations_per_changes histogram, head_moved_count, two_verdicts_defects. The Stats screen (N-40) shows the pass rate and the median time from gate green to review record; a median above seats.json review_latency_alert (default 900 s) is an alert on N-41 because a green pull request sitting unreviewed is the line's cost. The Machine screen (N-39) shows live reviews with pr, head and progress age.</text>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <text>See a review: the record on the head sha in the store; the GitHub pull request review mirrors it; the transcript is in the run directory.</text>
+    <text>A dead review after 3 blocked runs: the card names the reasons; the options are a stronger model by ruling, merge on the gate alone (the owner's call, recorded as a ruling that N-09 reads for that head only), or close.</text>
+    <text>The owner disagrees with a review.passed: a hold from the Controls screen (N-42) stops the merge; a card records the ruling; the owner never edits a record.</text>
+    <text>Cleanup: run directories by cleanup-seat-runs.sh (N-15); slots by cleanup-workspaces.sh (N-14).</text>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <edge dir="in" from="../N-15/spec.xml#N-15" record="seat.result done for a reviewer run (the brief ran inside the launcher's unit)"/>
+    <edge dir="out" to="../N-09/spec.xml#N-09" record="review.passed 201 on the head sha"/>
+    <edge dir="out" to="../N-11/spec.xml#N-11" record="review.changes 422 and phase.failed 500 (failure_body)"/>
+    <edge dir="re-entry" to="../N-07/spec.xml#N-07" record="after review.changes, N-11 moves the ticket to retry_wait and N-07 grants the worker's attempt n+1 (../../dag.md#4-re-entries)"/>
+  </section>
+
+  <section id="examples" title="Examples">
+    <example schema="record.schema.json#/$defs/review.passed">{"id":"20261014T071500Z-201-r2v3w","at":"2026-10-14T07:15:00Z","kind":"review.passed","code":201,"node":"N-19","seq":5420,"epoch":1,"ticket":"WO-20261014-ab12","attempt":1,"pr":57,"head_sha":"89abcdef0123456789abcdef0123456789abcdef","base_sha":"0123456789abcdef0123456789abcdef01234567","run_id":"d-20261014070000-r8k2wa","dispatch_id":"d-20261014070000-r8k2wa","lease":{"key":"WO-20261014-ab12:reviewer:1","token":191,"generation":1},"gate_verdict_ref":"20261014T065500Z-201-g7h8j","criteria":[{"id":"a1","evidenced":true,"evidence":"PR body evidence row a1: go test ./internal/sched -run TestGrant exit 0, was 1 on main","observed_exit_on_main":1,"expect_exit":0}],"observations":[],"design_fit":"Builds nodes/N-07/spec.xml#m-grant and nothing else: one Store.Do with the lease grant and the dispatch.","summary":"The grant and the dispatch commit together; the test proves the all-or-nothing case.","session_id":"5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b"}</example>
+    <example schema="../N-09/record.schema.json#/$defs/review_passed">{"id":"20261014T071500Z-201-r2v3w","at":"2026-10-14T07:15:00Z","kind":"review.passed","code":201,"node":"N-19","seq":5420,"epoch":1,"ticket":"WO-20261014-ab12","attempt":1,"pr":57,"head_sha":"89abcdef0123456789abcdef0123456789abcdef","base_sha":"0123456789abcdef0123456789abcdef01234567","run_id":"d-20261014070000-r8k2wa","dispatch_id":"d-20261014070000-r8k2wa","lease":{"key":"WO-20261014-ab12:reviewer:1","token":191,"generation":1},"gate_verdict_ref":"20261014T065500Z-201-g7h8j"}</example>
+    <example schema="record.schema.json#/$defs/review.changes">{"id":"20261014T074000Z-422-c4d5e","at":"2026-10-14T07:40:00Z","kind":"review.changes","code":422,"node":"N-19","seq":5500,"epoch":1,"ticket":"WO-20261014-ab12","phase":"reviewer","attempt":1,"outcome":"changes","failure_kind":"review.changes","pr":57,"head_sha":"89abcdef0123456789abcdef0123456789abcdef","base_sha":"0123456789abcdef0123456789abcdef01234567","run_id":"d-20261014070000-r8k2wa","dispatch_id":"d-20261014070000-r8k2wa","lease":{"key":"WO-20261014-ab12:reviewer:1","token":191,"generation":1},"gate_verdict_ref":"20261014T065500Z-201-g7h8j","criteria":[{"id":"a1","evidenced":false,"gap":"the test asserts the dispatch only; the lease row is never read back"}],"observations":[{"path":"scheduler/internal/sched/grant_test.go","line":41,"saw":"asserts dispatch record count only","expected":"assert the lease row is reserved with the same token"}],"design_fit":"Builds nodes/N-07/spec.xml#m-grant but the proof does not cover the lease half.","summary":"One observation: the all-or-nothing test must read the lease back.","session_id":"5e6f7a8b-9c0d-4e1f-8a2b-3c4d5e6f7a8b"}</example>
+    <example schema="../N-11/record.schema.json#/$defs/failure">{"id":"20261014T074000Z-422-c4d5e","at":"2026-10-14T07:40:00Z","kind":"review.changes","code":422,"node":"N-19","seq":5500,"epoch":1,"ticket":"WO-20261014-ab12","phase":"reviewer","attempt":1,"outcome":"changes","failure_kind":"review.changes","run_id":"d-20261014070000-r8k2wa","dispatch_id":"d-20261014070000-r8k2wa"}</example>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <source href="rebuild/investigation/03-DECISIONS.md#17-d15-human-in-the-merge-path">D15 option B</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#7-d05-where-a-gate-verdict-lives">D05</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#13-d11-which-llm-roles-remain">D11: the semantic half of reviewer stays</source>
+    <source href="rebuild/investigation/L13-llms-doing-scheduler-work.md#7-decisions-an-llm-makes-that-a-rule-could-make">D21 the mechanical half is lint; D03 verify by exit codes</source>
+    <source href="rebuild/investigation/02-MAPPING.md#2-validated-keep">V15 a separate reviewer; V12 the breadcrumb catalogue</source>
+    <source href="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal">T04 a verdict the agent can read and cannot edit</source>
+    <source href="rebuild/investigation/I02-postmortems-and-abandonment.md">section 4.2 generator-verifier split with no shared context; section 5.5 human review as the bottleneck</source>
+    <source href="roles/reviewer.json">purpose, read-only fence, must lines, forbidden, breadcrumbs 3d6g0 and b6f3</source>
+    <source href="specs/SPEC-17-orchestrator-and-agent-health.xml#n-review">the review node checklist</source>
+    <source href="specs/SPEC-03-dag-and-node-contract.xml#s-records">kickback without evidence is prose</source>
+    <source href="specs/SPEC-03-dag-and-node-contract.xml#s-sdlc">reviewer 201 then merger; 422 attempt lt 3 back to the worker</source>
+    <source href="factory/config/routes.json">pr.opened routes to the reviewer only when head_current (CI gate 5 ticket WO-20261013-3eac, L07 section)</source>
+    <source href="~/.claude/CLAUDE.md">breadcrumb at the fix site; never a ticket without its title</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/rulings-gates-check-are-records.md">a ruling a gate reads is a record</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/screenshot-every-page-change.md">owner-surface proof</source>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C43, C50</source>
+    <source href="~/.bearings/coq-stable/answers.jsonl">C36, C39</source>
+  </section>
+
+  <rejected id="rejected">
+    <item source="roles/reviewer.json inputs record.test and wakes_on record.test_passed" what="the reviewer woken by a tester's test.passed record" reason="the tester is retired (L13 D19); the gate's coq/gate on the head sha is the trigger (D05)"/>
+    <item source="roles/reviewer.json must line 4" what="the reviewer checks contents list, no em dash, UTC, config not literals" reason="L13 D21: the mechanical half is lint in the gate; the reviewer judges semantics only"/>
+    <item source="roles/reviewer.json allow.commands gh pr review and records review.passed through event.sh" what="the seat posts its own record and GitHub review" reason="S04 section 9 item 2; the launcher writes the record after the head check and mirrors it; the seat never holds the gh write"/>
+    <item source="specs/SPEC-03-dag-and-node-contract.xml#s-sdlc" what="a merger seat after the reviewer" reason="D11 and D15: the merge is code (N-09) on the two records"/>
+    <item source="rebuild/investigation/03-DECISIONS.md#17 option A" what="the owner reviews every pull request" reason="the bottleneck the field measured; the owner holds the line through cards and the hold"/>
+    <item source="rebuild/investigation/03-DECISIONS.md#17 option C" what="post-merge review only" reason="the verifier is not yet near perfect (red mains on 2026-10-13)"/>
+    <item source="mcp github pull_request_review_write and request_copilot_review" what="a vendor review bot as the reviewer" reason="allowed later as extra capacity behind the same record (S04 section 9 item 8), never the only path"/>
+  </rejected>
+</volume>

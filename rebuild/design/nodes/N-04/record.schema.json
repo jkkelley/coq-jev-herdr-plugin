@@ -1,0 +1,278 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-04/record.schema.json",
+  "title": "N-04 GitHub poll records",
+  "description": "Book 1.1.0 (F08, F09, review C new 5 and 6). Input poll tick (../N-06/record.schema.json) and forge.poll_now; output forge.snapshot, forge.pr_closed, protection.observed, protection.drift, forge.unreachable, forge.recovered, forge.throttled, forge.auth, forge.overflow, forge.slow, forge.started of node N-04; the entity forge:snapshot (forge_entity) and the forge_pr_files table row (pr_file). One mergeable vocabulary book-wide: GitHub's own (mergeable true, false or null while GitHub computes; mergeable_state clean, dirty, behind, blocked, unstable, has_hooks, draft, unknown). Envelope: shared/state-store.schema.json#/$defs/envelope. UTC everywhere.",
+  "$defs": {
+    "envelope": { "$ref": "../N-01/record.schema.json#/$defs/envelope" },
+    "at": { "$ref": "../N-01/record.schema.json#/$defs/at" },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "$ref": "../N-01/record.schema.json#/$defs/sha256" },
+    "gate_state": {
+      "enum": ["success", "failure", "error", "pending", "none"],
+      "description": "none: GitHub holds no coq/gate status on the sha (the one word; absent is not used)"
+    },
+    "gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state", "observed_at"],
+      "properties": {
+        "state": { "$ref": "#/$defs/gate_state" },
+        "description": { "type": "string", "maxLength": 240 },
+        "target_url": { "type": "string", "maxLength": 500 },
+        "updated_at": { "$ref": "#/$defs/at", "description": "GitHub's updated_at on the status; absent when state is none" },
+        "app_id": { "type": "integer", "minimum": 1, "description": "the GitHub App that posted the status, when GitHub reports it; N-08 refuses a green from any other source" },
+        "creator": { "type": "string", "maxLength": 100, "description": "the status creator login as GitHub reports it" },
+        "observed_at": { "$ref": "#/$defs/at", "description": "the last poll that confirmed this status, by a 200 or a 304 of the conditional GET" },
+        "superseded": {
+          "type": "boolean",
+          "description": "true when description says superseded by a newer build (ci/README.md)"
+        }
+      }
+    },
+    "mergeable": {
+      "type": ["boolean", "null"],
+      "description": "GitHub's mergeable from GET /pulls/{n}: null while GitHub computes"
+    },
+    "mergeable_state": {
+      "enum": ["clean", "dirty", "behind", "blocked", "unstable", "has_hooks", "draft", "unknown"]
+    },
+    "pr": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "number",
+        "head_sha",
+        "head_ref",
+        "head_repo",
+        "fork",
+        "base_ref",
+        "base_sha",
+        "mergeable",
+        "mergeable_state",
+        "gate",
+        "draft",
+        "head_seen_at",
+        "files_count",
+        "files_truncated"
+      ],
+      "properties": {
+        "number": { "type": "integer", "minimum": 1 },
+        "head_sha": { "$ref": "#/$defs/sha" },
+        "head_ref": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "head_repo": { "type": "string", "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$", "description": "head.repo.full_name from GET /pulls/{n}; owner/name" },
+        "fork": { "type": "boolean", "description": "true when head_repo differs from the polled repository; N-08's fork guard reads this" },
+        "base_ref": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "base_sha": { "$ref": "#/$defs/sha" },
+        "mergeable": { "$ref": "#/$defs/mergeable" },
+        "mergeable_state": { "$ref": "#/$defs/mergeable_state" },
+        "gate": { "$ref": "#/$defs/gate" },
+        "gate_page": { "$ref": "#/$defs/gate" },
+        "draft": { "type": "boolean" },
+        "head_seen_at": { "$ref": "#/$defs/at", "description": "the first poll that saw this head_sha on this PR; GitHub has no per-head push time (head.repo.pushed_at is the repository's), so N-08 ages an absent status from here" },
+        "updated_at": { "$ref": "#/$defs/at", "description": "GitHub's updated_at of the pull request" },
+        "detail_at": { "$ref": "#/$defs/at", "description": "the last GET /pulls/{n} that answered 200 or 304" },
+        "files_count": { "type": "integer", "minimum": 0, "description": "rows in forge_pr_files for (number, head_sha)" },
+        "files_truncated": { "type": "boolean", "description": "true when GitHub's 3000-file cap was reached; N-09 holds files-unknown" },
+        "ticket": {
+          "oneOf": [
+            { "$ref": "../N-01/record.schema.json#/$defs/ticket" },
+            { "type": "null" }
+          ]
+        },
+        "labels": {
+          "type": "array",
+          "items": { "type": "string" },
+          "maxItems": 20
+        },
+        "deferred": {
+          "type": "array",
+          "items": { "enum": ["detail", "files", "statuses"] },
+          "uniqueItems": true,
+          "description": "the reads the call budget postponed this poll; a postponed read is unknown, never absent (N-08 and N-09 skip the PR)"
+        }
+      }
+    },
+    "pr_file": {
+      "description": "one row of table forge_pr_files (spec.xml#mechanism): the changed files of one PR head, kept forge.keep_days after the PR closes so N-09, N-48 and N-51 can read the paths of a merged head",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pr", "head_sha", "path", "status", "read_at"],
+      "properties": {
+        "pr": { "type": "integer", "minimum": 1 },
+        "head_sha": { "$ref": "#/$defs/sha" },
+        "path": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "previous_path": { "type": "string", "maxLength": 1024 },
+        "status": { "enum": ["added", "removed", "modified", "renamed", "copied", "changed", "unchanged"] },
+        "read_at": { "$ref": "#/$defs/at" }
+      }
+    },
+    "poll_tick": { "$ref": "../N-06/record.schema.json#/$defs/tick" },
+    "forge_poll_now": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["by", "reason"],
+      "properties": {
+        "by": { "enum": ["N-09", "N-16", "ctl"] },
+        "reason": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "snapshot_body": {
+      "type": "object",
+      "required": ["main_sha", "main_gate", "prs", "hash", "polled_at", "calls", "rate_remaining"],
+      "properties": {
+        "main_sha": { "$ref": "#/$defs/sha" },
+        "main_gate": { "$ref": "#/$defs/gate" },
+        "prs": {
+          "type": "array",
+          "maxItems": 200,
+          "items": { "$ref": "#/$defs/pr" }
+        },
+        "hash": { "$ref": "#/$defs/sha256" },
+        "polled_at": { "$ref": "#/$defs/at" },
+        "calls": { "type": "integer", "minimum": 0 },
+        "rate_remaining": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "forge_snapshot": {
+      "description": "the record, appended when hash changes; a record is fresh by definition, so it carries no stale field",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "$ref": "#/$defs/snapshot_body" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "forge.snapshot" },
+            "code": { "const": 200 },
+            "node": { "const": "N-04" },
+            "stale": false
+          }
+        }
+      ]
+    },
+    "forge_entity": {
+      "description": "the entity forge:snapshot, written every poll by compare-and-swap; it is not a record (no envelope) and carries the staleness the record never does",
+      "allOf": [
+        { "$ref": "#/$defs/snapshot_body" },
+        {
+          "type": "object",
+          "required": ["stale"],
+          "properties": {
+            "stale": { "type": "boolean" },
+            "failed_since": { "$ref": "#/$defs/at" },
+            "etags": {
+              "type": "object",
+              "additionalProperties": { "type": "string" }
+            },
+            "cursor_pr": { "type": "integer", "minimum": 0, "description": "the PR number the next poll continues deferred reads from" }
+          }
+        }
+      ]
+    },
+    "forge_pr_closed": {
+      "description": "a PR that left the open list since the previous poll, read from the recently-closed list or GET /pulls/{n}; N-09 completes a lost merge from it",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["pr", "head_sha", "merged", "closed_at"],
+          "properties": {
+            "kind": { "const": "forge.pr_closed" },
+            "code": { "const": 200 },
+            "node": { "const": "N-04" },
+            "pr": { "type": "integer", "minimum": 1 },
+            "head_sha": { "$ref": "#/$defs/sha" },
+            "base_ref": { "type": "string", "maxLength": 200 },
+            "merged": { "type": "boolean" },
+            "merge_commit_sha": { "$ref": "#/$defs/sha" },
+            "merged_at": { "$ref": "#/$defs/at" },
+            "closed_at": { "$ref": "#/$defs/at" }
+          },
+          "if": { "properties": { "merged": { "const": true } } },
+          "then": { "required": ["merge_commit_sha", "merged_at"] }
+        }
+      ]
+    },
+    "required_check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["context"],
+      "properties": {
+        "context": { "type": "string", "minLength": 1 },
+        "app_id": { "type": ["integer", "null"], "description": "null when protection names no app, which N-04 reports as drift" }
+      }
+    },
+    "protection": {
+      "description": "protection.observed 200 when main's protection equals the expected configuration; protection.drift 412 naming every difference; read with the forge-read credential (shared/authority.xml#credential-matrix)",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["branch", "config_sha256", "observed_at", "strict", "checks", "linear_history", "force_pushes", "expected_app_id"],
+          "properties": {
+            "kind": { "enum": ["protection.observed", "protection.drift"] },
+            "code": { "enum": [200, 412] },
+            "node": { "const": "N-04" },
+            "branch": { "const": "main" },
+            "config_sha256": { "$ref": "#/$defs/sha256", "description": "sha256 of the canonical protection JSON GitHub returned" },
+            "observed_at": { "$ref": "#/$defs/at" },
+            "strict": { "type": "boolean" },
+            "checks": { "type": "array", "items": { "$ref": "#/$defs/required_check" }, "maxItems": 32 },
+            "linear_history": { "type": "boolean" },
+            "force_pushes": { "type": "boolean" },
+            "expected_app_id": { "type": "integer", "minimum": 1, "description": "config forge.gate_app_id, the coq-gate GitHub App (N-25)" },
+            "drift": {
+              "type": "array",
+              "items": { "enum": ["unreadable", "not-strict", "gate-check-missing", "gate-app-mismatch", "linear-history-off", "force-pushes-allowed", "extra-required-check", "unprotected"] },
+              "uniqueItems": true
+            }
+          },
+          "allOf": [
+            { "if": { "properties": { "kind": { "const": "protection.observed" } } }, "then": { "properties": { "code": { "const": 200 }, "strict": { "const": true }, "linear_history": { "const": true }, "force_pushes": { "const": false }, "drift": { "maxItems": 0 } } } },
+            { "if": { "properties": { "kind": { "const": "protection.drift" } } }, "then": { "required": ["drift"], "properties": { "code": { "const": 412 }, "drift": { "minItems": 1 } } } }
+          ]
+        }
+      ]
+    },
+    "forge_report": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["reason"],
+          "properties": {
+            "kind": {
+              "enum": [
+                "forge.started",
+                "forge.recovered",
+                "forge.unreachable",
+                "forge.throttled",
+                "forge.auth",
+                "forge.overflow",
+                "forge.slow"
+              ]
+            },
+            "code": { "enum": [100, 200, 400, 429, 500, 503] },
+            "node": { "const": "N-04" },
+            "reason": { "type": "string", "maxLength": 240 },
+            "limit": { "enum": ["primary", "secondary"], "description": "forge.throttled: which GitHub limit answered (secondary: a 403 or 429 with retry-after)" },
+            "attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "failed_since": { "$ref": "#/$defs/at" },
+            "outage_seconds": { "type": "integer", "minimum": 0 },
+            "reset_at": { "$ref": "#/$defs/at" },
+            "rate_remaining": { "type": "integer", "minimum": 0 },
+            "open_prs": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/poll_tick" },
+    { "$ref": "#/$defs/forge_poll_now" },
+    { "$ref": "#/$defs/forge_snapshot" },
+    { "$ref": "#/$defs/forge_pr_closed" },
+    { "$ref": "#/$defs/protection" },
+    { "$ref": "#/$defs/forge_report" }
+  ]
+}

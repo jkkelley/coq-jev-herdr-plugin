@@ -1,0 +1,178 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-28/record.schema.json",
+  "title": "N-28 System lane card builder: input and output records",
+  "description": "The card record and its held, unwatched, refused, merged and done forms. The input is any record whose (kind, code) row carries acts=owner in shared/status-codes.xml, plus watcher.alive from N-27 (schema in ../N-27/record.schema.json). Envelope per shared/state-store.xml#envelope.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "cardId": { "type": "string", "pattern": "^C-[0-9]{1,6}$" },
+    "tier": { "enum": ["stable", "uat", "dev"] },
+    "recordId": { "type": "string", "minLength": 8, "maxLength": 64 },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node"],
+      "properties": {
+        "id": { "$ref": "#/$defs/recordId" },
+        "kind": { "type": "string" },
+        "code": { "enum": [100, 200, 201, 204, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "const": "N-28" },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "maxLength": 128 },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 }
+      }
+    },
+    "option": {
+      "type": "object",
+      "required": ["label", "then"],
+      "additionalProperties": false,
+      "properties": {
+        "label": { "type": "string", "minLength": 1, "maxLength": 80, "description": "1 to 4 words" },
+        "then": { "type": "string", "minLength": 1, "maxLength": 300, "description": "what happens, 8 words or fewer" }
+      }
+    },
+    "ticketRef": {
+      "type": "object",
+      "required": ["id", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
+        "title": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 200,
+          "description": "the full title from the ticket record, never truncated"
+        }
+      }
+    },
+    "ownerActsInput": {
+      "title": "input: any owner-acts record (shape owned by its own node)",
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node"],
+      "properties": {
+        "id": { "$ref": "#/$defs/recordId" },
+        "kind": { "type": "string" },
+        "code": { "enum": [100, 300, 422, 423, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "ticket": { "type": ["string", "null"], "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" }
+      }
+    },
+    "card": {
+      "title": "card (output; an owner-only card has no deadline and no default)",
+      "properties": {
+        "kind": { "const": "card" },
+        "code": { "const": 300 },
+        "card": { "$ref": "#/$defs/cardId" },
+        "tier": { "$ref": "#/$defs/tier" },
+        "cause": { "$ref": "#/$defs/recordId" },
+        "about": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "decide": { "type": "string", "minLength": 3, "maxLength": 300 },
+        "options": { "type": "array", "minItems": 2, "maxItems": 4, "items": {"$ref": "#/$defs/option"} },
+        "rec": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "ticket": { "$ref": "#/$defs/ticketRef" },
+        "deadline": { "$ref": "#/$defs/utc" },
+        "default": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "watcher": { "type": "integer", "minimum": 1, "description": "lease generation alive at post time" },
+        "posted_at": { "$ref": "#/$defs/utc" },
+        "owner_only": { "type": "boolean", "description": "an option carries an effect other than none or ticket.unblock (shared/authority.xml#relayable-rulings); absent means false" },
+        "standing": { "enum": ["halt", "resume", "gofactory", "build-mode", "kill"], "description": "standing cards only (spec.xml#standing-cards)" },
+        "idempotency_key": {
+          "type": "string",
+          "pattern": "^N-28/card\\.(post/.+|standing/(halt|resume|gofactory|build-mode|kill))/r[0-9]{1,4}$",
+          "description": "N-28/card.post/<cause id>/r1, or N-28/card.standing/<lever>/r1 (shared/contracts.xml#operation-keys)"
+        }
+      },
+      "required": ["card", "tier", "cause", "about", "decide", "options", "rec", "watcher", "posted_at", "idempotency_key"],
+      "dependentRequired": { "deadline": ["default"], "default": ["deadline"], "standing": ["owner_only"] },
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "if": { "properties": { "owner_only": { "const": true } }, "required": ["owner_only"] }, "then": { "not": { "anyOf": [{ "required": ["deadline"] }, { "required": ["default"] }] } } },
+        { "if": { "required": ["standing"] }, "then": { "properties": { "owner_only": { "const": true } } } }
+      ]
+    },
+    "card.held": {
+      "title": "card.held (output)",
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": { "const": "card.held" },
+        "code": { "const": 423 },
+        "cause": { "$ref": "#/$defs/recordId" },
+        "page": { "type": "string" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "retry_at": { "$ref": "#/$defs/utc" }
+      },
+      "required": ["cause", "page", "attempt", "retry_at"]
+    },
+    "card.unwatched": {
+      "title": "card.unwatched (output, alert)",
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": { "const": "card.unwatched" },
+        "code": { "const": 500 },
+        "cause": { "$ref": "#/$defs/recordId" },
+        "page": { "type": "string" }
+      },
+      "required": ["cause", "page"]
+    },
+    "card.refused": {
+      "title": "card.refused (output, system defect)",
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": { "const": "card.refused" },
+        "code": { "const": 400 },
+        "cause": { "$ref": "#/$defs/recordId" },
+        "template": { "type": "string", "description": "the (kind, code) template row that failed" },
+        "template_version": { "type": "integer", "minimum": 1, "description": "the template table version that failed; a newer loaded version re-selects the cause" },
+        "violations": { "type": "array", "minItems": 1, "maxItems": 20, "items": {"type": "string", "maxLength": 240} }
+      },
+      "required": ["cause", "template", "template_version", "violations"]
+    },
+    "card.merged": {
+      "title": "card.merged (output)",
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": { "const": "card.merged" },
+        "code": { "const": 100 },
+        "cause": { "$ref": "#/$defs/recordId" },
+        "card": { "$ref": "#/$defs/cardId" },
+        "idempotency_key": { "type": "string", "pattern": "^N-28/card\\.merged/merged:.+/r[0-9]{1,4}$", "description": "N-28/card.merged/merged:<cause id>/r1; terminal for the cause" }
+      },
+      "required": ["cause", "card", "idempotency_key"]
+    },
+    "card.post.failed": {
+      "title": "card.post.failed (output, alert)",
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": { "const": "card.post.failed" },
+        "code": { "const": 500 },
+        "cause": { "$ref": "#/$defs/recordId" },
+        "error": { "type": "string", "maxLength": 240 }
+      },
+      "required": ["cause", "error"]
+    },
+    "card.done": {
+      "title": "card.done (output)",
+      "allOf": [{"$ref": "#/$defs/envelope"}],
+      "properties": {
+        "kind": { "const": "card.done" },
+        "code": { "const": 200 },
+        "card": { "$ref": "#/$defs/cardId" },
+        "ruling": { "$ref": "#/$defs/recordId" },
+        "by": { "enum": ["page", "controls", "cli", "relay", "policy", "imported"], "description": "the ruling's source (N-29)" }
+      },
+      "required": ["card", "ruling", "by"]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/ownerActsInput" },
+    { "$ref": "#/$defs/card" },
+    { "$ref": "#/$defs/card.held" },
+    { "$ref": "#/$defs/card.unwatched" },
+    { "$ref": "#/$defs/card.refused" },
+    { "$ref": "#/$defs/card.merged" },
+    { "$ref": "#/$defs/card.post.failed" },
+    { "$ref": "#/$defs/card.done" }
+  ]
+}

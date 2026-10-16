@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: the cut-over order. The one ordered sequence from the standing halt to the old line retired: which
+     dark flag goes live when, when route.sh, merge.sh, verify-main.sh, wait.mjs and the hook listener stop, and how the
+     hold flag, USERHALT, GOFACTORY and USERGO interleave. Validated by rebuild/design/check.sh against schema/volume.xsd.
+     What broke (gap review R-03, 2026-10-14): N-17, N-26, rejected-with-reason.xml and N-49 all pointed at "N-45's
+     cut-over order" or "the index's build order", and neither existed; N-49 (seven steps), N-50 (cancels, PR 35, the
+     design branch), N-32 (page cut-over steps 1 to 5) and twelve dark flags each described their own slice. Why one
+     volume and not an order section in N-50: the order spans six groups and the owner's two signals, and N-50 owns three
+     records of it; a shared volume every group points at is the one place a reader finds the whole sequence. Rejected:
+     an order section inside N-45, which is a deletion node and owns none of the flags. Cost: a node that changes its
+     go-live proof edits this volume in the same pull request (one file, one in-flight ticket applies).
+     Book 1.1.0 (2026-10-15), review F06: step 0 ran "before GOFACTORY" while DESIGN.md said nothing starts before it, and
+     a USERGO before step 7 was "accepted" though step 8 needs its proofs; the bootstrap state machine below is now the one
+     answer, with the merge path the hold would otherwise deadlock (C new 3) and an arm64 first controller image. -->
+<volume id="cut-over" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="Cut-over order">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, the nodes the order sequences</entry>
+    <entry ref="purpose">Purpose and how to read the order</entry>
+    <entry ref="signals">The owner's signals and the hold flag</entry>
+    <entry ref="bootstrap">The bootstrap state machine B0 to B8: entry, exit, what each state allows</entry>
+    <entry ref="bootstrap-merge">How pull requests merge under the hold during bootstrap (default and owner alternative)</entry>
+    <entry ref="order">The order: every step with its trigger, flags, what stops and its proof</entry>
+    <entry ref="diagram">The order as a Mermaid graph</entry>
+    <entry ref="legacy">When each piece of the old line stops</entry>
+    <entry ref="builders">Who builds the go-live tickets before and after the scheduler is live</entry>
+    <entry ref="waits">Every wait of the sequence, its timeout and its fallback</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="principles.xml#principles" kind="shared"/>
+    <sibling href="status-codes.xml#status-codes" kind="shared"/>
+    <sibling href="seat-contract.xml#halt-and-resume" kind="shared"/>
+    <sibling href="state-store.xml#flag-hold" kind="shared"/>
+    <sibling href="rejected-with-reason.xml#rejected-with-reason" kind="shared"/>
+    <dag href="../dag.md#7-rules-every-node-obeys"/>
+    <shared href="../nodes/N-49/spec.xml#order" role="unlanded">The seven unlanded steps this order places</shared>
+    <shared href="../nodes/N-50/spec.xml#mechanism" role="cut-over-records">Cancels, the PR 35 close, the design branch</shared>
+    <shared href="../nodes/N-32/spec.xml#cut-over" role="page">The page cut-over steps 1 to 5</shared>
+    <shared href="../nodes/N-29/spec.xml#mechanism" role="rulings">The rulings that carry GOFACTORY, USERHALT and USERGO</shared>
+    <shared href="../nodes/N-44/spec.xml#N-44" role="build-mode">Build mode, the flag the rebuild runs under</shared>
+    <shared href="authority.xml#owner-words" role="owner-words">How GOFACTORY, USERGO and USERHALT are matched and from whom</shared>
+    <shared href="contracts.schema.json#/$defs/bootstrap_state" role="schema">The bootstrap:state entity</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>Every node ships dark and goes live by its own ticket with a named proof (dag.md section 7 rule 9); this volume is the order those tickets are cut and merged in, so no two volumes disagree about what goes first.</s>
+    <s>A step starts on its trigger record and ends on its proof record; nothing in the sequence starts by an agent typing, and a step that fails its proof three times is one card (principles.xml#three-attempts).</s>
+    <s>A flag goes live when its go-live ticket merges the flag's default in the service config and the service applies it by Reload on the merge record; the proof each step names is the node's own checklist item c-dark or its go-live text, cited by anchor.</s>
+    <s>Steps with the same number run in parallel; a later number waits for every proof of the earlier number it names in its trigger, and for nothing else.</s>
+  </purpose>
+
+  <signals id="signals">
+    <s>Each signal counts only as authority.xml#owner-words defines it: the whole trimmed message from an owner principal on the owner page or the owner CLI; never relayed, defaulted, imported or produced by an agent.</s>
+    <signal name="USERHALT" kind="ruling" effect="control.halt">The owner's halt (N-30 rule R01, or the Controls lever N-42) sets flag:hold and nothing else (seat-contract.xml#halt-and-resume). One stands today on the old line; the new store is created held (step 0), so the new line starts held without importing it.</signal>
+    <signal name="GOFACTORY" kind="ruling" effect="gofactory">The owner's go for the rebuild: it moves bootstrap state B1 to B2 and is the trigger of step 0. It does not clear flag:hold.</signal>
+    <signal name="USERGO" kind="ruling" effect="control.resume">The owner's resume: it clears flag:hold and moves B7 to B8, after which N-07 dispatches and N-09 merges by the normal rules. In any state before B7 it is control.refused 412 not-ready with a reply naming the missing proofs, and nothing changes.</signal>
+    <s>flag:hold stops new dispatch (N-07) and new merges (N-09) only, except the bootstrap merges of #bootstrap-merge; ticks, health, backups, the poll, the push transport, the stable page, its watcher and its front door never stop (seat-contract.xml#halt-and-resume). The rebuild's own seats run under build mode, not under the line, so the hold does not stop them (memory build-mode-rule).</s>
+    <s>N-49 step 2 (the records cut-over, WO-20261012-99d6) needs flag:hold set by its own title; because the hold stands from step 0 until step 8 below, that wait finds it set; if the owner cleared it early, N-49's wait w2 applies (24 h, then one card).</s>
+  </signals>
+
+  <bootstrap id="bootstrap">
+    <s>One entity bootstrap:state (contracts.schema.json#/$defs/bootstrap_state) holds the state, since and the proofs seen; N-50 is its only writer and advances it on its tick by compare-and-swap in the Commit that cites the proof records, one state at a time and never backwards; bootstrap.advanced 200 records each move.</s>
+    <s>flag:hold is set from B2 to B7; the two owner words are the only transitions an agent cannot cause: GOFACTORY (B1 to B2) and USERGO (B7 to B8).</s>
+    <bstate id="B0" entry="this book merged on main with check.sh green" exit="the foundation tickets are cut" allows="design edits only; no binary of the new line runs">Design approved.</bstate>
+    <bstate id="B1" entry="B0" exit="bootstrap.foundation 201 and the GOFACTORY ruling, whichever comes second" allows="the store, schemas, code table, fixtures and dark binaries run against an empty test state root under the authority principals (authority.xml#principals); no live unit, no forge or Jenkins effect, no seat dispatch, no merge by the new line">Foundation; may precede GOFACTORY. bootstrap.foundation 201 lists the passing store, schema and fixture tests.</bstate>
+    <bstate id="B2" entry="the GOFACTORY ruling with bootstrap.foundation present, and the WSL host checks of authority.xml#wsl-host passing (else refused, reason wsl_host_open)" exit="the proofs of step 0 and step 1" allows="step 0 on the live state root (the test root is discarded, never promoted) and step 1 (N-49 and N-50 effects); go-live tickets of steps 2, 3 and 7 are cut">Authorized.</bstate>
+    <bstate id="B3" entry="the proofs of steps 0 and 1" exit="the proof of step 3" allows="steps 2, 3 and 7 run; merges by #bootstrap-merge">Owner surface and CI being built.</bstate>
+    <bstate id="B4" entry="the proof of step 3" exit="the proof of step 4" allows="step 4, and steps 2 and 7 continue">Main verification.</bstate>
+    <bstate id="B5" entry="the proof of step 4" exit="the proof of step 5" allows="step 5">Stall and retry.</bstate>
+    <bstate id="B6" entry="the proof of step 5" exit="the proofs of steps 2, 6 and 7" allows="step 6 (the scheduler under the hold)">Scheduler under the hold.</bstate>
+    <bstate id="B7" entry="the proofs of steps 2, 6 and 7, written as bootstrap.ready 201 naming each proof record" exit="the USERGO ruling" allows="the owner-only ready card (no default, no deadline, authority.xml#relayable-rulings); nothing else changes">Ready to resume.</bstate>
+    <bstate id="B8" entry="the USERGO ruling while in B7" exit="none" allows="dispatch and merge by the normal rules; steps 8 to 11">Live.</bstate>
+    <example schema="contracts.schema.json#/$defs/bootstrap_state">{"state":"B7","since":"2026-10-20T09:00:00Z","proofs":["20261018T120000Z-201-c2swp","20261019T080000Z-200-s6tck","20261019T150000Z-200-n49s2"],"ruling_ref":"20261016T070000Z-200-gofac"}</example>
+    <s>A USERGO in B0 to B6 is control.refused 412 not-ready whose reason lists the missing proofs read from bootstrap:state; a GOFACTORY outside B1 is refused the same way (already given, or foundation missing) and is not stored for later.</s>
+    <s>In B1 there is no live store to receive an owner word, so GOFACTORY is typed by the owner into coq bootstrap authorize (the owner CLI, owner principal, controlling terminal), which first shows the N-49 dry-run listing, then creates the live state root held with every flag false, starts coq-service, and passes the word to N-29 as the first ruling of the new store; a GOFACTORY answer on the legacy page is not an owner word (authority.xml#relayable-rulings, imported messages).</s>
+  </bootstrap>
+
+  <bootstrap-merge id="bootstrap-merge">
+    <s>Under the hold N-09 merges nothing by default, which would leave steps 2 to 7 unmergeable (their tickets are built before USERGO). The owner's pick is pending (review-dispositions.xml#D4); the default below is the book's until the owner rules.</s>
+    <path name="default" status="default">From the proof of step 3 (coq/gate required with the App, authority.xml#github-app), merge.enabled runs in bootstrap mode: under the hold N-09 merges only a pull request whose ticket has build-mode scope rebuild and belongs to a step the current bootstrap state allows, with a green coq/gate and review.passed on the same head sha, and at most one unverified merge on main; every other candidate is merge.held reason owner-hold. Bootstrap mode ends at B8.</path>
+    <path name="pre-gate" status="default">Before step 3's proof no machine verdict exists, so the CI-as-code pull requests that bring up the first coq/gate (and any step 2 pull request merged before it) are merged by the owner's break glass, one card each carrying the review record and the local proofs; N-51 counts each as an owner act.</path>
+    <path name="owner-break-glass" status="alternative">Every bootstrap pull request is merged by the owner's break glass (seat-contract.xml#break-glass), one card each; N-09 merges nothing until B8.</path>
+  </bootstrap-merge>
+
+  <order id="order">
+    <step n="0" id="step-system" trigger="the GOFACTORY ruling (B1 to B2, #bootstrap)" hold="set (the new store is created held)">
+      <does>The system comes up before anyone works: N-01 store, N-05 backups and N-06 unit, clock and health run as the user unit coq-service with every line flag false; N-43 loads the code table and the record kinds; the rulings C34 to C58 become ruling records once, at bring-up, by coq owner import-answers over ~/.bearings/coq-stable/answers.jsonl and rulings-r02.jsonl (run by the owner CLI; idempotent by card id), each with effects none (authority.xml#relayable-rulings); the hold is the store's initial state, not an imported USERHALT.</does>
+      <flags>none live; sched, gate, merge, verify, retry, stall, intake, inbox, push, cards, rail and phone_push all false</flags>
+      <stops>Nothing yet. The legacy stable page (server.mjs and its wait.mjs loop) keeps serving the owner throughout; it is the always-on monitor until step 2.</stops>
+      <proof>health:service SERVING, tick records for every subkind, a verified backup record, flag:hold set, the GOFACTORY ruling, and the ruling records for C34 to C58 (nodes/N-06/spec.xml#checklist, nodes/N-05/spec.xml#checklist).</proof>
+      <dry-run>Before GOFACTORY N-49 plans in the B1 foundation against the test root and coq bootstrap authorize shows that listing (nodes/N-49/spec.xml#mechanism step 1); nothing is applied.</dry-run>
+    </step>
+    <step n="1" id="step-gofactory" trigger="step 0 proof (the GOFACTORY ruling is its first record)" hold="set">
+      <does>N-50 writes the fourteen cancels and the PR 35 close (the design branch delete waits for the small-cut harvest, N-50 wait w3); N-49 runs its step 1 (back up first), then its steps 2 to 7 each on the previous step's success record (nodes/N-49/spec.xml#order); go-live tickets for steps 2 to 7 below are cut (see builders).</does>
+      <flags>none</flags>
+      <stops>The fourteen SPEC-16 tickets (cancel records); PR 35 (closed); the old line stays halted.</stops>
+      <proof>fourteen cancel 200 records and pr.close 200 (nodes/N-50/spec.xml#checklist); disposition 200 for N-49 step 1.</proof>
+    </step>
+    <step n="2" id="step-owner-surface" trigger="step 1 proof" hold="set">
+      <does>The owner surface moves first, because the owner must see the new line before it moves: push.enabled (N-31), then intake.enabled (N-29) and inbox.enabled (N-30), then the watcher unit (N-27) and cards.enabled (N-28, which needs a live lamp), then rail.enabled (N-33); the page service runs dev and uat (N-32 cut-over steps 1 and 2) and the legacy state is imported once (N-32 cut-over step 3); then the one-shot unit coq-cutover@coq-stable swaps the stable page (N-32 cut-over step 4), which starts coq-watcher@coq-stable and coq-front-door@coq-stable and stops the legacy server and its wait loop.</does>
+      <flags>push, intake, inbox, cards, rail (in that order, each by its own ticket)</flags>
+      <stops>wait.mjs and server.mjs on stable stop at cutover.swapped 201 (the script stops them itself, never a hand); front-door.mjs in the herdr pane stops when coq-front-door@coq-stable answers.</stops>
+      <proof>cutover.swapped 201 with the stopped legacy pids, front-door 100 on the tailnet bind, watcher.alive alive for coq-stable, one card on stable produced from a test record within one tick (nodes/N-32/spec.xml#checklist, nodes/N-28/spec.xml#checklist).</proof>
+    </step>
+    <step n="3" id="step-ci" trigger="step 1 proof (runs beside step 2)" hold="set">
+      <does>CI as code: N-20 job.registered, N-21 namespace.ready, N-22 images pinned; the first controller image is built multi-arch (linux/amd64 and linux/arm64) with qemu binfmt by ci/image/build.sh --platforms (a flag the N-22 ticket adds, planned) because the controller runs on an arm64 Pi; N-23 to N-25 plan, run and post coq/gate on pull requests through the coq-gate App; the owner applies the main protection requiring coq/gate with its app_id (authority.xml#github-app; the N-25 go-live proof); then gate.enabled (N-08), then merge.enabled in bootstrap mode (#bootstrap-merge).</does>
+      <flags>gate, merge (bootstrap mode)</flags>
+      <stops>The webhook-driven gate path: line/bin/hook-listener.sh and line/config/hook.json handlers stop being started (N-04's poll is the correctness path, D06); their units are disposed of in step 4.</stops>
+      <proof>protection.observed 200 naming coq/gate with the App's app_id, an image manifest listing linux/arm64, and a gate.verdict for the newest open pull request (nodes/N-08/spec.xml#runbook bring-up).</proof>
+    </step>
+    <step n="4" id="step-verify" trigger="step 3 proof" hold="set">
+      <does>N-26 verifies the newest main sha in pods and writes main.gate.status; then verify.enabled (N-10); N-10 reads the legacy hold file once and owns the hold as a record from then on.</does>
+      <flags>verify</flags>
+      <stops>At the first main.gate.status 201: line/bin/verify-main.sh is no longer called by anything and its hold file and worktrees are removed by N-45 (cleanup entries N-26 legacy-hold and legacy-verify-worktrees, nodes/N-26/spec.xml#runbook R3); the hook listener's units and handlers are removed by an N-49 step 7 disposition.</stops>
+      <proof>a verified 201 for the newest merge whose main_sha equals origin/main (nodes/N-10/spec.xml#runbook bring-up) and the two cleanup.run 200 rows.</proof>
+    </step>
+    <step n="5" id="step-stall-retry" trigger="step 4 proof" hold="set">
+      <does>stall.enabled in shadow (judge and log, no revoke) for one day, then live (N-12); then retry.enabled (N-11).</does>
+      <flags>stall (shadow, then live), retry</flags>
+      <stops>The idle alarm and the per-minute idle watches stay retired (rejected-with-reason.xml#idle-alarm).</stops>
+      <proof>a stall no-progress record for a SIGSTOPped test run (nodes/N-12/spec.xml#runbook bring-up) and the attempt record N-11 cut for a failure record (nodes/N-11/spec.xml#runbook bring-up).</proof>
+    </step>
+    <step n="6" id="step-scheduler" trigger="step 5 proof" hold="set">
+      <does>sched.enabled (N-07) while flag:hold is still set: the tick runs, dispatches nothing and counts the backlog, which proves the scheduler without moving the line; N-09, live in bootstrap mode since step 3, holds every candidate outside the current bootstrap step with merge.held reason owner-hold.</does>
+      <flags>sched (under the hold)</flags>
+      <stops>factory/bin/route.sh, flow.sh, policy.sh and the five watch scripts are started by nothing once coq-service is enabled (nodes/N-06/spec.xml#start step 4); their units and cache copies are N-49 step 7 dispositions; this step's proof is that none ran for a day.</stops>
+      <proof>sched:tick with leader true and held_by_hold equal to desired; merge.held records with reason owner-hold; no route.sh process for a day in the N-51 line-ops audit.</proof>
+    </step>
+    <step n="7" id="step-unlanded-done" trigger="N-49 step 2 done (the records cut-over merged)" hold="set">
+      <does>The records live in the state root only; events/ and factory/state leave git (WO-20261012-99d6, run by the rebuild seats under the hold its title asks for, merged by #bootstrap-merge).</does>
+      <flags>none</flags>
+      <stops>Every event.sh write into the repository tree.</stops>
+      <proof>disposition 200 for N-49 step 2 and git status clean of events/ on main.</proof>
+    </step>
+    <step n="8" id="step-usergo" trigger="bootstrap state B7 (bootstrap.ready 201), then the owner's USERGO ruling" hold="cleared by USERGO">
+      <does>The owner gives USERGO on the owner page (typed alone, or the Controls lever) or the owner CLI; N-29 records the ruling, N-44 clears flag:hold (the only flag writer, contracts.xml#statements flags.set) and N-50 moves bootstrap:state to B8; N-07 dispatches from the next tick; N-09 merges on a green gate plus review.passed (D15).</does>
+      <flags>none new; the hold clears</flags>
+      <stops>At the first merge record written by N-09: line/bin/merge.sh, merge-watch.sh and the tester, merger and verifier rows of factory/config/routes.json are retired by an N-49 step 7 disposition (rejected-with-reason.xml#tester-merger-verifier-seats).</stops>
+      <proof>a dispatch record after the resume ruling, then a merge 200 and a verified 201 for the same ticket with no hand step in the N-51 audit.</proof>
+    </step>
+    <step n="9" id="step-phone" trigger="inbox live on stable for one day (step 2 proof plus 24 h of ack ladders)" hold="any">
+      <does>phone_push.enabled (N-52).</does>
+      <flags>phone_push</flags>
+      <stops>Nothing.</stops>
+      <proof>one card on stable produces one push on the owner's phone within 10 s (nodes/N-52/spec.xml#start).</proof>
+    </step>
+    <step n="10" id="step-retire-legacy-page" trigger="one day of the new stable page with zero page.down 500" hold="any">
+      <does>The retire ticket removes make ask, make wait, reply.mjs, wait.mjs, server.mjs, front-door.mjs and the idle shutdown (N-32 cut-over step 5); cleanup-tier.sh --legacy removes ~/.bearings/coq-stable/ including wait.lock.json.</does>
+      <flags>none</flags>
+      <stops>The legacy page scripts, gone from the repository.</stops>
+      <proof>the retire ticket's merge record and cleanup.run 200 for the legacy entry.</proof>
+    </step>
+    <step n="11" id="step-exit" trigger="the daily tick after step 8" hold="any">
+      <does>N-51 runs the exit test every day; the product freeze lifts on the first pass (D19).</does>
+      <flags>none</flags>
+      <stops>The product freeze, on pass.</stops>
+      <proof>exit.verdict 201 and freeze.state lifted (nodes/N-51/spec.xml#checklist).</proof>
+    </step>
+  </order>
+
+  <diagram id="diagram">
+    <mermaid><![CDATA[
+flowchart TD
+  B1["B1 foundation on a test root"] --> G["GOFACTORY ruling (B2)"]
+  G --> S0["0 system up held, all flags false"]
+  S0 --> S1["1 N-50 cancels and PR 35 close; N-49 step 1 backups"]
+  S1 --> S2["2 owner surface: push, intake, inbox, watcher, cards, rail; page swap stops wait.mjs and server.mjs"]
+  S1 --> S3["3 CI as code, arm64 controller; coq/gate required by app_id; gate on; merge in bootstrap mode"]
+  S3 --> S4["4 main verify; verify on; verify-main.sh retired at first main.gate.status 201"]
+  S4 --> S5["5 stall shadow then live; retry on"]
+  S5 --> S6["6 sched on under the hold; route.sh started by nothing"]
+  S1 --> S7["7 N-49 step 2 records cut-over under the hold"]
+  S2 --> R["B7 ready: bootstrap.ready"]
+  S6 --> R
+  S7 --> R
+  R --> U{"USERGO ruling (B8)"}
+  U --> S8["8 hold cleared; first machine merge retires merge.sh and the old roles"]
+  S2 --> S9["9 phone push after a day of acks"]
+  S2 --> S10["10 retire legacy page scripts after a clean day"]
+  S8 --> S11["11 exit test daily; freeze lifts on pass"]
+]]></mermaid>
+  </diagram>
+
+  <legacy id="legacy">
+    <s>route.sh (and flow.sh, policy.sh, the watch scripts): started by nothing once coq-service is enabled, step 6 proves a day without it, N-49 step 7 removes the units (#step-scheduler).</s>
+    <s>merge.sh and merge-watch.sh: retired at the first N-09 merge record after USERGO (#step-usergo).</s>
+    <s>verify-main.sh and its hold file: retired at the first main.gate.status 201 (#step-verify).</s>
+    <s>wait.mjs and server.mjs: stopped by coq-cutover@coq-stable at the page swap (#step-owner-surface), deleted by the retire ticket a clean day later (#step-retire-legacy-page).</s>
+    <s>hook-listener.sh and the hook.json handlers: not started from step 3, units removed at step 4 (#step-ci, #step-verify).</s>
+    <s>The fourteen SPEC-16 tickets and PR 35: step 1; the SPEC-16 design branch after the small-cut harvest (nodes/N-50/spec.xml#waits w3).</s>
+  </legacy>
+
+  <builders id="builders">
+    <s>Before B8, nothing in the new line dispatches seats, so the go-live tickets of steps 2 to 7, N-49's land tickets and N-50's archive ticket are run by the rebuild plan's own seats under build mode scope rebuild (rebuild/factory-rebuild-plan.xml#steps; memory build-mode-rule), cut in this volume's order, one spec-author brief per step.</s>
+    <s>From step 8, every ticket request (nodes/N-03/spec.xml#input) becomes a spec-phase lease on a cut-request key and N-07 dispatches the spec-author (nodes/N-17/spec.xml#start); the rebuild seats stop taking new briefs.</s>
+    <s>Build mode expires by its own expiry (N-44); a rebuild ticket still open at expiry is one card, never a silent stop.</s>
+  </builders>
+
+  <waits id="waits">
+    <wait id="w-gofactory" class="owner-decision" what="the GOFACTORY ruling in B1" timeout="none; no default and no deadline (authority.xml#relayable-rulings)" fallback="nothing beyond the B1 foundation runs; coq bootstrap authorize shows the newest dry-run listing (nodes/N-49/spec.xml#waits w1)"/>
+    <wait id="w-step-proof" class="bounded" what="a step's proof record" timeout="P7D per go-live ticket (N-49 wait w3 shape)" fallback="the ticket's N-11 dead path posts one card; later steps that do not name this step in their trigger proceed"/>
+    <wait id="w-stall-shadow" class="bounded" what="the stall timer's shadow day" timeout="PT24H" fallback="go live on the day's record if no false stall was judged; one card naming the false stalls otherwise"/>
+    <wait id="w-usergo" class="owner-decision" what="the owner's USERGO in B7" timeout="none; one owner-only card says the line is ready and names the proofs, with no default and no deadline" fallback="the card ages once to alert.aged at its escalation bound (status-codes.xml#escalation-bound); the line stays held and monitoring keeps running"/>
+    <wait id="w-clean-day" class="bounded" what="a day of the new stable page with zero page.down 500" timeout="PT24H after cutover.swapped" fallback="any page.down 500 restarts the 24 h window; three restarts is one card"/>
+  </waits>
+
+  <many-agents id="many-agents">
+    <readers>Every spec-author, reviewer and the rebuild seats read this volume by step anchor; it holds no state, so any number read it at once.</readers>
+    <writers>One ticket at a time edits it (one file, one in-flight ticket); a node that changes its go-live proof edits its own volume and this step in one pull request.</writers>
+    <collision>Two go-live tickets of one step (push and intake) touch different nodes' config keys and never one file; two steps whose triggers race (step 2 and step 3 after step 1) are independent by construction; a go-live merged out of order is harmless because each flag gates only its own node and the hold gates the line, and the N-51 audit names the out-of-order flip.</collision>
+  </many-agents>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="12-ordering-and-trigger" note="the seven unlanded steps and the GOFACTORY trigger"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="27-d25-is-the-cleanup-in-04-unlandedmd-exempt-from-the-gofactory-hold" note="D25 A: cleanup is the first slice after GOFACTORY"/>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="steps" note="R-04 to R-10, the plan this order serves"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/build-mode-rule.md" note="nodes ship dark; the rebuild runs under build mode"/>
+    <source href="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/bearings-stable-is-the-only-always-on-monitor.md" note="the page and its wait never stop; USERHALT stops everything else"/>
+    <source href="~/.claude/CLAUDE.md" note="the system comes up before humans and agents"/>
+  </sources>
+</volume>

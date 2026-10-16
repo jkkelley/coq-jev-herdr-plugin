@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-49/record.schema.json",
+  "title": "N-49 Unlanded cleanup: input and output records",
+  "description": "Parent: ../../index.xml#N-49. Sibling: spec.xml. Envelope as in ../N-43/record.schema.json#/$defs/envelope. N-45 references #/$defs/disposition-body.",
+  "oneOf": [ { "$ref": "#/$defs/input" }, { "$ref": "#/$defs/output" } ],
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "envelope": { "$ref": "../N-43/record.schema.json#/$defs/envelope" },
+    "entry-id": { "type": "string", "pattern": "^U(02|03|04|05|06|07|08|09|10|11)-[A-Za-z0-9._/@{}#-]+$", "description": "U<section>-<row key>, for example U03-feat/record-bus-every-slot-s-new-records-reach-the-ch or U11-#60" },
+    "verdict": { "type": "string", "enum": ["LAND", "SUPERSEDE", "CLOSE", "KEEP", "DECIDE", "KEEP-OPEN", "FOLD", "CLOSE-CONFLICT", "FIXED", "PARTLY", "OPEN", "SUPERSEDED", "UNVERIFIED", "PARK"] },
+    "action": { "type": "string", "enum": ["land", "supersede", "close", "keep", "re-verdict", "fold", "keep-open"] },
+    "disposition-body": {
+      "type": "object",
+      "required": ["entry", "section", "key", "verdict", "action", "step", "state", "entries_total"],
+      "properties": {
+        "entry": { "$ref": "#/$defs/entry-id" },
+        "section": { "type": "integer", "minimum": 2, "maximum": 11 },
+        "key": { "type": "string" },
+        "verdict": { "$ref": "#/$defs/verdict" },
+        "action": { "$ref": "#/$defs/action" },
+        "resolved_by": { "type": "string", "description": "ruling id that resolved a DECIDE row" },
+        "step": { "type": "integer", "minimum": 1, "maximum": 7 },
+        "state": { "type": "string", "enum": ["planned", "running", "done", "failed", "kept", "partial"] },
+        "what": { "type": "string", "maxLength": 240 },
+        "sha": { "$ref": "#/$defs/sha" },
+        "bytes": { "type": "integer", "minimum": 0 },
+        "target": { "type": "string", "description": "branch, ref, path, worktree, issue number, repository" },
+        "repository": { "type": "string" },
+        "result_ref": { "type": "string", "description": "cleanup.run id, merge id, ticket id or comment id" },
+        "error": { "type": "string", "maxLength": 240 },
+        "plan_hash": { "$ref": "#/$defs/sha256" },
+        "entries_total": { "type": "integer", "minimum": 1 },
+        "owner_acts": { "type": "boolean" }
+      }
+    },
+    "input": {
+      "oneOf": [
+        { "title": "ruling GOFACTORY (from N-29)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "ruling" }, "body": { "type": "object", "required": ["signal", "card_id"], "properties": { "signal": { "const": "GOFACTORY" }, "card_id": { "type": "string" }, "words": { "type": "string", "maxLength": 240 }, "plan_hash": { "$ref": "#/$defs/sha256" } } } } },
+        { "title": "tick daily (from N-06)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "tick" }, "body": { "type": "object", "required": ["now", "tick"], "properties": { "now": { "$ref": "#/$defs/utc" }, "tick": { "const": "daily" } } } } },
+        { "title": "merge of a land ticket (from N-09)", "allOf": [ { "$ref": "#/$defs/envelope" } ], "properties": { "kind": { "const": "merge" }, "body": { "type": "object", "required": ["pr", "merge_sha", "ticket"], "properties": { "pr": { "type": "integer" }, "merge_sha": { "$ref": "#/$defs/sha" }, "ticket": { "type": "string" } } } } }
+      ]
+    },
+    "disposition": {
+      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "properties": { "kind": { "const": "disposition" }, "code": { "enum": [100, 200, 400, 409, 423] }, "body": { "$ref": "#/$defs/disposition-body" } }
+    },
+    "ticket-request": {
+      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "properties": {
+        "kind": { "const": "ticket.request" },
+        "code": { "const": 100 },
+        "body": {
+          "type": "object",
+          "required": ["title", "files", "lane", "home_node", "entry"],
+          "properties": {
+            "title": { "type": "string", "minLength": 10 },
+            "files": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+            "acceptance": { "type": "array", "items": { "type": "string" } },
+            "lane": { "const": "rebuild" },
+            "scope": { "type": "string", "enum": ["rebuild", "all"] },
+            "home_node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+            "entry": { "$ref": "#/$defs/entry-id" },
+            "existing_ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$", "description": "when the row names a ready ticket on main" }
+          }
+        }
+      }
+    },
+    "output": { "oneOf": [ { "$ref": "#/$defs/disposition" }, { "$ref": "#/$defs/ticket-request" } ] }
+  }
+}

@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-51 Exit test. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
+     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh.
+     Book 1.1.0 (2026-10-15): failing rows are decided before the no-movement 204, A1 counts by server-derived
+     principal, A3 adds a forge-side check for merges with no N-09 record (review F20); shared envelope (NF-A12). -->
+<volume id="N-51" kind="node-spec" node="N-51" group="G7" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, shared</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="audit">The line-ops audit: what counts, from which records</entry>
+    <entry ref="mechanism">Mechanism</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="shared-needs">What this volume needs from the shared volumes</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-51"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schema of this node</sibling>
+    <sibling href="../N-44/spec.xml#N-44" kind="node">Build-mode flag, whose state the verdict records</sibling>
+    <sibling href="../N-48/spec.xml#N-48" kind="node">Tier promotion, whose break glass counts as a hand operation</sibling>
+    <shared href="../../shared/principles.xml#product-frozen">Product work frozen until the exit test passes (D19)</shared>
+    <shared href="../../shared/seat-contract.xml#line-ops">The line operations a seat never performs and how seat.result reports attempts</shared>
+    <shared href="../../shared/authority.xml#role-derivation">The store derives node and by from the peer credential; a record's by is never self-reported</shared>
+    <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
+    <shared href="../../dag.md#3-every-node">DAG row N-51</shared>
+    <shared href="../../shared/cut-over.xml#step-exit" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>Once a day, decides from records whether the line ran itself: zero agent line operations, zero hand line operations, a clean owner checkout at origin/main, every merged PR holding only its ticket's declared files, and at least one ticket moving cut to verified; passes lift the product freeze (D19 B) by one record.</is>
+    <is-not>It is not a human review of the day and it is not a status report; N-28 turns the verdict into one card on the first pass and on every third consecutive fail; the Stats screen shows the daily rows.</is-not>
+    <why>ROADMAP Phase 2 done-when: a day of running leaves git status clean and every pull request holds only its ticket's files (ROADMAP.md:134), not met on 2026-10-14 (L05 section 5 item 5); D19 B: frozen to infrastructure until a named exit test passes, with the test written into the design.</why>
+  </purpose>
+
+  <input id="input">
+    <record kind="tick" from="N-06">The daily tick at 00:05Z; the day under test is the previous UTC day 00:00:00Z to 23:59:59Z.</record>
+    <record kind="verified" from="N-10">Every verified 201 and rejected 422 record of the day (main verdicts).</record>
+    <record kind="seat.result" from="N-15">Every seat.result of the day, for its denied_line_ops (shared/seat-contract.xml#line-ops; nodes/N-15/record.schema.json).</record>
+    <record kind="record.refused" from="N-01">Every 403 refusal of the day, with the principal role the store derived.</record>
+    <query>Line-ops audit rows (section audit) from the day's records; N-04's forge read of main's first-parent history and closed pull requests for the day (forge.pr_closed); git status --porcelain and rev-parse of the owner checkout, read with GIT_OPTIONAL_LOCKS=0; the day's merge records with their PR file lists versus the tickets' declared files.</query>
+    <schema href="record.schema.json#/$defs/input"/>
+  </input>
+
+  <output id="output">
+    <record kind="exit.verdict" code="201">Pass: every criterion row true; the day; the counts; freeze.state off is written in the same transaction with the verdict id as its reason.</record>
+    <record kind="exit.verdict" code="422">Fail: the failing rows with evidence (record ids, the git status lines, the PR and the extra files); the consecutive fail count.</record>
+    <record kind="exit.verdict" code="204">Not run: the line did nothing that day (no ticket moved cut to verified), so there is nothing to judge; the freeze stays; not a fail.</record>
+    <record kind="freeze.state" code="200">off (on a pass) with the verdict id; on (initial, written at bring-up by the system lane from the D19 ruling, and again if the owner rules the freeze back on).</record>
+    <schema href="record.schema.json#/$defs/output"/>
+    <example schema="record.schema.json#/$defs/exit-verdict"><![CDATA[
+{ "id": "20261016T000500Z-422-x7e2k", "at": "2026-10-16T00:05:00Z", "kind": "exit.verdict", "code": 422, "node": "N-51",
+  "body": { "day_from": "2026-10-15", "day_to": "2026-10-15", "consecutive_fails": 1, "build_mode": "on", "hold": "off",
+    "reason": "A3 failed with no ticket moved; a failing row is decided before the 204",
+    "rows": [
+      { "id": "A1", "name": "agent line operations", "pass": true, "count": 0 },
+      { "id": "A2", "name": "attempted line operations by seats", "pass": true, "count": 1 },
+      { "id": "A3", "name": "hand line operations", "pass": false, "count": 1, "evidence": [ { "pr": 212, "line": "merged on the forge with no N-09 merge record" } ] },
+      { "id": "A4", "name": "clean checkout", "pass": true, "count": 0 },
+      { "id": "A5", "name": "PR files equal declared files", "pass": true, "count": 0 },
+      { "id": "A6", "name": "at least one cut to verified", "pass": true, "count": 0 },
+      { "id": "A7", "name": "no dead tickets created by a line defect", "pass": true, "count": 0 },
+      { "id": "A8", "name": "build mode and hold", "pass": true, "count": 0 }
+    ] } }
+    ]]></example>
+    <reads>N-28 (card on the first pass: product work may resume; card on every third consecutive fail with the top failing row), N-03 (accepts tickets with lane product only while freeze.state is off), N-40 (daily rows), N-33 (the rail's R-09 and R-10 rows read the pass).</reads>
+  </output>
+
+  <audit id="audit">
+    <row id="A1" name="agent line operations" must="0">Count of record.refused 403 records whose derived principal role is seat or whose refused kind is a line-op kind (merge, verify, promotion, cleanup.run, dispatch, lease, cancel, branch.delete, ticket.request from a cleanup, seat start or stop), plus any committed record of a line-op kind whose server-derived principal (shared/authority.xml#role-derivation) is not the service. A record's by field is never trusted as self-reported: the store writes it from the peer credential. Seats hold no store socket and the deny list (N-13) blocks the commands, so both counts must be 0.</row>
+    <row id="A2" name="attempted line operations by seats" must="reported, not failing">Sum of denied_line_ops from the day's seat.result records (N-15 writes it from the launcher's deny log, never from the seat's own words) (a seat tried make serve, git push to main, gh pr merge, systemctl, cleanup.sh, and was denied). Over 0 is a brief defect to fix, shown on the Stats screen; it does not fail the day.</row>
+    <row id="A3" name="hand line operations" must="0">Records with origin break-glass or by owner on a line-op kind (N-42 control.action of kind break-glass, N-48 promote.sh by hand, N-45 cleanup.sh by hand, N-49 unlanded.sh by hand, a Reload by hand, any entry of cleanup trigger owner), plus every merge on main in the day that has no N-09 merge record (forge-side check: main's first-parent commits and the day's closed pull requests from N-04, matched to merge records by pr and merge sha; a merge done on the forge by hand or by any other credential counts), plus reflog entries in the owner checkout of the day not made by the fast-forward of N-49 step 3 (reflog lines whose message is not merge --ff-only origin/main).</row>
+    <row id="A4" name="clean checkout" must="true">git status --porcelain in the owner checkout is empty (tracked and untracked) and HEAD equals origin/main at the tick; a known-dirty exception list is not allowed after N-49 step 3 is done; before that, the three known files of 04-UNLANDED section 7 are the only allowed lines and the row says so.</row>
+    <row id="A5" name="PR files equal declared files" must="true for every merge of the day">For every merge record, the PR's changed file list (from forge.snapshot) is a subset of the ticket's declared files plus the generated aggregates the ticket's node volume allows; an extra file names the PR and the file.</row>
+    <row id="A6" name="at least one cut to verified" must="greater than 0, else 204">Tickets whose ticket.ready, dispatch, pr.opened, merge and verified 201 records all fall in the day or earlier with the verified in the day.</row>
+    <row id="A7" name="no dead tickets created by a line defect" must="reported">dead records of the day with reason class line (stall of a system node, 503 from a system node) are listed; over 0 is reported on the card as context; they do not fail the day because the owner's criterion is operations, not failures.</row>
+    <row id="A8" name="build mode and hold" must="recorded">The build-mode.state and hold flag state at the tick, for the record; a pass under build mode on is a pass (build mode governs old rules, not the exit criteria).</row>
+  </audit>
+
+  <mechanism id="mechanism">
+    <where>Go package exittest in the service; the git reads use the service's own git with GIT_OPTIONAL_LOCKS=0 against the owner checkout path from config (read-only; the service never writes there except N-49's fast-forward).</where>
+    <step n="1">On the daily tick, take lease exittest:&lt;day&gt;; query the store for the day's records by kind and derived principal; compute rows A1 to A8.</step>
+    <step n="2">Run git status --porcelain and git rev-parse HEAD and origin/main in the owner checkout; read the reflog for the day.</step>
+    <step n="3">For every merge of the day, read the PR file list from the forge snapshot at the merge sha and the ticket's declared files from the ticket record; compare. Read main's first-parent history and the day's closed pull requests from N-04 and list every merge with no N-09 merge record (row A3).</step>
+    <step n="4">Decide, in this order (review F20): any of A1, A3, A4, A5 failing gives 422, whatever A6 is, so a day of hand or agent operations with no ticket moving is a fail, never a not-run; else A6 equal to 0 gives 204; else 201 and freeze.state off in the same Store.Commit (shared/contracts.xml#batch, operation key N-51/exit.verdict/&lt;day&gt;/r1).</step>
+    <step n="5">Keep the consecutive fail counter in the verdict; N-28 reads it.</step>
+    <diagram>
+      <mermaid><![CDATA[
+flowchart TD
+  T[daily tick 00:05Z] --> Q[query day's records: line-op kinds, seat results, merges, verified]
+  Q --> G[git status, HEAD vs origin/main, reflog of the owner checkout]
+  G --> F[PR files vs declared files per merge]
+  F --> E{A1 A3 A4 A5 all pass?}
+  E -- no --> X[exit.verdict 422 rows + consecutive count]
+  E -- yes --> D{A6 > 0?}
+  D -- no --> N[exit.verdict 204 not run]
+  D -- yes --> P[exit.verdict 201 + freeze.state off]
+  P --> C[N-28: one card, product may resume]
+      ]]></mermaid>
+    </diagram>
+  </mechanism>
+
+  <start id="start">
+    <s>The daily tick starts it; the records it reads are written by the nodes as they run; no one collects evidence by hand and no one declares the exit test passed in prose.</s>
+    <s>The freeze itself is a record the system lane writes at bring-up from the D19 ruling; N-03 enforces it on intake; nobody reminds anyone.</s>
+  </start>
+
+  <waits id="waits">
+    <wait id="w1" what="store queries for the day" timeout="PT60S" fallback="one retry; then exit.verdict 503 reason store and an alert; the next daily tick covers two days (the day field is a range)"/>
+    <wait id="w2" what="git reads in the owner checkout" timeout="PT30S" fallback="a lock or a missing checkout gives A4 false with the reason; the verdict is 422 with that row, because an unreadable checkout is not a clean checkout"/>
+    <wait id="w3" what="forge file lists for the day's merges" timeout="PT30S per PR" fallback="N-04 ladder; then A5 is false with reason unreadable for that PR; the verdict is 422 and the next day re-checks the same merges if they are still in the window (the window is the day, so a persistent forge outage fails days, which is correct)"/>
+    <wait id="w4" what="lease exittest:day" timeout="PT5S" fallback="another instance holds it (cannot happen under N-06's single unit); skip; idempotency key makes a double run harmless"/>
+    <cog-test>The cog that could stall this node is a human judging whether the day was clean. The rows are computed from records and git, and the freeze flips on the record.</cog-test>
+  </waits>
+
+  <retries id="retries">
+    <policy attempts="3" backoff="2 s fixed">Store and git reads inside one run.</policy>
+    <recover>After three failures: exit.verdict 503 for the day; the freeze is unchanged; the next tick runs for the next day and includes the failed day in its range.</recover>
+    <report>201 is one card the first time and a counter after; 422 is a Stats row and one card every third consecutive fail with the top row; 204 is a row only; 503 is an alert record.</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Every seat is subject to the audit and none reads it to behave; the seat contract's deny list is what makes A1 zero, and the audit is the proof, so twenty seats running at once add rows to A2 at most.</readers>
+    <writers>One verdict per day under one operation key; a re-run with the same request replays the first reply; the freeze flip is in the same batch, so a crash between verdict and flip cannot leave them apart.</writers>
+    <collision>A seat writing a record at 23:59:59Z and the tick at 00:05Z: the window is by record at, assigned by N-01 at commit, so a late put lands in the day it committed; the five-minute offset lets the last records commit.</collision>
+    <collision>The owner editing the checkout at the tick moment: A4 reads what is there; a dirty checkout at 00:05Z fails the day, which is the rule (the checkout is the owner's working surface only through tickets after N-49 step 3).</collision>
+    <collision>Two merges of the same ticket on one day (a fix after a rejected main): both are checked in A5 against the same declared files; both must hold.</collision>
+    <collision>freeze.state off and a product ticket cut in the same second: N-03 reads the flag at validation; an earlier put is refused 412 frozen and the ticket request is re-validated on the next tick, so no product ticket is lost and none slips through early.</collision>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="201" kind="exit.verdict">Pass; owner reads one card the first time; system lifts the freeze.</emits>
+    <emits code="422" kind="exit.verdict">Fail; system acts (fix tickets from the rows where a node is named); owner reads a card every third consecutive fail.</emits>
+    <emits code="204" kind="exit.verdict">Not run (nothing moved); nobody acts.</emits>
+    <emits code="503" kind="exit.verdict">Could not compute; system acts (alert, next day range).</emits>
+    <emits code="200" kind="freeze.state">on or off; N-03 acts on intake.</emits>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path id="N-51.rows" glob="$COQ_STATE/exittest/&lt;day&gt;.json" retention="P365D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-51.rows">The full row evidence per day (the record carries a bounded copy).</path>
+    <path id="N-51.log" glob="$COQ_STATE/logs/exittest/*.jsonl" retention="P90D" trigger="timer" acts="system" cleanup="line/bin/cleanup.sh --entry N-51.log">Run output.</path>
+    <path id="N-51.proof" glob="$COQ_STATE/rebuild/2026/10/proofs/R-09-ten-tickets.tsv" retention="never" trigger="owner" acts="owner" cleanup="line/bin/cleanup.sh --entry N-51.proof from the owner CLI only">Generated from verified records for the plan's R-09 proof; the owner's artifact.</path>
+  </state-paths>
+
+  <edges id="edges">
+    <in ref="../N-06/spec.xml#N-06">tick (daily)</in>
+    <in ref="../N-10/spec.xml#N-10">verified 201 and rejected 422 of the day</in>
+    <out ref="../N-28/spec.xml#N-28">exit.verdict 201 (first pass) and 422 (third consecutive)</out>
+    <out ref="../../dag.md#2-the-dag">freeze.state to N-03 by store read (not drawn: N-03 reads flags at validation)</out>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>A clean day passes and lifts the freeze in one batch.</check><proof>A test world with one ticket cut to verified by system actors only, a clean checkout fake and matching PR files; exit.verdict 201 and freeze.state off with the same key; N-03 then accepts a product ticket.</proof></item>
+    <item><check>A seat's refused line-op put is counted in A1 and fails the day.</check><proof>A test Commit of kind merge from a seat principal; N-01 refuses 403 kind_not_permitted; the verdict is 422 with row A1 naming the record.</proof></item>
+    <item><check>A failing row beats no movement.</check><proof>A test day with zero tickets verified and one hand promotion; the verdict is 422 with row A3, not 204.</proof></item>
+    <item><check>A merge done on the forge with no N-09 record fails the day.</check><proof>A fake forge with one merged PR on main and no merge record; row A3 names the PR and sha; 422.</proof></item>
+    <item><check>A hand promotion fails the day.</check><proof>A promote.sh run with origin break-glass recorded; row A3 names it; 422.</proof></item>
+    <item><check>An untracked file in the checkout fails the day.</check><proof>A fake checkout with one untracked file; row A4 lists the line; 422.</proof></item>
+    <item><check>A PR with an undeclared file fails the day.</check><proof>A merge whose file list has one extra path; row A5 names PR and path; 422.</proof></item>
+    <item><check>A clean day with no movement is 204, not a fail, and does not reset the consecutive count.</check><proof>A test world with no records of the day and a clean checkout; 204; the counter unchanged.</proof></item>
+    <item><check>The consecutive fail counter reaches 3 and posts one card.</check><proof>Three failing days on the fake clock; one card record from N-28 keyed on day three.</proof></item>
+    <item><check>R-09's proof is generated from records.</check><proof>Ten consecutive verified tickets with no stall record between them produce R-09-ten-tickets.tsv with ten rows.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <may role="system" do="read the day's records; read the owner checkout; write exit.verdict and freeze.state"/>
+    <may role="owner" do="rule the freeze back on (a ruling record), or lift it early by a ruling that names the reason (recorded as freeze.state off reason owner-ruling, and the card says the test did not pass)"/>
+    <may-not role="seat" do="write exit.verdict or freeze.state; write a product-lane ticket while the freeze is on; perform any line operation"/>
+    <may-not role="architect" do="declare the exit test passed in prose or a ledger row; the record is the only pass"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="exit_test_result" kind="gauge-label">201, 422, 204, 503 for the last day.</counter>
+    <counter name="exit_test_consecutive_fails" kind="gauge"/>
+    <counter name="line_ops_by_seats_total" labels="kind">A1 over time; any non-zero is an alert.</counter>
+    <counter name="denied_line_ops_total" labels="role">A2 over time; the brief defect signal.</counter>
+    <counter name="checkout_dirty_lines" kind="gauge">A4 at the last tick.</counter>
+    <counter name="freeze_on" kind="gauge">1 or 0.</counter>
+    <panel screen="Stats" kind="exit.verdict">One row per day with the eight rows as lamps; the Rail's R-09 row reads ten consecutive verified tickets from the same records.</panel>
+  </monitoring>
+
+  <runbook id="runbook">
+    <step n="1" when="A1 greater than 0">A seat wrote or tried to write a line-op record: the seat contract's deny list has a hole; the fix ticket request names N-13 and the kind.</step>
+    <step n="2" when="A3 greater than 0">A hand operation happened (break glass or a hand git in the checkout); it is the owner's own; nothing to fix unless it was an agent, which is A1.</step>
+    <step n="3" when="A4 false">Read the lines; an untracked runtime file means a writer still targets the repository (a fix ticket for that writer); a modified tracked file means a hand edit (the owner's; it goes through a ticket).</step>
+    <step n="4" when="A5 false">The named PR carried a file its ticket did not declare; N-14's claim check or N-18's validator missed it; the fix ticket names the node.</step>
+    <step n="5" when="the owner wants product work before a pass">A ruling lifts the freeze with a reason; the card says the test did not pass; D19's intent is recorded as overridden by the owner, which is the owner's right.</step>
+    <cleanup>line/bin/cleanup.sh --entry N-51.rows, N-51.log; N-51.proof only by the owner.</cleanup>
+    <cold-start>Verdicts are in the store; the next tick computes the next day; a missed day is included in the range.</cold-start>
+  </runbook>
+
+  <sources id="sources">
+    <source path="ROADMAP.md" anchor="#phases">Phase 2 done-when: a day of running leaves git status clean and every pull request holds only its ticket's files; Phase 3: a ticket goes from cut to verified with zero architect prompts</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#21-d19-product-work-before-the-line-runs-itself">D19 B with the exit test written into the design</source>
+    <source path="$HOME/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C56">D19 ruled: frozen until a day with zero agent line operations and a clean checkout</source>
+    <source path="rebuild/investigation/L05-git-state.md" anchor="#5-what-broke-and-why">Item 5: the main checkout is permanently dirty; the Phase 2 exit test is not met; a clean checkout is what the starter needs</source>
+    <source path="rebuild/investigation/01-ROOT-CAUSES.md" anchor="3-root-causes" note="RC1 and RC3">Agents doing line operations (43 of 92 hand merges, 66 of 66 hand verifies) and status as a file on a branch</source>
+    <source path="$HOME/.bearings/coq-stable/answers.jsonl" anchor="C39">D11: code does the mechanical jobs; agents write, judge and rule</source>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="#steps">R-05 proof: no agent or human action between cut and merged; R-09: ten consecutive tickets without a stall</source>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="#2-validated-keep">V07 one file one in-flight ticket (the A5 row), V08 probes not opinions</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#7-uncommitted-and-untracked-changes-in-the-owner-checkout">The three known dirty files allowed until N-49 step 3</source>
+    <source path="$HOME/.claude/projects/${HOME_SLUG}/memory/no-cog-system-drives.md" anchor="file">Monitoring is the system reporting on itself</source>
+  </sources>
+
+  <rejected id="rejected">
+    <reject source="the architect ticking the roadmap's done-when box by hand (ROADMAP.md, How the architect follows this)" reason="A prose pass is an opinion; the verdict is a record computed from records and git."/>
+    <reject source="D19 option A (product resumes at the first slice) and C (a product lane now)" reason="D19 ruled B on C56."/>
+    <reject source="counting idle minutes or agent activity as the criterion" reason="D17: the idle alarm is retired; the criterion is operations and a clean checkout, not busyness."/>
+    <reject source="failing the day on dead tickets (A7)" reason="The owner's criterion is that the line runs itself, not that every ticket succeeds; dead tickets are the line's output and are reported, not counted against the day."/>
+    <reject source="reading the seats' transcripts for line operations" reason="State from transcripts is on the kill list (L15 section 9 item 2); the deny list and the refused puts are the evidence."/>
+  </rejected>
+
+  <shared-needs id="shared-needs">
+    <need kind="principle">principles.xml#product-frozen (D19) with the eight audit rows named as the test.</need>
+    <need kind="seat-contract">seat-contract.xml#line-ops: the list of line-op commands denied to every seat; seat.result (nodes/N-15/record.schema.json) carries denied_line_ops (count and the command names) from the launcher's deny log; a line-op Commit from a seat principal is refused 403 by N-01 and counted.</need>
+    <need kind="store-table">flags row freeze (state, reason, verdict_id); exit_verdicts: day, code, rows JSON, consecutive_fails; a query by kind and by over an at range.</need>
+    <need kind="record-kinds">exit.verdict, freeze.state, the line-op kind list (merge, verified, promotion, cleanup.run, dispatch, lease, cancel, branch.delete, seat.start, seat.stop, reload.request), control.action with origin break-glass, seat.result with denied_line_ops.</need>
+    <need kind="status-codes">201 pass, 422 fail, 204 not run, 503 could not compute; 403 for a seat put of a line-op kind; 412 frozen on a product intake.</need>
+    <need kind="n-01">Store.Commit with two records (verdict plus freeze flip) under one operation key; the at field assigned at commit; record.refused carries the derived principal role.</need>
+    <need kind="n-03">Intake refuses lane product with 412 while freeze is on; re-validates on the next tick.</need>
+    <need kind="n-04">forge.snapshot carries each PR's changed file list at merge; main's first-parent history and the day's closed pull requests (forge.pr_closed) for the forge-side merge check.</need>
+    <need kind="n-28">Card rules: first 201 once; 422 every third consecutive; card text templates.</need>
+    <need kind="config">exittest.owner_checkout, exittest.tick 00:05Z, exittest.known_dirty_files (until N-49 step 3 done), exittest.card_every_fails 3.</need>
+  </shared-needs>
+
+</volume>

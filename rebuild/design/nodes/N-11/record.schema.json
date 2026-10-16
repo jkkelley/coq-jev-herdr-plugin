@@ -1,0 +1,121 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-11/record.schema.json",
+  "title": "N-11 Retry and backoff: input and output records",
+  "description": "Book 1.1.0. Input: any failure record that carries ../../shared/contracts.schema.json#/$defs/failure_body (every failure_kind of shared/contracts.xml#retry-owner), and N-02 lease.expired with end_reason start-grace. Outputs: attempt, regrant and dead on the shared committed envelope. Each output Commit also writes entity failure.handled:<failure_id> with precondition absent (it replaces handled_by) and runs tickets.transition. The operation keys N-11/attempt/<ticket>:<phase>:<n> and N-11/regrant/<lease_key>@<token> ride on the Commit request, not in the record; dead uses N-11/attempt/<ticket>:<phase>:<n> with n the attempt it would have been (4 after exhaustion).",
+  "oneOf": [
+    { "$ref": "#/$defs/failure" },
+    { "$ref": "../N-02/record.schema.json#/$defs/lease_expired" },
+    { "$ref": "#/$defs/attempt" },
+    { "$ref": "#/$defs/regrant" },
+    { "$ref": "#/$defs/dead" },
+    { "$ref": "#/$defs/failure_handled" }
+  ],
+  "$defs": {
+    "at": { "$ref": "../../shared/contracts.schema.json#/$defs/at" },
+    "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/ticket" },
+    "phase": { "$ref": "../../shared/contracts.schema.json#/$defs/phase" },
+    "role": { "$ref": "../../shared/contracts.schema.json#/$defs/role" },
+    "lane": { "$ref": "../../shared/contracts.schema.json#/$defs/lane" },
+    "failure_kind": { "$ref": "../../shared/contracts.schema.json#/$defs/failure_kind" },
+    "envelope": { "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" },
+    "failure": {
+      "description": "What N-11 reads from any failure record: the committed envelope plus failure_body. The owning node's own fields are copied into the next brief as detail. A record with fenced true is an echo of a run that was already fenced (shared/contracts.xml#terminal-report): N-11 marks it handled and acts on nothing.",
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "$ref": "../../shared/contracts.schema.json#/$defs/failure_body" }
+      ]
+    },
+    "failure_handled": {
+      "description": "Entity failure.handled:<failure_id>, written with precondition absent in the same Commit as the attempt, regrant or dead record, so a failure is acted on once; the entity write itself appends no record.",
+      "type": "object",
+      "required": ["entity", "failure_id", "failure_kind", "action", "by_record", "at", "version"],
+      "properties": {
+        "entity": { "type": "string", "pattern": "^failure\\.handled:[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$" },
+        "failure_id": { "type": "string", "pattern": "^[0-9]{8}T[0-9]{6}Z-[0-9]{3}-[a-z0-9]{5}$" },
+        "failure_kind": { "$ref": "#/$defs/failure_kind" },
+        "action": { "enum": ["attempt", "regrant", "dead", "echo", "not_mine", "wait"], "description": "echo: a fenced report; wait: harness_mismatch (ticket to waiting) or head_moved (nothing charged, a new head gets a new grant); not_mine: a kind whose retry owner is another node (phase.failed before exhaust, admission-refused)" },
+        "by_record": { "type": ["string", "null"], "description": "the attempt, regrant or dead record id; null for echo and not_mine" },
+        "at": { "$ref": "#/$defs/at" },
+        "version": { "const": 1 }
+      },
+      "additionalProperties": false
+    },
+    "attempt": {
+      "description": "A charged retry: attempts.append plus tickets.transition to retry_wait (shared/contracts.xml#ticket-transitions). session is new or resume per shared/contracts.xml#retry-owner.",
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "required": ["ticket", "phase", "role", "attempt", "not_before", "backoff_seconds", "failure_ids", "failure_kind", "lane", "session"],
+      "properties": {
+        "kind": { "const": "attempt" },
+        "code": { "const": 100 },
+        "node": { "const": "N-11" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "enum": ["worker", "reviewer", "spec"], "description": "the phase re-dispatched; after review.changes, gate red or merge.conflict it is worker" },
+        "role": { "enum": ["worker", "reviewer", "spec-author"] },
+        "attempt": { "type": "integer", "minimum": 2, "maximum": 3 },
+        "not_before": { "$ref": "#/$defs/at" },
+        "backoff_seconds": { "type": "integer", "minimum": 10, "maximum": 300 },
+        "jitter_seconds": { "type": "integer", "minimum": -60, "maximum": 60 },
+        "failure_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "failure_kind": { "$ref": "#/$defs/failure_kind" },
+        "lane": { "$ref": "#/$defs/lane" },
+        "session": { "$ref": "../../shared/contracts.schema.json#/$defs/session" }
+      }
+    },
+    "regrant": {
+      "description": "A free regrant: no attempt charged, ticket in_flight to ready and the lease regranted by leases.grant at the same attempt, after retry.claim_seconds or on the next tick for cap (shared/contracts.xml#timing).",
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "required": ["ticket", "phase", "attempt", "lease", "failure_id", "failure_kind", "not_before"],
+      "properties": {
+        "kind": { "const": "regrant" },
+        "code": { "const": 100 },
+        "node": { "const": "N-11" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/phase" },
+        "attempt": { "$ref": "../../shared/contracts.schema.json#/$defs/attempt" },
+        "lease": { "$ref": "../../shared/contracts.schema.json#/$defs/lease_ref", "description": "the lease that ended; the regrant is keyed by it" },
+        "failure_id": { "type": "string" },
+        "failure_kind": { "anyOf": [{ "enum": ["workspace.refused", "claim_overlap", "files-claimed", "cap"] }, { "const": "start-grace" }] },
+        "not_before": { "$ref": "#/$defs/at" }
+      }
+    },
+    "dead": {
+      "description": "Attempts exhausted, or a non-retryable kind: tickets.transition to dead and claims.release in the same Commit. N-28 shows one card.",
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "required": ["ticket", "phase", "attempts", "owner_acts", "recommendation", "lane"],
+      "properties": {
+        "kind": { "const": "dead" },
+        "code": { "const": 500 },
+        "node": { "const": "N-11" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/phase" },
+        "attempts": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["attempt", "failure_id", "failure_kind", "outcome", "at"],
+            "properties": {
+              "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+              "failure_id": { "type": "string" },
+              "failure_kind": { "$ref": "#/$defs/failure_kind" },
+              "outcome": { "type": "string" },
+              "at": { "$ref": "#/$defs/at" }
+            }
+          }
+        },
+        "owner_acts": { "const": true },
+        "recommendation": { "type": "string", "enum": ["split-the-ticket", "re-scope", "system-lane-fault", "leave-dead"] },
+        "policy_id": { "type": "string" },
+        "policy_deadline": { "$ref": "#/$defs/at" },
+        "policy_default": { "type": "string", "maxLength": 240 },
+        "lane": { "$ref": "#/$defs/lane" }
+      }
+    }
+  }
+}

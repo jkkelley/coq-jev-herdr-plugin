@@ -1,0 +1,387 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-19/record.schema.json",
+  "title": "N-19 Reviewer run: structured output and output records",
+  "description": "Book 1.1.0. Input: the reviewer brief inside a seat run (dispatch_body phase reviewer, target pr and head_sha; bundle ../N-13/record.schema.json; read-only workspace). The seat returns review.result as structured output (N-13 copies this def into the bundle's output.schema.json). The close-out (code in the service, principal coq-svc acting as N-19) commits review.passed or review.changes under operation key N-19/review.verdict/{pr}@{head_sha}@{run_id}/r1 (shared/contracts.xml#operation-keys); the key rides on the Commit request, never in the record. Both records carry the reviewer seat lease (shared lease_ref), which N-09 requires; review.changes also carries shared failure_body for N-11. UTC everywhere.",
+  "$defs": {
+    "sha1": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "observation": {
+      "type": "object",
+      "required": [
+        "path",
+        "line",
+        "saw",
+        "expected"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "saw": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "expected": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "answers_prior": {
+          "type": "string",
+          "description": "the prior observation index this one follows up, on a re-review"
+        }
+      },
+      "additionalProperties": false
+    },
+    "criterion": {
+      "type": "object",
+      "required": [
+        "id",
+        "evidenced"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^a[0-9]{1,2}$"
+        },
+        "evidenced": {
+          "type": "boolean"
+        },
+        "evidence": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "the pull request body line or diff hunk that proves it"
+        },
+        "gap": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "what is missing when evidenced is false"
+        },
+        "observed_exit_on_main": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255,
+          "description": "copied from the ticket (../N-18/record.schema.json#/$defs/observed_acceptance)"
+        },
+        "expect_exit": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 255
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "evidenced": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "evidence"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "evidenced": {
+                "const": false
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "gap"
+            ]
+          }
+        }
+      ]
+    },
+    "review.result": {
+      "type": "object",
+      "description": "The seat's structured output.",
+      "required": [
+        "verdict",
+        "head_sha",
+        "criteria",
+        "observations",
+        "design_fit",
+        "summary"
+      ],
+      "properties": {
+        "verdict": {
+          "enum": [
+            "passed",
+            "changes"
+          ]
+        },
+        "head_sha": {
+          "$ref": "#/$defs/sha1"
+        },
+        "criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/criterion"
+          }
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/observation"
+          }
+        },
+        "design_fit": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 2000,
+          "description": "names the anchor and says whether the change does what it says and nothing else"
+        },
+        "breadcrumb_present": {
+          "type": "boolean"
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 3000
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "verdict": {
+                "const": "changes"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "observations": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "verdict": {
+                "const": "passed"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "criteria": {
+                "items": {
+                  "properties": {
+                    "evidenced": {
+                      "const": true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "review_base": {
+      "type": "object",
+      "required": [
+        "ticket",
+        "pr",
+        "head_sha",
+        "base_sha",
+        "run_id",
+        "dispatch_id",
+        "attempt",
+        "lease",
+        "gate_verdict_ref",
+        "criteria",
+        "observations",
+        "design_fit",
+        "summary",
+        "session_id"
+      ],
+      "properties": {
+        "node": {
+          "const": "N-19"
+        },
+        "ticket": {
+          "$ref": "../../shared/contracts.schema.json#/$defs/wo_id"
+        },
+        "attempt": {
+          "$ref": "../../shared/contracts.schema.json#/$defs/attempt",
+          "description": "the reviewer phase attempt"
+        },
+        "pr": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "head_sha": {
+          "$ref": "#/$defs/sha1"
+        },
+        "base_sha": {
+          "$ref": "#/$defs/sha1"
+        },
+        "run_id": {
+          "type": "string",
+          "pattern": "^d-[0-9]{14}-[a-z0-9]{6}$"
+        },
+        "dispatch_id": {
+          "type": "string",
+          "pattern": "^d-[0-9]{14}-[a-z0-9]{6}$",
+          "description": "equals run_id"
+        },
+        "lease": {
+          "$ref": "../../shared/contracts.schema.json#/$defs/lease_ref",
+          "description": "the reviewer seat lease TICKET:reviewer:N and its token; N-01 fences the verdict Commit by it (412 stale_token) and the same Commit releases it"
+        },
+        "gate_verdict_ref": {
+          "$ref": "../../shared/state-store.schema.json#/$defs/id",
+          "description": "the gate.verdict green on this head"
+        },
+        "prior_review_ref": {
+          "$ref": "../../shared/state-store.schema.json#/$defs/id",
+          "description": "the review.changes on an earlier head this review answers"
+        },
+        "criteria": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/criterion"
+          }
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/observation"
+          }
+        },
+        "design_fit": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 2000
+        },
+        "summary": {
+          "type": "string",
+          "minLength": 20,
+          "maxLength": 3000
+        },
+        "session_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model": {
+          "type": "string"
+        },
+        "cost_usd": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "review.passed": {
+      "description": "every criterion evidenced, on the head sha; N-09 merges it with gate.verdict green on the same head (../N-09/record.schema.json#/$defs/review_passed is a subset of this def)",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope"
+        },
+        {
+          "$ref": "#/$defs/review_base"
+        }
+      ],
+      "properties": {
+        "kind": {
+          "const": "review.passed"
+        },
+        "code": {
+          "const": 201
+        },
+        "criteria": {
+          "type": "array",
+          "items": {
+            "properties": {
+              "evidenced": {
+                "const": true
+              }
+            }
+          }
+        }
+      }
+    },
+    "review.changes": {
+      "description": "at least one observation, on the head sha; a failure routed to N-11 (shared/contracts.xml#retry-owner row review.changes: worker attempt n+1, session resume-if-done)",
+      "type": "object",
+      "allOf": [
+        {
+          "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope"
+        },
+        {
+          "$ref": "#/$defs/review_base"
+        },
+        {
+          "$ref": "../../shared/contracts.schema.json#/$defs/failure_body"
+        }
+      ],
+      "properties": {
+        "kind": {
+          "const": "review.changes"
+        },
+        "code": {
+          "const": 422
+        },
+        "phase": {
+          "const": "reviewer"
+        },
+        "outcome": {
+          "const": "changes"
+        },
+        "failure_kind": {
+          "const": "review.changes"
+        },
+        "observations": {
+          "type": "array",
+          "minItems": 1
+        }
+      }
+    },
+    "review_record": {
+      "description": "either verdict record; kept as the one name the pointers use",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/review.passed"
+        },
+        {
+          "$ref": "#/$defs/review.changes"
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/review.result"
+    },
+    {
+      "$ref": "#/$defs/review.passed"
+    },
+    {
+      "$ref": "#/$defs/review.changes"
+    }
+  ]
+}

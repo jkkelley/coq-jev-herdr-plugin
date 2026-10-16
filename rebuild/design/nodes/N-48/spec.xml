@@ -1,0 +1,272 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-48 Tier promotion with screenshot. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
+     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh. -->
+<!-- N-48 round 2, 2026-10-14T07:30:00Z, gap-fix author (R-03 gap review).
+     What broke: round 1 swapped stable by starting a new backend unit coq-bearings@<tier>-<sha7> on a fresh loopback port
+     and repointing server.json, kept wait.mjs reading ~/.bearings/<project>-stable JSONL files, and needed N-34 to re-read
+     server.json per connection; the G5 volumes it promotes say otherwise: N-32 keeps no JSONL (state in the store, legacy
+     migrated once), names units coq-bearings@<page> with state under ${COQ_STATE}/bearings/<page>/, N-27 replaced
+     wait.mjs with coq-watcher and a store lease, and N-34 reads server.json once at start and restarts with the page.
+     Why it mattered: two swap mechanisms for one page; a build ticket cut from either breaks the other.
+     The fix: one swap mechanism, N-32's: the tier unit is restarted on the new sha's workspace (a 2 s DISCONNECTED that
+     browsers resume by Last-Event-ID), the watcher and the store keep everything the owner typed, and this volume owns the
+     workspace pointer, the probe, the rollback and the screenshot. Also (gap 9): the owner's confirm for a change to the
+     owner-locked page assets is decided here once, in #owner-confirm; N-28, N-29, N-32, N-09 and command-center point here.
+     Rejected: keeping the blue-green repoint (desktop browsers reach 127.0.0.1:44900 directly, so a fresh backend port
+     needs a second loopback proxy, and the front door would need a per-connection re-read: two moving parts to avoid a
+     2 s gap that loses nothing). Cost: a 2 s DISCONNECTED on each stable promotion, shown on the page as such. -->
+<!-- N-48 book 1.1.0, 2026-10-15T06:00:00Z (review F13, E NF-E9, C new 10).
+     What broke: stable was promoted on the merge record, before main was verified; the inputs used an r- envelope and a
+     body wrapper no producer writes; the volume carried a home directory and a home-directory slug.
+     The fix: stable promotes on N-10's verified (paths from N-09's merge record by merge_sha); inputs by reference to their
+     producers' schemas under the shared envelope; placeholders for personal paths. -->
+<volume id="N-48" kind="node-spec" node="N-48" group="G7" version="1.2.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, shared</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="tiers">Tiers and what each promotion means</entry>
+    <entry ref="owner-confirm">The owner's confirm: which changes wait for it, and where it is collected</entry>
+    <entry ref="mechanism">Mechanism: restart on the new workspace, screenshot, look check</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="shared-needs">What this volume needs from the shared volumes</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-48"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schema of this node</sibling>
+    <sibling href="../N-45/spec.xml#N-45" kind="node">Cleanup registry, which removes dev and uat pages after merge</sibling>
+    <sibling href="../N-51/spec.xml#N-51" kind="node">Exit test, which counts a hand promotion as a line operation</sibling>
+    <shared href="../../shared/principles.xml#owner-surface">Bearings is the one owner surface and never stops</shared>
+    <shared href="../../shared/principles.xml#krastorio-look">Every owner-facing view carries the Krastorio look (brief C addendum)</shared>
+    <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
+    <shared href="../../shared/state-store.xml#leases">Leases (tier:&lt;name&gt;)</shared>
+    <shared href="../../dag.md#3-every-node">DAG row N-48</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>Moves a change to the owner's page or the command center map through dev, uat and stable without a hand step and without stopping the stable watcher: a pr.opened brings the dev tier up on the head sha and screenshots it; a green gate on that sha brings uat up and screenshots it for the reviewer (and for the owner's confirm when the change touches the owner-locked assets, #owner-confirm); a verified main (N-10's verified for the merge) restarts stable on the merge sha's workspace and screenshots it for the owner's card; a merge alone never touches stable (F13).</is>
+    <is>Every promotion record carries the screenshot record (1280 and 430 wide, both read by the look check), so the picture comes before the card (owner, 2026-10-14: why do you never screenshot?).</is>
+    <is-not>It does not judge the picture's beauty; the reviewer (N-19) and the owner do. It checks the look tokens mechanically and it proves the page answers.</is-not>
+    <why>HANDOFF checkpoint 03:51Z: make upgrade was not run because it stops stable and its waits; the server was replaced by hand with SIGKILL and server.mjs --join, which is a hand line operation and a defect for the spec book: upgrade must swap stable without stopping the waits. The owner's always-on monitor never stops on a halt (bearings-stable-is-the-only-always-on-monitor).</why>
+  </purpose>
+
+  <input id="input">
+    <record kind="pr.opened" from="N-16">A PR whose changed paths match promotion.paths (tools/bearings/** or the map app path the G6 volumes name) with its head sha; tier dev.</record>
+    <record kind="gate.verdict" from="N-08" via="re-entry">Green on that head sha; tier uat. (Drawn as part of the pr.opened traversal: the node holds the promotion in state dev until the gate record arrives.)</record>
+    <record kind="verified" from="N-10">N-10's verified for a merge whose merge record (N-09, read by merge_sha; paths from forge_pr_files) matches promotion.paths; tier stable.</record>
+    <schema href="record.schema.json#/$defs/input"/>
+  </input>
+
+  <output id="output">
+    <record kind="promotion" code="201">Tier, sha, the URL, the server pid and port, the swap method, the screenshot record id, the look check rows, the health probe result; for stable, previous_sha (the workspace the pointer was renamed from, kept for rollback).</record>
+    <record kind="promotion" code="422">The new server did not answer healthy within its timeout or the look check failed hard (a token missing); stable is untouched (the old server keeps serving); dev or uat is torn down.</record>
+    <record kind="promotion" code="423">Three attempts failed; owner acts for stable (one card with the last screenshot or the error), system acts for dev and uat (the ticket's next attempt).</record>
+    <record kind="screenshot" code="200">Attached to the promotion: paths of the two PNGs under the state root, the tier URL, the viewport sizes, the computed look tokens.</record>
+    <schema href="record.schema.json#/$defs/output"/>
+    <reads>N-28 (the stable promotion is one owner card with the screenshot: the page changed, here is what it looks like; dev and uat are not cards), N-32 (the page shows its own version and sha in the strip), N-19 (the uat screenshot is in the reviewer brief).</reads>
+  </output>
+
+  <tiers id="tiers">
+    <tier name="dev" runs-from="a workspace at the head sha, ${COQ_STATE}/tiers/&lt;project&gt;-dev-&lt;ticket&gt;/src@&lt;sha&gt;, with current pointing at it" port="first free in the dev range" page="&lt;project&gt;-dev-&lt;ticket&gt;" unit="coq-bearings@&lt;project&gt;-dev-&lt;ticket&gt;" who="the worker's own check and the test suite" lifetime="until merge or ticket dead; N-45 removes it on the merge trigger"/>
+    <tier name="uat" runs-from="a workspace at the gate-green head sha, ${COQ_STATE}/tiers/&lt;project&gt;-uat-&lt;ticket&gt;/src@&lt;sha&gt;" port="first free in the uat range" page="&lt;project&gt;-uat-&lt;ticket&gt;" unit="coq-bearings@&lt;project&gt;-uat-&lt;ticket&gt;" who="the reviewer seat through its brief; the owner on the confirm card when the change touches the owner-locked assets (#owner-confirm)" lifetime="until merge"/>
+    <tier name="stable" runs-from="a workspace at the merge sha, ${COQ_STATE}/tiers/&lt;project&gt;-stable/src@&lt;sha&gt;, with current pointing at it and the previous kept for rollback" port="fixed (config tiers.stable.port, 44900) on loopback; the tailnet door forwards to it (N-34)" page="&lt;project&gt;-stable" unit="coq-bearings@&lt;project&gt;-stable" who="the owner, every day; the phone on the tailnet" lifetime="always; never stopped except for the restart of a promotion"/>
+    <s>Every value comes from tools/bearings/config/bearings.json as today (tiers, ports, page names); a tier is the systemd user unit coq-bearings@&lt;page&gt; (nodes/N-32/spec.xml#start), never a pane and never under an agent (D08); its state lives under ${COQ_STATE}/bearings/&lt;page&gt;/ and its records in the store, never in JSONL files (nodes/N-32/spec.xml#purpose).</s>
+    <s>The map app (G6) promotes on the same record with its own hello page as the first proof; on every bearings tier the map is the bundle served at /board from the tier's workspace, so the tier promotion promotes it too; its public static build lives on the cluster behind map.gatehouse.click through Argo (N-35), so for the public name the stable step is the gitops tag bump N-35 already makes and the screenshot is taken against the public name.</s>
+  </tiers>
+
+  <owner-confirm id="owner-confirm">
+    <s>This section is the one answer to who gates a page change (gap review R-03, 2026-10-14); nodes/N-09/spec.xml#m-hold, N-28#input, N-29#mechanism step 4, N-32#cut-over step 2 and shared/command-center.xml#requirements point here.</s>
+    <rule>The owner-locked assets are tools/bearings/assets/page.html and tools/bearings/assets/theme.css (config promotion.confirm_paths): "the page markup and theme are the owner's and are not changed without an approved sample" (tools/bearings/AGENTS.md, the owner's SKILL rule). A pull request whose paths touch them waits for the owner's confirm before it merges: at gate green this node brings uat up, screenshots it at both widths, and N-28 posts one promotion.confirm 300 card on the uat tier with the screenshot pair and the look rows; the owner's pick is a ruling (N-29 effect promotion.confirm naming the head sha); N-09 holds the merge with merge.held reason awaiting-owner-confirm until that ruling exists for the current head. The owner's approval is the sample.</rule>
+    <rule>Every other change under promotion.paths (the Go page service, the map bundle, the config) merges on the machine verdict (D15: green gate plus review.passed) and reaches stable on the verified record for its merge with no approval asked; the owner sees one card after the fact with the screenshot, and can revert through the Controls screen (no-bureaucracy-creep).</rule>
+    <rule>Bounded, never a cog: the confirm card carries a default (not confirmed: the pull request stays held) and a deadline, ages once to alert.aged at its escalation bound (shared/status-codes.xml#escalation-bound), and holds only its own pull request; every other merge proceeds. A new head re-arms the card, because the owner confirmed a picture of one sha.</rule>
+  </owner-confirm>
+
+  <mechanism id="mechanism">
+<where>Go package promote in the service decides; tools/bearings/scripts/promote.sh does the tier work as an Executor.Run verb; tools/bearings/scripts/screenshot.sh takes the pictures in a pinned playwright container on the host (podman, --network=host, so loopback and the tailnet address are reachable; the cluster cannot reach the host, D23).</where>
+    <step n="1" tier="dev">On pr.opened: take lease tier:dev-&lt;ticket&gt;; provision the workspace at the head sha (git worktree from the mirror) and build the page binary into it (make -C tools/bearings build in the pinned coq-go image under podman); point current at it (write a temporary symlink, rename it over current); start or restart unit coq-bearings@&lt;project&gt;-dev-&lt;ticket&gt;, whose ExecStart runs the binary and assets of current; probe GET /health until 200 or timeout; screenshot; look check; promotion 201 dev.</step>
+    <step n="2" tier="uat">On gate.verdict green for the same sha: the same on the uat range; the reviewer brief (N-19) gets the uat URL and the screenshot paths; when the paths touch the owner-locked assets, N-28 posts the confirm card (#owner-confirm).</step>
+    <step n="3" tier="stable">On verified for a merge touching promotion.paths: take lease tier:stable in a Commit whose precondition is that no live drain:tier-stable lease covers the tier directory (a drained tier is refused 423 and retried on the next trigger, nodes/N-45/spec.xml#mechanism step 3); provision src@&lt;merge sha&gt; and build its binary; rename current to point at it, keeping the previous target as previous; systemctl restart coq-bearings@&lt;project&gt;-stable, which drains for up to 5 s and starts on the same port 44900 from the new workspace (nodes/N-32/spec.xml#tiers); probe /health 200 and GET / with the page key 200 within promotion.probe_timeout; screenshot the stable URL; promotion 201 stable with previous_sha.</step>
+    <step n="4" waits="never stopped">The watcher (coq-watcher@&lt;page&gt;, N-27) is its own unit holding a store lease and tailing the store; it reads no page file and no page process, so the restart is invisible to it; the owner's answers and messages are store records and the browser queues an act made during the 2 s gap and resends it by id (nodes/N-32/spec.xml#mechanism step 5); browsers show DISCONNECTED and resume by Last-Event-ID with no seq lost. The front door (coq-front-door@&lt;page&gt;, N-34) is bound to the page unit and restarts with it, reading the port once at its start; the phone's EventSource reconnects through it. Nothing in this step calls make stop or make upgrade, and nothing repoints a port.</step>
+    <step n="5" screenshot="both sizes">screenshot.sh opens the tier URL with the viewer key, waits for the page's ready marker (a data-ready attribute the page sets after its first state render), takes 1280x800 and 430x932 (iPhone 16 Pro Max CSS px) PNGs, and reads getComputedStyle of the look tokens (the CSS custom properties of shared/principles.xml#krastorio-look) into JSON.</step>
+    <step n="6" look="check">The look check compares each token with the value in shared/principles.xml#krastorio-look (values only, original art); a missing token is a hard fail (422); a differing value is a row with code 422 on that row and the promotion proceeds for dev and uat (the reviewer sees the row) but not for stable (a stable restart with a failing look row is rolled back and refused 422 so the owner never sees a wrong page; the merge is already on main, so the fix is a fix ticket request from N-11).</step>
+    <rollback tier="stable">If the restarted unit fails its probe or the look check, rename current back to previous and restart again (the old sha serves within one more 2 s gap); promotion 422 and the next attempt (N-11) retries the same sha up to three times, then 423 and one card.</rollback>
+    <diagram>
+      <mermaid><![CDATA[
+sequenceDiagram
+  participant M as verified record
+  participant S as Go promote
+  participant W as workspace src@sha (current)
+  participant U as unit coq-bearings@project-stable
+  participant F as front door (N-34, bound to U)
+  participant P as screenshot.sh
+  M->>S: verified merge sha touching promotion.paths
+  S->>W: provision, build binary, rename current (previous kept)
+  S->>U: systemctl restart (drain 5 s, same port)
+  U-->>F: front door restarts with the unit
+  S->>U: GET /health, GET / (key) until 200 (timeout 60 s)
+  alt probe or look fails
+    S->>W: rename current back to previous
+    S->>U: restart again; promotion 422
+  else healthy
+    S->>P: 1280 and 430 PNG + look tokens
+    P-->>S: screenshot record
+    S-->>M: promotion 201 stable (previous_sha)
+  end
+      ]]></mermaid>
+    </diagram>
+  </mechanism>
+
+  <start id="start">
+    <s>pr.opened, gate.verdict and verified are records the service already consumes; the promotion is a handler on them; no builder runs make serve, no architect runs make upgrade, no one runs SIGKILL.</s>
+    <s>The owner sees a stable promotion as one card with the picture, after the fact, with no approval asked (no-bureaucracy-creep), except for a change to the owner-locked assets, which the owner confirms on the uat card before it merges (#owner-confirm); the owner can hold the line or revert through a card or the Controls screen, which is a new traversal.</s>
+  </start>
+
+  <waits id="waits">
+    <wait id="w1" what="lease tier:&lt;name&gt;" timeout="PT2M" fallback="re-queue on the next tick; a stale lease is reclaimed by N-02 after its expiry (PT15M)"/>
+    <wait id="w2" what="workspace provision at the sha" timeout="PT2M" fallback="one attempt of three; 422 with reason provision"/>
+    <wait id="w3" what="the restarted unit's /health and / with key" timeout="PT60S" fallback="rename current back to previous and restart; 422; retry per N-11"/>
+    <wait id="w4" what="the unit's drain on restart" timeout="PT5S (the unit's own stop bound, nodes/N-32/spec.xml#mechanism step 9)" fallback="systemd's SIGKILL after TimeoutStopSec; browsers reconnect to the new instance"/>
+    <wait id="w8" class="owner-decision" what="the owner's confirm for a change to the owner-locked assets (#owner-confirm)" timeout="none for the line; the card's escalation bound for the card" fallback="the pull request stays merge.held awaiting-owner-confirm; the card ages once to alert.aged; every other merge proceeds"/>
+    <wait id="w5" what="screenshot container" timeout="PT90S" fallback="one retry inside the attempt; then the promotion is 201 with screenshot missing marked (for dev and uat) or 422 (for stable, because the owner's card must carry the picture)"/>
+    <wait id="w6" what="page ready marker" timeout="PT20S" fallback="take the picture anyway and mark not-ready in the screenshot record; the look check still runs"/>
+    <wait id="w7" what="map stable through Argo sync" timeout="PT10M" fallback="N-35's contract: Argo status polled by the tick; after the timeout promotion 422 for the map tier and N-35's runbook applies"/>
+    <cog-test>The cog that could stall this node is the architect running make upgrade by hand and then telling the owner. The handler on the verified record, the restart on the renamed workspace pointer and the automatic screenshot remove the hand and the telling.</cog-test>
+  </waits>
+
+  <retries id="retries">
+    <policy attempts="3" backoff="min(10 s x 2^(n-1), 5 min)">Per promotion of one sha on one tier; the attempt counter is on the promotion key tier:sha.</policy>
+    <recover>Stable is never left broken: a failed attempt renames the pointer back and the previous sha serves again; after three, promotion 423, one card with the error and the last screenshot if any; the lamp on the Controls screen shows stable behind main with the sha gap.</recover>
+    <report>Dev and uat failures are rows in the worker's or reviewer's next brief; a stable 423 is one card; a look-row mismatch on stable is a fix ticket request, once per token.</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Many PRs touch the page at once: each has its own dev and uat tier (port from the range, page name with the ticket), so twenty builders never share a page; the range size is config and a full range is a 429 row that re-queues.</readers>
+    <writers>Stable has one lease (tier:stable); two merges touching the page within a minute serialize; the second restart waits for the first to finish and then restarts again; the owner sees two cards or, if N-28's dedupe window folds them, one card naming both shas.</writers>
+    <collision>A promotion of sha A running when sha B merges: B waits on the lease; after A's 201, B provisions and restarts; stable ends on B; the records show the order; no page state is lost because the state is in the store, not in the workspace.</collision>
+    <collision>An owner answer arriving during the restart: the browser queues it and resends by its id after the 2 s gap, and the watcher (N-27) delivers whatever the store already holds; Intake is idempotent on the record id, so an answer seen twice rules once (nodes/N-29/spec.xml#many-agents).</collision>
+    <collision>A screenshot container and the owner on the phone at the same moment: the page serves both; the screenshot uses its own key-bearing URL and never writes.</collision>
+    <collision>A builder seat starting the same dev tier by hand: refused, because the tier units are system-owned and the seat deny list covers make serve, make wait, make stop and make upgrade (seat-contract).</collision>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="201" kind="promotion">Promoted; system acts (dev, uat); owner reads one card (stable).</emits>
+    <emits code="422" kind="promotion">Attempt failed (probe, look hard fail, provision); system acts (retry).</emits>
+    <emits code="423" kind="promotion">Failed after 3; owner acts for stable (one card); seat acts for dev and uat (next attempt gets the rows).</emits>
+    <emits code="429" kind="promotion">No free port in the tier range; system acts (re-queue next tick).</emits>
+    <emits code="200" kind="screenshot">Pictures and tokens recorded; nobody acts.</emits>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path acts="system" id="N-48.tier-src" glob="$COQ_STATE/tiers/*/src*" retention="P0D" trigger="merge" cleanup="line/bin/cleanup.sh --entry N-48.tier-src" holds="lease tier:&lt;name&gt;; stable keeps the current and the previous sha (rollback), older ones go on the timer">Tier workspaces per sha.</path>
+    <path acts="system" id="N-48.pages" glob="${COQ_STATE}/bearings/&lt;project&gt;-dev-*/ and ${COQ_STATE}/bearings/&lt;project&gt;-uat-*/" retention="P0D" trigger="merge" cleanup="line/bin/cleanup.sh --entry N-48.pages (runs tools/bearings/bin/cleanup-tier.sh per page)" holds="never the stable tier's state directory">Dev and uat tier state directories (nodes/N-32/spec.xml#state-paths).</path>
+    <path acts="system" id="N-48.screenshots" glob="$COQ_STATE/screenshots/&lt;tier&gt;/&lt;sha&gt;/*.png" retention="P90D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-48.screenshots">The pictures; the record names them; stable's are kept 365 days (a second entry N-48.screenshots-stable).</path>
+    <path acts="system" id="N-48.screenshots-stable" glob="$COQ_STATE/screenshots/stable/*/*.png" retention="P365D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-48.screenshots-stable">Stable pictures, the owner's history of the page.</path>
+    <path acts="system" id="N-48.log" glob="$COQ_STATE/logs/promote/*.jsonl" retention="P30D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-48.log">promote.sh and screenshot.sh output.</path>
+    <path acts="system" id="N-48.units" glob="systemd system unit instances coq-bearings@&lt;project&gt;-dev-*.service and coq-bearings@&lt;project&gt;-uat-*.service (instances of the one template)" retention="P0D" trigger="merge" cleanup="line/bin/cleanup.sh --entry N-48.units (systemctl stop the instance and reset-failed it)" holds="the stable instance">Dev and uat unit instances; the template is installed by N-32's install-units.sh and lives in the repository under tools/bearings/units/.</path>
+  </state-paths>
+
+  <edges id="edges">
+    <in ref="../N-16/spec.xml#N-16">pr.opened (paths match)</in>
+    <in ref="../N-09/spec.xml#N-09" kind="read">merge record, read by merge_sha for its paths; never the trigger of a stable promotion</in>
+    <in ref="../N-10/spec.xml#N-10" drawn="false">verified for a merge whose paths match (stable); the merge record of N-09 is read for its paths, never a trigger</in>
+    <in ref="../N-08/spec.xml#N-08">gate.verdict green (uat step of the same traversal)</in>
+    <out ref="../N-28/spec.xml#N-28">promotion 201 stable and 423 (cards)</out>
+    <out ref="../N-32/spec.xml#N-32">promotion (the strip shows the live sha and version)</out>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>A stable promotion never stops the watcher and loses nothing the owner typed.</check><proof>A test world with coq-watcher and the front door running; a verified record for a merge touching promotion.paths; the watcher pid is unchanged after promotion 201, the front door is active again within 10 s, an answer posted during the restart rules exactly once, and the browser's seq set has no gap.</proof></item>
+    <item><check>A failed probe rolls back to the previous sha.</check><proof>A new workspace whose binary returns 500 on /health; promotion 422; current points at the previous sha again; GET / on the stable port 200.</proof></item>
+    <item><check>A change to the owner-locked assets waits for the owner's confirm; any other change does not.</check><proof>Two test PRs, one touching theme.css and one touching cmd/coq-bearings: the first is merge.held awaiting-owner-confirm until a promotion.confirm ruling for its head; the second merges on gate green plus review.passed.</proof></item>
+    <item><check>Both screenshots exist and the look tokens are read.</check><proof>Two PNGs under the state root with the right sizes, and a screenshot record whose tokens object has every name in the look volume.</proof></item>
+    <item><check>A missing look token refuses stable.</check><proof>A page with one token removed; promotion 422 reason look; current renamed back and the previous sha serving.</proof></item>
+    <item><check>Dev and uat tiers are per ticket and torn down on merge.</check><proof>Two PRs open at once produce two dev pages on different ports; after one merges, N-45's merge trigger removes that ticket's dev and uat directories and units.</proof></item>
+    <item><check>No hand step exists in the path.</check><proof>The N-51 line-ops audit for the day of a stable promotion shows zero hand operations and the promotion record lists the unit names.</proof></item>
+    <item><check>The map tier promotes through gitops.</check><proof>N-35's deploy record referenced from a promotion 201 for the map, screenshot of map.gatehouse.click at both sizes.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <may role="system" do="provision tier workspaces, rename the current pointer, start, stop and restart tier units, run the screenshot container, write promotion and screenshot records"/>
+    <may role="owner" do="hold or revert stable through a card or the Controls screen (a control.action that promotes the previous sha)"/>
+    <may role="reviewer-seat" do="read the uat URL and the screenshots in its brief; never start a tier"/>
+    <may-not role="seat" do="make serve, make wait, make stop, make upgrade, start any tier unit, touch a tier workspace or its pointer, kill a server"/>
+    <may-not role="system" do="stop the watcher units; delete the stable tier's state directory; swap stable on a sha without a merge record and N-10's verified for it (N-10 hold applies: a merge.hold stops stable promotions until main is green)"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="promotions_total" labels="tier,result"/>
+    <counter name="stable_sha_gap" kind="gauge">Commits on main touching promotion.paths since the sha stable runs; over 0 for an hour is an alert record.</counter>
+    <counter name="stable_swap_seconds" kind="histogram">Time from the verified record to promotion 201.</counter>
+    <counter name="look_check_failures_total" labels="token"/>
+    <lamp screen="Controls" name="stable page">Green when the gap is 0 and the last probe was 200; amber with a gap; red on a 423 or when the front door or the watcher is dead (N-27).</lamp>
+  </monitoring>
+
+  <runbook id="runbook">
+    <step n="1" when="stable is behind main (amber)">Read the latest promotion record for stable; a 422 shows the probe or look reason; the retry runs on its own; after a 423 the card says what failed.</step>
+    <step n="2" when="the owner wants the previous page back">Controls screen: revert stable to previous sha (a control.action); the handler renames current to src@previous and restarts with the same mechanism; a card records it.</step>
+    <step n="3" when="break glass">tools/bearings/scripts/promote.sh --tier stable --sha &lt;sha&gt; by the owner, which writes the same records and is counted by N-51 as a hand line operation for that day.</step>
+    <step n="4" when="screenshots look wrong">The PNG paths are in the screenshot record; the owner reads them on the card; a wrong look is a fix ticket, never a hand edit of page.html on main (L08 finding 10).</step>
+    <cleanup>line/bin/cleanup.sh --entry N-48.tier-src, N-48.pages, N-48.screenshots, N-48.screenshots-stable, N-48.log, N-48.units.</cleanup>
+    <cold-start>The stable unit is enabled and starts with the user session from the workspace current points at; the front door and the watcher are their own units (N-34, N-27); the tick compares stable's sha with main and promotes if behind.</cold-start>
+  </runbook>
+
+  <sources id="sources">
+    <source path="tools/bearings/AGENTS.md" anchor="tiers">Tier table: stable from main, uat on the PR branch, dev on the feature branch; every value from config/bearings.json</source>
+    <source path="tools/bearings/AGENTS.md" anchor="promote-a-change-dev-to-uat-to-stable">The six-step hand flow this node replaces, including make upgrade (stops stable) and page.html re-read per request</source>
+    <source path="tools/bearings/AGENTS.md" anchor="phone-on-the-tailnet-front-door">front-door.mjs binds the tailnet IPv4 and pipes to the loopback server; make stop never stops it</source>
+    <source path="tools/bearings/scripts/front-door.mjs" anchor="line 63">Reads server.json port at start; kept: the door restarts with the page unit (N-34), so no per-connection re-read is needed</source>
+    <source path="tools/bearings/Makefile" anchor="upgrade">upgrade runs from the main checkout and restarts stable</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="Checkpoint 2026-10-14T03:51Z">make upgrade was NOT run because it stops stable and its waits; upgrade must swap stable without stopping the waits</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="#5-owner-rulings-this-session-in-order">Rulings 22 and 23: screenshot every page change; promote the strip to stable</source>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/screenshot-every-page-change.md" anchor="Rule">1280 and 430 wide; picture before the card</source>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/bearings-stable-is-the-only-always-on-monitor.md" anchor="file">Page server and wait loop never shut off</source>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="#8-what-to-carry-forward">Tiers and the make upgrade promotion flow; build-stamp self-reload; JSONL with idempotent ids</source>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="#9-what-to-kill">Idle shutdown on stable; hand edits to the owner-locked page outside a ticket</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#10-d08-herdrs-role-and-version">Every system process under its own systemd user unit</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#22-d20-one-owner-surface-or-two-bearings-and-the-execution-rail">One surface the system writes</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md" anchor="#4-gui-style-extraction">The look values (panel definitions, palette, fonts) the look check reads</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md" anchor="#added-2026-10-14-0445z-the-look">Every owner-facing view carries the Krastorio look, stated as a requirement with its check</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#7-uncommitted-and-untracked-changes-in-the-owner-checkout">The dirty page.html and theme.css edits live on stable without a PR; N-49 lands them through one ticket and this node promotes the result</source>
+  </sources>
+
+  <rejected id="rejected">
+    <reject source="tools/bearings Makefile upgrade (stop stable, pull main, serve)" reason="Stops the owner's always-on monitor and its waits; replaced by the restart on a renamed workspace pointer with the watcher as its own unit."/>
+    <reject source="SIGKILL plus server.mjs --join by hand (HANDOFF 03:51Z)" reason="A hand line operation; the exit test counts it; the handler does the same swap as code."/>
+    <reject source="herdr panes for tier servers and waits (tools/bearings/AGENTS.md Run it)" reason="D08: herdr is the owner's window; every system process is its own unit."/>
+    <reject source="SO_REUSEPORT on the stable port, and the round 1 blue-green backend on a fresh loopback port behind a server.json repoint" reason="Desktop browsers reach 127.0.0.1:44900 directly, so a fresh backend port needs a second loopback proxy, and the tailnet door would need a per-connection re-read; both add moving parts to avoid a 2 s DISCONNECTED that loses nothing (answers are records, the browser queues, SSE resumes by Last-Event-ID)."/>
+    <reject source="screenshots as a cluster pod" reason="D23 pods egress only to GitHub and GHCR and cannot reach the host's loopback or tailnet; the container runs on the host under podman."/>
+    <reject source="an owner approval card before every stable promotion" reason="D15 and no-bureaucracy-creep: the machine verdict merged it; the owner sees the picture and can revert; a gate that waits on the owner is a cog. The one exception is the owner's own rule on the owner-locked assets, decided once in #owner-confirm."/>
+    <reject source="the playwright under $HOME/projects/getting-my-bearings-npm/node_modules" reason="Another project's node_modules is not a pinned dependency; the screenshot image is digest-pinned in images.json."/>
+  </rejected>
+
+  <shared-needs id="shared-needs">
+    <need kind="principle">principles.xml#owner-surface (bearings never stops, one surface) and principles.xml#krastorio-look with the token table: CSS custom property names and values from the art inventory section 4 (values only).</need>
+    <need kind="seat-contract">The seat deny list covers make serve, wait, stop, upgrade, front-door and any systemctl call; a seat never starts a tier.</need>
+    <need kind="store-table">promotions: tier, sha, attempt, state, pid, port, screenshot_id, previous_sha; leases tier:&lt;name&gt;.</need>
+    <need kind="record-kinds">promotion, screenshot, pr.opened (changed paths), gate.verdict, verified, merge (changed paths, read only), control.action (revert stable).</need>
+    <need kind="status-codes">201, 422, 423, 429 for promotion; 200 for screenshot.</need>
+    <need kind="config">promotion.paths (tools/bearings/**, the map app path from G6), promotion.confirm_paths (tools/bearings/assets/page.html, tools/bearings/assets/theme.css), tiers.*.port_range, tiers.stable.port, promotion.probe_timeout PT60S, promotion.drain PT30S, screenshot image digest in images.json, viewport sizes 1280x800 and 430x932.</need>
+    <need kind="n-34">The front door is bound to the page unit (BindsTo) and restarts with it, reading the port once at start (nodes/N-34/spec.xml#start).</need>
+    <need kind="n-27">The watcher is its own unit holding a store lease and tailing the store, never bound to the page process (nodes/N-27/spec.xml#mechanism); it survives a page restart.</need>
+    <need kind="n-32">The unit's ExecStart runs the binary and assets of the tier's current workspace; page.html sets a data-ready marker after the first render and exposes the look tokens as CSS custom properties; the strip shows the live sha.</need>
+    <need kind="n-09">merge.held reason awaiting-owner-confirm for a pull request touching promotion.confirm_paths with no promotion.confirm ruling on its head (#owner-confirm).</need>
+    <need kind="n-35">The map's stable promotion is a gitops tag bump with Argo sync status readable by the tick.</need>
+    <need kind="executor-verb">promote and screenshot with the timeouts above.</need>
+  </shared-needs>
+
+</volume>

@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-26/record.schema.json",
+  "title": "N-26 Main verify pipeline: input merge and output main.gate.status",
+  "description": "Book 1.1.0 (F13, review C new 7 and 10, E NF-E5). Input: N-09's merge record, referenced, never restated (../N-09/record.schema.json#/$defs/merge, shared envelope, UTC-stamp id). Output main.gate.status, the input of N-10 (../N-10/record.schema.json#/$defs/main_gate_status refers here): the shared committed envelope (shared/state-store.schema.json#/$defs/committed_envelope) plus merge_seq and suites. The main.plan record uses N-23's output schema with kind main.plan and pr 0.",
+  "oneOf": [
+    { "$ref": "#/$defs/input" },
+    { "$ref": "#/$defs/output" }
+  ],
+  "$defs": {
+    "envelope": { "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" },
+    "record_id": { "$ref": "../../shared/state-store.schema.json#/$defs/id" },
+    "sha40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "input": { "$ref": "../N-09/record.schema.json#/$defs/merge" },
+    "merge_ref": {
+      "type": "object",
+      "required": ["sha", "pr", "merge_seq"],
+      "properties": {
+        "sha": { "$ref": "#/$defs/sha40" },
+        "pr": { "type": "integer", "minimum": 1 },
+        "merge_seq": { "type": "integer", "minimum": 1 },
+        "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" }
+      }
+    },
+    "suite_result": {
+      "type": "object",
+      "required": ["name", "exit_code"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "exit_code": { "type": "integer" },
+        "result": { "type": "string", "enum": ["pass", "fail", "timeout", "infra", "superseded"] },
+        "log_url": { "type": "string" },
+        "seconds": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "output": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["main_sha", "merge_seq", "state", "suites", "range_from", "merges", "plan_attempt", "counts", "gate_run"],
+          "properties": {
+            "kind": { "const": "main.gate.status" },
+            "code": { "enum": [201, 422, 500, 410] },
+            "node": { "const": "N-26" },
+            "main_sha": { "$ref": "#/$defs/sha40" },
+            "merge_seq": { "type": "integer", "minimum": 0, "description": "merge_seq of the merge record whose merge_sha is main_sha; 0 when no merge record names it (a push outside the line)" },
+            "state": { "type": "string", "enum": ["success", "failure", "error"] },
+            "suites": { "type": "array", "items": { "$ref": "#/$defs/suite_result" }, "description": "every suite of suites.json full with its exit code; every suite runs even after one fails" },
+            "range_from": { "oneOf": [ { "$ref": "#/$defs/sha40" }, { "const": "unknown" } ] },
+            "merges": { "type": "array", "items": { "$ref": "#/$defs/merge_ref" } },
+            "plan_attempt": { "type": "integer", "minimum": 1, "maximum": 2, "description": "shared/retry-budget.xml#plan-attempt" },
+            "counts": {
+              "type": "object",
+              "required": ["pass", "fail", "timeout", "infra", "superseded", "spec_check_pass", "spec_check_fail"],
+              "properties": {
+                "pass": { "type": "integer", "minimum": 0 }, "fail": { "type": "integer", "minimum": 0 },
+                "timeout": { "type": "integer", "minimum": 0 }, "infra": { "type": "integer", "minimum": 0 },
+                "superseded": { "type": "integer", "minimum": 0 },
+                "spec_check_pass": { "type": "integer", "minimum": 0 }, "spec_check_fail": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "first_failure": { "type": "object", "properties": { "name": { "type": "string" }, "log": { "type": "string" } } },
+            "gate_run": { "$ref": "#/$defs/record_id", "description": "the gate.run record id (N-25) for the main sha" },
+            "superseded_by": { "$ref": "#/$defs/sha40" },
+            "reason": { "type": "string", "enum": ["infrastructure", "range-unavailable", "newer-main"] },
+            "range_log": { "type": "string" },
+            "run_url": { "type": "string" }
+          },
+          "allOf": [
+            { "if": { "properties": { "code": { "const": 201 } } }, "then": { "properties": { "state": { "const": "success" }, "range_from": { "$ref": "#/$defs/sha40" } } } },
+            { "if": { "properties": { "code": { "const": 422 } } }, "then": { "required": ["first_failure"], "properties": { "state": { "const": "failure" } } } },
+            { "if": { "properties": { "code": { "const": 410 } } }, "then": { "required": ["superseded_by"], "properties": { "state": { "const": "error" }, "reason": { "const": "newer-main" } } } },
+            { "if": { "properties": { "code": { "const": 500 } } }, "then": { "required": ["reason"], "properties": { "state": { "const": "error" } } } }
+          ]
+        }
+      ]
+    }
+  }
+}

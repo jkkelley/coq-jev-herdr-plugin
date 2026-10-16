@@ -1,0 +1,184 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-35/record.schema.json",
+  "title": "N-35 Hello page deploy: input and output records",
+  "description": "Book 1.1.0. Input: N-10's verified record (../N-10/record.schema.json#/$defs/verified) for a merge whose N-09 merge record paths touch tools/map/** (joined by merge_sha; the kind map.commit is retired). Outputs deploy.record and deploy.prereq under the shared committed envelope (shared/state-store.schema.json#/$defs/committed_envelope); the code is the envelope code. UTC everywhere.",
+  "$defs": {
+    "utc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+      "description": "UTC as 2006-01-02T15:04:05Z"
+    },
+    "sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "envelope": {
+      "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope"
+    },
+    "deploy.prereq": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        }
+      ],
+      "type": "object",
+      "required": [
+        "prereq",
+        "proof_command",
+        "proof_path"
+      ],
+      "properties": {
+        "kind": {
+          "const": "deploy.prereq"
+        },
+        "node": {
+          "const": "N-35"
+        },
+        "prereq": {
+          "enum": [
+            "dns-a-record",
+            "vps-server-block",
+            "haproxy-route"
+          ]
+        },
+        "proof_command": {
+          "type": "string"
+        },
+        "proof_path": {
+          "type": "string",
+          "pattern": "^\\$COQ_STATE/map/deploy/prereq/"
+        },
+        "code": {
+          "const": 201
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "idempotency_key": {
+          "$ref": "../../shared/contracts.schema.json#/$defs/operation_key"
+        }
+      }
+    },
+    "deploy.record": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/envelope"
+        }
+      ],
+      "type": "object",
+      "required": [
+        "sha",
+        "attempt",
+        "stage",
+        "idempotency_key"
+      ],
+      "properties": {
+        "kind": {
+          "const": "deploy.record"
+        },
+        "node": {
+          "const": "N-35"
+        },
+        "sha": {
+          "$ref": "#/$defs/sha"
+        },
+        "image_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "image_tag": {
+          "type": "string",
+          "minLength": 1
+        },
+        "argo_app": {
+          "const": "coq-map"
+        },
+        "argo_synced_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "haproxy_route": {
+          "const": "map.gatehouse.click"
+        },
+        "public_200_at": {
+          "$ref": "#/$defs/utc"
+        },
+        "stage": {
+          "enum": [
+            "build",
+            "status",
+            "gitops",
+            "sync",
+            "front-door",
+            "done",
+            "superseded"
+          ]
+        },
+        "build_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "superseded_by": {
+          "$ref": "#/$defs/sha"
+        },
+        "probe_log": {
+          "type": "string",
+          "pattern": "^\\$COQ_STATE/map/deploy/probe/"
+        },
+        "code": {
+          "enum": [
+            100,
+            200,
+            201,
+            409,
+            500,
+            502,
+            504
+          ]
+        },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        "idempotency_key": {
+          "$ref": "../../shared/contracts.schema.json#/$defs/operation_key"
+        },
+        "verified_id": {
+          "$ref": "../../shared/state-store.schema.json#/$defs/id"
+        }
+      },
+      "if": {
+        "properties": {
+          "code": {
+            "const": 201
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "image_digest",
+          "image_tag",
+          "argo_synced_at",
+          "public_200_at"
+        ]
+      }
+    },
+    "input": {
+      "$ref": "../N-10/record.schema.json#/$defs/verified"
+    }
+  },
+  "oneOf": [
+    {
+      "$ref": "#/$defs/input"
+    },
+    {
+      "$ref": "#/$defs/deploy.prereq"
+    },
+    {
+      "$ref": "#/$defs/deploy.record"
+    }
+  ]
+}

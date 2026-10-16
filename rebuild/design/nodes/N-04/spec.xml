@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-04 GitHub poll. Node volume of the Factory Rebuild spec book, group G1 Store and leases.
+     Written 2026-10-14T04:34Z UTC by the G1 spec-author seat, round 1, against brief C.
+     Canonical by owner ruling C42; older specs cited below are sources, never authority (D14). -->
+<!-- N-04 round 2, 2026-10-14T05:01:33Z, by the G1 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers (verdict in
+     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-04):
+     every shared pointer (five per volume, into the shared directory) pointed at a directory no author had written and at anchors no volume declared.
+     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
+     The fix: shared needs are declared in <shared-needs> by volume and anchor with no href, so nothing points at a file
+     that does not exist, and the principles this node obeys point at dag.md sections 7 and 8, which do exist.
+     Rejected: writing shared/ from this seat (the brief gives shared/ to one shared author; two authors on one file is the
+     one-file, one-in-flight-ticket collision the book forbids) and leaving the hrefs to resolve later (a failing volume blocks the book now).
+     Cost: a declared need is not a live pointer until shared/ lands; check.sh matches each need's volume and anchor against the
+     shared volumes when they land, so no hand edit happens here. Cross-group edges point at volumes that now exist, and at
+     index.xml#<node-id> for a node whose volume has not landed, because the index entry is the one anchor every node is guaranteed. -->
+<!-- N-04 round 3, 2026-10-14T05:20:00Z, by the G1 spec-author seat.
+     What changed: the edge in from N-25 pointed at ../../index.xml#N-25 because the N-25 volume had not landed in round 2;
+     it has now, with anchors N-25 and input, so the edge points at the volume itself. Nothing else changed; N-04 passed round 2.
+     Why: a live pointer is what check.sh resolves; the index entry was a stand-in only. Cost: none. -->
+<!-- N-04 book 1.1.0, 2026-10-15T06:00:00Z (review F08, F09, C new 5, 6, 9).
+     What broke: the poll read only the open list, so mergeable, mergeable_state, base sha, fork and files were never fetched;
+     only changed or pending heads were re-read, so a re-run on the same head was missed; the record schema made the entity's
+     stale state unwritable; the token was said to be read-only here and used to merge in N-09.
+     The fix: per-PR detail and files, a conditional status read of every head each poll, a recently-closed read, a
+     protection check, one mergeable vocabulary (GitHub's), and the forge-read credential only. -->
+<volume id="N-04" kind="node-spec" node="N-04" group="G1" version="1.2.0" written="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG and principles</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: poll tick</entry>
+    <entry ref="output">Output record: forge.snapshot</entry>
+    <entry ref="mechanism">Mechanism: a deliberate poll named as a poll, write-if-changed</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-04"/>
+    <sibling href="record.schema.json" role="schema">JSON schema of the poll tick in and forge.snapshot out</sibling>
+    <sibling href="../N-01/spec.xml#N-01" role="node">N-01 State store</sibling>
+    <sibling href="../N-02/spec.xml#N-02" role="node">N-02 Lease service</sibling>
+    <sibling href="../N-03/spec.xml#N-03" role="node">N-03 Ticket intake and readiness</sibling>
+    <sibling href="../N-05/spec.xml#N-05" role="node">N-05 Backups</sibling>
+    <sibling href="../N-06/spec.xml#N-06" role="node">N-06 Service unit, clock and health</sibling>
+    <shared href="../../dag.md#3-every-node" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 6 (the verdict the agent reads and cannot edit is the coq/gate status on the head sha) and rule 2 (no cog: the poll is the clock's, never an agent's)</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, 409 that reports</principle>
+    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+  </pointers>
+  <shared-needs id="shared-needs">
+    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares. check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for forge.started 100; forge.snapshot 200; forge.recovered 200; forge.pr_closed 200; protection.observed 200; protection.drift 412 (owner-acts); forge.auth 400; forge.throttled 429; forge.overflow 500; forge.slow 500; forge.unreachable 503. Owner-acts: forge.auth; forge.overflow; forge.unreachable after three consecutive failed polls past forge.stale_after_seconds.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-forge">Entity forge:snapshot (record.schema.json#/$defs/forge_entity) written every poll by compare-and-swap; table forge_history(seq, hash, polled_at, body JSON) appended on hash change; table forge_pr_files(pr, head_sha, path, previous_path, status, read_at; key pr, head_sha, path; record.schema.json#/$defs/pr_file) written by N-04 only, kept forge.keep_days after the PR closes.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="level-triggered">Reconcile, not events: a poll of the forge is the correctness path; a webhook can only call poll_now and never writes state (S03 section 8 item 3, D06 C44).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="no-cog">No agent reads GitHub for state; one poller, one rate budget, one truth.</need>
+    <need kind="authority" volume="shared/authority.xml" anchor="credential-matrix">N-04 holds the forge-read credential only (contents, pull requests, statuses and administration, each read); it cannot merge, push, post a status or change protection. Seats never push or read it.</need>
+    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">forge.poll_seconds 30, forge.request_seconds 10, forge.poll_budget_seconds 20, forge.calls_per_poll_max 60, forge.throttle_floor 1000, forge.throttle_max_seconds 900, forge.stale_after_seconds 180, forge.min_interval_seconds 5, forge.prs_max 200, forge.files_max 3000, forge.closed_lookback 30, forge.keep_days 30, forge.ticket_pattern, forge.gate_app_id (the coq-gate GitHub App id), protection.check_seconds 86400 (the daily tick); the forge-read credential in STATE/config/service.env as COQ_FORGE_READ_TOKEN.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="forge-unreachable">Three request attempts fail: entity stale, forge.unreachable 503 once per transition, N-08 reads pending, N-09 holds, polls continue, one card after three failed polls past stale_after; forge.recovered 200 on the first success.</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <is>N-04 is the one place the factory learns what GitHub holds: open pull requests with their head shas, base sha, head repository, the coq/gate status on each head and on main, mergeability, changed files, the PRs that closed since the last poll, main's branch protection, and the main sha. It polls on every poll tick (D06, C44) and writes the forge:snapshot entity the gate (N-08), the merge (N-09) and the main verdict (N-10) read.</is>
+    <is>Correctness never depends on a delivery: GitHub does not redeliver a failed webhook, so the poll is the correctness path and a webhook can only ever make it faster (S01 section 5, I03 F3: events make it fast, reconciliation makes it true).</is>
+    <is-not>It does not post statuses (only the coq-gate GitHub App does, through N-25), does not merge (N-09), does not change protection (forge-admin is the owner's alone), does not decide a verdict (N-08), and holds no second copy of GitHub beyond the latest snapshot, its history and the changed-file rows in the store.</is-not>
+    <decisions>D06 (poll each tick, webhooks later as accelerators), D05 (the verdict is the coq/gate status on the commit), D18 (GitHub now, Forgejo later: the forge client is an interface with one implementation).</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="tick" subkind="poll" from="N-06" schema="../N-06/record.schema.json#/$defs/tick">
+      <field name="at">UTC.</field>
+      <field name="interval_seconds">forge.poll_seconds from config (30 by default; the ci/README.md Jenkins poll proved 0.37 s per check, so 30 s is latency, not load).</field>
+    </record>
+    <also kind="coq/gate statuses posted by N-25" note="arrive at GitHub, not here; the poll reads them; drawn as the N-25 to N-04 edge"/>
+    <also kind="forge.poll_now" from="N-09 after a merge and N-16 after a push" note="an accelerator: one extra poll at once, bounded by forge.min_interval_seconds 5; never required for correctness"/>
+  </input>
+
+  <output id="output">
+    <record kind="forge.snapshot" code="200" schema="record.schema.json#/$defs/forge_snapshot">
+      <field name="main_sha">The sha of refs/heads/main.</field>
+      <field name="main_gate">The coq/gate status on main_sha: success, failure, error, pending, none, with its target url and description.</field>
+      <field name="prs">One entry per open PR: number, head_sha, head_ref, head_repo and fork, base_ref, base_sha, mergeable (GitHub's true, false or null while computing) and mergeable_state (clean, dirty, behind, blocked, unstable, has_hooks, draft, unknown), gate (coq/gate on head_sha: state success, failure, error, pending or none, target url, description, updated_at, app_id, observed_at), gate_page (coq/gate-page when present), draft, head_seen_at, files_count and files_truncated, ticket (parsed from the branch name or title by the pattern in config), labels, deferred (reads the budget postponed). This is the one mergeable vocabulary; N-08 and N-09 use these words.</field>
+      <field name="hash">sha256 of the canonical body without at, so unchanged polls compare equal.</field>
+      <field name="polled_at">UTC of the poll.</field>
+      <field name="stale">Never on the record (a record is fresh by definition); the entity forge:snapshot (record.schema.json#/$defs/forge_entity) carries stale, failed_since and the ETags.</field>
+    </record>
+    <rule>Write-if-changed (S03 section 8 item 2): the snapshot entity forge:snapshot is written every poll (version grows, polled_at and every gate.observed_at move); the forge.snapshot record is appended only when hash changes (hash excludes polled_at and observed_at). N-08 runs on every poll tick and reads the entity, so a same-head transition and an aging status are seen without a new record; readers that need "what changed" read the records.</rule>
+    <record kind="forge.pr_closed" code="200" schema="record.schema.json#/$defs/forge_pr_closed">A PR that left the open list since the previous poll: number, head_sha, merged, merge_commit_sha and merged_at when merged, closed_at; once per PR. N-09 completes a lost merge from it; N-45 and N-51 read it.</record>
+    <record kind="protection.observed" code="200" schema="record.schema.json#/$defs/protection">main's protection equals the expected configuration (strict, required check coq/gate with app_id forge.gate_app_id, no force pushes, linear history; shared/authority.xml#github-app); config_sha256 and observed_at; written at start, every protection.check_seconds and on demand after a merge refusal. N-09 and N-10 read the newest.</record>
+    <record kind="protection.drift" code="412" schema="record.schema.json#/$defs/protection">Protection is unreadable or differs, with every difference named; N-09 holds every merge protection-unverified until a newer protection.observed; one card through N-28, because only the owner's forge-admin can repair it.</record>
+    <example schema="record.schema.json#/$defs/protection">{"id":"20261015T060000Z-200-y1z2a","at":"2026-10-15T06:00:00Z","seq":4000,"epoch":1,"kind":"protection.observed","code":200,"node":"N-04","branch":"main","config_sha256":"4444444444444444444444444444444444444444444444444444444444444444","observed_at":"2026-10-15T06:00:00Z","strict":true,"checks":[{"context":"coq/gate","app_id":123456}],"linear_history":true,"force_pushes":false,"expected_app_id":123456,"drift":[]}</example>
+    <record kind="forge.unreachable" code="503">Three attempts failed; the entity is marked stale with the first failure time (record.schema.json#/$defs/forge_entity); readers treat a stale snapshot older than forge.stale_after_seconds 180 as unknown: N-08 writes nothing and N-09 holds.</record>
+    <record kind="forge.throttled" code="429">GitHub's primary limit, or a secondary limit (403 or 429 with retry-after; field limit secondary), answered; the poll backs off to the reset time or retry-after GitHub reports, at most forge.throttle_max_seconds 900.</record>
+    <record kind="forge.auth" code="400">The token is missing, expired or lacks scope; one card through N-28; polling continues and keeps failing until fixed, so the lamp stays red.</record>
+  </output>
+
+  <mechanism id="mechanism">
+    <component name="package">Go package scheduler/internal/forge: an interface Forge with Ref(name), ListOpenPRs, ListRecentlyClosed, Pull(n), PullFiles(n), Status(sha) and Protection(branch), and one implementation for GitHub over REST v3 with conditional requests; a fake in testkit answers from recorded fixtures. The Forgejo implementation is a later ticket against the same interface (D18, C55).</component>
+    <component name="auth">The forge-read credential of shared/authority.xml#credential-matrix (contents, pull requests, statuses and administration, each read, on the one repository), read by the service user coq-svc from STATE/config/service.env (mode 0600, never in the repository, never in a record). This node holds no other credential, so a bug here can never write to GitHub.</component>
+    <component name="calls">Per poll, every GET conditional (ETag, If-None-Match; a 304 costs no primary rate): GET git/ref/heads/main (1); GET pulls?state=open&amp;per_page=100 (1 per page); GET pulls?state=closed&amp;sort=updated&amp;direction=desc&amp;per_page=forge.closed_lookback (1); GET pulls/N for every open PR (mergeable, mergeable_state, base.sha, head.repo.full_name, merged); GET pulls/N/files, paginated per_page=100, for a PR whose head_sha changed (GitHub stops at 3000 files: files_truncated true); GET commits/SHA/status for main and for every open head, every poll, so a re-run on the same head is seen (a 304 refreshes gate.observed_at); GET branches/main/protection every protection.check_seconds. The combined status is paginated by GitHub at 100 contexts; only coq/gate and coq/gate-page are copied.</component>
+    <component name="budget">forge.calls_per_poll_max 60 counts 200 answers; order: main ref, open list, closed list, statuses of heads (pending or none first), PR detail, files. Over the budget the rest of the PR's reads are listed in pr.deferred and the next poll continues from entity cursor_pr in PR number order; a deferred read is unknown, never absent. The primary limit is 5000 per hour; at 30 s and 60 counted calls the worst case is 7200, so the budget halves when remaining is under forge.throttle_floor. Secondary limits (403 or 429 with retry-after, or concurrent requests) are avoided by one request at a time and honoured by backing off for retry-after (forge.throttled 429 limit secondary).</component>
+    <component name="files">Table forge_pr_files(pr, head_sha, path, previous_path, status, read_at) is written by this node in the snapshot transaction for a new head (record.schema.json#/$defs/pr_file); it outlives the PR for forge.keep_days so the merge record (N-09), the stable promotion (N-48) and the exit test (N-51) read a merged head's paths from it. A head whose list hit 3000 files is files_truncated and N-09 holds it files-unknown.</component>
+    <component name="protection">Protection(main) reads strict, the required checks with app_id, and required_linear_history, hashes the canonical answer and compares it with the expected configuration (strict true, exactly coq/gate with app_id forge.gate_app_id, force pushes off, linear history on): equal writes protection.observed 200; unreadable or different writes protection.drift 412 naming each difference. N-04 cannot repair protection (forge-admin is the owner's, shared/authority.xml#credential-matrix).</component>
+    <mermaid id="m-poll">flowchart LR
+  T[poll tick N-06] --> M[GET ref main, ETag]
+  M --> P[GET open and recently closed PRs, ETag]
+  P --> C[GET status of every head, ETag, 304 refreshes observed_at]
+  C --> Q[GET pulls/N per PR, files on a new head, budgeted]
+  Q --> H[canonical body, hash]
+  H --> E[entity forge:snapshot CAS write]
+  E --> D{hash changed?}
+  D -- yes --> R[append forge.snapshot 200]
+  D -- no --> X[counter forge.unchanged]
+  R --> N8[N-08 gate check]</mermaid>
+    <step n="1">Read the previous entity forge:snapshot (version v) for ETags and last hashes.</step>
+    <step n="2">Fetch main ref; fetch open PRs page by page up to forge.prs_max 200 (more is forge.overflow 500 and the first 200 by number); fetch the recently-closed list; every PR in the previous snapshot that is no longer open gets forge.pr_closed 200 once (from the closed list, or GET pulls/N when it is not in the list).</step>
+    <step n="3">For every open PR, every poll: the conditional status read of its head and the conditional GET pulls/N (mergeable, mergeable_state, base_sha, head_repo, fork); for a head not seen before, head_seen_at is now and the files are read into forge_pr_files. Copy coq/gate and coq/gate-page contexts only (ci/README.md status table, kept), with app_id where GitHub reports it; other contexts are ignored.</step>
+    <step n="4">Parse ticket id from head_ref by forge.ticket_pattern (WO-YYYYMMDD-xxxx) else from the title; absent is null, never guessed.</step>
+    <step n="5">Build the body, canonical JSON, hash; CAS-write the entity with expected_version v; on 409 (another poll committed first, which only happens after a restart overlap) re-read and give up this tick.</step>
+    <step n="6">Append forge.snapshot 200 when hash changed, and forge.pr_closed for each PR that left the open list, in the same transaction; N-08 reads the entity on every poll tick, so the record is the history, not the trigger.</step>
+    <step n="7">mergeable null (mergeable_state unknown) means GitHub's background job has not run; the poll asks again next tick; N-09 never merges on it.</step>
+    <step n="8">Every protection.check_seconds, at start and on poll_now from N-09 after a merge refusal: the protection read of the protection component; its record is written in its own transaction.</step>
+    <accelerator>Webhooks later (D06 "A later"): a listener would only call forge.poll_now; it never writes the snapshot itself, so a lost or forged delivery changes nothing but timing. Until then, N-09 and N-16 call poll_now after their own pushes.</accelerator>
+  </mechanism>
+
+  <start id="start">
+    <rule>Nothing starts by an agent typing. The poll runs on the poll tick N-06 emits from the service's own clock; the first poll runs at start as soon as the store is open and the token is read.</rule>
+    <step n="1">At start, read the token from the environment the unit passed; missing or empty is forge.auth 400 once and the poll keeps trying every tick with the same report latched (one record per transition, not per tick).</step>
+    <step n="2">Load the previous entity for ETags; a missing entity means a cold full poll with no conditional headers.</step>
+    <step n="3">forge.started 100 with the remaining rate limit the first response reported.</step>
+  </start>
+
+  <waits id="waits">
+    <wait name="http" on="one GitHub request" timeout="forge.request_seconds 10" fallback="counts as a failed attempt; see retries"/>
+    <wait name="poll-total" on="the whole poll" timeout="forge.poll_budget_seconds 20 (under the 30 s tick)" fallback="the poll stops where it is, writes what it has with statuses deferred, and the next tick continues; forge.slow 500 once per transition"/>
+    <wait name="rate-limit" on="GitHub reset" timeout="the reset time, at most forge.throttle_max_seconds 900" fallback="forge.throttled 429; the entity is stale after forge.stale_after_seconds; N-08 reads pending and N-09 holds; nothing loops"/>
+    <wait name="mergeable" class="level-triggered" on="GitHub computing mergeability" timeout="none held: null is a value" fallback="asked again next tick; N-09 treats null as not yet"/>
+    <wait name="protection" on="the protection read" timeout="forge.request_seconds 10" fallback="protection.drift 412 reason unreadable after the request retries; N-09 holds protection-unverified; the next check retries"/>
+    <wait name="store" on="the entity write" timeout="5 s" fallback="503, retried per retries; the next tick overwrites anyway"/>
+  </waits>
+
+  <retries id="retries">
+    <rule>Every automated step retries up to 3 times, then recovers and reports.</rule>
+    <step name="request">A 5xx, a timeout or a connection error is retried 3 times with 2, 4, 8 s inside the poll budget; the fourth failure ends the poll as failed.</step>
+    <step name="poll">A failed poll marks the entity stale (stale true, failed_since) and appends forge.unreachable 503 once per transition; polls continue every tick; the first success appends forge.recovered 200 with the outage length. Three consecutive failed polls plus stale over forge.stale_after_seconds is the owner-acts condition N-28 turns into one card, because a dark CI path was RC7's silent failure.</step>
+    <step name="429">Not retried inside the poll: back off to the reset time (primary) or retry-after (secondary); forge.throttled 429 once with limit; the budget floor halves the calls per poll until remaining recovers.</step>
+    <step name="401 or 403 scope">Not retried: forge.auth 400 once; one card; the poll keeps running so recovery is automatic when the token is fixed.</step>
+  </retries>
+
+  <many-agents id="many-agents">
+    <reading>Every gate, merge and verdict node and every screen reads the one snapshot entity or its records; twenty readers see one version each; nobody calls GitHub for state except this node (one poller means one rate budget and one truth; L02 section 8 item 6: GitHub is the one place every merge shows up).</reading>
+    <working>Seats push branches and open PRs through their own gh calls in their run (N-16); they never write the snapshot; what they did shows up in the next poll.</working>
+    <collision name="two-pollers">The service restarts while a poll is in flight, or a second instance is started by hand: the entity CAS on version admits one writer; the other gets 409 and stops. The unit's single instance (N-06, systemd) makes this a restart edge case, not a steady state.</collision>
+    <collision name="poll-vs-push">N-16 pushes a new head while the poll reads statuses: the snapshot may hold the old head with its gate and the PR list with the new head; the hash changes next tick and N-08 issues a new verdict for the new head; the old head's verdict is superseded by sha, never reused (gate.sh heads_match predicate, L01 section 8 item 4, kept as code in N-08).</collision>
+    <collision name="superseded-status">N-25 posts error superseded on the old sha and pending on the new one (ci/README.md): both are copied as they are; N-08 keys verdicts by head_sha and status updated_at so neither overwrites the other, and a re-run on the same head is a new key.</collision>
+    <collision name="close-between-polls">A PR merges or closes between two polls: it leaves the open list, so step 2 writes forge.pr_closed with merged and merge_commit_sha; N-09 reads it to complete a merge whose reply was lost.</collision>
+    <collision name="poll_now-storm">Ten seats call poll_now within a second: forge.min_interval_seconds collapses them into one poll; the rest return the in-flight poll's result.</collision>
+    <test>Fixture forge with 50 PRs, two of them changing heads every tick, one with gate flapping, and a scripted 429 at tick 7 and a 500 storm at tick 12: the snapshot records equal the fixture's change list exactly, the entity goes stale at tick 12 plus three attempts and recovers at tick 15, the rate budget never exceeds the floor during the 429.</test>
+    <test>Recorded API fixtures (AT-F09): mergeable null then true; same head failure, pending, success; unchanged error over three polls (observed_at moves, hash does not); 3100 changed files (files_truncated); close and merge between polls (forge.pr_closed); protection changed (protection.drift). Status: not-run.</test>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="100" kind="forge.started" acts="nobody; monitoring"/>
+    <emits code="200" kind="forge.snapshot" acts="N-08 (gate check per PR head), N-09 (mergeability, main sha), N-10 (main gate)"/>
+    <emits code="200" kind="forge.recovered" acts="nobody; N-41 clears the alert"/>
+    <emits code="200" kind="forge.pr_closed" acts="N-09 completes a lost merge; N-45 and N-51 read it"/>
+    <emits code="200" kind="protection.observed" acts="N-09 and N-10 read the newest; nobody acts"/>
+    <emits code="412" kind="protection.drift" acts="N-09 holds every merge protection-unverified; owner through one card (forge-admin is the owner's)"/>
+    <emits code="400" kind="forge.auth" acts="owner, one card from N-28 (fix the token in service.env)"/>
+    <emits code="429" kind="forge.throttled" acts="nobody; N-40 shows the rate budget"/>
+    <emits code="500" kind="forge.overflow" acts="owner through N-28: more than forge.prs_max open PRs is itself a line problem"/>
+    <emits code="500" kind="forge.slow" acts="N-06 health"/>
+    <emits code="503" kind="forge.unreachable" acts="N-08 reads pending, N-09 holds; owner through one card after three consecutive failures past stale_after"/>
+    <rule>Every code above must exist in ../../shared/status-codes.xml#codes with the same meaning and actor.</rule>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path acts="owner" trigger="owner" p="STATE/store/coq.db (entity forge:snapshot, tables forge_history and forge_pr_files)" writer="N-04 through N-01" cleanup="scheduler/host/bin/cleanup-forge.sh: --dry-run lists forge.snapshot records, forge_history rows and forge_pr_files rows of PRs closed more than forge.keep_days 30 ago; --apply deletes them; the live entity and the rows of open PRs are never touched" registry="N-45"/>
+    <path trigger="owner" p="STATE/config/service.env" writer="the owner, once, by the runbook; read by the unit" retention="never" acts="owner" cleanup="kept on purpose: the unit's secrets; cleanup.sh lists it and refuses apply; only the owner removes it, by break glass when the token is revoked (shared/cleanup-registry.json class host, retention never)" registry="N-45"/>
+    <path acts="system" trigger="timer" p="STATE/logs/service/forge.jsonl" writer="N-04 structured log: one line per poll with calls, remaining, changed" cleanup="scheduler/host/bin/cleanup-logs.sh" registry="N-45"/>
+  </state-paths>
+
+
+  <edges id="edges">
+    <in from="N-06" record="poll tick" href="../N-06/spec.xml#output"/>
+    <in from="N-25" record="coq/gate commit statuses on GitHub" href="../N-25/spec.xml#N-25" note="read by the poll, not delivered; N-25 is a G4 volume whose spec has landed, so the pointer is live"/>
+    <out to="N-08" record="forge.snapshot (per PR head: sha, coq/gate state)" href="../N-08/spec.xml#input"/>
+    <reads-by to="N-08" record="forge:snapshot entity every poll tick" href="../N-08/spec.xml#input" note="N-08 runs on the tick and reads the entity, so same-head transitions and aging statuses need no new record"/>
+    <reads-by to="N-09" record="forge:snapshot entity (mergeable_state, base_sha, main_sha), forge_pr_files, forge.pr_closed, protection.observed and protection.drift" href="../N-09/spec.xml#input" note="N-09's input edge is drawn from N-08; it reads these for the merge decision"/>
+    <reads-by to="N-10" record="forge:snapshot entity (main_gate)" href="../N-10/spec.xml#input" note="N-26 posts the main status; N-10 reads it from the snapshot"/>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>A poll against the fixture forge writes the entity every tick and a record only on hash change.</check><proof>Go test forge/poll_test.go: 10 ticks, 3 changes, 3 records.</proof></item>
+    <item><check>ETags are sent and a 304 costs no rate budget.</check><proof>Fixture asserts If-None-Match on the second poll.</proof></item>
+    <item><check>Only coq/gate and coq/gate-page contexts are copied.</check><proof>Fixture with 5 contexts; snapshot holds 2.</proof></item>
+    <item><check>A 500 storm leads to forge.unreachable once and forge.recovered once.</check><proof>Go test with the fake clock.</proof></item>
+    <item><check>A 429 backs off to the reset time and never past throttle_max.</check><proof>Go test.</proof></item>
+    <item><check>The token never appears in a record, a log line or the Status answer.</check><proof>grep of the test state root for the fixture token returns nothing.</proof></item>
+    <item><check>The forge-read credential cannot merge, push or post a status (AT-F08).</check><proof>Against a scratch repository: PUT pulls/N/merge and POST statuses/SHA with the forge-read token both answer 403; not-run.</proof></item>
+    <item><check>Every open head's status is read every poll, and a 304 moves observed_at only.</check><proof>Go test: three polls of an unchanged error head; three conditional reads, observed_at moves, one record.</proof></item>
+    <item><check>Files over the cap set files_truncated; a merged PR's rows survive its close.</check><proof>Go test with a 3100-file fixture; rows of a closed PR present until keep_days.</proof></item>
+    <item><check>A protection change yields protection.drift and holds merges.</check><proof>Fixture: app_id removed from the coq/gate check; protection.drift with gate-app-mismatch; N-09 test TestProtectionUnverified holds.</proof></item>
+    <item><check>Two pollers on one entity: one 409, no double record.</check><proof>Go test with two goroutines.</proof></item>
+    <item><check>The Forge interface has a GitHub implementation and a fake; no gh binary is called.</check><proof>go vet and a grep for exec.Command in scheduler/internal/forge return nothing.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <actor name="N-04 in-process" may="read GitHub with the forge-read credential; write the forge entity, forge_pr_files and its records"/>
+    <actor name="N-09, N-16 (code)" may="call poll_now"/>
+    <actor name="seat (the model)" may="nothing here; it uses its own gh in its run for pushes and PR creation under its rendered permissions (N-13)"/>
+    <actor name="pod" may="nothing here; coq/gate is posted only by the coq-gate GitHub App through N-25, and no pod holds its key"/>
+    <actor name="owner" may="write STATE/config/service.env once; rotate the token; `scheduler ctl forge get` to read the snapshot"/>
+    <rule>The credential is read-only on one repository; the merge uses the separate forge-merge credential (N-09), statuses the coq-gate GitHub App (N-25), pushes and PR creation forge-pr (N-16), and protection changes forge-admin, which only the owner holds (shared/authority.xml#credential-matrix), so a bug here can never write to GitHub.</rule>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <gauge name="forge.snapshot_age_seconds" alarm="over forge.stale_after_seconds"/>
+    <gauge name="forge.rate_remaining" alarm="under forge.throttle_floor"/>
+    <gauge name="forge.open_prs"/>
+    <counter name="forge.polls_total" by="result: changed, unchanged, failed, throttled"/>
+    <counter name="forge.calls_total"/>
+    <counter name="forge.poll_ms" kind="histogram" alarm="p99 over forge.poll_budget_seconds"/>
+    <surface>Map screen (N-38) shows the forge as a machine with a lamp (fresh, stale, dark); Stats (N-40) shows rate remaining; Alerts (N-41) shows forge.unreachable and forge.auth.</surface>
+  </monitoring>
+
+  <runbook id="runbook">
+    <task name="read the snapshot">`scheduler ctl forge get` prints main sha, main gate, every open PR with head and gate state, polled_at and stale.</task>
+    <task name="poll now">`scheduler ctl forge poll` calls poll_now; it is bounded by min_interval and never needed for correctness.</task>
+    <task name="install or rotate the token">Create the forge-read fine-grained token (contents, pull requests, statuses and administration, each read only, on the repository; shared/authority.xml#credential-matrix); write COQ_FORGE_READ_TOKEN=... into STATE/config/service.env (0600); `systemctl --user restart coq-service`; confirm forge.started shows remaining and a protection.observed follows.</task>
+    <task name="protection.drift card">The card names each difference; the owner repairs protection with forge-admin (never the service); the next check writes protection.observed and N-09 resumes.</task>
+    <task name="forge.auth card">The card names the env file and this task; nothing else is needed.</task>
+    <task name="cleanup">scheduler/host/bin/cleanup-forge.sh --dry-run, then --apply.</task>
+  </runbook>
+
+  <rejected id="rejected">
+    <item source="rebuild/investigation/03-DECISIONS.md#8-d06-how-github-events-reach-the-system" what="public ingress for webhooks (option A) and outbound forwarders or ARC runners (option B) as the correctness path" reason="C44 ruled the poll; GitHub does not redeliver a missed delivery; A stays allowed later only as an accelerator that calls poll_now"/>
+    <item source="line/bin/merge-watch.sh" what="a 60 s bash poll of merged PRs that self-exits after 7 days with flock" reason="K12: a bash loop as control plane died silently; this node is a goroutine of the one unit with a stale lamp and a latched report"/>
+    <item source="line/bin/hook-listener.sh" what="the webhook listener as the write path for gate verdicts" reason="RC7: the CI verdict path was dark end to end and nothing said so; the poll reads the status GitHub holds, and a webhook can only accelerate"/>
+    <item source="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal" what="T11 webhook redelivery reconciler (list deliveries, redeliver non-OK within 3 days)" reason="deferred with the webhook itself; when the accelerator lands, T11 is its own ticket under this node"/>
+    <item source="scheduler/config/scheduler.json" what="intake.poll_seconds 2 over the records tree" reason="the records tree is gone (N-01); the only poll left is this one against the forge, and its interval is 30 s because the forge is the slow external"/>
+    <item source="rebuild/investigation/L10-cluster-and-gitops.md#54-small-leaks-and-drift" what="Argo CD polling as the way GitHub state reaches the cluster" reason="Argo's poll is about gitops manifests (N-20, N-21, N-35); it is not the factory's view of PRs and statuses"/>
+  </rejected>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="8-d06-how-github-events-reach-the-system"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="7-d05-where-a-gate-verdict-lives"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="20-d18-forgejo-now-or-later"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal" note="T03, T04, T11"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="3-dropped-by-the-field-still-carried-here-kill" note="K08, K12"/>
+    <source path="rebuild/investigation/01-ROOT-CAUSES.md" anchor="rc7-the-ci-verdict-path-is-dark-end-to-end-and-nothing-said-so"/>
+    <source path="rebuild/investigation/L02-state-stores.md" anchor="6-waits-polls-sleeps-and-leases" note="merge-watch 60 s row"/>
+    <source path="rebuild/investigation/L02-state-stores.md" anchor="8-what-to-carry-forward" note="item 6"/>
+    <source path="rebuild/investigation/L01-line-scripts.md" anchor="8-what-to-carry-forward" note="item 4: gate.sh head predicates"/>
+    <source path="rebuild/investigation/S03-make-and-durable-queues.md" anchor="8-what-to-carry-forward" note="item 2: write-if-changed sense step; item 3: level-triggered reconcile"/>
+    <source path="ci/README.md" anchor="statuses" note="coq/gate and coq/gate-page states and meanings, kept"/>
+    <source path="rebuild/investigation/L07-ci-and-pods.md" anchor="8-what-to-carry-forward"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C44"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C43"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C55"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C37"/>
+    <source path="~/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/no-cog-system-drives.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+  </sources>
+</volume>

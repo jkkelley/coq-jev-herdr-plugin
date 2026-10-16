@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-01/record.schema.json",
+  "title": "N-01 State store records",
+  "description": "Book 1.1.0. Input commit_request and output commit_reply ($ref shared/contracts.schema.json, never restated), record_put (a Commit with exactly one record, the old Put), and the records N-01 appends: record.committed, record.refused, record.conflict, record.invalid, record.stale, store.restored and the store.* reports; plus the Snapshot reply N-05 consumes. The envelope is shared/state-store.schema.json#/$defs/envelope; node and by are derived by the server from the caller's principal (shared/authority.xml#role-derivation). Parent volume: spec.xml#N-01. UTC everywhere.",
+  "$defs": {
+    "id": { "$ref": "../../shared/state-store.schema.json#/$defs/id" },
+    "at": { "$ref": "../../shared/state-store.schema.json#/$defs/at" },
+    "node": { "$ref": "../../shared/state-store.schema.json#/$defs/node" },
+    "code": { "$ref": "../../shared/state-store.schema.json#/$defs/code" },
+    "ticket": { "$ref": "../../shared/state-store.schema.json#/$defs/ticket" },
+    "sha256": { "$ref": "../../shared/state-store.schema.json#/$defs/sha256" },
+    "envelope": { "$ref": "../../shared/state-store.schema.json#/$defs/envelope" },
+    "epoch": { "type": "integer", "minimum": 1, "description": "the store epoch (entity store:epoch); a seq means something only with its epoch" },
+    "operation_key": { "$ref": "../../shared/contracts.schema.json#/$defs/operation_key" },
+    "lease_key": { "$ref": "../../shared/contracts.schema.json#/$defs/lease_key" },
+    "entity_write": { "$ref": "../../shared/contracts.schema.json#/$defs/entity_write" },
+    "commit_request": { "$ref": "../../shared/contracts.schema.json#/$defs/commit_request" },
+    "commit_reply": { "$ref": "../../shared/contracts.schema.json#/$defs/commit_reply" },
+    "record_put": {
+      "description": "The old Put: a Commit with exactly one record (shared/contracts.xml#batch)",
+      "allOf": [
+        { "$ref": "#/$defs/commit_request" },
+        { "type": "object", "required": ["records"], "properties": { "records": { "minItems": 1, "maxItems": 1 } } }
+      ]
+    },
+    "snapshot_reply": {
+      "description": "Store.Snapshot reply: read from the copy itself, so the numbers describe exactly the image (spec.xml#mechanism snapshot); N-05 verifies them",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["epoch", "high_water_seq", "row_count", "min_retained_seq", "bytes"],
+      "properties": {
+        "epoch": { "$ref": "#/$defs/epoch" },
+        "high_water_seq": { "type": "integer", "minimum": 0 },
+        "row_count": { "type": "integer", "minimum": 0 },
+        "min_retained_seq": { "type": "integer", "minimum": 0 },
+        "bytes": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "n01_record": {
+      "description": "the common part of every record N-01 appends: envelope, node N-01, the epoch",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "type": "object", "required": ["epoch"], "properties": { "node": { "const": "N-01" }, "epoch": { "$ref": "#/$defs/epoch" } } }
+      ]
+    },
+    "record_committed": {
+      "allOf": [
+        { "$ref": "#/$defs/n01_record" },
+        {
+          "type": "object",
+          "required": ["seq", "hash", "replayed", "of", "operation_key"],
+          "properties": {
+            "kind": { "const": "record.committed" },
+            "code": { "enum": [200, 201] },
+            "seq": { "type": "integer", "minimum": 1, "description": "strictly increasing and unique, never reused, not gapless" },
+            "of": { "$ref": "#/$defs/id", "description": "the id of the first record committed" },
+            "operation_key": { "$ref": "#/$defs/operation_key" },
+            "hash": { "$ref": "#/$defs/sha256" },
+            "versions": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 1 } },
+            "replayed": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "record_refused": {
+      "description": "403: the caller's principal may not write this (shared/authority.xml#role-derivation); nothing else of the request is stored",
+      "allOf": [
+        { "$ref": "#/$defs/n01_record" },
+        {
+          "type": "object",
+          "required": ["reason", "uid", "operation_key"],
+          "properties": {
+            "kind": { "const": "record.refused" },
+            "code": { "const": 403 },
+            "reason": { "enum": ["unknown_principal", "kind_not_permitted", "principal_mismatch", "capability_expired"] },
+            "uid": { "type": "integer", "minimum": 0 },
+            "principal": { "type": "string", "description": "the principal name the uid mapped to; absent when unknown" },
+            "operation_key": { "type": "string", "maxLength": 240, "description": "as sent; may itself be malformed" },
+            "attempted_kind": { "type": "string", "maxLength": 80 },
+            "attempted_statement": { "type": "string", "maxLength": 80 }
+          }
+        }
+      ]
+    },
+    "record_conflict": {
+      "allOf": [
+        { "$ref": "#/$defs/n01_record" },
+        {
+          "type": "object",
+          "required": ["reason", "operation_key"],
+          "properties": {
+            "kind": { "const": "record.conflict" },
+            "code": { "const": 409 },
+            "reason": { "enum": ["version", "id", "idempotency_mismatch"] },
+            "operation_key": { "$ref": "#/$defs/operation_key" },
+            "key": { "type": "string", "description": "the entity key (version) or the record id (id)" },
+            "expected": { "type": "integer", "minimum": 0 },
+            "current": { "type": "integer", "minimum": 0 },
+            "request_hash_seen": { "$ref": "#/$defs/sha256" },
+            "request_hash_stored": { "$ref": "#/$defs/sha256" }
+          },
+          "allOf": [
+            { "if": { "properties": { "reason": { "const": "version" } } }, "then": { "required": ["key", "expected", "current"] } },
+            { "if": { "properties": { "reason": { "const": "idempotency_mismatch" } } }, "then": { "required": ["request_hash_seen", "request_hash_stored"] } }
+          ]
+        }
+      ]
+    },
+    "record_invalid": {
+      "allOf": [
+        { "$ref": "#/$defs/n01_record" },
+        {
+          "type": "object",
+          "required": ["path", "reason"],
+          "properties": {
+            "kind": { "const": "record.invalid" },
+            "code": { "const": 400 },
+            "of": { "type": "string", "description": "the record id or operation key the caller sent, which may itself be malformed" },
+            "path": { "type": "string", "description": "JSON pointer of the failing field" },
+            "reason": { "type": "string", "maxLength": 240 }
+          }
+        }
+      ]
+    },
+    "record_stale": {
+      "description": "412: fencing refused (shared/contracts.xml#fencing); token is an integer everywhere",
+      "allOf": [
+        { "$ref": "#/$defs/n01_record" },
+        {
+          "type": "object",
+          "required": ["reason", "lease_key", "token_seen", "operation_key"],
+          "properties": {
+            "kind": { "const": "record.stale" },
+            "code": { "const": 412 },
+            "reason": { "enum": ["stale_token", "lease_not_current"] },
+            "lease_key": { "$ref": "#/$defs/lease_key" },
+            "operation_key": { "$ref": "#/$defs/operation_key" },
+            "token_seen": { "$ref": "../../shared/state-store.schema.json#/$defs/lease_token" },
+            "token_current": { "$ref": "../../shared/state-store.schema.json#/$defs/lease_token" },
+            "lease_state": { "$ref": "../../shared/contracts.schema.json#/$defs/lease_state" }
+          }
+        }
+      ]
+    },
+    "store_restored": {
+      "description": "200: a restore started a new epoch held with flags off (shared/contracts.xml#restore); only an owner ruling releases the hold",
+      "allOf": [
+        { "$ref": "#/$defs/n01_record" },
+        {
+          "type": "object",
+          "required": ["from_backup", "backup_epoch", "backup_high_water_seq", "lost_after_seq", "token_floor", "leases_expired", "hold"],
+          "properties": {
+            "kind": { "const": "store.restored" },
+            "code": { "const": 200 },
+            "from_backup": { "type": "string", "minLength": 1 },
+            "backup_epoch": { "$ref": "#/$defs/epoch" },
+            "backup_high_water_seq": { "type": "integer", "minimum": 0 },
+            "lost_after_seq": { "type": "integer", "minimum": 0, "description": "records of the old epoch after this seq are not in the restored store" },
+            "live_high_water_seq": { "type": "integer", "minimum": 0, "description": "the moved-aside file's high-water seq when it could be read" },
+            "token_floor": { "type": "integer", "minimum": 1, "description": "counter:lease_token after the bump" },
+            "leases_expired": { "type": "integer", "minimum": 0 },
+            "hold": { "const": true }
+          }
+        }
+      ]
+    },
+    "store_report": {
+      "description": "store.opened, store.corrupt, store.wal_large, store.busy, store.disk, store.unavailable, stream.slow; store.unavailable and store.corrupt are journaled when the store cannot take them and imported on recovery (shared/outside-probe.xml#journal)",
+      "allOf": [
+        { "$ref": "#/$defs/n01_record" },
+        {
+          "type": "object",
+          "required": ["reason"],
+          "properties": {
+            "kind": { "enum": ["store.opened", "store.corrupt", "store.wal_large", "store.busy", "store.disk", "store.unavailable", "stream.slow"] },
+            "code": { "enum": [100, 500, 503] },
+            "reason": { "type": "string", "maxLength": 240 },
+            "high_water_seq": { "type": "integer", "minimum": 0 },
+            "db_bytes": { "type": "integer", "minimum": 0 },
+            "wal_bytes": { "type": "integer", "minimum": 0 },
+            "free_mib": { "type": "integer", "minimum": 0 },
+            "journaled": { "type": "boolean", "description": "true when written to the outage journal first and imported later" }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/commit_request" },
+    { "$ref": "#/$defs/commit_reply" },
+    { "$ref": "#/$defs/snapshot_reply" },
+    { "$ref": "#/$defs/record_committed" },
+    { "$ref": "#/$defs/record_refused" },
+    { "$ref": "#/$defs/record_conflict" },
+    { "$ref": "#/$defs/record_invalid" },
+    { "$ref": "#/$defs/record_stale" },
+    { "$ref": "#/$defs/store_restored" },
+    { "$ref": "#/$defs/store_report" }
+  ]
+}

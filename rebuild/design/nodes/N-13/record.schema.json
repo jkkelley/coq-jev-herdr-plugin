@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-13/record.schema.json",
+  "title": "N-13 Seat layer render: input and output records",
+  "description": "Book 1.1.0. Input: dispatch, the one def ../N-07/record.schema.json#/$defs/dispatch (body ../../shared/contracts.schema.json#/$defs/dispatch_body); no local projection. Output: seat.bundle, seat.bundle.refused, seat.bundle.failed on the shared committed envelope (../../shared/state-store.schema.json#/$defs/committed_envelope). The failure records carry ../../shared/contracts.schema.json#/$defs/failure_body so N-11 reads them as they are. The operation key N-13/seat.bundle/<dispatch_id>/r1 rides on the Commit request, not in the record.",
+  "$defs": {
+    "sha256": { "$ref": "../../shared/state-store.schema.json#/$defs/sha256" },
+    "envelope": { "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" },
+    "dispatch": { "$ref": "../N-07/record.schema.json#/$defs/dispatch" },
+    "run_id": { "type": "string", "pattern": "^d-[0-9]{14}-[a-z0-9]{6}$", "description": "equals the dispatch_id; one dispatch is one run" },
+    "seat_role": {
+      "description": "a seat role: the code role gate is never rendered",
+      "allOf": [{ "$ref": "../../shared/contracts.schema.json#/$defs/role" }, { "not": { "const": "gate" } }]
+    },
+    "seat_phase": {
+      "allOf": [{ "$ref": "../../shared/contracts.schema.json#/$defs/phase" }, { "not": { "const": "gate" } }]
+    },
+    "limits": {
+      "type": "object",
+      "required": ["max_turns", "max_budget_usd", "run_deadline_seconds", "stall_seconds"],
+      "properties": {
+        "max_turns": { "type": "integer", "minimum": 1 },
+        "max_budget_usd": { "type": "number", "exclusiveMinimum": 0 },
+        "run_deadline_seconds": { "type": "integer", "minimum": 60, "description": "run.deadline_seconds.<role> of shared/contracts.xml#timing" },
+        "stall_seconds": { "type": "integer", "minimum": 60, "description": "stall.seconds.<role> of shared/contracts.xml#timing; N-12 judges it" }
+      },
+      "additionalProperties": false
+    },
+    "seat.bundle": {
+      "type": "object",
+      "required": ["run_id", "ticket", "phase", "role", "attempt", "bundle_dir", "settings_path", "mcp_path", "brief_path", "schema_path", "model", "limits", "allow_paths", "read_deny", "build_mode", "hashes", "session", "lease", "deadline_at"],
+      "properties": {
+        "kind": { "const": "seat.bundle" },
+        "code": { "const": 100 },
+        "node": { "const": "N-13" },
+        "run_id": { "$ref": "#/$defs/run_id" },
+        "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/seat_phase" },
+        "role": { "$ref": "#/$defs/seat_role" },
+        "attempt": { "$ref": "../../shared/contracts.schema.json#/$defs/attempt" },
+        "bundle_dir": { "type": "string", "pattern": "^STATE/seats/bundle/d-[0-9]{14}-[a-z0-9]{6}/$", "description": "STATE is the service state root (coq-svc, 0700); the run's seat user reads it by ACL only" },
+        "settings_path": { "type": "string" },
+        "mcp_path": { "type": "string" },
+        "brief_path": { "type": "string", "pattern": "^bundle/d-[0-9]{14}-[a-z0-9]{6}/brief\\.md$", "description": "the dispatch's brief_path; the brief lives only here" },
+        "schema_path": { "type": "string" },
+        "model": { "type": "string", "pattern": "^claude-" },
+        "limits": { "$ref": "#/$defs/limits" },
+        "allow_paths": { "type": "array", "items": { "type": "string" }, "description": "the ticket's declared files; Edit and Write outside are denied; empty for a reviewer and a spec-author" },
+        "read_deny": { "type": "array", "minItems": 1, "items": { "type": "string" }, "description": "Read deny rules rendered for every role: the state root, the secrets and credential paths of shared/authority.xml#credential-matrix" },
+        "build_mode": { "$ref": "../../shared/contracts.schema.json#/$defs/build_mode" },
+        "hashes": {
+          "type": "object",
+          "required": ["settings", "mcp", "brief", "schema", "bundle"],
+          "properties": {
+            "settings": { "$ref": "#/$defs/sha256" },
+            "mcp": { "$ref": "#/$defs/sha256" },
+            "brief": { "$ref": "#/$defs/sha256" },
+            "schema": { "$ref": "#/$defs/sha256" },
+            "bundle": { "$ref": "#/$defs/sha256" }
+          },
+          "additionalProperties": false
+        },
+        "session": { "$ref": "../../shared/contracts.schema.json#/$defs/session" },
+        "lease": { "$ref": "../../shared/contracts.schema.json#/$defs/lease_ref" },
+        "deadline_at": { "$ref": "../../shared/contracts.schema.json#/$defs/at" }
+      },
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "if": { "properties": { "role": { "const": "worker" } } }, "then": { "properties": { "allow_paths": { "minItems": 1 } } }, "else": { "properties": { "allow_paths": { "maxItems": 0 } } } }
+      ]
+    },
+    "seat.bundle.refused": {
+      "description": "The repository is at fault (role file, template, ticket); a failure record for N-11 (failure_kind seat.bundle.failed, outcome refused).",
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "../../shared/contracts.schema.json#/$defs/failure_body" }],
+      "required": ["run_id", "reason"],
+      "properties": {
+        "kind": { "const": "seat.bundle.refused" },
+        "code": { "const": 412 },
+        "node": { "const": "N-13" },
+        "run_id": { "$ref": "#/$defs/run_id" },
+        "dispatch_id": { "$ref": "#/$defs/run_id" },
+        "outcome": { "const": "refused" },
+        "failure_kind": { "const": "seat.bundle.failed" },
+        "reason": { "enum": ["role_schema_invalid", "no_files_declared", "no_template_for_phase", "ticket_missing"] },
+        "detail": { "type": "string", "maxLength": 1000 }
+      }
+    },
+    "seat.bundle.failed": {
+      "description": "An io or store step failed three times; a failure record for N-11 (failure_kind seat.bundle.failed, outcome failed).",
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "../../shared/contracts.schema.json#/$defs/failure_body" }],
+      "required": ["run_id", "step", "reason"],
+      "properties": {
+        "kind": { "const": "seat.bundle.failed" },
+        "code": { "const": 500 },
+        "node": { "const": "N-13" },
+        "run_id": { "$ref": "#/$defs/run_id" },
+        "dispatch_id": { "$ref": "#/$defs/run_id" },
+        "outcome": { "const": "failed" },
+        "failure_kind": { "const": "seat.bundle.failed" },
+        "step": { "type": "integer", "minimum": 1, "maximum": 7 },
+        "reason": { "enum": ["role_unreadable", "store_unreachable", "bundle_io", "hash_mismatch"] },
+        "stderr_tail": { "type": "string", "maxLength": 2000 }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/dispatch" },
+    { "$ref": "#/$defs/seat.bundle" },
+    { "$ref": "#/$defs/seat.bundle.refused" },
+    { "$ref": "#/$defs/seat.bundle.failed" }
+  ]
+}

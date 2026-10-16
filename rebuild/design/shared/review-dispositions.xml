@@ -1,0 +1,654 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: review dispositions for book 1.1.0. Every finding of the external review pinned at fb7135ef89e819b91249ac890ebbffcd52c4adea
+     (F01 to F26) and every defect the verification found that the review missed (F27 onward), each with a disposition, evidence at the
+     baseline commit (file and line), the anchors that resolve it, and the proof status. Rendered from a table by the integrator; check C29
+     refuses a missing finding, a duplicate id, an unknown disposition or an unresolved resolution pointer. Validated by check.sh. -->
+<volume id="review-dispositions" kind="shared" version="1.1.0" issued="2026-10-15T06:00:00Z" timezone="UTC" title="Review dispositions">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings</entry>
+    <entry ref="purpose">Purpose and how to read a disposition</entry>
+    <entry ref="method">Method: how each finding was verified</entry>
+    <entry ref="tally">Tally</entry>
+    <entry ref="review-findings">Review findings F01 to F26</entry>
+    <entry ref="new-findings">Findings the review missed, F27 onward</entry>
+    <entry ref="owner-decisions">Decisions only the owner can make</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="contracts.xml#contracts" kind="shared"/>
+    <sibling href="authority.xml#authority" kind="shared"/>
+    <sibling href="ci-capacity.xml#ci-capacity" kind="shared"/>
+    <sibling href="retry-budget.xml#retry-budget" kind="shared"/>
+    <sibling href="outside-probe.xml#outside-probe" kind="shared"/>
+    <sibling href="state-store.xml#state-store" kind="shared"/>
+    <sibling href="seat-contract.xml#seat-contract" kind="shared"/>
+    <sibling href="cut-over.xml#cut-over" kind="shared"/>
+    <dag href="../dag.md#4-re-entries"/>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>This volume answers, for every finding, whether it holds, where the evidence is, and which anchor of the book now resolves it.</s>
+    <s>accepted means the finding holds as stated; accepted-partial means it holds but part of the claim or its severity is wrong, and the note says which part; rejected and superseded are available and unused, because every review finding reproduced at the pinned commit; new marks a defect the review missed.</s>
+    <s>A resolution pointer names the authoritative anchor; the book states each rule once there and every other volume cites it.</s>
+    <s>Every proof that a resolution works at runtime is not-run: this is design work and nothing is built; the only executed proofs are the reproductions of the defects (probes P01 to P07 and the extra probes) and the book checks.</s>
+  </purpose>
+
+  <method id="method">
+    <s>Each finding was re-derived from the book at fb7135ef89e819b91249ac890ebbffcd52c4adea by reading the cited lines and the volumes around them, not from the review text.</s>
+    <s>Probes P01 to P07 were re-run with python3, jsonschema 4.26.0 and SQLite 3.45.1 against the book schemas; every producer example and synthetic producer record was validated against every consumer schema (19 synthetic records, 10 book examples).</s>
+    <s>External facts (GitHub REST, branch protection, Jenkins queue, ntfy iOS delivery, Kaniko upstream and forks, the local claude --help) were checked on 2026-10-15 and are named in sources.</s>
+  </method>
+
+  <tally id="tally" accepted="21" accepted-partial="5" rejected="0" superseded="0" new="42">
+    <s>All 26 review findings hold at the pinned commit: 21 as stated and 5 in part (F07 severity, F16, F17, F21 and F24 scope); none is rejected or superseded, because no commit landed after the pin.</s>
+    <s>The verification found 42 further defects (F27 to F68), 20 of them blocker or high.</s>
+  </tally>
+
+  <review-findings id="review-findings">
+    <finding id="F01" severity="blocker" review-severity="blocker" disposition="accepted" nodes="N-01 N-13 N-14 N-15 N-16 N-29" origin="review">
+      <title>Seat permissions do not establish the promised security boundary</title>
+      <evidence file="nodes/N-01/spec.xml" line="124" commit="fb7135e">socket mode 0600, same user only: every seat runs as the owner uid</evidence>
+      <evidence file="nodes/N-01/spec.xml" line="153-158" commit="fb7135e">Put has no authorization step and N-01 emits no 403</evidence>
+      <evidence file="shared/seat-contract.xml" line="153" commit="fb7135e">rule text of the relay clause (the cited :151 is its open tag)</evidence>
+      <evidence file="nodes/N-15/spec.xml" line="145" commit="fb7135e">seat env excludes COQ_SEAT; nothing ever sets it, yet N-29 and N-32 trust it</evidence>
+      <verdict>The book is weaker than the review states: no API authorizes anything, seats can read other seats' tokens, and every credential belongs to one user. Fix: separate Unix users per principal, SO_PEERCRED on the store socket, role and permitted kinds derived on the server, 403 record.refused. Containers deferred. WSL interop off is an owner decision.</verdict>
+      <resolution href="../shared/authority.xml#principals"/>
+      <resolution href="../shared/authority.xml#peer-credentials"/>
+      <resolution href="../shared/authority.xml#seat-isolation"/>
+      <resolution href="../nodes/N-01/spec.xml#N-01"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F02" severity="blocker" review-severity="blocker" disposition="accepted" nodes="N-01 N-13 N-14 N-15 N-17" origin="review">
+      <title>Global idempotency keys collide between different operations</title>
+      <evidence file="shared/state-store.xml" line="78-84" commit="fb7135e">one key per effect, but six effects of one run share the dispatch id</evidence>
+      <evidence file="nodes/N-01/spec.xml" line="96" commit="fb7135e">a second Put returns the first commit with no payload comparison</evidence>
+      <evidence file="nodes/N-13/spec.xml" line="139" commit="fb7135e">seat.bundle keyed by the dispatch id that N-14 and N-15 also use</evidence>
+      <verdict>Probe P04 reproduced and widened: of six prescribed keys only one commits. Fix: node/operation/subject/r&lt;revision&gt; keys whose node segment must equal the caller, request hash stored, 409 idempotency_mismatch before any effect.</verdict>
+      <resolution href="../shared/contracts.xml#operation-keys"/>
+      <resolution href="contracts.schema.json#/$defs/operation_key"/>
+      <reproduced probes="P04" status="executed"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F03" severity="blocker" review-severity="blocker" disposition="accepted" nodes="N-02 N-07 N-13 N-14 N-15" origin="review">
+      <title>The producer and consumer schemas cannot carry the same dispatch</title>
+      <evidence file="nodes/N-07/record.schema.json" line="65-87" commit="fb7135e">deadline, flat lease key, integer token, boolean build_mode</evidence>
+      <evidence file="nodes/N-13/record.schema.json" line="28-74" commit="fb7135e">deadline_at, nested lease with a string token, repo, repo_sha, object build_mode</evidence>
+      <evidence file="shared/seat-contract.xml" line="170" commit="fb7135e">a third build_mode shape</evidence>
+      <evidence file="DESIGN.md" line="973" commit="fb7135e">the owner-read dispatch example fails N-13 and N-14</evidence>
+      <verdict>Probes P01 and P02 reproduced. Wider than stated: CR spec dispatches and gate dispatches fail their own producer schema. Fix: one dispatch_body def that every producer and consumer references, with examples for every phase checked by C23.</verdict>
+      <resolution href="../shared/contracts.xml#dispatch"/>
+      <resolution href="contracts.schema.json#/$defs/dispatch_body"/>
+      <reproduced probes="P01 P02" status="executed"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F04" severity="blocker" review-severity="blocker" disposition="accepted" nodes="N-01 N-02 N-03 N-18 N-51" origin="review">
+      <title>Atomic transactions are promised but absent from the store API contract</title>
+      <evidence file="nodes/N-01/record.schema.json" line="32" commit="fb7135e">record_put refuses an entities array</evidence>
+      <evidence file="shared/state-store.xml" line="66" commit="fb7135e">one transaction under one idempotency key, with no API that writes it</evidence>
+      <evidence file="nodes/N-18/spec.xml" line="125" commit="fb7135e">admission needs several keys in one transaction</evidence>
+      <verdict>Probe P03 reproduced. No API writes node-owned tables at all. Fix: Store.Commit, one transaction with preconditions, entity CAS, owner-registered statements, records and outbox effects, all or nothing.</verdict>
+      <resolution href="../shared/contracts.xml#batch"/>
+      <resolution href="../shared/contracts.xml#statements"/>
+      <resolution href="contracts.schema.json#/$defs/commit_request"/>
+      <reproduced probes="P03" status="executed"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F05" severity="blocker" review-severity="blocker" disposition="accepted" nodes="N-02 N-07 N-12 N-27 N-45 N-52" origin="review">
+      <title>Lease grant, dispatch, hold and revoke rules disagree</title>
+      <evidence file="nodes/N-02/spec.xml" line="90" commit="fb7135e">grant sets a holder</evidence>
+      <evidence file="nodes/N-07/spec.xml" line="119" commit="fb7135e">dispatch selects only leases with an empty holder</evidence>
+      <evidence file="nodes/N-02/spec.xml" line="121" commit="fb7135e">hold refuses every claim, so the watcher exits 3 and is never restarted</evidence>
+      <evidence file="nodes/N-07/spec.xml" line="79" commit="fb7135e">generation defined three ways (also N-02:92, state-store.xml:108)</evidence>
+      <verdict>Accepted with extensions: system lease keys fail the key pattern and fencing by (ticket, attempt) is ambiguous. Fix: one lease state machine with classes, GrantDispatch atomic with the dispatch, generation only on grant, hold gating only seat grants and work-class leases.</verdict>
+      <resolution href="../shared/contracts.xml#lease-machine"/>
+      <resolution href="../shared/contracts.xml#fencing"/>
+      <resolution href="contracts.schema.json#/$defs/lease_row"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F06" severity="blocker" review-severity="blocker" disposition="accepted" nodes="N-01 N-20 N-22 N-29 N-49 N-50" origin="review">
+      <title>Bootstrap and resume gates remain contradictory</title>
+      <evidence file="shared/cut-over.xml" line="58" commit="fb7135e">step 0 triggers before GOFACTORY while DESIGN.md:29 forbids any build before it</evidence>
+      <evidence file="shared/cut-over.xml" line="52" commit="fb7135e">a USERGO before step 7 proofs is accepted</evidence>
+      <evidence file="nodes/N-22/spec.xml" line="102" commit="fb7135e">the first arm64 controller image is built by the amd64 host leg alone</evidence>
+      <verdict>Nuance: ci/image/build.sh already builds multi-arch with qemu; the contradiction is in N-22 prose and runbook R1. Fix: bootstrap state machine B0 to B8; foundation work may precede GOFACTORY; runtime only after the GOFACTORY ruling; USERGO only at B7.</verdict>
+      <resolution href="../shared/cut-over.xml#bootstrap"/>
+      <resolution href="../shared/cut-over.xml#bootstrap-merge"/>
+      <resolution href="contracts.schema.json#/$defs/bootstrap_state"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F07" severity="medium" review-severity="high" disposition="accepted-partial" nodes="N-01 N-06" origin="review">
+      <title>The reuse inventory overstates the existing protobuf API</title>
+      <evidence file="DESIGN.md" line="92" commit="fb7135e">seven RPCs kept whole</evidence>
+      <evidence file="shared/state-store.xml" line="428" commit="fb7135e">the same false list, not cited by the review</evidence>
+      <verdict>The defect is real but its impact is medium: N-01 already defines a new Store service. The real proto has Executor{Run, Health} and Scheduler{Health, Status, Reload, Drain, Retry} and nothing streams. Both texts are corrected.</verdict>
+      <resolution href="../nodes/N-01/spec.xml#N-01"/>
+      <resolution href="../shared/contracts.xml#batch"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F08" severity="high" review-severity="high" disposition="accepted" nodes="N-04 N-08 N-09 N-25" origin="review">
+      <title>Forge credentials and gate authority are inconsistent</title>
+      <evidence file="nodes/N-09/spec.xml" line="105" commit="fb7135e">merges with the read token N-04 polls with</evidence>
+      <evidence file="nodes/N-25/spec.xml" line="82" commit="fb7135e">required check has no app_id, so any writer satisfies it</evidence>
+      <evidence file="nodes/N-25/spec.xml" line="168" commit="fb7135e">no GitHub token for the gate, while N-08:54 has Jenkins post coq/gate</evidence>
+      <verdict>Fix: a credential matrix and a dedicated coq-gate GitHub App that alone can post coq/gate; protection observed daily.</verdict>
+      <resolution href="../shared/authority.xml#credential-matrix"/>
+      <resolution href="../shared/authority.xml#github-app"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F09" severity="high" review-severity="high" disposition="accepted" nodes="N-04 N-08 N-51" origin="review">
+      <title>The poll plan misses required endpoints and same-head transitions</title>
+      <evidence file="nodes/N-04/spec.xml" line="103" commit="fb7135e">no per-PR GET, yet the snapshot schema requires mergeable</evidence>
+      <evidence file="nodes/N-08/spec.xml" line="129-130" commit="fb7135e">absent and pending timeouts checked only on record arrival</evidence>
+      <verdict>Stronger than stated. Fix: per-PR GET, paginated files, conditional status reads every poll, N-08 runs every tick and escalates by age.</verdict>
+      <resolution href="../nodes/N-04/spec.xml#N-04"/>
+      <resolution href="../nodes/N-08/spec.xml#N-08"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F10" severity="high" review-severity="high" disposition="accepted" nodes="N-09 N-11 N-16" origin="review">
+      <title>Strict branch protection has no deterministic stale-base recovery</title>
+      <evidence file="nodes/N-09/spec.xml" line="110" commit="fb7135e">the same merge is retried three times on an unchanged head</evidence>
+      <evidence file="nodes/N-16/spec.xml" line="153" commit="fb7135e">claims N-09 handles a clean rebase; it has no such step</evidence>
+      <verdict>Fix: N-09 branches on mergeable_state; behind uses update-branch with expected_head_sha and a fresh gate.</verdict>
+      <resolution href="../nodes/N-09/spec.xml#N-09"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F11" severity="high" review-severity="high" disposition="accepted" nodes="N-06 N-12 N-15" origin="review">
+      <title>Launcher recovery does not match its process and file lifecycle</title>
+      <evidence file="nodes/N-06/spec.xml" line="104" commit="fb7135e">KillMode=mixed kills every seat on a service restart</evidence>
+      <evidence file="nodes/N-15/spec.xml" line="132" commit="fb7135e">stdout goes to result.json at spawn, so the adopt scan never matches</evidence>
+      <evidence file="nodes/N-12/spec.xml" line="118" commit="fb7135e">kill grace 2 s here, 30 s at N-15:147, 10 s at failure-cases.xml:36</evidence>
+      <verdict>Stronger than stated. Fix: one transient systemd unit per run outside the service cgroup, a run state entity, partial result renamed and sealed, one kill authority, kill grace 30 s.</verdict>
+      <resolution href="../shared/contracts.xml#run-states"/>
+      <resolution href="../shared/contracts.xml#kill-authority"/>
+      <resolution href="../nodes/N-15/spec.xml#N-15"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F12" severity="high" review-severity="high" disposition="accepted" nodes="N-03 N-11 N-14 N-15 N-16" origin="review">
+      <title>Ticket transitions, retry ownership and claim release lack one authority</title>
+      <evidence file="shared/state-store.xml" line="182" commit="fb7135e">the shared list forbids transitions N-03 performs (:120, :124)</evidence>
+      <evidence file="nodes/N-11/spec.xml" line="162" commit="fb7135e">fresh seat here; resume at N-16:129, N-15:156 and seat-contract.xml:46</evidence>
+      <evidence file="shared/state-store.xml" line="185-190" commit="fb7135e">claims keyed by path cannot be reacquired</evidence>
+      <verdict>Fix: one transition table checked by C24, one retry-owner table, one claims authority with release.</verdict>
+      <resolution href="../shared/contracts.xml#ticket-transitions"/>
+      <resolution href="../shared/contracts.xml#retry-owner"/>
+      <resolution href="../shared/contracts.xml#claims"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F13" severity="high" review-severity="high" disposition="accepted" nodes="N-09 N-10 N-26 N-35 N-48" origin="review">
+      <title>Main verification can be starved by newer merges</title>
+      <evidence file="nodes/N-09/spec.xml" line="61" commit="fb7135e">never wait on a verify between merges</evidence>
+      <evidence file="nodes/N-26/spec.xml" line="117" commit="fb7135e">relies on N-09 merging nothing while main is unverified</evidence>
+      <verdict>Owner pick: at most one unverified merge on main. Ticket status merged until verified; deploy and promotion trigger on verified main.</verdict>
+      <resolution href="../nodes/N-09/spec.xml#N-09"/>
+      <resolution href="../shared/contracts.xml#ticket-transitions"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F14" severity="high" review-severity="high" disposition="accepted" nodes="N-01 N-05 N-45" origin="review">
+      <title>Backup, sequence and restore semantics are not retention-safe</title>
+      <evidence file="nodes/N-01/spec.xml" line="106" commit="fb7135e">seq never reused, while :157 makes seq the rowid</evidence>
+      <evidence file="nodes/N-05/spec.xml" line="95" commit="fb7135e">VACUUM INTO on the writer's turn</evidence>
+      <evidence file="nodes/N-01/spec.xml" line="275" commit="fb7135e">restore has no hold, epoch or reconciliation</evidence>
+      <verdict>Probes P05 and P06 reproduced; a 293.7 MiB snapshot blocked the writer 2.82 s. Worse than stated: page.state retention makes every backup fail verification about seven days after go-live.</verdict>
+      <resolution href="../shared/contracts.xml#epoch-cursor"/>
+      <resolution href="../shared/contracts.xml#restore"/>
+      <reproduced probes="P05 P06" status="executed"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F15" severity="high" review-severity="high" disposition="accepted" nodes="N-01 N-06 N-31" origin="review">
+      <title>The failure reporter depends on the store it reports as unavailable</title>
+      <evidence file="nodes/N-01/spec.xml" line="185" commit="fb7135e">store down is reported through one card, which is a store put</evidence>
+      <evidence file="nodes/N-06/spec.xml" line="156" commit="fb7135e">nothing outside the host detects an outage</evidence>
+      <verdict>Fix: an independent probe on one Pi with its own ntfy topic. The owner has not confirmed a free Pi; the proof is not-run.</verdict>
+      <resolution href="../shared/outside-probe.xml#probe"/>
+      <resolution href="../shared/outside-probe.xml#alerting"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F16" severity="high" review-severity="high" disposition="accepted-partial" nodes="N-09 N-20 N-22 N-23 N-25 N-52" origin="review">
+      <title>External effects need explicit unknown-outcome reconciliation</title>
+      <evidence file="nodes/N-23/spec.xml" line="108" commit="fb7135e">already looks for an existing build, but by SHA only and not in the queue</evidence>
+      <evidence file="nodes/N-20/spec.xml" line="89" commit="fb7135e">records the job then posts, with no lost-reply recovery</evidence>
+      <evidence file="shared/failure-cases.xml" line="95" commit="fb7135e">omits Jenkins builds and status posts</evidence>
+      <verdict>Overstated for N-23, which has a lookup; the lookup is broken. Fix: an outbox written in the deciding transaction, Jenkins lookup by COQ_OP_ID, merge.lock 300 s.</verdict>
+      <resolution href="../shared/contracts.xml#outbox"/>
+      <resolution href="contracts.schema.json#/$defs/effect_row"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F17" severity="high" review-severity="high" disposition="accepted-partial" nodes="N-31 N-32" origin="review">
+      <title>SSE snapshot and replay need a precise cursor contract</title>
+      <evidence file="nodes/N-31/spec.xml" line="86" commit="fb7135e">replay by numeric gap with no retention floor</evidence>
+      <evidence file="nodes/N-31/spec.xml" line="151" commit="fb7135e">snapshot without one read transaction</evidence>
+      <verdict>Coalescing already exists (N-31:87, :91, :92, :121). Missing: per-kind coalesce key, epoch, one drop rule, heartbeat frames without an SSE id.</verdict>
+      <resolution href="../shared/contracts.xml#epoch-cursor"/>
+      <resolution href="../nodes/N-31/spec.xml#N-31"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F18" severity="high" review-severity="high" disposition="accepted" nodes="N-20 N-21 N-23 N-24" origin="review">
+      <title>The CI concurrency claim exceeds its own namespace quota</title>
+      <evidence file="nodes/N-21/spec.xml" line="80" commit="fb7135e">quota 4500m cpu and 3Gi requests</evidence>
+      <evidence file="nodes/N-24/spec.xml" line="80" commit="fb7135e">suite pod 1100m with the jnlp sidecar; 8 pods need 8800m</evidence>
+      <verdict>Probe P07 reproduced; understated: memory is over too and the canary cannot fit. See F58.</verdict>
+      <resolution href="../shared/ci-capacity.xml#model"/>
+      <resolution href="../shared/ci-capacity.xml#quota"/>
+      <reproduced probes="P07" status="executed"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F19" severity="high" review-severity="high" disposition="accepted" nodes="N-17 N-18 N-23 N-24 N-25" origin="review">
+      <title>Acceptance admission cannot bootstrap many new features as written</title>
+      <evidence file="nodes/N-18/spec.xml" line="131" commit="fb7135e">refuses a missing script or make target</evidence>
+      <evidence file="nodes/N-18/spec.xml" line="119" commit="fb7135e">refuses a brand new directory</evidence>
+      <evidence file="nodes/N-18/spec.xml" line="129" commit="fb7135e">claims the same exit as the gate on a different architecture</evidence>
+      <verdict>Fix: test identity and expected failure in the acceptance, new paths admitted, an expected-red manifest the gate honours.</verdict>
+      <resolution href="../nodes/N-18/spec.xml#N-18"/>
+      <resolution href="../nodes/N-17/spec.xml#N-17"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F20" severity="high" review-severity="high" disposition="accepted" nodes="N-28 N-30 N-41 N-51" origin="review">
+      <title>Owner status can claim resolution or response without either</title>
+      <evidence file="nodes/N-41/spec.xml" line="129" commit="fb7135e">any later 2xx clears the alert</evidence>
+      <evidence file="nodes/N-30/spec.xml" line="96" commit="fb7135e">SLA expiry writes a canned reply and answered</evidence>
+      <evidence file="nodes/N-51/spec.xml" line="79" commit="fb7135e">A6 zero returns 204 before forbidden-op rows</evidence>
+      <verdict>All four sub-claims confirmed.</verdict>
+      <resolution href="../nodes/N-41/spec.xml#N-41"/>
+      <resolution href="../nodes/N-30/spec.xml#N-30"/>
+      <resolution href="../nodes/N-51/spec.xml#N-51"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F21" severity="medium" review-severity="medium" disposition="accepted-partial" nodes="N-13 N-15" origin="review">
+      <title>Launcher flags need a pinned executable compatibility proof</title>
+      <evidence file="nodes/N-15/spec.xml" line="154" commit="fb7135e">--json-schema given a path; the CLI takes inline JSON</evidence>
+      <evidence file="nodes/N-15/spec.xml" line="155" commit="fb7135e">--setting-sources local is not --bare: CLAUDE.md still loads</evidence>
+      <verdict>Partial: --permission-prompts exists; --max-turns is absent from --help and only a real run proves it. Fix: harness pin with sha256, one argv list, golden envelopes marked not-run.</verdict>
+      <resolution href="../shared/seat-contract.xml#launch-flags"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F22" severity="high" review-severity="medium" disposition="accepted" nodes="N-52" origin="review">
+      <title>iPhone push requires a documented background-delivery path</title>
+      <evidence file="nodes/N-52/spec.xml" line="90" commit="fb7135e">provider tag with no delivery path</evidence>
+      <evidence file="nodes/N-52/spec.xml" line="123" commit="fb7135e">receipt means delivered to the provider</evidence>
+      <verdict>Owner requirement: instant. Fix: ntfy upstream-base-url https://ntfy.sh so iOS gets an instant poll request; bodies stay on the host. Locked-phone proof not-run.</verdict>
+      <resolution href="../nodes/N-52/spec.xml#push-delivery"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F23" severity="medium" review-severity="medium" disposition="accepted" nodes="N-29 N-32 N-34 N-38 N-42" origin="review">
+      <title>Owner web authentication needs an explicit browser threat contract</title>
+      <evidence file="nodes/N-32/spec.xml" line="116-117" commit="fb7135e">only /control and /alert-ack are owner-only</evidence>
+      <evidence file="nodes/N-34/spec.xml" line="147" commit="fb7135e">plain HTTP, so no Secure cookie</evidence>
+      <verdict>Fix: SameSite=Strict, Origin plus CSRF token, per-tier cookie, owner role on every mutating route, CSP, no key in history or argv.</verdict>
+      <resolution href="../nodes/N-32/spec.xml#web-security"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F24" severity="medium" review-severity="medium" disposition="accepted-partial" nodes="N-14 N-22 N-45 N-47" origin="review">
+      <title>Cleanup and image retention need reference and filesystem safety</title>
+      <evidence file="nodes/N-45/spec.xml" line="86" commit="fb7135e">apply re-expands and deletes with no recheck, symlink rule or inode bind</evidence>
+      <evidence file="nodes/N-22/spec.xml" line="150" commit="fb7135e">already protects digests named by recent 201 records</evidence>
+      <evidence file="nodes/N-47/spec.xml" line="73" commit="fb7135e">compares size only</evidence>
+      <verdict>Overstated for N-22 (it has a reachability rule; the gap is live references). Fix: drain lease, inode bind, recheck at apply; a keep-set union; hash-verified Drive copies.</verdict>
+      <resolution href="../nodes/N-45/spec.xml#N-45"/>
+      <resolution href="../nodes/N-22/spec.xml#N-22"/>
+      <resolution href="../nodes/N-47/spec.xml#N-47"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F25" severity="medium" review-severity="medium" disposition="accepted" nodes="N-22 N-36" origin="review">
+      <title>Tooling and art inputs need reproducible provenance</title>
+      <evidence file="nodes/N-22/spec.xml" line="80" commit="fb7135e">Kaniko with no distribution, version or digest</evidence>
+      <evidence file="nodes/N-36/spec.xml" line="148" commit="fb7135e">inventory is a CI artifact in the pod with no way to get there</evidence>
+      <evidence file="nodes/N-36/spec.xml" line="86" commit="fb7135e">the 260 figure (the review cites :98)</evidence>
+      <verdict>Upstream Kaniko was archived 2025-06-03. Pin ghcr.io/osscontainertools/kaniko v1.28.5 by digest (checked 2026-10-15), BuildKit fallback.</verdict>
+      <resolution href="../shared/ci-capacity.xml#builder-pin"/>
+      <resolution href="../nodes/N-36/spec.xml#N-36"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F26" severity="high" review-severity="medium" disposition="accepted" nodes="N-11 N-24 N-25 N-46" origin="review">
+      <title>The book checks structure but not system coherence or total cost</title>
+      <evidence file="nodes/N-24/spec.xml" line="83" commit="fb7135e">a 5-rung pod ladder inside 3 plan attempts inside 3 gate dispatches</evidence>
+      <evidence file="nodes/N-08/spec.xml" line="130" commit="fb7135e">gate missing after 3600 s while one N-25 attempt may run 3 h</evidence>
+      <evidence file="nodes/N-11/spec.xml" line="59" commit="fb7135e">claims to be the one owner of retry</evidence>
+      <verdict>Up to 135 pods per unit per ticket and no global spend cap. Fix: a retry budget with one retrying layer per failure, per-ticket and daily caps, nested deadlines; semantic checks C23 to C31.</verdict>
+      <resolution href="../shared/retry-budget.xml#layers"/>
+      <resolution href="../shared/retry-budget.xml#budgets"/>
+      <resolution href="../shared/retry-budget.xml#deadlines"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+  </review-findings>
+
+  <new-findings id="new-findings">
+    <finding id="F27" severity="blocker" review-severity="blocker" disposition="new" nodes="N-28 N-29 N-30 N-44 N-49" origin="verification">
+      <title>Owner-only words can become rulings without the owner saying them</title>
+      <evidence file="shared/seat-contract.xml" line="153" commit="fb7135e">an agent session relays owner answers</evidence>
+      <evidence file="nodes/N-29/spec.xml" line="94" commit="fb7135e">GOFACTORY card maps to an effect with no source limit</evidence>
+      <evidence file="nodes/N-30/spec.xml" line="105-107" commit="fb7135e">owner words matched by text contains</evidence>
+      <evidence file="shared/seat-contract.xml" line="163" commit="fb7135e">every card has a default and a deadline</evidence>
+      <resolution href="../shared/authority.xml#owner-words"/>
+      <resolution href="../shared/authority.xml#relayable-rulings"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F28" severity="high" review-severity="high" disposition="new" nodes="N-02 N-07 N-12" origin="verification">
+      <title>A swept or revoked lease is renewed, released or dispatched again</title>
+      <evidence file="nodes/N-02/spec.xml" line="122-124" commit="fb7135e">Renew and Release match key and token only after Sweep</evidence>
+      <evidence file="nodes/N-07/spec.xml" line="119" commit="fb7135e">every empty-holder lease is selected, including revoked ones</evidence>
+      <resolution href="../shared/contracts.xml#lease-machine"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F29" severity="high" review-severity="high" disposition="new" nodes="N-01 N-02" origin="verification">
+      <title>Fencing by ticket and attempt collides and system leases cannot be represented</title>
+      <evidence file="shared/state-store.xml" line="125" commit="fb7135e">fencing keyed (ticket, attempt)</evidence>
+      <evidence file="nodes/N-02/record.schema.json" line="14" commit="fb7135e">lease key pattern refuses node:N-07:leader and merge.lock</evidence>
+      <resolution href="../shared/contracts.xml#fencing"/>
+      <resolution href="contracts.schema.json#/$defs/system_lease_key"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F30" severity="high" review-severity="high" disposition="new" nodes="N-02 N-07 N-11 N-12" origin="verification">
+      <title>An undispatched lease expires into a charged stall</title>
+      <evidence file="nodes/N-02/spec.xml" line="93" commit="fb7135e">900 s ttl renewed only by a running launcher</evidence>
+      <evidence file="nodes/N-11/spec.xml" line="116" commit="fb7135e">files-claimed cannot die of it, yet the lease expires</evidence>
+      <resolution href="../shared/contracts.xml#lease-machine"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F31" severity="high" review-severity="high" disposition="new" nodes="N-02 N-11 N-12 N-15" origin="verification">
+      <title>The launcher's terminal report after a kill is refused</title>
+      <evidence file="nodes/N-12/spec.xml" line="117-118" commit="fb7135e">revoke then kill</evidence>
+      <evidence file="nodes/N-02/spec.xml" line="157" commit="fb7135e">old token refused, reason not in the enum</evidence>
+      <resolution href="../shared/contracts.xml#terminal-report"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F32" severity="high" review-severity="high" disposition="new" nodes="N-03 N-14" origin="verification">
+      <title>File claims cannot detect overlap and are never released</title>
+      <evidence file="nodes/N-14/spec.xml" line="108" commit="fb7135e">unique literal prefix index</evidence>
+      <evidence file="nodes/N-14/spec.xml" line="164" commit="fb7135e">its own case herdr/bin/* against herdr/bin/seat.sh passes</evidence>
+      <resolution href="../shared/contracts.xml#claims"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F33" severity="high" review-severity="high" disposition="new" nodes="N-03 N-11 N-14" origin="verification">
+      <title>A retried ticket blocks on its own claims and claim_overlap strands the attempt</title>
+      <evidence file="nodes/N-03/spec.xml" line="129-130" commit="fb7135e">own claims not excluded; reinsert collides</evidence>
+      <evidence file="shared/failure-cases.xml" line="78" commit="fb7135e">no attempt counted, but the dispatch key is spent</evidence>
+      <resolution href="../shared/contracts.xml#claims"/>
+      <resolution href="../shared/contracts.xml#retry-owner"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F34" severity="high" review-severity="high" disposition="new" nodes="N-11 N-13 N-14 N-15" origin="verification">
+      <title>N-11 rejects most failures routed to it</title>
+      <evidence file="nodes/N-11/record.schema.json" line="20" commit="fb7135e">failure kinds of N-13 and N-14 not in the enum</evidence>
+      <evidence file="nodes/N-11/spec.xml" line="68" commit="fb7135e">input list omits them</evidence>
+      <resolution href="../shared/contracts.xml#retry-owner"/>
+      <resolution href="contracts.schema.json#/$defs/failure_body"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F35" severity="high" review-severity="high" disposition="new" nodes="N-03 N-07 N-11 N-12 N-13 N-14 N-18" origin="verification">
+      <title>The cut request path cannot be represented end to end</title>
+      <evidence file="nodes/N-07/record.schema.json" line="80" commit="fb7135e">brief_path is work-order only</evidence>
+      <evidence file="nodes/N-03/spec.xml" line="90" commit="fb7135e">CR closes via source_request, which no schema defines</evidence>
+      <resolution href="contracts.schema.json#/$defs/target_cr"/>
+      <resolution href="../shared/contracts.xml#dispatch"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F36" severity="medium" review-severity="medium" disposition="new" nodes="N-02 N-03 N-13 N-14 N-15" origin="verification">
+      <title>The gate phase cannot be represented</title>
+      <evidence file="nodes/N-02/spec.xml" line="77" commit="fb7135e">gate leases from ticket.ready, which excludes gate</evidence>
+      <resolution href="../shared/contracts.xml#roles"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F37" severity="high" review-severity="high" disposition="new" nodes="N-03 N-18" origin="verification">
+      <title>The ticket record overloads node and N-03 rejects N-18's ticket</title>
+      <evidence file="nodes/N-18/record.schema.json" line="1" commit="fb7135e">draft_ticket.node is the target node inside an envelope whose node is N-18</evidence>
+      <evidence file="nodes/N-03/record.schema.json" line="1" commit="fb7135e">additionalProperties false rejects 15 fields</evidence>
+      <resolution href="../nodes/N-18/spec.xml#N-18"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F38" severity="medium" review-severity="medium" disposition="new" nodes="N-01 N-07 N-12 N-27" origin="verification">
+      <title>A stale token is 412 in some volumes and 409 in others</title>
+      <evidence file="nodes/N-01/spec.xml" line="155" commit="fb7135e">412</evidence>
+      <evidence file="nodes/N-07/spec.xml" line="179" commit="fb7135e">409</evidence>
+      <resolution href="../shared/contracts.xml#fencing"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F39" severity="medium" review-severity="medium" disposition="new" nodes="N-02 N-07 N-12 N-15" origin="verification">
+      <title>Timing defaults, caps and config keys contradict or are missing</title>
+      <evidence file="nodes/N-12/spec.xml" line="114" commit="fb7135e">stall 300 s for every role vs N-15:184</evidence>
+      <evidence file="nodes/N-02/spec.xml" line="111" commit="fb7135e">jobs.in_flight 4 vs caps.max_seats 16 at N-07:121</evidence>
+      <evidence file="nodes/N-02/spec.xml" line="63" commit="fb7135e">a missing config key exits 3, and keys are missing</evidence>
+      <resolution href="../shared/contracts.xml#timing"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F40" severity="medium" review-severity="medium" disposition="new" nodes="N-07 N-11 N-12" origin="verification">
+      <title>Append-only records are mutated</title>
+      <evidence file="shared/state-store.xml" line="53" commit="fb7135e">records are never updated</evidence>
+      <evidence file="nodes/N-07/spec.xml" line="178" commit="fb7135e">claimed_by set by CAS on the dispatch</evidence>
+      <resolution href="../shared/contracts.xml#entity-only"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F41" severity="medium" review-severity="medium" disposition="new" nodes="N-13 N-15 N-16 N-51" origin="verification">
+      <title>seat.result is defined three ways and seats are told to push</title>
+      <evidence file="shared/seat-contract.xml" line="129" commit="fb7135e">seats push and open PRs</evidence>
+      <evidence file="nodes/N-13/spec.xml" line="184" commit="fb7135e">seats are denied git push and gh</evidence>
+      <evidence file="shared/seat-contract.xml" line="75" commit="fb7135e">fields absent from the N-15 schema</evidence>
+      <resolution href="../shared/seat-contract.xml#seat-contract"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F42" severity="medium" review-severity="medium" disposition="new" nodes="N-07 N-12" origin="verification">
+      <title>Halt semantics disagree and N-07 uses the desired set before computing it</title>
+      <evidence file="shared/seat-contract.xml" line="160" commit="fb7135e">running seats finish under halt</evidence>
+      <evidence file="nodes/N-12/spec.xml" line="199" commit="fb7135e">USERHALT interrupts</evidence>
+      <evidence file="nodes/N-07/spec.xml" line="118" commit="fb7135e">held_by_hold uses desired before steps 3 and 4</evidence>
+      <resolution href="../shared/authority.xml#owner-words"/>
+      <resolution href="../nodes/N-07/spec.xml#N-07"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F43" severity="low" review-severity="low" disposition="new" nodes="N-02 N-06 N-29" origin="verification">
+      <title>Exit code 3 is overloaded and a duplicate instance can run</title>
+      <evidence file="shared/failure-cases.xml" line="148" commit="fb7135e">relies on RestartPreventExitStatus=3, which N-06 lacks</evidence>
+      <evidence file="nodes/N-29/spec.xml" line="132" commit="fb7135e">two service instances may run</evidence>
+      <resolution href="../nodes/N-06/spec.xml#N-06"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F44" severity="medium" review-severity="medium" disposition="new" nodes="N-06 N-27 N-31 N-32" origin="verification">
+      <title>Entity-only ticks and heartbeats are impossible, so the record log floods</title>
+      <evidence file="shared/state-store.xml" line="69" commit="fb7135e">every entity write is a record</evidence>
+      <evidence file="nodes/N-32/spec.xml" line="86" commit="fb7135e">page.state every second</evidence>
+      <resolution href="../shared/contracts.xml#entity-only"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F45" severity="medium" review-severity="medium" disposition="new" nodes="N-29 N-42 N-44" origin="verification">
+      <title>No single writer for flag:hold</title>
+      <evidence file="shared/state-store.xml" line="232" commit="fb7135e">N-29 writes it; N-44:62 says N-42; N-06:230 says both</evidence>
+      <resolution href="../nodes/N-44/spec.xml#N-44"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F46" severity="high" review-severity="high" disposition="new" nodes="N-05 N-45" origin="verification">
+      <title>Backup vocabulary disagrees and N-45 cannot accept the N-05 backup record</title>
+      <evidence file="nodes/N-05/spec.xml" line="61" commit="fb7135e">classes tick/daily/monthly/manual vs state-store.xml:252 daily/weekly/monthly</evidence>
+      <evidence file="nodes/N-45/record.schema.json" line="1" commit="fb7135e">expects body.snapshot and an r- id</evidence>
+      <resolution href="../shared/contracts.xml#restore"/>
+      <resolution href="../nodes/N-05/spec.xml#N-05"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F47" severity="low" review-severity="low" disposition="new" nodes="N-15" origin="verification">
+      <title>Two launchers cannot be told apart by generation</title>
+      <evidence file="shared/seat-contract.xml" line="177" commit="fb7135e">detected by generation; both hold the same one</evidence>
+      <resolution href="../shared/contracts.xml#run-states"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F48" severity="medium" review-severity="medium" disposition="new" nodes="N-20 N-21 N-22 N-23 N-24 N-25 N-26 N-43 N-44" origin="verification">
+      <title>The rejected r- id form is still required by eleven schemas</title>
+      <evidence file="shared/rejected-with-reason.xml" line="76" commit="fb7135e">r- form rejected</evidence>
+      <evidence file="nodes/N-26/spec.xml" line="81" commit="fb7135e">r- id required</evidence>
+      <resolution href="../shared/state-store.schema.json#/$defs/id"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F49" severity="high" review-severity="high" disposition="new" nodes="N-29 N-44" origin="verification">
+      <title>N-44 cannot consume an N-29 ruling and owner.answer ids fail the envelope</title>
+      <evidence file="nodes/N-44/record.schema.json" line="18-29" commit="fb7135e">expects body flag, state, scope</evidence>
+      <evidence file="nodes/N-29/record.schema.json" line="10" commit="fb7135e">a- id pattern fails the shared id</evidence>
+      <resolution href="../nodes/N-29/spec.xml#N-29"/>
+      <resolution href="../nodes/N-44/spec.xml#N-44"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F50" severity="high" review-severity="high" disposition="new" nodes="N-29 N-30 N-42" origin="verification">
+      <title>Neither halt path produces a ruling</title>
+      <evidence file="nodes/N-29/spec.xml" line="91" commit="fb7135e">source=controls only from the page service</evidence>
+      <evidence file="nodes/N-42/spec.xml" line="143" commit="fb7135e">a UUID action id where a card id is required</evidence>
+      <resolution href="../nodes/N-42/spec.xml#N-42"/>
+      <resolution href="../nodes/N-29/spec.xml#N-29"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F51" severity="high" review-severity="high" disposition="new" nodes="N-04 N-09" origin="verification">
+      <title>The owner-confirm hold depends on a file list nobody supplies</title>
+      <evidence file="nodes/N-09/spec.xml" line="109" commit="fb7135e">holds owner-locked paths only when the PR's paths touch them</evidence>
+      <resolution href="../nodes/N-09/spec.xml#N-09"/>
+      <resolution href="../nodes/N-04/spec.xml#N-04"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F52" severity="high" review-severity="high" disposition="new" nodes="N-09 N-44" origin="verification">
+      <title>Bootstrap cannot reach USERGO because nothing can merge under hold</title>
+      <evidence file="nodes/N-09/spec.xml" line="107" commit="fb7135e">every PR held while hold is set</evidence>
+      <evidence file="shared/cut-over.xml" line="101" commit="fb7135e">step 7 needs a merge with hold set</evidence>
+      <resolution href="../shared/cut-over.xml#bootstrap-merge"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F53" severity="high" review-severity="high" disposition="new" nodes="N-08" origin="verification">
+      <title>A green re-run on the same head is never recorded</title>
+      <evidence file="nodes/N-08/spec.xml" line="75" commit="fb7135e">verdict key pr:head:verdict replays the first verdict</evidence>
+      <evidence file="nodes/N-08/spec.xml" line="145" commit="fb7135e">its own example shows it</evidence>
+      <resolution href="../shared/contracts.xml#operation-keys"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F54" severity="medium" review-severity="medium" disposition="new" nodes="N-04 N-08" origin="verification">
+      <title>The forge snapshot lacks pushed_at and the head owner, and can never be stale</title>
+      <evidence file="nodes/N-08/spec.xml" line="68" commit="fb7135e">fork guard reads the head owner</evidence>
+      <evidence file="nodes/N-04/record.schema.json" line="105" commit="fb7135e">stale const false combined with a stale boolean</evidence>
+      <resolution href="../nodes/N-04/spec.xml#N-04"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F55" severity="high" review-severity="high" disposition="new" nodes="N-09 N-10 N-26 N-47" origin="verification">
+      <title>Main-verify records do not fit their consumers</title>
+      <evidence file="nodes/N-26/record.schema.json" line="1" commit="fb7135e">requires parent_main absent from the merge record</evidence>
+      <evidence file="DESIGN.md" line="1060" commit="fb7135e">the merge example fails N-26 and N-47</evidence>
+      <resolution href="../nodes/N-26/spec.xml#N-26"/>
+      <resolution href="../nodes/N-10/spec.xml#N-10"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F56" severity="medium" review-severity="medium" disposition="new" nodes="N-04 N-20 N-23 N-35" origin="verification">
+      <title>Several records have no producer</title>
+      <evidence file="nodes/N-20/spec.xml" line="54" commit="fb7135e">N-04 writes jenkins.config, but polls one repo</evidence>
+      <evidence file="nodes/N-23/spec.xml" line="81" commit="fb7135e">N-04 owns a fetch it does not do</evidence>
+      <resolution href="../nodes/N-20/spec.xml#N-20"/>
+      <resolution href="../nodes/N-23/spec.xml#N-23"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F57" severity="low" review-severity="low" disposition="new" nodes="N-08 N-25" origin="verification">
+      <title>status.post.failed has the wrong shape and a gate.run fallback is described that does not exist</title>
+      <evidence file="nodes/N-25/spec.xml" line="83" commit="fb7135e">gate.run fallback in N-08</evidence>
+      <resolution href="../nodes/N-25/spec.xml#N-25"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F58" severity="high" review-severity="high" disposition="new" nodes="N-20 N-21 N-24" origin="verification">
+      <title>CI pods breach memory quota and Pod Security, and a quota refusal is not a Pending pod</title>
+      <evidence file="nodes/N-21/spec.xml" line="80" commit="fb7135e">4 case pods at 1Gi plus jnlp = 5Gi against 3Gi</evidence>
+      <evidence file="nodes/N-21/spec.xml" line="126" commit="fb7135e">over-quota pod said to wait Pending; Kubernetes refuses it with 403</evidence>
+      <evidence file="nodes/N-20/spec.xml" line="88" commit="fb7135e">no pod template, so the injected jnlp lacks the restricted fields and floats its tag</evidence>
+      <resolution href="../shared/ci-capacity.xml#pod-template"/>
+      <resolution href="../shared/ci-capacity.xml#admission"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F59" severity="high" review-severity="high" disposition="new" nodes="N-23 N-24 N-36" origin="verification">
+      <title>Artifact import reads a field no schema defines</title>
+      <evidence file="nodes/N-23/spec.xml" line="72" commit="fb7135e">reads records from each plan entry</evidence>
+      <evidence file="nodes/N-36/spec.xml" line="60" commit="fb7135e">an N-23 to N-36 edge drawn nowhere</evidence>
+      <resolution href="../nodes/N-23/spec.xml#N-23"/>
+      <resolution href="../nodes/N-24/spec.xml#N-24"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F60" severity="medium" review-severity="medium" disposition="new" nodes="N-24 N-46" origin="verification">
+      <title>N-46 contradicts N-24 on exit codes, rungs, deadline and log path</title>
+      <evidence file="nodes/N-46/spec.xml" line="86" commit="fb7135e">exit 2 retried</evidence>
+      <evidence file="nodes/N-24/spec.xml" line="83" commit="fb7135e">an exit code is a result</evidence>
+      <resolution href="../nodes/N-46/spec.xml#N-46"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F61" severity="high" review-severity="high" disposition="new" nodes="N-45" origin="verification">
+      <title>The cleanup registry schedules break-glass and uninstall commands as timer jobs</title>
+      <evidence file="bin/registry.py" line="101" commit="fb7135e">unmarked paths default to timer and system</evidence>
+      <evidence file="shared/cleanup-registry.json" line="78" commit="fb7135e">removes main's branch protection on a timer</evidence>
+      <resolution href="../nodes/N-45/spec.xml#N-45"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F62" severity="medium" review-severity="medium" disposition="new" nodes="N-08 N-10 N-25 N-26" origin="verification">
+      <title>Outer deadlines are shorter than inner ones</title>
+      <evidence file="nodes/N-08/spec.xml" line="130" commit="fb7135e">3600 s against a 3 h attempt</evidence>
+      <evidence file="nodes/N-10/spec.xml" line="138" commit="fb7135e">verify bound below the N-26 plan bound</evidence>
+      <resolution href="../shared/retry-budget.xml#deadlines"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F63" severity="medium" review-severity="medium" disposition="new" nodes="N-46" origin="verification">
+      <title>Several checks pass silently on the defects they exist to catch</title>
+      <evidence file="bin/check-book.py" line="550" commit="fb7135e">C20 scans N-37 to N-42 only</evidence>
+      <evidence file="bin/test-checks.py" line="112-116" commit="fb7135e">baseline exit code ignored</evidence>
+      <evidence file="bin/dag-check.py" line="1" commit="fb7135e">never compares the DAG with declared edges; 35 missing</evidence>
+      <resolution href="../index.xml#tooling"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F64" severity="low" review-severity="low" disposition="new" nodes="N-38" origin="verification">
+      <title>The hold lamp is named three ways</title>
+      <evidence file="nodes/N-38/spec.xml" line="98" commit="fb7135e">HOLD or USERGO lamp</evidence>
+      <evidence file="DESIGN.md" line="438" commit="fb7135e">HOLD or GOFACTORY</evidence>
+      <resolution href="../shared/command-center.xml#command-center"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F65" severity="medium" review-severity="medium" disposition="new" nodes="N-20 N-21 N-25 N-34 N-35 N-48" origin="verification">
+      <title>The book carries personal data against AGENTS.md</title>
+      <evidence file="shared/state-store.xml" line="391" commit="fb7135e">a real home path</evidence>
+      <evidence file="nodes/N-34/spec.xml" line="147" commit="fb7135e">a tailnet host name and address</evidence>
+      <evidence file="DESIGN.md" line="105" commit="fb7135e">a public VPS address</evidence>
+      <resolution href="../shared/state-store.xml#state-store"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F66" severity="medium" review-severity="medium" disposition="new" nodes="N-52" origin="verification">
+      <title>Quiet hours drop pushes and push.skipped reasons are outside the schema</title>
+      <evidence file="nodes/N-52/spec.xml" line="81" commit="fb7135e">seen and quiet not in the enum</evidence>
+      <evidence file="nodes/N-52/spec.xml" line="103" commit="fb7135e">quiet-hours pushes dropped for good</evidence>
+      <resolution href="../nodes/N-52/spec.xml#push-delivery"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F67" severity="medium" review-severity="medium" disposition="new" nodes="N-27" origin="verification">
+      <title>The watcher's delivered high-water skips failed records</title>
+      <evidence file="nodes/N-27/spec.xml" line="91" commit="fb7135e">high-water advances past a failure picked up next pass (:121)</evidence>
+      <resolution href="../nodes/N-27/spec.xml#N-27"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+    <finding id="F68" severity="low" review-severity="low" disposition="new" nodes="N-13" origin="verification">
+      <title>Spec-author bundles are refused for having no files</title>
+      <evidence file="nodes/N-13/spec.xml" line="170" commit="fb7135e">refuses a bundle with no files; spec-author has none (N-03:90)</evidence>
+      <resolution href="../nodes/N-13/spec.xml#N-13"/>
+      <proof status="not-run">runtime proof lands with the build ticket cut from the resolution anchor</proof>
+    </finding>
+  </new-findings>
+
+  <owner-decisions id="owner-decisions">
+    <decision id="D1">Confirm one Raspberry Pi of the cluster is free for the outside probe (F15); until then the probe is designed and its proof is not-run.</decision>
+    <decision id="D2">Create the coq-gate GitHub App and record its app_id (F08); the required check names it.</decision>
+    <decision id="D3">Turn WSL interop off and mount Windows drives with umask 077 on the host (F01); both change how the owner uses the host.</decision>
+    <decision id="D4">Bootstrap merge path (F52): the default is that N-09 merges under hold only PRs of the current bootstrap step with a green gate and review.passed; the alternative is an owner break-glass merge for each.</decision>
+    <decision id="D5">Accept the Kaniko pin to the osscontainertools fork v1.28.5 by digest, with BuildKit rootless as the fallback (F25).</decision>
+    <decision id="D6">GOFACTORY and USERGO remain the owner's words; nothing in this volume grants or implies either.</decision>
+    <decision id="D7">Seat credential under --bare (authority.xml#credential-matrix row anthropic-seat): with --bare the harness reads only ANTHROPIC_API_KEY or apiKeyHelper, so host seats run on an Anthropic API key and the subscription login of D03 cannot be used by them; whether seats are billed by API key is the owner's call, and until it is made the launcher starts no host seat and the B7 ready card names the decision as missing.</decision>
+    <s>Residual risk the owner accepts by running the line, not a decision: the owner uid is the trust root, so an agent session the owner runs under their own uid can reach the owner CLI; the ancestry refusal and the N-51 audit mitigate it, and only running such sessions under another uid removes it (authority.xml#deferred, item owner-uid-trust-root).</s>
+  </owner-decisions>
+
+  <many-agents id="many-agents">
+    <s>One finding id names one defect; a later reviewer appends new ids after the highest and never renumbers, so two authors adding findings at once collide only on the next id, which C09 and C29 refuse.</s>
+  </many-agents>
+
+  <sources id="sources">
+    <external href="https://docs.ntfy.sh/config/#ios-instant-notifications" checked="2026-10-15"/>
+    <external href="https://docs.github.com/en/rest/branches/branch-protection" checked="2026-10-15"/>
+    <external href="https://github.com/github/rest-api-description" checked="2026-10-15"/>
+    <external href="https://docs.cloudbees.com/d/kb-360028147532" checked="2026-10-15"/>
+    <external href="https://github.com/GoogleContainerTools/kaniko" checked="2026-10-15"/>
+    <external href="https://github.com/osscontainertools/kaniko/releases" checked="2026-10-15"/>
+    <external href="https://github.com/chainguard-dev/kaniko" checked="2026-10-15"/>
+  </sources>
+</volume>

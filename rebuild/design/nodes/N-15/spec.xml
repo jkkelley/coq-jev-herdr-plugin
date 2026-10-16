@@ -1,0 +1,323 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-15 One-shot seat launcher. Volume of the Factory Rebuild spec book (R-03), group G3 Seats.
+  Written 2026-10-14T05:40:00Z by the G3 spec-author seat against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  Rulings: D02 (C36) one-shot runs, D03 (C37) subscription on the host and key in pods, D17 (C49) stall timer,
+  D11 (C39) code does mechanical jobs, D22 (C38) seats on the WSL host, D08 (C46) herdr is the owner's window.
+  No em dash appears in this file. Every time is UTC.
+-->
+<!--
+  Round 2, 2026-10-14T05:04:00Z, by the G3 spec-author seat, after the R-03 review seat failed round 1 on pointers and no cog.
+  What broke: this volume pointed at ../N-xx/spec.xml#N-xx-spec while every volume in the book declares
+  root id="N-xx" and links with #N-xx, and it pointed at ../../shared/*.xml anchors that no author has
+  written (shared/ belongs to the shared author, not this seat).
+  Why it mattered: a dangling pointer fails check.sh, and the architect reads nothing until the book passes.
+  The fix: root id is now the node id; every sibling, upstream, downstream and edge anchor is #N-xx; the
+  shared anchors are declared in <shared-needs> with no href so the shared author can write them and
+  check.sh can match them when shared/ lands; the principles this node obeys point at dag.md sections 7
+  and 8, which exist. The parent stays ../../index.xml#N-15 because the brief names the index volume as
+  every node's parent and the anchor is the node id, the one anchor every node is guaranteed.
+  Rejected: writing shared/ or index.xml from this seat (two authors on one file is the one-file,
+  one-in-flight-ticket collision the book forbids); leaving the hrefs to resolve later (a failing volume
+  blocks the book now).
+  Cost: a declared need is not a live pointer until shared/ lands.
+-->
+<!--
+  Round 3, 2026-10-14T05:30:00Z, by the G3 spec-author seat, after the R-03 review seat failed round 2 on no cog.
+  What broke: section retries (the launcher-restart recovery) adopted a surviving process and said "poll every
+  5 s until it exits" with no timeout and no fallback; the deadline, stall, lease-lost and kill-record checks
+  lived only in the heartbeat loop of mechanism step 4, and the adopt path did not say it re-entered that loop
+  or emitted heartbeats. The checklist proof "adopted to its exit" confirmed the wait was open-ended.
+  Why it mattered: a stalled adopted process was unbounded, and N-12 could not see it because no heartbeat
+  reached the store; a service restart could leave a seat running for ever, which is the cog the book forbids.
+  The fix: the beat loop is one function, beat(run), fed from started.json alone (pid, pgid, process start time,
+  deadline_at, stall_seconds, lease token and generation, session_id, transcript_path); a fresh start and an
+  adopt both enter it, so an adopted process emits heartbeats, renews the lease and is killed on the same four
+  conditions with the same SIGTERM, 30 s, SIGKILL path; the deadline is absolute from started.json, so a second
+  restart never extends it. Exit of a non-child is detected by /proc each beat, within one heartbeat_seconds.
+  Rejected: a separate adopt loop with its own timer (two loops drift and one is always the one nobody tested);
+  killing every survivor on restart and recording crashed (throws away a run that may be seconds from done and
+  burns an attempt of 3 for a restart the seat did nothing to cause).
+  Cost: an adopted run reports exit_code null because a non-child cannot be waited on; the envelope carries the
+  outcome, and a kill of an adopted run records no_result when the envelope was never written.
+-->
+<!--
+  Book 1.1.0, 2026-10-15T06:00:00Z: the round 3 beat loop above is superseded. The launcher runs as coq-launch with one
+  transient unit per run started through coq-seat-exec (CANON F11); the run entity replaces started.json; N-12 alone
+  decides a kill and RuntimeMaxSec is the one deadline (shared/contracts.xml#kill-authority, #run-states).
+-->
+<volume id="N-15" node="N-15" kind="node-spec" group="G3" version="1.3.0" issued="2026-10-15T06:00:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
+    <entry ref="shared-needs">Shared anchors this volume cites</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input records: dispatch, seat.bundle and workspace</entry>
+    <entry ref="output">Output: seat.result always, the heartbeats row and the run entity while it runs</entry>
+    <entry ref="mechanism">Mechanism: the launcher, one transient unit per run</entry>
+    <entry ref="command">The launch command</entry>
+    <entry ref="result">Turning the process result into the record</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report (including adoption after a launcher restart)</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="checklist">Checklist with proof</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="examples">Examples</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with the reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-15"/>
+    <dag href="../../dag.md#3-every-node">The DAG row of this node: input record and output record</dag>
+    <principle href="../../dag.md#7-rules-every-node-obeys">Rules 1 to 9: input to output, no cog, three attempts, one store, code does mechanical jobs, the verdict the agent cannot edit, herdr is the owner's window, build mode, ships dark</principle>
+    <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives</principle>
+    <needs href="spec.xml#shared-needs">The shared anchors this volume cites</needs>
+    <sibling href="record.schema.json" kind="schema">JSON schema: seat.result, phase.failed, launcher.defect, the heartbeats row, the run entity, the harness envelope</sibling>
+    <sibling href="../N-13/spec.xml#N-13">Seat layer render, writer of seat.bundle</sibling>
+    <sibling href="../N-14/spec.xml#N-14">Workspace provision, writer of workspace</sibling>
+    <sibling href="../N-16/spec.xml#N-16">Worker close-out</sibling>
+    <sibling href="../N-17/spec.xml#N-17">Spec-author draft put</sibling>
+    <sibling href="../N-19/spec.xml#N-19">Reviewer verdict put</sibling>
+    <upstream href="../N-02/spec.xml#N-02">Leases: Start, Renew, Release</upstream>
+    <downstream href="../N-12/spec.xml#N-12">Stall timer: reads the heartbeats row, writes kill</downstream>
+    <downstream href="../N-11/spec.xml#N-11">Retry: reads a blocked seat.result</downstream>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <text>Every shared anchor below is live in book 1.1.0; this volume cites them and restates none of their numbers.</text>
+    <need volume="../../shared/contracts.xml" anchor="run-states" kind="contract">entity run:RUN_ID, the transient unit per run, result.json.partial then rename then result.ok</need>
+    <need volume="../../shared/contracts.xml" anchor="kill-authority" kind="contract">N-12 decides and writes kill:RUN_ID; this node executes by stopping the unit</need>
+    <need volume="../../shared/contracts.xml" anchor="lease-machine" kind="contract">Start (reserved to running), Renew, Release</need>
+    <need volume="../../shared/contracts.xml" anchor="fencing" kind="contract">every Commit of the run carries the lease; integer token</need>
+    <need volume="../../shared/contracts.xml" anchor="terminal-report" kind="contract">one fenced seat.result per run after the lease ended</need>
+    <need volume="../../shared/contracts.xml" anchor="operation-keys" kind="contract">N-15/run.start, N-15/lease.renew, N-15/seat.result</need>
+    <need volume="../../shared/contracts.xml" anchor="entity-only" kind="contract">the heartbeats row appends no record except adopted or a token change</need>
+    <need volume="../../shared/contracts.xml" anchor="retry-owner" kind="contract">failure_kind per terminal reason; harness_mismatch charges nothing</need>
+    <need volume="../../shared/contracts.xml" anchor="timing" kind="contract">lease.heartbeat_seconds, start.grace_seconds, kill.grace_seconds, run.deadline_seconds.ROLE</need>
+    <need volume="../../shared/authority.xml" anchor="principals" kind="authority">coq-launch, the pool users, coq-seat-exec start, kill, scrub, key</need>
+    <need volume="../../shared/authority.xml" anchor="seat-isolation" kind="authority">filesystem, network, process, environment, scrub and session layers</need>
+    <need volume="../../shared/authority.xml" anchor="role-derivation" kind="authority">the launcher permit row</need>
+    <need volume="../../shared/seat-contract.xml" anchor="launch-flags" kind="seat-contract">the argv and environment, and the harness pin</need>
+    <need volume="../../shared/seat-contract.xml" anchor="launch-flags-rule" kind="seat-contract">no other source of flags; the pin check before every spawn</need>
+    <need volume="../../shared/seat-contract.xml" anchor="seat-result" kind="seat-contract">what seat.result carries</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-200" kind="status-code">seat.result done</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-412" kind="status-code">seat.result preflight</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-423" kind="status-code">seat.result blocked</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">launcher.defect</need>
+    <need volume="../../shared/principles.xml" anchor="no-cog" kind="principle">every wait has a timeout and a fallback</need>
+  </shared-needs>
+
+  <section id="purpose" title="Purpose">
+    <text>N-15 runs one seat as one bounded transient unit and always ends it in a seat.result record, written by the launcher from the harness's own result, never by the model. A seat exists only between its input (a bundle plus a workspace) and its output (seat.result) (rebuild/investigation/03-DECISIONS.md#4-d02-seat-contract).</text>
+    <text>The launcher runs as coq-launch, outside the service's cgroup; each run is its own unit coq-seat-RUN_ID started through coq-seat-exec as a pool user (CANON F11, ../../shared/authority.xml#principals), so a service restart kills no seat and a restarted launcher adopts every run by its unit name.</text>
+    <text>Limits are fields: turns and spend by the harness flags, wall clock by the unit's RuntimeMaxSec (the single deadline timer), progress by N-12's stall judgment. A dead run, a crashed launcher or a missing result still yields a record.</text>
+  </section>
+
+  <section id="input" title="Input records: dispatch, seat.bundle and workspace">
+    <text>Three records with one run id: the dispatch (../N-07/record.schema.json#/$defs/dispatch), seat.bundle (../N-13/record.schema.json#/$defs/seat.bundle) and workspace (../N-14/record.schema.json#/$defs/workspace). The launcher starts a run when all three exist, the lease is reserved, and no run:RUN_ID entity exists. Role gate never reaches it (a code run, ../../shared/contracts.xml#roles). From the dispatch: lease, deadline_at, session; from the bundle: paths, hashes, model, limits; from the workspace: path, slot and seat_user.</text>
+  </section>
+
+  <section id="output" title="Output: seat.result always, the heartbeats row and the run entity while it runs">
+    <text>run:RUN_ID entity (record.schema.json#/$defs/run_state): spawning, running, exited, result_committed, then closed_out by the phase owner, or failed_spawn (../../shared/contracts.xml#run-states). It is the launcher's only recovery input.</text>
+    <text>The heartbeats row (record.schema.json#/$defs/seat.heartbeat), statement heartbeats.upsert keyed by run_id, in the N-15/lease.renew/RUN_ID@BEAT Commit with Lease.Renew every lease.heartbeat_seconds; entity-only (../../shared/contracts.xml#entity-only): a record only when adopted turns true or the token changes. progress_at is the transcript mtime N-12 compares with stall.seconds.ROLE.</text>
+    <text>seat.result (record.schema.json#/$defs/seat.result), exactly one per run, operation key N-15/seat.result/RUN_ID/r1, the shape of ../../shared/seat-contract.xml#seat-result: lease, outcome, terminal_reason, failure_kind when not done, harness version and sha256, cost, turns, session_id, denied_line_ops {count, commands} for every role, fenced when accepted under ../../shared/contracts.xml#terminal-report, and phase_record_ref null (the phase record id is set later on the run entity, since records are append-only). A blocked result carries ../../shared/contracts.schema.json#/$defs/failure_body so N-11 reads it as it is. Role gate never has a seat.result.</text>
+    <text>launcher.defect 500: a unit that survived stop, a result put that never landed, two launchers that disagree, or result.ok that does not match result.json.</text>
+    <text>phase.failed is defined in this schema as the shared shape the close-out owners (N-16, N-17, N-19) write after their own three tries; the launcher never writes it.</text>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the launcher, one transient unit per run">
+    <text>Package scheduler/internal/launcher, built into the coq-launch binary (its own systemd user unit under coq-launch, not the service). Every step is a compare-and-swap on run:RUN_ID, so every exit path ends in a seat.result or failed_spawn.</text>
+    <mermaid>sequenceDiagram
+  participant S as Store N-01
+  participant L as launcher (coq-launch)
+  participant X as coq-seat-exec (root helper)
+  participant U as unit coq-seat-RUN_ID (pool user)
+  S-->>L: dispatch + seat.bundle + workspace, lease reserved, no run entity
+  L->>L: preflight: harness pin, bundle hashes, workspace HEAD, lease current
+  L->>S: Commit: run spawning, dispatch.claim, seat_users.bind
+  L->>U: systemd-run --user --unit=coq-seat-RUN_ID ... ExecStart=coq-seat-exec start, ExecStop=coq-seat-exec kill
+  L->>S: Commit N-15/run.start: run running + Lease.Start
+  loop every lease.heartbeat_seconds until the unit is inactive
+    L->>S: Commit N-15/lease.renew/RUN_ID@BEAT: heartbeats.upsert + Lease.Renew
+    S-->>L: kill:RUN_ID appears: systemctl --user stop the unit
+  end
+  U-->>L: unit inactive (exit, stop or RuntimeMaxSec)
+  L->>S: run exited
+  L->>L: validate result.json.partial, rename to result.json, fsync, write result.ok (sha256)
+  L->>S: Commit N-15/seat.result: seat.result + run result_committed (+ Lease.Release when blocked; fenced if the lease ended)
+  L->>X: scrub the slot user, keeping the session file
+  Note over S: N-16, N-17 or N-19 close out and move the run to closed_out</mermaid>
+    <step n="1">Preflight, before anything is written. The resolved harness matches the pin of ../../shared/seat-contract.xml#launch-flags (path, version, sha256), else 412 harness_mismatch; the bundle files hash to the record's hashes, else 412 bundle_mismatch; the workspace HEAD equals base_sha, else 412 workspace_mismatch; the ticket's claims are still live for a worker, else 412 claim_missing; the lease row is reserved with the dispatch token and before expires_at, else 412 lease_not_current. Each writes seat.result outcome blocked code 412 with failure_body and no unit starts. 412 is the only preflight code.</step>
+    <step n="2">Claim. One Commit, key N-15/run.spawn/RUN_ID/r1: entity dispatch.claim:DISPATCH_ID and run:RUN_ID state spawning, both with precondition absent, and statement seat_users.bind for the workspace's seat_user. A second launcher gets 409 and stops. The claimed_by field of book 1.0.0 is gone.</step>
+    <step n="3">Spawn. systemd-run --user --unit=coq-seat-RUN_ID --collect -p KillMode=control-group -p TimeoutStopSec=kill.grace_seconds -p RuntimeMaxSec=BOUND -p StandardOutput=file:RUNDIR/result.json.partial -p StandardError=file:RUNDIR/stderr.log -p ExecStop=coq-seat-exec kill RUN_ID, with ExecStart coq-seat-exec start SLOT RUN_ID WORKSPACE BUNDLE and the argv built only from ../../shared/seat-contract.xml#launch-flags. BOUND is deadline_at minus now, the one deadline timer; nothing else kills on time. The unit runs outside the service cgroup.</step>
+    <step n="4">Start. When the unit is active with a main pid: one Commit with key N-15/run.start/RUN_ID/r1, Lease.Start (reserved to running) and run:RUN_ID spawning to running. systemd-run failing, or no active unit by start.grace_seconds: one Commit, key N-15/run.failed-spawn/RUN_ID/r1: run to failed_spawn, Lease.Release, seat.result blocked terminal_reason failed_spawn with failure_kind crashed.</step>
+    <step n="5">Beat. Every lease.heartbeat_seconds: Commit N-15/lease.renew/RUN_ID@BEAT with heartbeats.upsert (integer token, progress_at from the transcript mtime, adopted) and Lease.Renew. A 412 on renew means the lease ended: stop beating; the kill comes from N-12 and the unit's RuntimeMaxSec bounds the rest. The launcher watches kill:* for its runs and runs systemctl --user stop coq-seat-RUN_ID at once; ExecStop is coq-seat-exec kill because coq-launch's user manager cannot signal another uid; after kill.grace_seconds systemd ends the control group. The launcher never decides a stall.</step>
+    <step n="6">Exit. The unit goes inactive: run to exited (key N-15/run.exited/RUN_ID/r1). Validate result.json.partial as the harness envelope; rename it to result.json, fsync, write result.ok holding its sha256. Map outcome and terminal_reason by section result.</step>
+    <step n="7">Result. One Commit, key N-15/seat.result/RUN_ID/r1: seat.result and run exited to result_committed; for a blocked outcome also Lease.Release; for a done outcome the lease stays running and is released by the phase owner's close-out Commit, so every close-out write is fenced (../../shared/contracts.xml#fencing). When the lease is already revoked or expired the store accepts this one report with fenced true (../../shared/contracts.xml#terminal-report) and N-11 reads it as an echo.</step>
+    <step n="8">Scrub. coq-seat-exec scrub SLOT after the result commit; the session file is copied out of the seat home first so a resume rework can use it (../../shared/authority.xml#seat-isolation); scrubbed_at is recorded in seat_users. A survivor is launcher.defect 500 and the slot stays out of the pool.</step>
+    <step n="9">Close-out is not the launcher's: on result_committed with outcome done, the phase owner (N-16 worker, N-17 spec-author, N-19 reviewer) runs its post step in the service and moves the run to closed_out; a blocked result is handed to N-11 and the owner moves the run to closed_out without a post step.</step>
+  </section>
+
+  <section id="command" title="The launch command">
+    <text>The argv, the environment and the harness pin are ../../shared/seat-contract.xml#launch-flags, built under the rules of #launch-flags-rule; this volume restates none of them. The environment holds no store socket, no STATE or cache path and no token; COQ_SEAT=RUN_ID is a diagnostic label, never authority. The seat credential is the anthropic-seat API key through apiKeyHelper (../../shared/authority.xml#credential-matrix); until the owner rules on API-key billing the launcher starts no host seat.</text>
+  </section>
+
+  <section id="result" title="Turning the process result into the record">
+    <table id="result-map">
+      <row exit="0" subtype="success" structured="valid" outcome="done" code="200" reason="success" failure_kind="none"/>
+      <row exit="0" subtype="success" structured="invalid or missing" outcome="blocked" code="423" reason="schema_invalid" failure_kind="schema_invalid"/>
+      <row exit="0" subtype="success" structured="valid with blocked set" outcome="blocked" code="423" reason="seat_blocked" failure_kind="seat_blocked"/>
+      <row exit="0" subtype="error_max_turns" structured="any" outcome="blocked" code="423" reason="error_max_turns" failure_kind="error_max_turns"/>
+      <row exit="0" subtype="error_max_budget_usd" structured="any" outcome="blocked" code="423" reason="error_max_budget_usd" failure_kind="error_max_budget"/>
+      <row exit="0" subtype="error_max_structured_output_retries" structured="any" outcome="blocked" code="423" reason="error_max_structured_output_retries" failure_kind="schema_invalid"/>
+      <row exit="non-zero" subtype="error_during_execution or none" structured="any" outcome="blocked" code="423" reason="error_during_execution" failure_kind="crashed"/>
+      <row exit="stopped by kill:RUN_ID" subtype="none" structured="none" outcome="blocked" code="423" reason="killed_by_record or killed_lease_lost" failure_kind="stall, fenced: N-12 already wrote the charged stall"/>
+      <row exit="RuntimeMaxSec reached" subtype="none" structured="none" outcome="blocked" code="423" reason="killed_deadline" failure_kind="stall, charged"/>
+      <row exit="unit gone, no result" subtype="none" structured="result.json.partial unreadable" outcome="blocked" code="423" reason="no_result" failure_kind="no_result"/>
+      <row exit="spawn failed" subtype="none" structured="none" outcome="blocked" code="423" reason="failed_spawn" failure_kind="crashed"/>
+      <row exit="no unit" subtype="preflight" structured="none" outcome="blocked" code="412" reason="harness_mismatch, bundle_mismatch, workspace_mismatch, claim_missing, lease_not_current" failure_kind="harness_mismatch, seat.bundle.failed, workspace.failed, workspace.refused, stall (fenced)"/>
+    </table>
+    <text>output_rejected is not the launcher's: the phase owner's post step writes it when it refuses a done result. The structured output claims nothing on its own (T04): N-16 checks the PR, N-19 the head sha, N-18 runs the acceptance commands.</text>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <text>The launcher's controller lists run ids with a dispatch, a seat.bundle and a workspace, a reserved lease and no run entity, every tick.scheduler_seconds, and runs the mechanism for each, bounded by the free pool users. A run never starts from a pane, a prompt, a Makefile target typed by hand, or a person.</text>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait what="the seat process itself" timeout="RuntimeMaxSec of the unit: deadline_at minus the spawn time (run.deadline_seconds.ROLE, ../../shared/contracts.xml#timing)" attempts="1 per run" fallback="systemd stops the unit; seat.result blocked killed_deadline"/>
+    <wait what="the unit becoming active after systemd-run" timeout="start.grace_seconds" attempts="1" fallback="run failed_spawn, Lease.Release, seat.result blocked failed_spawn; N-11 charges crashed"/>
+    <wait what="the unit stopping after systemctl stop" timeout="kill.grace_seconds, then systemd kills the control group" attempts="1" fallback="a unit still active after a second grace is launcher.defect 500 unit_survived_stop"/>
+    <wait what="heartbeat Commit" timeout="5 s" attempts="3 per beat" fallback="the beat is skipped and counted; N-12 judges the missing beats (launcher-dead) and writes the kill"/>
+    <wait what="seat.result Commit" timeout="5 s" attempts="3, same operation key" fallback="result.ok stays on disk; the recovery pass on the next tick resends the same key; three ticks without a commit is launcher.defect 500 result_put_never_landed and one card"/>
+    <wait what="an adopted unit after a launcher restart" timeout="the unit's own RuntimeMaxSec, never recomputed" attempts="1 per run" fallback="the same exit and result steps as a fresh run; the bound never grows across restarts"/>
+    <text>No wait in this node depends on a person. The owner's only influence is a kill ruling, which N-12 turns into kill:RUN_ID.</text>
+  </section>
+
+  <section id="retries" title="Retries up to 3, then recover and report">
+    <text>Inside a run nothing is retried by the launcher (../../shared/retry-budget.xml#seat-api); across runs N-11 owns the count. Mechanical steps (Commits, file writes, systemd-run) retry 3 times with 1 s, 2 s, 4 s.</text>
+    <text id="adopt">Adoption after a launcher restart: the launcher iterates run:RUN_ID entities not in result_committed, closed_out or failed_spawn, never directories. spawning with an active unit coq-seat-RUN_ID: Start Commit (same key, so a replay if it had landed). running with an active unit: re-enter the beat loop with adopted true, which appends one heartbeat record (the adopted change). running or spawning with no unit: no_result, or failed_spawn when it never became active. exited: resume at step 6. The unit name makes a second launch of one run impossible.</text>
+  </section>
+
+  <section id="many-agents" title="Many agents at once">
+    <text>Up to caps.max_seats runs at once, one per pool user; each is its own unit, cgroup, workspace slot and run directory.</text>
+    <text>Two launchers for one run: the claim Commit writes dispatch.claim:DISPATCH_ID and run:RUN_ID with precondition absent, so one wins; the unit name is a second guard; seat.result is keyed by N-15/seat.result/RUN_ID, so a second put is a replay.</text>
+    <text>Two runs for one ticket: impossible past GrantDispatch (one reserved or running lease per ticket and phase); a stale run's renew is 412 and its result is either the one fenced report or 412 stale_token.</text>
+    <text>N-12 and the owner both want a kill: N-12 writes one kill:RUN_ID (precondition absent); the launcher stops the unit once.</text>
+    <text>Transcripts: every run has its own pool user home and session id; the session file is kept across scrub only for a resume.</text>
+  </section>
+
+  <section id="codes" title="Status codes this node emits">
+    <code value="200" kind="seat.result">Outcome done. Acts: the phase owner's close-out.</code>
+    <code value="423" kind="seat.result">Outcome blocked with a terminal_reason and failure_body. Acts: N-11 by the retry-owner row.</code>
+    <code value="412" kind="seat.result">Preflight refused: harness_mismatch, bundle_mismatch, workspace_mismatch, claim_missing, lease_not_current. Acts: N-11.</code>
+    <code value="500" kind="launcher.defect">Acts: N-06 health; N-28 one card.</code>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path id="N-15.runs" dir="/var/lib/coq-launch/runs/&lt;run_id&gt;/" writes="result.json.partial, result.json, result.ok, stderr.log, transcript.jsonl (copied at exit), session file kept for a resume" cleanup="scheduler/host/bin/cleanup-seat-runs.sh" retention="7 days after closed_out; 30 days when the ticket died, so a card's evidence survives" trigger="timer" acts="system">The launcher's own root, 0700 coq-launch; dry run by default; never deletes a run whose entity is not closed_out or failed_spawn.</path>
+    <path id="N-15.lock" dir="/var/lib/coq-launch/runs/.lock" writes="the launcher's single-instance lock" cleanup="scheduler/host/bin/cleanup-seat-runs.sh" retention="P0D when no launcher pid holds it" trigger="unit-stop" acts="system"/>
+    <text>Pool user homes are emptied by coq-seat-exec scrub after every run (../../shared/authority.xml#seat-isolation); nothing is written into the repository.</text>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <text>The launcher runs as coq-launch (../../shared/authority.xml#principals), member of coq-store, with the permit row of ../../shared/authority.xml#role-derivation: seat.result and launcher.defect, Lease Start, Renew and Release, seat_users.bind, the run, dispatch.claim and heartbeats rows, each under the run's lease. It may execute coq-seat-exec; it holds no forge, Jenkins or cluster credential.</text>
+    <text>A seat runs as its pool user with no store socket, no STATE path, no network but the Anthropic API (../../shared/authority.xml#seat-isolation). It may never read another run's directory, outlive its unit, or reach herdr.</text>
+  </section>
+
+  <section id="checklist" title="Checklist with proof">
+    <item proof="go test ./internal/launcher -run TestAlwaysResult: fixtures for success, max turns, non-zero exit, stop by kill, RuntimeMaxSec, result missing, spawn failure, launcher panic; each yields exactly one seat.result with the mapped reason and failure_kind">Every exit path ends in a seat.result.</item>
+    <item proof="host test: systemctl --user show coq-seat-RUN_ID reports KillMode=control-group, TimeoutStopSec equal to kill.grace_seconds and RuntimeMaxSec equal to the remaining deadline; restarting coq-service leaves the unit active">One transient unit per run, outside the service.</item>
+    <item proof="go test TestHarnessPin: a binary whose sha256 differs from the pin yields seat.result 412 harness_mismatch and no systemd-run call">Harness pin checked before every spawn.</item>
+    <item proof="go test TestPreflight412: bundle, workspace, claim and lease mismatches each yield code 412 and no unit">Preflight is 412.</item>
+    <item proof="go test TestKillEntity: a kill:RUN_ID entity makes the launcher stop the unit within one beat; the result reads killed_by_record and is accepted fenced">The launcher executes kills, never decides them.</item>
+    <item proof="go test TestAtomicResult: a crash between write and rename leaves result.json.partial only, which the recovery pass validates and renames; result.ok always matches result.json">Output is partial, rename, ok.</item>
+    <item proof="go test TestAdoptByUnit: a launcher restarted mid-run finds the unit by name from run entities, re-enters the beat with adopted true, and one heartbeat record is appended">Adoption by unit name.</item>
+    <item proof="go test TestHeartbeatEntityOnly: 100 beats append no record; adopted and a token change each append one">Heartbeats are entity-only.</item>
+    <item proof="go test TestIdempotentResult: two result Commits for one run commit one seat.result and one replay">One result per run.</item>
+    <item proof="host probe: as a pool user, opening /run/coq/store.sock is EACCES and env shows no COQ_STATE, COQ_CACHE or token">A seat has no store authority.</item>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <text>StatusResponse.seats (scheduler.proto SeatStatus, extended by its ticket with run_id, unit, seat_user, run state, progress_at, cost_usd, turns): one row per live run, from the run entities and heartbeats rows. Counters: runs_started, runs_done, runs_blocked_by_reason, runs_failed_spawn, runs_adopted, results_fenced, heartbeats_skipped, harness_mismatch_total, cost_usd_total by role. The Alerts screen (N-41) shows failed_spawn, no_result, harness_mismatch and a 401 or 429 api_error_status streak.</text>
+    <text>Health line: live runs over the pool, the oldest progress_at age, adopted runs, and the last seat.result at. A launcher with zero live runs while claimable dispatches exist for longer than one tick is a health warning (D17).</text>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <text>See a run: ctl run RUN_ID prints the run entity, the heartbeats row and the seat.result; systemctl --user -M coq-launch@ status coq-seat-RUN_ID shows the unit; the files are under /var/lib/coq-launch/runs/RUN_ID/ (owner read through ctl).</text>
+    <text>Restart the launcher while seats run: nothing to do; adoption by unit name (section retries) resumes every run from its entity.</text>
+    <text>Kill a run: an owner kill ruling from the Controls screen (N-42) reaches N-12, which writes kill:RUN_ID; the launcher stops the unit within one beat. Never kill by hand; if it happens the result is no_result and the system continues.</text>
+    <text>harness_mismatch card: update the pin through its ticket or reinstall the pinned binary; nothing dispatches for the ticket until it matches.</text>
+    <text>Credential: the anthropic-seat key lives at /etc/coq/anthropic-seat.key (root, 0600) and reaches a seat only through coq-seat-exec key; a 401 streak is an alert; no agent touches it.</text>
+    <text>Cleanup: scheduler/host/bin/cleanup-seat-runs.sh [--apply] [--older-than 7d]; registered in N-45.</text>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <edge dir="in" from="../N-07/spec.xml#N-07" record="dispatch"/>
+    <edge dir="in" from="../N-13/spec.xml#N-13" record="seat.bundle"/>
+    <edge dir="in" from="../N-14/spec.xml#N-14" record="workspace"/>
+    <edge dir="out" to="../N-16/spec.xml#N-16" record="seat.result done for a worker run (close-out in the service)"/>
+    <edge dir="out" to="../N-17/spec.xml#N-17" record="seat.result done for a spec-author run (draft put in the service)"/>
+    <edge dir="out" to="../N-19/spec.xml#N-19" record="seat.result done for a reviewer run (verdict put in the service)"/>
+    <edge dir="out" to="../N-12/spec.xml#N-12" record="the heartbeats row (seat.heartbeat)"/>
+    <edge dir="out" to="../N-11/spec.xml#N-11" record="seat.result blocked 423 and 412 (failure_body)"/>
+  </section>
+
+  <section id="examples" title="Examples">
+    <example schema="record.schema.json#/$defs/seat.result">{"id":"20261014T074500Z-200-c1d2e","at":"2026-10-14T07:45:00Z","kind":"seat.result","code":200,"node":"N-15","seq":5520,"epoch":1,"run_id":"d-20261014063000-p2m7dq","ticket":"WO-20261014-ab12","role":"worker","phase":"worker","attempt":1,"lease":{"key":"WO-20261014-ab12:worker:1","token":184,"generation":1},"outcome":"done","terminal_reason":"success","exit_code":0,"cost_usd":3.12,"turns":41,"session_id":"0b8e7a12-3c4d-4e5f-8a9b-1c2d3e4f5a6b","model":"claude-sonnet-5","harness":{"version":"2.1.300","sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},"started_at":"2026-10-14T06:30:20Z","finished_at":"2026-10-14T07:44:58Z","duration_seconds":4478,"denied_line_ops":{"count":0,"commands":[]},"structured":{"summary":"tick loop split"},"phase_record_ref":null,"result_path":"runs/d-20261014063000-p2m7dq/result.json","stderr_path":"runs/d-20261014063000-p2m7dq/stderr.log"}</example>
+    <example schema="record.schema.json#/$defs/seat.result">{"id":"20261014T090300Z-423-f3g4h","at":"2026-10-14T09:03:00Z","kind":"seat.result","code":423,"node":"N-15","seq":5960,"epoch":1,"run_id":"d-20261014080500-w5x6yz","ticket":"WO-20261014-ab12","role":"worker","phase":"worker","attempt":2,"lease":{"key":"WO-20261014-ab12:worker:2","token":203,"generation":1},"fenced":true,"outcome":"blocked","failure_kind":"stall","terminal_reason":"killed_by_record","exit_code":null,"signal":"SIGKILL","session_id":"6f1c2a9e-0b7d-4e3a-9c55-2d8e1f0a7b31","model":"claude-sonnet-5","harness":{"version":"2.1.300","sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},"started_at":"2026-10-14T08:05:20Z","finished_at":"2026-10-14T09:02:50Z","duration_seconds":3450,"denied_line_ops":{"count":1,"commands":["git push origin wo/WO-20261014-ab12"]},"phase_record_ref":null,"result_path":"runs/d-20261014080500-w5x6yz/result.json","stderr_path":"runs/d-20261014080500-w5x6yz/stderr.log"}</example>
+    <example schema="record.schema.json#/$defs/seat.result">{"id":"20261014T071505Z-412-j5k6l","at":"2026-10-14T07:15:05Z","kind":"seat.result","code":412,"node":"N-15","seq":5391,"epoch":1,"run_id":"d-20261014071500-s3c9vb","ticket":"CR-req-0042","role":"spec-author","phase":"spec","attempt":1,"lease":{"key":"CR-req-0042:spec:1","token":195},"outcome":"blocked","failure_kind":"harness_mismatch","terminal_reason":"harness_mismatch","session_id":"none","model":"claude-opus-5-5","harness":{"version":"2.1.299","sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"},"started_at":"2026-10-14T07:15:05Z","finished_at":"2026-10-14T07:15:05Z","duration_seconds":0,"denied_line_ops":{"count":0,"commands":[]},"phase_record_ref":null,"result_path":"none","stderr_path":"none"}</example>
+    <example schema="record.schema.json#/$defs/seat.heartbeat">{"run_id":"d-20261014063000-p2m7dq","ticket":"WO-20261014-ab12","unit":"coq-seat-d-20261014063000-p2m7dq.service","main_pid":48211,"started_at":"2026-10-14T06:30:20Z","progress_at":"2026-10-14T06:41:02Z","beat":22,"transcript_bytes":184220,"stderr_bytes":0,"turns_so_far":9,"lease":{"key":"WO-20261014-ab12:worker:1","token":184},"renewed":true,"adopted":false}</example>
+    <example schema="record.schema.json#/$defs/run_state">{"entity":"run:d-20261014063000-p2m7dq","run_id":"d-20261014063000-p2m7dq","state":"result_committed","unit":"coq-seat-d-20261014063000-p2m7dq.service","seat_user":"coq-seat-04","dispatch_id":"d-20261014063000-p2m7dq","lease":{"key":"WO-20261014-ab12:worker:1","token":184},"deadline_at":"2026-10-14T08:00:00Z","started_at":"2026-10-14T06:30:20Z","exited_at":"2026-10-14T07:44:58Z","result_sha256":"0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef","seat_result_ref":"20261014T074500Z-200-c1d2e","version":6}</example>
+    <example schema="record.schema.json#/$defs/launcher.defect">{"id":"20261014T100000Z-500-m7n8p","at":"2026-10-14T10:00:00Z","kind":"launcher.defect","code":500,"node":"N-15","seq":6200,"epoch":1,"run_id":"d-20261014080500-w5x6yz","reason":"unit_survived_stop","detail":"coq-seat-d-20261014080500-w5x6yz.service active 60 s after stop"}</example>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <source href="rebuild/investigation/03-DECISIONS.md#4-d02-seat-contract">D02 option B, cost note on the wall clock</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#5-d03-seat-credential-and-billing">D03 option C</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#19-d17-the-one-minute-idle-rule">D17 option B</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#13-d11-which-llm-roles-remain">D11 option B</source>
+    <source href="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#4-what-works">4.1 the contract table, 4.2 result from the harness, limits as fields, no prompts by flag, leases with liveness, resume by id</source>
+    <source href="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#5-what-broke-and-why">items 1 to 8</source>
+    <source href="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#8-what-to-carry-forward">items 1, 3, 4, 5, 7, 8, 10</source>
+    <source href="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#9-what-to-kill">items 1, 2, 3</source>
+    <source href="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal">T01, T04, T06, T07 (ships dark), T13</source>
+    <source href="rebuild/investigation/02-MAPPING.md#3-dropped-by-the-field-still-carried-here-kill">K02, K03, K04, K10, K12</source>
+    <source href="rebuild/investigation/01-ROOT-CAUSES.md#3-root-causes">RC2, RC4</source>
+    <source href="rebuild/investigation/L11-governance-layer.md#52-findings-f1-to-f18">F9, F10, F13, F15</source>
+    <source href="rebuild/investigation/L06-owner-retros-and-plans.md#8-what-to-carry-forward">a seat exists only between its input and its output; seats as Jobs with TTL, leases and heartbeats</source>
+    <source href="rebuild/investigation/L09-earlier-factory-iterations.md#7-decisions-an-llm-makes-that-a-rule-could-make">whether a seat is alive: transcript proof plus heartbeat age</source>
+    <source href="specs/SPEC-04-herdr-seat-lifecycle.xml#s-seat">the env unset list, carried as an allow-list</source>
+    <source href="specs/SPEC-04-herdr-seat-lifecycle.xml#s-recovery">seat silent 900 s, resume 3 times then 423, the shape this node keeps as stall_seconds and N-11</source>
+    <source href="specs/SPEC-17-orchestrator-and-agent-health.xml#s-health">C1 alive, C2 stuck, C4 at capacity: replaced by heartbeat, stall and the capacity formula</source>
+    <source href="scheduler/api/scheduler/v1/scheduler.proto">SeatStatus, Stall, counters</source>
+    <source href="herdr/bin/seat.sh">ensure_trust, nudge_seat, herdr agent start: the mechanisms retired</source>
+    <source href="herdr/bin/testpane.sh">under bypassPermissions an allow rule restricts nothing</source>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C49</source>
+    <source href="~/.bearings/coq-stable/answers.jsonl">C36, C37, C38, C39</source>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md">rulings 20, 21, 24</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/herdr-crash-restart-order.md">a herdr core dump killed all seats: every seat is now its own process under the service</source>
+    <source href="$HOME/.claude/projects/${HOME_SLUG}projects-coq-jev-herdr-plugin/memory/arm-herdr-idle-watch-on-every-resume.md">idle watches flooded the architect; retired</source>
+  </section>
+
+  <rejected id="rejected">
+    <item source="herdr/bin/seat.sh and specs/SPEC-04-herdr-seat-lifecycle.xml#s-seat" what="herdr agent start in a pane, typed brief, guard bind, ACK nudge, trust writer" reason="S04 section 9 item 1; D02; D08"/>
+    <item source="specs/SPEC-17-orchestrator-and-agent-health.xml#s-health C2" what="stuck repairs: nudge, Escape then nudge, retire and re-seat" reason="a one-shot run has no prompt to nudge; stall kills and N-11 retries with a fresh run"/>
+    <item source="specs/SPEC-04-herdr-seat-lifecycle.xml#s-recovery" what="resume_agents_on_restore, re-attach by label" reason="recovery is by the run:RUN_ID entity and the unit name; labels and panes are the owner's window only"/>
+    <item source="nodes/N-15/spec.xml 1.0.x beat loop" what="the launcher as a child-process supervisor that killed on its own stall and deadline checks" reason="two killers (the launcher and N-12) and two timers (the loop and the context) disagreed; CANON F11 and contracts.xml#kill-authority give one decider (N-12), one executor (the launcher) and one deadline (RuntimeMaxSec)"/>
+    <item source="line/bin/route-retry.sh and herdr/bin/patrolwatch.sh" what="pane reads and idle notes as liveness" reason="K04; progress_at from the transcript and heartbeats are the probe (V08)"/>
+    <item source="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#4-what-works claude --bg" what="background sessions read through claude agents --json" reason="the result must come from the launcher's own parse of the harness envelope; the supervisor's hour idle stop and shared quota make it a watch option for the owner, not the seat mechanism (D02 C allowed later)"/>
+    <item source="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#8-what-to-carry-forward item 6" what="OpenHands stuck detector over the transcript" reason="carried as T07 and ships dark: a later ticket adds the five patterns as a second kill condition; slice one kills on no progress only"/>
+    <item source="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#8-what-to-carry-forward item 9" what="Claude Code self-hosted environments as the runner" reason="plan eligibility unverified (S04 section 10 question 2); the host launcher needs no vendor control plane"/>
+    <item source="roles/*.json max_seats" what="per-role concurrency caps" reason="capacity is one formula over RAM in seats.json; a role cap is a hand edit (S04 section 5 item 6)"/>
+    <item source="--fallback-model" what="a silent model fallback" reason="the role names the model; a fallback changes it without a record"/>
+  </rejected>
+</volume>

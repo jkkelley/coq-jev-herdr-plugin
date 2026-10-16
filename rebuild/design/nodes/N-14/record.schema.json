@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-14/record.schema.json",
+  "title": "N-14 Workspace provision: input and output records",
+  "description": "Book 1.1.0. Input: dispatch, the one def ../N-07/record.schema.json#/$defs/dispatch. Output: workspace, workspace.refused, workspace.failed on the shared committed envelope. N-14 holds no claims table: it verifies that the ticket holds its claims in the claims table N-03 owns (shared/contracts.xml#claims) and refuses 412 claim_missing otherwise. The failure records carry ../../shared/contracts.schema.json#/$defs/failure_body. The operation key N-14/workspace.provision/<dispatch_id>/r1 rides on the Commit request.",
+  "$defs": {
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "envelope": { "$ref": "../../shared/state-store.schema.json#/$defs/committed_envelope" },
+    "dispatch": { "$ref": "../N-07/record.schema.json#/$defs/dispatch" },
+    "run_id": { "$ref": "../N-13/record.schema.json#/$defs/run_id" },
+    "slot": { "type": "integer", "minimum": 1, "maximum": 16, "description": "1..workspace_slots; slot n is used only by pool user coq-seat-NN" },
+    "workspace": {
+      "type": "object",
+      "required": ["run_id", "role", "path", "slot", "seat_user", "base_sha", "base_ref", "mode", "mirror_sha", "claims_verified"],
+      "properties": {
+        "kind": { "const": "workspace" },
+        "code": { "const": 100 },
+        "node": { "const": "N-14" },
+        "run_id": { "anyOf": [{ "$ref": "#/$defs/run_id" }, { "type": "string", "pattern": "^v-[A-Za-z0-9._:-]+$", "description": "a validator borrow (N-18, in process): v- plus the set id" }] },
+        "ticket": { "$ref": "../../shared/contracts.schema.json#/$defs/ticket" },
+        "role": { "enum": ["worker", "spec-author", "reviewer", "validator"] },
+        "path": { "type": "string", "pattern": "^CACHE/ws/[0-9]+/$", "description": "CACHE is the service cache root; the slot directory is owned by coq-svc and opened to the slot user by ACL" },
+        "slot": { "$ref": "#/$defs/slot" },
+        "seat_user": { "type": "string", "pattern": "^coq-seat-[0-9]{2}$" },
+        "branch": { "type": "string", "pattern": "^wo/WO-[0-9]{8}-[0-9a-f]{4}$" },
+        "base_sha": { "$ref": "#/$defs/sha1" },
+        "base_ref": { "type": "string", "pattern": "^(origin/main|origin/wo/WO-[0-9]{8}-[0-9a-f]{4}|refs/pull/[0-9]+/head)$" },
+        "mode": { "enum": ["write", "read-only"], "description": "enforced by the ACL on the slot (rwx for a worker's slot user, r-x for every other role), not by settings alone" },
+        "mirror_sha": { "$ref": "#/$defs/sha1" },
+        "claims_verified": { "type": "array", "items": { "type": "object", "required": ["claim_id", "pattern"], "properties": { "claim_id": { "type": "integer", "minimum": 1 }, "pattern": { "type": "string" } } }, "description": "the live claims rows (N-03) this ticket holds, read in the provision transaction; empty for a role that claims nothing" },
+        "expires_at": { "$ref": "../../shared/contracts.schema.json#/$defs/at", "description": "slot hold expiry: dispatch.deadline_at plus kill.grace_seconds plus 600 s" }
+      },
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "if": { "properties": { "role": { "const": "validator" } } }, "then": { "properties": { "seat_user": { "pattern": "^coq-seat-[0-9]{2}$" } } }, "else": { "required": ["ticket"] } },
+        { "if": { "properties": { "role": { "const": "worker" } } }, "then": { "required": ["branch"], "properties": { "mode": { "const": "write" }, "claims_verified": { "minItems": 1 } } }, "else": { "properties": { "mode": { "const": "read-only" } } } }
+      ]
+    },
+    "workspace.refused": {
+      "description": "A failure record for N-11: claim_missing and head_moved are failure_kind workspace.refused and no_slot is failure_kind cap; both are free regrants with no attempt charged (shared/contracts.xml#retry-owner).",
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "$ref": "../../shared/contracts.schema.json#/$defs/failure_body" },
+        { "if": { "properties": { "reason": { "const": "no_slot" } } }, "then": { "properties": { "code": { "const": 429 }, "failure_kind": { "const": "cap" } } }, "else": { "properties": { "code": { "const": 412 }, "failure_kind": { "const": "workspace.refused" } } } }
+      ],
+      "required": ["run_id", "reason"],
+      "properties": {
+        "kind": { "const": "workspace.refused" },
+        "code": { "enum": [412, 429] },
+        "node": { "const": "N-14" },
+        "run_id": { "$ref": "#/$defs/run_id" },
+        "dispatch_id": { "$ref": "#/$defs/run_id" },
+        "outcome": { "const": "refused" },
+        "reason": { "enum": ["claim_missing", "head_moved", "no_slot"] },
+        "missing": { "type": "array", "items": { "type": "string" }, "description": "declared patterns with no live claims row for this ticket" },
+        "pool": { "type": "object", "properties": { "size": { "type": "integer" }, "holders": { "type": "array", "items": { "type": "string" } } } },
+        "expected_sha": { "$ref": "#/$defs/sha1" },
+        "observed_sha": { "$ref": "#/$defs/sha1" }
+      }
+    },
+    "workspace.failed": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "../../shared/contracts.schema.json#/$defs/failure_body" }],
+      "required": ["run_id", "step", "reason", "attempts"],
+      "properties": {
+        "kind": { "const": "workspace.failed" },
+        "code": { "const": 500 },
+        "node": { "const": "N-14" },
+        "run_id": { "$ref": "#/$defs/run_id" },
+        "dispatch_id": { "$ref": "#/$defs/run_id" },
+        "outcome": { "const": "failed" },
+        "failure_kind": { "const": "workspace.failed" },
+        "step": { "enum": ["claims", "slot", "mirror", "clone", "acl", "verify", "record"] },
+        "reason": { "enum": ["store_unreachable", "mirror_locked", "fetch_failed", "clone_failed", "acl_failed", "io"] },
+        "attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "stderr_tail": { "type": "string", "maxLength": 2000 },
+        "log_path": { "type": "string" }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/dispatch" },
+    { "$ref": "#/$defs/workspace" },
+    { "$ref": "#/$defs/workspace.refused" },
+    { "$ref": "#/$defs/workspace.failed" }
+  ]
+}
