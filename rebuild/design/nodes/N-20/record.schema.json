@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-20/record.schema.json",
+  "title": "N-20 Jenkins as code: input jenkins.config and output job.registered",
+  "description": "Written 2026-10-14T04:39Z UTC by the G4 spec-author seat. The envelope must equal shared/state-store.schema.json#/$defs/envelope once the shared author lands it; until then it is repeated here so this file validates on its own.",
+  "oneOf": [
+    { "$ref": "#/$defs/input" },
+    { "$ref": "#/$defs/output" },
+    { "$ref": "#/$defs/unready" }
+  ],
+  "$defs": {
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node", "attempt", "key", "version"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^r-[0-9]{17}-[a-z0-9]{5}$", "description": "Store-assigned record id, UTC stamp plus suffix." },
+        "kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$" },
+        "code": { "type": "integer", "enum": [100, 200, 201, 300, 400, 409, 410, 412, 422, 423, 429, 500, 503] },
+        "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$", "description": "UTC, second precision." },
+        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "attempt": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "key": { "type": "string", "minLength": 3, "description": "Idempotency key; a second put with the same key and a different payload is a 409." },
+        "version": { "type": "integer", "minimum": 1, "description": "Compare-and-swap version of the row the put expects." },
+        "lease_token": { "type": "string", "description": "Fencing token of the lease the writer holds; required for every system-job write." },
+        "note": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "sha40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+    "resources": {
+      "type": "object",
+      "required": ["requests", "limits"],
+      "properties": {
+        "requests": { "type": "object", "required": ["cpu", "memory"], "properties": { "cpu": { "type": "string" }, "memory": { "type": "string" } } },
+        "limits": { "type": "object", "required": ["memory"], "properties": { "cpu": { "type": "string" }, "memory": { "type": "string" } } }
+      }
+    },
+    "home": {
+      "type": "object",
+      "required": ["pvc", "storage_class", "size"],
+      "properties": {
+        "pvc": { "type": "string" },
+        "storage_class": { "type": "string", "const": "longhorn" },
+        "size": { "type": "string", "pattern": "^[0-9]+Gi$" },
+        "bound": { "type": "boolean" }
+      }
+    },
+    "input": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["gitops_repo", "gitops_sha", "casc_hash", "jobs_hash", "image", "resources", "home", "paths"],
+          "properties": {
+            "kind": { "const": "jenkins.config" },
+            "code": { "const": 100 },
+            "node": { "const": "N-04" },
+            "gitops_repo": { "type": "string", "const": "jkkelley/homelab-gitops" },
+            "gitops_sha": { "$ref": "#/$defs/sha40" },
+            "casc_hash": { "$ref": "#/$defs/sha256" },
+            "jobs_hash": { "$ref": "#/$defs/sha256" },
+            "image": { "type": "string", "pattern": "^ghcr\\.io/jkkelley/coq-jenkins:[0-9A-Za-z._-]+@sha256:[0-9a-f]{64}$" },
+            "resources": { "$ref": "#/$defs/resources" },
+            "home": { "$ref": "#/$defs/home" },
+            "paths": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^(apps/jenkins/|argocd-apps/infrastructure/jenkins)" } }
+          }
+        }
+      ]
+    },
+    "output": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["gitops_sha", "config_hash", "image_digest", "resource_limits", "home_volume", "jenkins_version", "jobs", "argo_revision", "check_log"],
+          "properties": {
+            "kind": { "const": "job.registered" },
+            "code": { "const": 201 },
+            "node": { "const": "N-20" },
+            "gitops_sha": { "$ref": "#/$defs/sha40" },
+            "config_hash": { "$ref": "#/$defs/sha256" },
+            "image_digest": { "$ref": "#/$defs/digest" },
+            "resource_limits": { "$ref": "#/$defs/resources" },
+            "home_volume": { "allOf": [ { "$ref": "#/$defs/home" }, { "properties": { "bound": { "const": true } }, "required": ["bound"] } ] },
+            "jenkins_version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+(\\.[0-9]+)?$" },
+            "jobs": { "type": "array", "minItems": 3, "uniqueItems": true, "items": { "type": "string", "enum": ["coq-gate", "coq-image", "coq-map"] } },
+            "argo_revision": { "$ref": "#/$defs/sha40" },
+            "check_log": { "type": "string", "pattern": "^\\$COQ_STATE/ci/jenkins-check/[0-9]{4}/[0-9]{2}/[0-9a-f]{12}-[0-3]\\.log$" }
+          }
+        }
+      ]
+    },
+    "unready": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["gitops_sha", "failed", "check_log"],
+          "properties": {
+            "kind": { "const": "jenkins.unready" },
+            "code": { "const": 500 },
+            "node": { "const": "N-20" },
+            "attempt": { "const": 3 },
+            "gitops_sha": { "$ref": "#/$defs/sha40" },
+            "failed": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^[a-z][a-z0-9 /-]*: FAILED .+$" } },
+            "check_log": { "type": "string" }
+          }
+        }
+      ]
+    }
+  }
+}

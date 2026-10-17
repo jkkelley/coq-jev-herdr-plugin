@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-39/record.schema.json",
+  "title": "N-39 Machine screen: input and output records",
+  "description": "Input selection plus node.state (the node view N-31 pushes); output machine.panel (drawn frame, not stored) described for the client. Shared envelope per shared/state-store.xml#record-envelope. UTC everywhere.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "nodeId": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+    "code": { "type": "integer", "minimum": 100, "maximum": 599 },
+    "envelope": {
+      "type": "object",
+      "required": ["kind", "id", "at", "node", "status", "seq", "version", "idempotency_key"],
+      "properties": {
+        "kind": { "type": "string" },
+        "id": { "type": "string", "minLength": 8 },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "$ref": "#/$defs/nodeId" },
+        "status": { "$ref": "#/$defs/code" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "minLength": 8 },
+        "by": { "type": "string" }
+      }
+    },
+    "recordLine": {
+      "type": "object",
+      "required": ["id", "at", "kind", "status"],
+      "properties": {
+        "id": { "type": "string" },
+        "at": { "$ref": "#/$defs/utc" },
+        "kind": { "type": "string" },
+        "status": { "$ref": "#/$defs/code" },
+        "message": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "lease": {
+      "type": "object",
+      "required": ["lease_id", "holder", "ticket", "ticket_title", "attempt", "expires_at", "fencing_token"],
+      "properties": {
+        "lease_id": { "type": "string" },
+        "holder": { "type": "string" },
+        "model": { "type": "string" },
+        "ticket": { "type": "string" },
+        "ticket_title": { "type": "string" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "expires_at": { "$ref": "#/$defs/utc" },
+        "fencing_token": { "type": "integer", "minimum": 1 },
+        "bringup_seconds": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "checklistItem": {
+      "type": "object",
+      "required": ["anchor", "check", "done"],
+      "properties": {
+        "anchor": { "type": "string" },
+        "check": { "type": "string" },
+        "done": { "type": "boolean" },
+        "proof": { "type": "string" },
+        "ticket": { "type": "string" },
+        "at": { "$ref": "#/$defs/utc" }
+      }
+    },
+    "alertLine": {
+      "type": "object",
+      "required": ["alert_id", "status", "since", "cause", "retries", "system_did"],
+      "properties": {
+        "alert_id": { "type": "string" },
+        "status": { "$ref": "#/$defs/code" },
+        "since": { "$ref": "#/$defs/utc" },
+        "cause": { "type": "string" },
+        "retries": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "system_did": { "type": "string" }
+      }
+    },
+    "node.state": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["client_id", "view_node", "full", "latest", "heartbeat_age_s", "stall_bound_s", "leases", "checklist", "last_records", "last_alerts", "input", "output"],
+      "properties": {
+        "kind": { "const": "node.state" },
+        "node": { "const": "N-31" },
+        "client_id": { "type": "string", "minLength": 8 },
+        "view_node": { "$ref": "#/$defs/nodeId" },
+        "full": { "type": "boolean" },
+        "latest": { "$ref": "#/$defs/recordLine" },
+        "heartbeat_age_s": { "type": "integer", "minimum": -1 },
+        "stall_bound_s": { "type": "integer", "minimum": 1 },
+        "leases": { "type": "array", "items": { "$ref": "#/$defs/lease" } },
+        "checklist": { "type": "array", "items": { "$ref": "#/$defs/checklistItem" } },
+        "last_records": { "type": "array", "maxItems": 10, "items": { "$ref": "#/$defs/recordLine" } },
+        "last_alerts": { "type": "array", "maxItems": 5, "items": { "$ref": "#/$defs/alertLine" } },
+        "input": { "type": "object", "required": ["kind"], "properties": { "kind": { "type": "string" }, "latest": { "$ref": "#/$defs/recordLine" } } },
+        "output": { "type": "object", "required": ["kind"], "properties": { "kind": { "type": "string" }, "latest": { "$ref": "#/$defs/recordLine" } } }
+      }
+    },
+    "machine.panel": {
+      "type": "object",
+      "description": "The drawn frame; not a store record. Listed so the client and the tests share one shape.",
+      "required": ["view_node", "delivered_seq", "state", "status"],
+      "properties": {
+        "view_node": { "$ref": "#/$defs/nodeId" },
+        "delivered_seq": { "type": "integer", "minimum": 0 },
+        "state": { "enum": ["default", "empty", "loading", "error", "offline"] },
+        "error_class": { "enum": ["not-found", "timeout", "validation"] },
+        "status": { "enum": [200, 404, 422, 503, 504] },
+        "spec_anchor": { "type": "string" },
+        "runbook_anchor": { "type": "string" },
+        "lamp": { "enum": ["green", "amber", "red", "grey"] }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/node.state" },
+    { "$ref": "#/$defs/machine.panel" }
+  ]
+}

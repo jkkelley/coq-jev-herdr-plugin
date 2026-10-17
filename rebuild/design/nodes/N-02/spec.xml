@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-02 Lease service. Node volume of the Factory Rebuild spec book, group G1 Store and leases.
+     Written 2026-10-14T04:34Z UTC by the G1 spec-author seat, round 1, against brief C.
+     Canonical by owner ruling C42; older specs cited below are sources, never authority (D14). -->
+<!-- N-02 round 2, 2026-10-14T05:01:33Z, by the G1 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers (verdict in
+     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-02):
+     every shared pointer (five per volume, into the shared directory) pointed at a directory no author had written and at anchors no volume declared.
+     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
+     The fix: shared needs are declared in <shared-needs> by volume and anchor with no href, so nothing points at a file
+     that does not exist, and the principles this node obeys point at dag.md sections 7 and 8, which do exist.
+     Rejected: writing shared/ from this seat (the brief gives shared/ to one shared author; two authors on one file is the
+     one-file, one-in-flight-ticket collision the book forbids) and leaving the hrefs to resolve later (a failing volume blocks the book now).
+     Cost: a declared need is not a live pointer until shared/ lands; check.sh matches each need's volume and anchor against the
+     shared volumes when they land, so no hand edit happens here. Cross-group edges point at volumes that now exist, and at
+     index.xml#<node-id> for a node whose volume has not landed, because the index entry is the one anchor every node is guaranteed. -->
+<volume id="N-02" kind="node-spec" node="N-02" group="G1" version="1.1.0" written="2026-10-14T05:01:33Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG and principles</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: ticket.ready</entry>
+    <entry ref="output">Output record: lease or lease.refused</entry>
+    <entry ref="mechanism">Mechanism: compare-and-swap leases with fencing tokens in the store</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-02"/>
+    <sibling href="record.schema.json" role="schema">JSON schema of ticket.ready in, lease and lease.refused out</sibling>
+    <sibling href="../N-01/spec.xml#N-01" role="node">N-01 State store</sibling>
+    <sibling href="../N-03/spec.xml#N-03" role="node">N-03 Ticket intake and readiness</sibling>
+    <sibling href="../N-04/spec.xml#N-04" role="node">N-04 GitHub poll</sibling>
+    <sibling href="../N-05/spec.xml#N-05" role="node">N-05 Backups</sibling>
+    <sibling href="../N-06/spec.xml#N-06" role="node">N-06 Service unit, clock and health</sibling>
+    <shared href="../../dag.md#4-re-entries" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 2 (no cog: expiry by the clock, never by opinion) and rule 3 (three attempts then report)</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, 409 that reports</principle>
+    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+  </pointers>
+  <shared-needs id="shared-needs">
+    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares. check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for lease.recovered 100; lease.renewed 200; lease.granted 201; lease.released 204; lease.stale 412; lease.refused 423 (held, hold) and 429 (cap); lease.expired 500; lease.failed 500; break.glass (owner-only record kind). Owner-acts: lease.failed at three in ten minutes on one key.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-leases">leases(key PRIMARY KEY ticket:phase:attempt, ticket, phase, attempt, holder, token, generation, granted_at, expires_at, heartbeat_at, released_at, version); the token counter is entity counter:lease_token.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="fencing">The store-wide fencing token only grows; N-01 refuses a Put whose token is not current for the record's ticket and attempt (412).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="multi-agent-first">Two seats can never both act on one ticket phase; a silent seat loses its lease by time.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="probes-not-opinions">Liveness is a timestamp and the process table, never a pane read or a model opinion (V08, K04).</need>
+    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="lease-token">The launcher exports the token into the run; every seat Put carries it; the seat cannot claim, renew or release.</need>
+    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="heartbeat">The launcher (N-15), not the model, renews every lease.heartbeat_seconds 30; the lease.ttl_seconds 900 leaves room for a service restart; N-12 finds a dead launcher at 3 missed beats (90 s); every node reads the same keys.</need>
+    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">lease.ttl_seconds 900, lease.heartbeat_seconds 30, lease.caps (global jobs.in_flight 4 plus per-role), lease.keep_days 30, stall.tick_seconds 15; a missing key is exit 3 naming the key.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="stall">A lease past expires_at with no renewal: swept, generation bumped, lease.expired 500; N-12 kills the run, N-11 decides attempt n+1.</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <is>N-02 turns a claimable unit of work (a ticket at a phase and an attempt) into exactly one lease: one holder, one fencing token that only grows, one expiry, one generation. Every write the holder makes carries the token, and the store (N-01) refuses a stale one.</is>
+    <is>It is the collision answer of the whole factory: two seats can never both act on one ticket phase, and a seat that went silent loses its lease by time, never by opinion.</is>
+    <is-not>It does not dispatch (N-07), does not kill a run (N-12), does not retry (N-11), and never asks a model whether a holder is alive (SPEC-16 l-llm, K04).</is-not>
+    <decisions>D01 (the Go service owns leases and heartbeats), D17 (one-shot seats plus a stall timer, C49), D02 (one-shot runs, C36), T06 (lease with heartbeat, generation counter, compare-and-swap, renewed at a third of its length, never stolen while liveness is unknown).</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="ticket.ready" schema="../N-03/record.schema.json#/$defs/ticket_ready">
+      <field name="ticket">The work order id.</field>
+      <field name="phase">worker or reviewer on a ticket (the reviewer phase re-enters on gate.verdict green, dag.md section 4), spec on a cut-request key CR-&lt;request id&gt; that N-03 admitted from a ticket.request (role spec-author, no file claims), or gate for the code role N-07 performs in process. The merge phase is never leased: N-09 serialises merges on merge.lock.</field>
+      <field name="attempt">1 to 3 (re-entry from N-11 with attempt n+1).</field>
+      <field name="role">The role the phase needs, from the ticket.</field>
+    </record>
+    <also kind="lease.renew" from="the holder's heartbeat (N-15) through the ctl CLI" schema="record.schema.json#/$defs/lease_renew"/>
+    <also kind="lease.release" from="the holder's seat.result (N-15) or a merge record (N-09)" schema="record.schema.json#/$defs/lease_release"/>
+    <also kind="stall tick" from="N-06 every stall.tick_seconds 15" note="the sweep that expires silent leases"/>
+    <rule>A claim is keyed on ticket, phase and attempt. The same key claimed twice is one lease and one 423 lease.refused, never two leases.</rule>
+  </input>
+
+  <output id="output">
+    <record kind="lease.granted" code="201" schema="record.schema.json#/$defs/lease_granted">
+      <field name="key">ticket:phase:attempt.</field>
+      <field name="holder">The dispatch id N-07 will create, or the seat name once N-15 starts the run; the holder is a string the store does not interpret.</field>
+      <field name="token">Fencing token: a store-wide counter that only grows; every later token for any key is larger. Carried on every Put by the holder.</field>
+      <field name="generation">Per-key counter: how many times this key has been granted (expiry and re-grant bump it).</field>
+      <field name="expires_at">UTC: granted_at plus lease.ttl_seconds.</field>
+      <field name="heartbeat_seconds">lease.heartbeat_seconds (default 30): the holder renews at this interval; N-12 judges a launcher dead after 3 missed beats, long before the ttl.</field>
+    </record>
+    <record kind="lease.refused" code="423" schema="record.schema.json#/$defs/lease_refused">
+      <field name="reason">held (a live holder exists), cap (role or global concurrency cap reached: 429 instead of 423), hold (the HOLD flag is set), phase (the ticket is not at this phase).</field>
+      <field name="holder">Who holds it, when held.</field>
+      <field name="expires_at">When the holder's lease ends, so the caller knows the bound of its wait.</field>
+    </record>
+    <record kind="lease.expired" code="500" schema="record.schema.json#/$defs/lease_expired">The sweep found a lease past expires_at with no renewal; the key is free and generation is bumped; N-12 reads this to kill the run.</record>
+    <record kind="lease.renewed" code="200">A heartbeat renewed the lease; expires_at moved.</record>
+    <record kind="lease.released" code="204">The holder released on its result; the key is terminal for this attempt.</record>
+    <record kind="lease.stale" code="412">A renew or release carried a token that is not current; logged, nothing changed.</record>
+  </output>
+
+  <mechanism id="mechanism">
+    <component name="package">Go package scheduler/internal/lease: Claim, Renew, Release, Sweep, Current. Pure arithmetic for expiry and heartbeat bounds; the clock is core.Clock; the store is N-01's Put with an entity write.</component>
+    <component name="table">leases (key PRIMARY KEY, ticket, phase, attempt, holder, token, generation, granted_at, expires_at, heartbeat_at, released_at, version) in coq.db, owned by this node; the token counter is one row of the entities table (key counter:lease_token) bumped with compare-and-swap.</component>
+    <component name="system-leases">System jobs lease keys of the form node:N-xx:KEY with their own ttl (shared/state-store.xml#table-leases): node:N-07:leader is the scheduler leader lease, ttl 30 s renewed every 10 s, which N-07 holds so one tick goroutine dispatches (nodes/N-07/spec.xml#many-agents); the service-wide flock on STATE/run/service.lock (N-06) refuses a second service process outright, and the leader lease covers the overlap of a stopping and a starting process that the flock hand-over leaves.</component>
+    <component name="caps">lease.caps from scheduler/config/scheduler.json: a global cap (jobs.in_flight, 4 today) and a per-role cap table; a cap counts live leases by role. The cap values are data, never prose (K10).</component>
+    <mermaid id="m-claim">stateDiagram-v2
+  [*] --> free
+  free --> held: Claim (CAS: no live holder) token=next()
+  held --> held: Renew (token matches) expires_at+=ttl
+  held --> free: Sweep (now > expires_at) lease.expired 500, generation+1
+  held --> released: Release (token matches) lease.released 204
+  held --> held: Claim by another (lease.refused 423)
+  released --> [*]
+  free --> free: Claim under cap or HOLD (lease.refused 429 or 423)</mermaid>
+    <step n="1">Claim: in one Put transaction, read the key; if a row exists with released_at null and expires_at after now, 423 held. Else count live leases by role and globally against caps; over means 429 cap. Else if flag:hold is set, 423 hold. Else token = CAS increment of counter:lease_token; write the lease row with expected_version equal to the row's current version (0 when absent); append lease.granted 201.</step>
+    <step n="2">Renew: UPDATE WHERE key AND token = given AND released_at IS NULL; zero rows means 412 lease.stale (logged); else expires_at = now + ttl, heartbeat_at = now, lease.renewed 200. A renew after expiry but before the sweep ran is honoured only if the generation has not moved; otherwise 412.</step>
+    <step n="3">Release: UPDATE WHERE key AND token = given; sets released_at; lease.released 204. The ticket's phase entity moves in the same transaction (N-03 reads it).</step>
+    <step n="4">Sweep (every stall tick from N-06): SELECT keys WHERE released_at IS NULL AND expires_at &lt; now; for each, in its own transaction, bump generation, clear holder, append lease.expired 500 with the last heartbeat_at. N-12 consumes lease.expired to kill the run; N-11 consumes the stall to decide attempt n+1.</step>
+    <step n="5">Current(ticket, attempt) answers the store's fencing check in N-01 step 3: the token is current when the row for that key has that token and released_at is null and expires_at is after now.</step>
+    <ttl>lease.ttl_seconds 900 (herdr/config/leases.json#seat ttl 900, kept); the seat launcher (N-15) heartbeats and renews every lease.heartbeat_seconds 30, far inside the ttl, so a service restart of a few minutes never expires a live run's lease (T06 renews at a third or sooner; sooner is safe); the dead-launcher bound is N-12's 3 x 30 s = 90 s, not the ttl. One value, one key: N-07, N-12, N-15 and the seat contract read lease.heartbeat_seconds. The stall bound of N-12 is read from the same config so the two never disagree.</ttl>
+    <liveness>A lease is never stolen while liveness is unknown: the only way a held key frees is Release by its token or expiry by the clock. No probe, no screen read, no model opinion (V08, K04).</liveness>
+  </mechanism>
+
+  <start id="start">
+    <rule>Nothing starts by an agent typing. Claim runs when N-07's tick finds a ticket.ready with no live lease; Sweep runs on every stall tick from N-06; Renew and Release are calls the seat launcher (N-15) makes as code around the one-shot run.</rule>
+    <step n="1">At service start, after the store opens, Recover: every lease row with released_at null and expires_at before now is swept as in step 4; every row with expires_at after now is left alone, because its holder may still be alive (a run that survived the service restart keeps its lease and its token).</step>
+    <step n="2">The caps table is loaded from config; a missing key is exit 3 naming the key (SPEC-16 l-config, kept).</step>
+    <step n="3">lease.recovered 100 is appended once with the counts swept and kept.</step>
+  </start>
+
+  <waits id="waits">
+    <wait name="claim-put" on="the store transaction" timeout="5 s (N-01 busy)" fallback="503 from the store; Claim retries 3 times with the same idempotency key; then N-07 treats the ticket as not dispatched this tick and tries next tick"/>
+    <wait name="heartbeat" on="the holder renewing" timeout="lease.ttl_seconds 900 since the last renew" fallback="Sweep expires the lease; lease.expired 500; N-12 kills, N-11 retries"/>
+    <wait name="sweep" on="the stall tick" timeout="stall.tick_seconds 15; a sweep older than 3 ticks is reported by N-06 health as tick.missed" fallback="the next tick sweeps; a missed sweep delays expiry, never loses it"/>
+    <wait name="cap" class="level-triggered" on="a role cap freeing" timeout="none held here: a 429 returns at once" fallback="N-07 re-evaluates every tick (level-triggered); nothing blocks on a cap"/>
+    <wait name="hold" class="owner-decision" on="flag:hold clearing" timeout="none held here: a 423 hold returns at once" fallback="N-07 re-evaluates every tick; the owner clears the hold through the Controls screen (N-42) and N-29"/>
+  </waits>
+
+  <retries id="retries">
+    <rule>Every automated step retries up to 3 times, then recovers and reports.</rule>
+    <step name="claim">A store 503 or 409 on the counter row is retried 3 times with a fresh read and 1, 2, 4 s backoff; the fourth failure appends lease.failed 500 with the reason and N-07 leaves the ticket for the next tick; three lease.failed on one key in ten minutes is an owner-acts code through N-28.</step>
+    <step name="renew">The holder's renew retries 3 times inside N-15 with the same token; a renew that fails three times is not fatal by itself: the lease still has up to two heartbeat intervals before expiry.</step>
+    <step name="release">A release that fails 3 times is left to the sweep: the lease expires by time and lease.expired carries the seat.result id that tried to release, so the record is evidence, not a lost release.</step>
+    <step name="sweep">A sweep transaction failing is retried next tick; the per-key transaction means one bad row cannot stop the others.</step>
+  </retries>
+
+  <many-agents id="many-agents">
+    <reading>N seats read their own lease by key through the ctl CLI; the token travels in the seat bundle (N-13) and the launcher's environment, never in a file two seats share.</reading>
+    <working>Twenty seats on twenty tickets hold twenty leases; the store serializes every claim; a seat never sees another seat's token.</working>
+    <collision name="two-claims-one-key">N-07 on two ticks, or a recovered claim plus a live one, both Claim ticket:worker:1: the store's compare-and-swap on the lease row admits one; the other reads 423 held with the holder and expiry, and N-07 does not dispatch twice (level-triggered compare of open work with live runs, T02).</collision>
+    <collision name="old-run-after-expiry">Attempt 1 went silent, the sweep expired it, N-11 cut attempt 2, N-02 granted a larger token; attempt 1 wakes and writes: its token is stale, every Put is 412, every renew is 412; it can only end with a seat.result the launcher records as blocked with reason stale, which N-11 ignores because attempt 2 is live (fencing, T06; the Optio lesson in S03 section 8 item 3).</collision>
+    <collision name="release-vs-sweep">Release and Sweep race on an expiring lease: both are transactions on the same row; whichever commits first wins; the loser's UPDATE affects zero rows and is logged; the outcome is either released (ticket progresses) or expired (N-11 retries), and N-11 reads the ticket's phase entity to tell which, so no attempt is lost or doubled.</collision>
+    <collision name="cap-race">Two claims for the last cap slot in one tick: the counting and the insert are one transaction behind the single writer, so exactly one gets 201 and the other 429.</collision>
+    <collision name="restart-mid-lease">The service restarts while a seat runs: Recover keeps every unexpired lease, the seat's token stays valid, its next heartbeat renews as if nothing happened.</collision>
+    <test>Two claimants per key over 100 keys, 1000 rounds, with a fake clock stepping past ttl in the middle: exactly one grant per generation, tokens strictly increasing across all keys, no Put with a stale token accepted.</test>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="100" kind="lease.recovered" acts="nobody; monitoring"/>
+    <emits code="200" kind="lease.renewed" acts="nobody"/>
+    <emits code="201" kind="lease.granted" acts="N-07, which dispatches with the token"/>
+    <emits code="204" kind="lease.released" acts="N-03 (phase moves), N-45 (claims may free at merge)"/>
+    <emits code="412" kind="lease.stale" acts="nobody; evidence that a fenced write was refused"/>
+    <emits code="423" kind="lease.refused" note="reason held or hold" acts="N-07 waits a tick"/>
+    <emits code="429" kind="lease.refused" note="reason cap" acts="N-07 waits a tick; N-40 shows the cap pressure"/>
+    <emits code="500" kind="lease.expired" acts="N-12 kills the run, N-11 decides attempt n+1"/>
+    <emits code="500" kind="lease.failed" acts="N-07 next tick; three in ten minutes on one key is a card through N-28"/>
+    <rule>Every code above must exist in ../../shared/status-codes.xml#codes with the same meaning and actor.</rule>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path p="STATE/store/coq.db (table leases, entity counter:lease_token)" writer="N-02 through N-01" cleanup="scheduler/host/bin/cleanup-leases.sh: --dry-run lists released or expired lease rows older than lease.keep_days 30; --apply deletes them; never a live row" registry="N-45"/>
+    <rule>No other path. A lease is a row, never a file; the lease file of herdr/config/leases.json and the treehouse slot lease are retired by N-14's volume and N-49.</rule>
+  </state-paths>
+
+
+  <edges id="edges">
+    <in from="N-01" record="record.committed on ticket.ready and on lease rows" href="../N-01/spec.xml#output"/>
+    <in from="N-03" record="ticket.ready (ticket, phase, attempt, role)" href="../N-03/spec.xml#output"/>
+    <in from="N-06" record="stall tick" href="../N-06/spec.xml#output"/>
+    <in from="N-15" record="lease.renew heartbeats and lease.release on seat.result" href="../N-15/spec.xml#output" note="calls, drawn as re-entries, not edges"/>
+    <out to="N-07" record="lease.granted (holder, token, expiry, generation)" href="../N-07/spec.xml#input"/>
+    <out to="N-12" record="lease rows plus lease.expired, read with heartbeat records" href="../N-12/spec.xml#input"/>
+    <re-entry from="N-08" note="gate.verdict green re-enters as a reviewer-phase claim on the same ticket" href="../../dag.md#4-re-entries"/>
+    <re-entry from="N-11" note="attempt n+1 re-enters as a fresh claim" href="../../dag.md#4-re-entries"/>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>Claim on a free key returns 201 with a token larger than every earlier token.</check><proof>Go test lease/claim_test.go with 100 keys.</proof></item>
+    <item><check>Claim on a held key returns 423 with holder and expires_at.</check><proof>Go test.</proof></item>
+    <item><check>Claim over the role cap returns 429 and the count is exact under concurrency.</check><proof>Go test with 8 goroutines on cap 4.</proof></item>
+    <item><check>Renew with the current token extends expires_at by ttl; with a stale token returns 412 and changes nothing.</check><proof>Go test with the fake clock.</proof></item>
+    <item><check>Sweep expires a lease ttl after the last heartbeat and appends lease.expired with heartbeat_at.</check><proof>Go test: clock advanced 901 s.</proof></item>
+    <item><check>A Put by the expired holder is refused 412 by N-01 after re-grant.</check><proof>Integration test store plus lease.</proof></item>
+    <item><check>Recover at start keeps unexpired leases and sweeps expired ones.</check><proof>Test with a prepared coq.db; lease.recovered counts match.</proof></item>
+    <item><check>ttl, heartbeat and the N-12 stall bound come from one config key set and a missing key exits 3.</check><proof>`scheduler check` output with the key removed.</proof></item>
+    <item><check>cleanup-leases.sh dry-run lists and never deletes a live row.</check><proof>Script test in scheduler/host/tests.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <actor name="N-07 in-process" may="Claim"/>
+    <actor name="N-15 launcher (code around the seat run)" may="Renew and Release with the token it was given"/>
+    <actor name="seat (the model inside the run)" may="nothing on leases directly; its ctl Puts carry the token the launcher exported; it cannot renew, release or claim"/>
+    <actor name="N-06 tick" may="Sweep"/>
+    <actor name="owner" may="`scheduler ctl lease release KEY --break-glass` once, recorded as break.glass; never automated (SPEC-16 l-glass, kept)"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <gauge name="lease.live" by="role"/>
+    <gauge name="lease.cap_pressure" note="live divided by cap, by role"/>
+    <counter name="lease.granted_total"/>
+    <counter name="lease.refused_total" by="reason"/>
+    <counter name="lease.expired_total" alarm="3 in ten minutes"/>
+    <counter name="lease.stale_total" alarm="any: a fenced write was attempted"/>
+    <gauge name="lease.sweep_age_seconds" alarm="over 3 stall ticks"/>
+    <surface>Machine screen (N-39) shows a node's lease (holder, token, expires_at); Alerts (N-41) shows lease.expired; Stats (N-40) shows cap pressure.</surface>
+  </monitoring>
+
+  <runbook id="runbook">
+    <task name="who holds a ticket">`scheduler ctl lease get WO-ID` prints every phase and attempt row with holder, token, expiry.</task>
+    <task name="a seat is stuck">Do nothing by hand: the sweep expires it within ttl and N-12 kills it; the Alerts screen shows the stall. A hand release is break glass only.</task>
+    <task name="change ttl or caps">Edit scheduler/config/scheduler.json through a ticket; `scheduler ctl reload` applies the tables; a running lease keeps its old expiry.</task>
+    <task name="cleanup">scheduler/host/bin/cleanup-leases.sh --dry-run, then --apply.</task>
+  </runbook>
+
+  <rejected id="rejected">
+    <item source="herdr/config/leases.json" what="four lease kinds (slot, tier, ticket, seat) with ttls declared but enforced by a monitor" reason="declared and not enforced (L02 section 6, finding 7); one lease kind keyed on ticket, phase and attempt, enforced by the store's sweep; the slot lease belongs to N-14, the tier lease to N-27"/>
+    <item source="queue/bin/queue.sh" what="lease_ttl_seconds 7200 with renew_grace_seconds 300 enforced only when sweep runs" reason="three queue implementations with lease fields nobody swept (K05, S03 F1); the sweep is a tick here, never optional"/>
+    <item source="specs/scheduler/SPEC-16-scheduler-overview.xml#d-c" what="the seats domain with caps, holding and the shared merger seat" reason="caps are kept as data here; the shared merger seat is killed (L01 section 9 item 2, D11 C39: code merges)"/>
+    <item source="rebuild/investigation/L14-go-grpc-control-plane.md#45-drive-control_planeproto-bootstrap-with-agent-release-bwa-rel-2026-09-17-v010-status-proposed" what="Lease with renewal token and HeartbeatLease from the Drive proto" reason="carried in shape (token, heartbeat, expected_version); the separate renewal token is folded into the fencing token because one number that only grows answers both"/>
+    <item source="rebuild/investigation/03-DECISIONS.md#19-d17-the-one-minute-idle-rule" what="the idle alarm and the patrol as the liveness mechanism" reason="C49: one-shot seats plus a stall timer; idle cannot exist; the lease expiry is the timer's input"/>
+    <item source="rebuild/investigation/L02-state-stores.md#7-decisions-an-llm-makes-that-a-rule-could-make" what="a monitor that releases an expired slot lease after reading a pane" reason="an LLM opinion is not a probe (V08); expiry is the clock"/>
+  </rejected>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="3-d01-control-plane-shape"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="4-d02-seat-contract"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="19-d17-the-one-minute-idle-rule"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal" note="T02, T06"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep" note="V02, V08"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="3-dropped-by-the-field-still-carried-here-kill" note="K04, K05, K10"/>
+    <source path="rebuild/investigation/L02-state-stores.md" anchor="6-waits-polls-sleeps-and-leases"/>
+    <source path="rebuild/investigation/L02-state-stores.md" anchor="7-decisions-an-llm-makes-that-a-rule-could-make" note="item 10"/>
+    <source path="rebuild/investigation/S03-make-and-durable-queues.md" anchor="8-what-to-carry-forward" note="item 3: lease plus heartbeat plus deadline, one owner per transition with compare-and-swap"/>
+    <source path="rebuild/investigation/L14-go-grpc-control-plane.md" anchor="45-drive-control_planeproto-bootstrap-with-agent-release-bwa-rel-2026-09-17-v010-status-proposed" note="Lease, HeartbeatLease, expected_version"/>
+    <source path="rebuild/investigation/L14-go-grpc-control-plane.md" anchor="6-waits-polls-sleeps-and-leases"/>
+    <source path="herdr/config/leases.json" anchor="/leases/seat" note="ttl 900 kept as lease.ttl_seconds"/>
+    <source path="scheduler/config/scheduler.json" anchor="/jobs.in_flight" note="global cap value kept as data"/>
+    <source path="specs/scheduler/SPEC-16-scheduler-overview.xml" anchor="l-llm"/>
+    <source path="specs/scheduler/SPEC-16-scheduler-overview.xml" anchor="l-glass"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C49"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C36"/>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-cog-system-drives.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+  </sources>
+</volume>

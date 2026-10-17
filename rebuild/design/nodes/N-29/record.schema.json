@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-29/record.schema.json",
+  "title": "N-29 Owner answer intake: input and output records",
+  "description": "owner.answer (input, from the page, a relay, a policy or the Controls screen) and ruling (output), with the refusal and rejection forms. Envelope per shared/state-store.xml#envelope.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "cardId": { "type": "string", "pattern": "^C-[0-9]{1,6}$" },
+    "recordId": { "type": "string", "minLength": 8, "maxLength": 64 },
+    "answerId": { "type": "string", "pattern": "^a-[0-9]{17}-[a-z0-9]{5}$" },
+    "tier": { "enum": ["stable", "uat", "dev"] },
+    "source": { "enum": ["page", "relay", "policy", "controls"] },
+    "effect": {
+      "type": "object",
+      "required": ["kind"],
+      "properties": {
+        "kind": { "enum": ["ticket.unblock", "build-mode.set", "gofactory", "control.halt", "control.resume", "promotion.confirm", "break.glass", "reopen", "none"] },
+        "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
+        "expiry": { "$ref": "#/$defs/utc" },
+        "request": { "$ref": "#/$defs/recordId", "description": "break.glass: the 300 request id" }
+      }
+    },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node"],
+      "properties": {
+        "id": { "$ref": "#/$defs/recordId" },
+        "kind": { "type": "string" },
+        "code": { "enum": [100, 200, 201, 204, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "const": "N-29" },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "maxLength": 128 },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "owner.answer (input, persisted first)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "owner.answer" },
+        "code": { "const": 100 },
+        "id": { "$ref": "#/$defs/answerId" },
+        "card": { "$ref": "#/$defs/cardId" },
+        "pick": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "words": { "type": "string", "maxLength": 4000 },
+        "source": { "$ref": "#/$defs/source" },
+        "by": { "type": "string", "minLength": 1, "maxLength": 64, "description": "owner; or seat name and role for relay; or POL-id for policy" },
+        "tier": { "$ref": "#/$defs/tier" }
+      },
+      "required": ["card", "pick", "words", "source", "by", "tier"]
+    },
+    {
+      "title": "ruling (output, one per card)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "ruling" },
+        "code": { "const": 200 },
+        "card": { "$ref": "#/$defs/cardId" },
+        "cause": { "$ref": "#/$defs/recordId" },
+        "pick": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "choice": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "words": { "type": "string", "maxLength": 4000 },
+        "source": { "$ref": "#/$defs/source" },
+        "by": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "answer": { "$ref": "#/$defs/answerId" },
+        "effects": { "type": "array", "maxItems": 4, "items": { "$ref": "#/$defs/effect" } },
+        "idempotency_key": { "type": "string", "pattern": "^ruling:C-[0-9]{1,6}$" }
+      },
+      "required": ["card", "cause", "pick", "choice", "words", "source", "by", "answer", "effects", "idempotency_key"]
+    },
+    {
+      "title": "answer.refused (output: a ruling already exists)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "answer.refused" },
+        "code": { "const": 409 },
+        "card": { "$ref": "#/$defs/cardId" },
+        "answer": { "$ref": "#/$defs/answerId" },
+        "ruling": { "$ref": "#/$defs/recordId" }
+      },
+      "required": ["card", "answer", "ruling"]
+    },
+    {
+      "title": "answer.rejected (output: validation failed)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "answer.rejected" },
+        "code": { "const": 400 },
+        "card": { "type": "string", "maxLength": 64 },
+        "reason": { "enum": ["unknown-card", "card-closed", "pick-out-of-range", "wrong-tier", "words-over-cap", "relay-role-not-allowed", "source-caller-mismatch", "store"] }
+      },
+      "required": ["card", "reason"]
+    },
+    {
+      "title": "ruling.effects.unknown (output, alert)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "ruling.effects.unknown" },
+        "code": { "const": 500 },
+        "ruling": { "$ref": "#/$defs/recordId" }
+      },
+      "required": ["ruling"]
+    },
+    {
+      "title": "intake.unavailable (output: store down after 3 tries)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "intake.unavailable" },
+        "code": { "const": 503 },
+        "answer": { "$ref": "#/$defs/answerId" }
+      },
+      "required": ["answer"]
+    }
+  ]
+}

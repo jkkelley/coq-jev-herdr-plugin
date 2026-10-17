@@ -1,0 +1,311 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-15 One-shot seat launcher. Volume of the Factory Rebuild spec book (R-03), group G3 Seats.
+  Written 2026-10-14T05:40:00Z by the G3 spec-author seat against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  Rulings: D02 (C36) one-shot runs, D03 (C37) subscription on the host and key in pods, D17 (C49) stall timer,
+  D11 (C39) code does mechanical jobs, D22 (C38) seats on the WSL host, D08 (C46) herdr is the owner's window.
+  No em dash appears in this file. Every time is UTC.
+-->
+<!--
+  Round 2, 2026-10-14T05:04:00Z, by the G3 spec-author seat, after the R-03 review seat failed round 1 on pointers and no cog.
+  What broke: this volume pointed at ../N-xx/spec.xml#N-xx-spec while every volume in the book declares
+  root id="N-xx" and links with #N-xx, and it pointed at ../../shared/*.xml anchors that no author has
+  written (shared/ belongs to the shared author, not this seat).
+  Why it mattered: a dangling pointer fails check.sh, and the architect reads nothing until the book passes.
+  The fix: root id is now the node id; every sibling, upstream, downstream and edge anchor is #N-xx; the
+  shared anchors are declared in <shared-needs> with no href so the shared author can write them and
+  check.sh can match them when shared/ lands; the principles this node obeys point at dag.md sections 7
+  and 8, which exist. The parent stays ../../index.xml#N-15 because the brief names the index volume as
+  every node's parent and the anchor is the node id, the one anchor every node is guaranteed.
+  Rejected: writing shared/ or index.xml from this seat (two authors on one file is the one-file,
+  one-in-flight-ticket collision the book forbids); leaving the hrefs to resolve later (a failing volume
+  blocks the book now).
+  Cost: a declared need is not a live pointer until shared/ lands.
+-->
+<!--
+  Round 3, 2026-10-14T05:30:00Z, by the G3 spec-author seat, after the R-03 review seat failed round 2 on no cog.
+  What broke: section retries (the launcher-restart recovery) adopted a surviving process and said "poll every
+  5 s until it exits" with no timeout and no fallback; the deadline, stall, lease-lost and kill-record checks
+  lived only in the heartbeat loop of mechanism step 4, and the adopt path did not say it re-entered that loop
+  or emitted heartbeats. The checklist proof "adopted to its exit" confirmed the wait was open-ended.
+  Why it mattered: a stalled adopted process was unbounded, and N-12 could not see it because no heartbeat
+  reached the store; a service restart could leave a seat running for ever, which is the cog the book forbids.
+  The fix: the beat loop is one function, beat(run), fed from started.json alone (pid, pgid, process start time,
+  deadline_at, stall_seconds, lease token and generation, session_id, transcript_path); a fresh start and an
+  adopt both enter it, so an adopted process emits heartbeats, renews the lease and is killed on the same four
+  conditions with the same SIGTERM, 30 s, SIGKILL path; the deadline is absolute from started.json, so a second
+  restart never extends it. Exit of a non-child is detected by /proc each beat, within one heartbeat_seconds.
+  Rejected: a separate adopt loop with its own timer (two loops drift and one is always the one nobody tested);
+  killing every survivor on restart and recording crashed (throws away a run that may be seconds from done and
+  burns an attempt of 3 for a restart the seat did nothing to cause).
+  Cost: an adopted run reports exit_code null because a non-child cannot be waited on; the envelope carries the
+  outcome, and a kill of an adopted run records no_result when the envelope was never written.
+-->
+<volume id="N-15" node="N-15" kind="node-spec" group="G3" version="1.2.0" issued="2026-10-14T05:30:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, DAG, principles, siblings, needs</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input records: seat.bundle plus workspace</entry>
+    <entry ref="output">Output records: seat.result always, seat.heartbeat while it runs</entry>
+    <entry ref="mechanism">Mechanism: the launcher in the Go service</entry>
+    <entry ref="command">The exact launch command</entry>
+    <entry ref="result">Turning the process result into the record</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report (including the adopt path after a launcher restart)</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="checklist">Checklist with proof</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with the reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-15"/>
+    <dag href="../../dag.md#3-every-node">The DAG row of this node: input record and output record</dag>
+    <principle href="../../dag.md#7-rules-every-node-obeys">Rules 1 to 9: input to output, no cog, three attempts, one store, code does mechanical jobs, the verdict the agent cannot edit, herdr is the owner's window, build mode, ships dark</principle>
+    <principle href="../../dag.md#8-many-agents-at-once">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, timed-out stalls, a 409 that reports</principle>
+    <needs href="spec.xml#shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <sibling href="record.schema.json" kind="schema">JSON schema of seat.heartbeat, seat.result and the claude -p result envelope the launcher parses</sibling>
+    <sibling href="../N-13/spec.xml#N-13">Seat layer render, writer of seat.bundle</sibling>
+    <sibling href="../N-14/spec.xml#N-14">Workspace provision, writer of workspace</sibling>
+    <sibling href="../N-16/spec.xml#N-16">Worker run, the phase inside this launcher that ends in pr.opened</sibling>
+    <sibling href="../N-17/spec.xml#N-17">Spec-author run, the phase that ends in ticket-set.draft</sibling>
+    <sibling href="../N-18/spec.xml#N-18">Validator</sibling>
+    <sibling href="../N-19/spec.xml#N-19">Reviewer run, the phase that ends in review.passed or review.changes</sibling>
+    <upstream href="../N-02/spec.xml#N-02">Lease service: the fencing token the heartbeat renews</upstream>
+    <downstream href="../N-12/spec.xml#N-12">Stall timer: the consumer of heartbeats</downstream>
+    <downstream href="../N-11/spec.xml#N-11">Retry and backoff: the consumer of seat.result blocked</downstream>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <text>Declared, not linked: the shared author writes these volumes and anchors; check.sh matches each need against shared/ when it lands. Nothing below points at a file that does not exist in this pull request.</text>
+    <need volume="../../shared/status-codes.xml" anchor="code-100" kind="status-code">100 exists or in progress: seat.bundle, workspace, seat.heartbeat, pr.opened, ticket-set.draft; acts: the next node on the edge</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-200" kind="status-code">200 done: seat.result outcome done with validated structured output; acts: the phase post step</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-412" kind="status-code">412 precondition refused: seat.bundle.refused, workspace.refused (claim_overlap, aggregate, ticket_in_flight, head_moved), seat.result preflight (bundle_mismatch, workspace_mismatch, lease_expired); acts: N-11, or N-03 for claim_overlap without an attempt</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-423" kind="status-code">423 blocked: seat.result outcome blocked with a terminal_reason from the reason table; acts: N-11 by reason</need>
+    <need volume="../../shared/status-codes.xml" anchor="code-500" kind="status-code">500 failed after 3 or a defect: seat.bundle.failed, workspace.failed, phase.failed, validator.failed, launcher.defect; acts: N-11, or N-06 health then N-28 for a defect</need>
+    <need volume="../../shared/seat-contract.xml" anchor="one-shot" kind="seat-contract">a seat is one bounded process between a bundle plus workspace and a seat.result; no pane, no prompt, no nudge, no idle state</need>
+    <need volume="../../shared/seat-contract.xml" anchor="launch-flags" kind="seat-contract">the exact claude -p flag set of N-15 section command (settings, --setting-sources local, --strict-mcp-config, dontAsk, --max-turns, --max-budget-usd, --output-format json, --json-schema, --session-id or --resume); no --fallback-model, no bypassPermissions on the host</need>
+    <need volume="../../shared/seat-contract.xml" anchor="result-from-the-harness" kind="seat-contract">seat.result is parsed by the launcher from the claude -p JSON envelope; a seat never posts its own record; a model's claim is data to verify</need>
+    <need volume="../../shared/seat-contract.xml" anchor="credential-by-placement" kind="seat-contract">host seats use the owner's subscription login (setup-token once, user-initiated); pod seats get ANTHROPIC_API_KEY from the launcher's pod spec; no seat ever reads or copies a token</need>
+    <need volume="../../shared/state-store.xml" anchor="table-heartbeats" kind="store-table">heartbeats: latest per run_id (upsert with monotonic seq): lease token and generation, pid, progress_at, transcript_bytes, adopted (true after a launcher restart re-entered the beat loop)</need>
+    <need volume="../../shared/state-store.xml" anchor="table-leases" kind="store-table">leases: holder, fencing token, generation, expires_at; renew accepted only for the current generation (N-02)</need>
+    <need volume="../../shared/principles.xml" anchor="no-cog" kind="principle">every wait has a timeout and a fallback; no agent is a gate; nothing starts by typing; the system drives (dag.md section 7 rule 2 until the shared volume lands)</need>
+  </shared-needs>
+
+  <section id="purpose" title="Purpose">
+    <text>N-15 runs one seat as one bounded process and always ends it in a seat.result record, written by the launcher from the harness's own result, never by the model. A seat exists only between its input (a bundle plus a workspace) and its output (seat.result): the owner's rule is then true by construction (rebuild/investigation/03-DECISIONS.md#4-d02-seat-contract, why).</text>
+    <text>It removes the three mechanisms that existed only because a seat was an interactive pane: the typed brief, the ACK nudge and the trust writer (rebuild/investigation/S04-agent-frameworks-seat-contracts.md#9-what-to-kill item 1), and it ends the condition the idle alarm reported: a one-shot run cannot sit idle; a run with no progress is killed by the stall timer and retried (rebuild/investigation/03-DECISIONS.md#19-d17-the-one-minute-idle-rule option B).</text>
+    <text>Limits are fields of the launch, enforced by the harness and the launcher: turns, spend, wall clock and stall. A dead run, a crashed launcher or a missing result still yields a record, so nothing downstream waits on a seat that is not there.</text>
+  </section>
+
+  <section id="input" title="Input records: seat.bundle plus workspace">
+    <text>Two records with the same run_id: seat.bundle 100 (../N-13/record.schema.json#/$defs/seat.bundle) and workspace 100 (../N-14/record.schema.json#/$defs/workspace). The launcher starts when both exist for a run_id that has no seat.result. From the bundle it takes the paths, hashes, model, limits, session id, lease and build_mode; from the workspace it takes the cwd, branch and mode. The dispatch's deadline_at is carried in the bundle's lease and in the dispatch record the launcher reads once for the deadline.</text>
+  </section>
+
+  <section id="output" title="Output records: seat.result always, seat.heartbeat while it runs">
+    <text>seat.heartbeat, code 100, every lease.heartbeat_seconds (default 30, shared/state-store.xml#config-keys; seats.json carries no copy of it) while the process lives: run_id, lease token and generation, pid, started_at, progress_at (the mtime of the session transcript, which moves on every model turn and tool call), transcript_bytes, stderr_bytes, turns_so_far when the stream reports it. The store keeps the latest heartbeat per run_id (an upsert keyed by run_id with a monotonic seq, table heartbeats), and the stall timer (N-12) compares progress_at with stall_seconds. A heartbeat also renews the ticket lease at N-02 with the fencing token; a renewal refused (token stale, generation moved) is a signal to kill the run: another holder exists.</text>
+    <text>seat.result, exactly one per run_id, idempotency_key = run_id. Fields: run_id, ticket, role, phase, attempt, outcome (done or blocked), code (200 for done, 423 for blocked), terminal_reason (success, error_max_turns, error_max_budget_usd, error_during_execution, error_max_structured_output_retries, killed_deadline, killed_stall, killed_lease_lost, killed_by_record, crashed, no_result, schema_invalid, bundle_mismatch, workspace_mismatch, lease_expired, output_rejected, seat_blocked), exit_code, signal, cost_usd, turns, session_id, model, started_at, finished_at, duration_seconds, permission_denials (count and the first five), structured (the phase's validated structured output, present only on done), result_path, stderr_path, transcript_path.</text>
+    <text>A done result is then handed to the phase's post step (N-16 close-out, N-17 draft put, N-19 verdict put) inside the same launcher call; the phase record (pr.opened, ticket-set.draft, review.passed or review.changes) is written after seat.result, by code, and a post step that fails turns the outcome into blocked with the post step's reason (section result).</text>
+    <text>Schema: record.schema.json#/$defs/seat.heartbeat and seat.result.</text>
+  </section>
+
+  <section id="mechanism" title="Mechanism: the launcher in the Go service">
+    <text>Package scheduler/internal/launcher. Run(ctx, bundle, workspace) returns nothing to its caller but the record it wrote; every exit path of the function ends in a seat.result put, including panics (a deferred recover writes blocked crashed). One goroutine per run; the process is a child of the service with its own process group so a kill reaches every grandchild.</text>
+    <mermaid>sequenceDiagram
+  participant S as Store N-01
+  participant L as launcher.Run
+  participant P as claude -p (child process group)
+  participant R as $COQ_STATE/seats/runs/run_id
+  S-->>L: seat.bundle and workspace for run_id, no seat.result
+  L->>L: verify bundle_hash over the four files; mismatch is 412 bundle_mismatch
+  L->>R: write started.json (pid pending, argv, env keys, deadline_at, stall_seconds, heartbeat_seconds, lease token and generation, session_id, transcript_path)
+  L->>P: start with cwd = workspace.path, stdout to result.json, stderr to stderr.log
+  L->>R: update started.json with pid, pgid and process start time
+  Note over L,R: beat(run) below is one function; a launcher restart re-enters it from started.json (section retries)
+  loop beat(run) every heartbeat_seconds until exit, or until deadline_at from started.json
+    L->>S: seat.heartbeat (progress_at from the transcript mtime) and lease renew
+    L->>L: deadline passed, stall, lease lost or kill record: SIGTERM to pgid, 30 s, SIGKILL
+  end
+  P-->>L: exit code and result.json
+  L->>L: parse result, validate structured output against output.schema.json
+  L->>S: seat.result (200 done or 423 blocked), idempotency_key = run_id
+  L->>L: phase post step (N-16, N-17 or N-19) when done
+  L->>S: phase record (pr.opened, ticket-set.draft, review.*) or a second seat.result is never written: the post failure is a phase.failed record and N-11 reads it</mermaid>
+    <step n="1">Preflight. Recompute sha256 of the bundle's four files and compare with the record's hashes; a mismatch is seat.result blocked 423 bundle_mismatch without starting a process (a hand edit of a bundle cannot launch). Check the workspace path exists and git -C path rev-parse HEAD equals workspace.base_sha; a mismatch is blocked workspace_mismatch. Check the lease has not expired; expired is blocked lease_expired, and N-11 decides.</step>
+    <step n="2">Environment. A minimal environment is built from scratch, not inherited: PATH, HOME, LANG, TZ=UTC, COQ_RUN_ID, COQ_TICKET, COQ_ROLE, COQ_WORKTREE, COQ_STATE, COQ_CACHE, COQ_BUILD_MODE, GIT_AUTHOR_NAME and GIT_COMMITTER_NAME from seats.json git identity, and the credential variable of section permissions. CLAUDECODE, CLAUDE_CODE_*, CLAUDE_PID, AI_AGENT, HERDR_* and RAIL_SURFACE are never set, so a seat cannot find a herdr socket or a parent session (specs/SPEC-04-herdr-seat-lifecycle.xml#s-seat unset list, carried forward as an allow-list instead of a deny-list).</step>
+    <step n="3">Start. The command of section command, with cwd = workspace.path, stdin closed, stdout to result.json, stderr to stderr.log, a new process group, and a context whose deadline is min(dispatch.deadline_at, now plus limits.wall_clock_seconds). Before the process starts, started.json is written with everything the beat loop needs and nothing it must look up: deadline_at (the absolute UTC instant just computed), stall_seconds and heartbeat_seconds of the role, the lease token and generation, session_id, the transcript path, argv and the environment key names; after the start it is updated with pid, pgid and the process start time from /proc/&lt;pid&gt;/stat. started.json is the whole input of beat(run), so a restarted launcher re-enters the loop from the file alone (section retries).</step>
+    <step n="4">Beat loop, one function beat(run) for a fresh start and for an adopted run alike. Every heartbeat_seconds: read the transcript mtime at started.json transcript_path, write seat.heartbeat (with adopted true when the launcher is not the parent), renew the lease with the token and generation from started.json. Kill conditions, checked each beat in this order: deadline_at from started.json passed (killed_deadline); now minus progress_at greater than stall_seconds (killed_stall); lease renewal refused (killed_lease_lost); a kill record for this run_id from N-12 or N-42 (killed_by_record). Kill is SIGTERM to the pgid from started.json, 30 s, then SIGKILL to the pgid; the launcher never signals a pid, so an adopted run and a child are killed by the same call. Exit is detected by the child wait for a child, and by /proc/&lt;pid&gt; with the recorded start time disappearing for an adopted run, so the loop sees an exit within one heartbeat_seconds either way. The loop has no path that runs past deadline_at plus the 30 s grace: that is the bound of every run, fresh or adopted.</step>
+    <step n="5">Exit. Wait for the process; read result.json; parse the claude -p JSON envelope (type result, subtype, is_error, total_cost_usd, num_turns, session_id, structured_output, permission_denials); validate structured_output against output.schema.json. Map to outcome and terminal_reason by section result. Write seat.result. Remove the process group if anything survives.</step>
+    <step n="6">Post step. On done, call the phase's post function with the structured output: N-16 closeout (push, pull request, pr.opened), N-17 (ticket-set.draft put), N-19 (review record put after the head check). The post function writes its own record or a phase.failed 500 with reason; it never rewrites seat.result.</step>
+  </section>
+
+  <section id="command" title="The exact launch command">
+    <text>Host seat on the owner's subscription (D03, slice one):</text>
+    <command>claude -p "$(cat "$BUNDLE/brief.md")" --model "$MODEL" --settings "$BUNDLE/settings.json" --setting-sources local --strict-mcp-config --mcp-config "$BUNDLE/mcp.json" --permission-mode dontAsk --permission-prompts none --max-turns "$MAX_TURNS" --max-budget-usd "$MAX_BUDGET_USD" --output-format json --json-schema "$BUNDLE/output.schema.json" --session-id "$SESSION_ID" --no-session-persistence=false</command>
+    <text>Pod seat on the API key (when seats move to pods under D22 and D03): the same with --bare added and the key in the pod's environment from the factory namespace's secret-free path (N-21 has no secret access; the key arrives as an env var set by the launcher's pod spec from the host, never from a cluster secret). --bare skips hooks, CLAUDE.md, auto memory and plugins; on the host the same effect comes from --setting-sources local plus the rendered settings (the checklist proves it).</text>
+    <text>Resume (a rework attempt of N-16 after review.changes): --resume "$SESSION_ID" replaces --session-id, with the new brief as the prompt; the verdict is in the brief, so no wake is typed and none can be lost (S04 section 8 item 8).</text>
+    <text>Why no --fallback-model: a fallback silently changes the model the role names; a 529 overload is a crashed run that N-11 retries on the same model (memory right-size-agent-models).</text>
+    <text>Why no --permission-mode bypassPermissions on the host: under bypass an allow rule restricts nothing (herdr/bin/testpane.sh header), so the fence of N-13 would be prose; dontAsk makes the allow list the fence and a miss a recorded denial, never a prompt.</text>
+  </section>
+
+  <section id="result" title="Turning the process result into the record">
+    <table id="result-map">
+      <row exit="0" subtype="success" structured="valid" outcome="done" code="200" reason="success"/>
+      <row exit="0" subtype="success" structured="invalid or missing" outcome="blocked" code="423" reason="schema_invalid: the seat ended without the contract's output"/>
+      <row exit="0" subtype="error_max_turns" structured="any" outcome="blocked" code="423" reason="error_max_turns"/>
+      <row exit="0" subtype="error_max_budget_usd" structured="any" outcome="blocked" code="423" reason="error_max_budget_usd"/>
+      <row exit="0" subtype="error_max_structured_output_retries" structured="any" outcome="blocked" code="423" reason="error_max_structured_output_retries"/>
+      <row exit="non-zero" subtype="error_during_execution or none" structured="any" outcome="blocked" code="423" reason="error_during_execution"/>
+      <row exit="143 or signal" subtype="none" structured="none" outcome="blocked" code="423" reason="killed_deadline, killed_stall, killed_lease_lost or killed_by_record, whichever the launcher issued"/>
+      <row exit="none (process vanished, launcher restarted)" subtype="none" structured="none" outcome="blocked" code="423" reason="crashed"/>
+      <row exit="any" subtype="any" structured="result.json unreadable" outcome="blocked" code="423" reason="no_result"/>
+      <row exit="0" subtype="success" structured="valid but the post step refuses it" outcome="blocked" code="423" reason="output_rejected with the post step's detail (for example pr_not_found, head_moved, no_observations)"/>
+    </table>
+    <text>The structured output claims nothing on its own: N-16 checks the pull request exists at the claimed head, N-19 checks the head sha is the dispatched one, N-18 runs the acceptance commands. A model's claim is data to verify, never a verdict (rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal T04).</text>
+    <text>A seat that writes blocked itself: the output schema of every phase has an optional blocked object (reason, observations, repro); a valid output with blocked set is outcome blocked 423 reason seat_blocked with the observations attached; the seat never posts a record, the launcher does.</text>
+  </section>
+
+  <section id="start" title="How it starts without an agent typing">
+    <text>The seat controller (N-06 unit, N-07 tick) lists run_ids that have both a seat.bundle and a workspace and no seat.result and no live launcher goroutine, and starts Run for each up to the capacity of seats.json max_runs (default from RAM: floor((host_ram_gib minus 8) divided by 1.5), the hosting guide's formula with 1.5 GiB per session, capped by workspace_slots). A run never starts from a pane, a prompt, a Makefile target typed by hand, or a person. After a service restart the same list recovers every run that was in flight (section retries).</text>
+  </section>
+
+  <section id="waits" title="Every wait, its timeout and its fallback">
+    <wait what="the seat process itself" timeout="min(dispatch.deadline_at, wall_clock_seconds of the role: worker 5400 s, spec-author 3600 s, reviewer 1200 s)" attempts="1 per run" fallback="SIGTERM, 30 s, SIGKILL; seat.result blocked killed_deadline; N-11 counts the attempt"/>
+    <wait what="progress between model turns" timeout="stall_seconds of the role: worker 600 s, spec-author 600 s, reviewer 300 s" attempts="1 per run" fallback="kill; blocked killed_stall (the stall timer N-12 reads the same heartbeat and can issue the kill record if the launcher's own check is late)"/>
+    <wait what="process exit after SIGTERM" timeout="30 s" attempts="1" fallback="SIGKILL to the process group; survivors are listed in stderr.log and reported as a 500 defect"/>
+    <wait what="an adopted process after a launcher restart (started.json without result.json, pid alive with the recorded start time)" timeout="deadline_at from started.json, absolute, never recomputed; stall_seconds from started.json against the transcript mtime; the same beat(run) loop as a fresh start, so the bound is the remaining part of the run's own wall clock plus the 30 s grace" attempts="1 per run; every further restart adopts the same run against the same deadline_at, so the bound never grows" fallback="SIGTERM to the pgid, 30 s, SIGKILL; seat.result blocked killed_deadline or killed_stall (or killed_lease_lost, killed_by_record) with adopted true and exit_code null; result.json present at that point is parsed as usual, absent is no_result; N-11 counts the attempt"/>
+    <wait what="detecting the exit of an adopted process (a non-child cannot be waited on)" timeout="one heartbeat_seconds: /proc/&lt;pid&gt; with the recorded start time is checked every beat" attempts="every beat until deadline_at" fallback="the deadline wait above; a pid that is reused by another process is told apart by the start time, so a reuse reads as exited and result.json decides between the envelope's outcome and no_result"/>
+    <wait what="heartbeat put and lease renew" timeout="5 s" attempts="3 per beat" fallback="the beat is skipped and counted; three consecutive skipped beats kill the run with killed_lease_lost because liveness can no longer be proved to the store"/>
+    <wait what="seat.result put" timeout="5 s" attempts="3" fallback="the result stays in result.json beside a result.pending marker; the level-triggered recovery pass on the next tick re-puts it (idempotent by run_id) as its own step of 3; a marker older than one tick is reported by N-06 health as a store outage, and N-28 posts one card when it survives 3 ticks; the launcher itself never loops"/>
+    <wait what="the API (529, 5xx, rate limit) inside the seat process" timeout="the run's own bound, not the harness's: min(dispatch.deadline_at, wall_clock_seconds of the role) from the first wait, and stall_seconds when the retrying process stops writing its transcript" attempts="1 per run; the launcher never restarts the process and sets no retry flag of its own" fallback="the run ends error_during_execution, killed_stall or killed_deadline, whichever comes first; N-11 backs off min(10 s times 2 to the n minus 1, 5 min) for 3 attempts, then dead and one card"/>
+    <text>No wait in this node depends on a person. The owner's only influence is a kill record from the Controls screen (N-42) which the heartbeat loop honours within one beat.</text>
+  </section>
+
+  <section id="retries" title="Retries up to 3, then recover and report">
+    <text>Inside a run nothing is retried by the launcher: a run is one attempt. Across runs N-11 owns the count: a seat.result blocked is a failure record; attempt n+1 is a new dispatch, a new bundle and a fresh workspace (or the ticket's branch), and a new run; after attempt 3 the ticket is dead and N-28 posts one card. The launcher's own mechanical steps (puts, file writes) retry 3 times with 1 s, 2 s, 4 s.</text>
+    <text id="adopt">Recovery after a launcher restart, the adopt path: for every runs/&lt;run_id&gt;/started.json without result.json, read pid, pgid and the process start time. If /proc/&lt;pid&gt; exists with the same start time, the launcher adopts the run by calling the same beat(run) of mechanism step 4 with started.json as its only input: it emits seat.heartbeat every heartbeat_seconds with adopted true (so N-12 sees the run again from the first beat after the restart), renews the lease with the recorded token and generation, and kills on the same four conditions with the same SIGTERM to pgid, 30 s, SIGKILL path. The bound is deadline_at from started.json, which is absolute and never recomputed, plus stall_seconds against the transcript mtime, so an adopted run can live no longer than it could have under its first launcher, and a second or third restart adopts the same run against the same instant. When the process exits (seen by /proc within one beat) result.json is parsed as usual; a non-child cannot be waited on, so exit_code is recorded as null and the envelope carries the outcome; a kill of an adopted run records the kill reason, and no_result when the envelope was never written. If the process is gone at restart, write seat.result blocked crashed at once. No run is ever left without a result and no adopted run is ever without a bound; that is the checklist's recovery proof.</text>
+    <text>Restart overlap on the adopt path: started.json is read, never recreated, by the adopter, and the O_EXCL creation of collision 1 (section many-agents) belongs to the fresh start only, so a fresh start and an adopt for one run_id cannot both proceed; the fresh start loses because the file exists, and the adopter is the only writer of heartbeats for that run_id after the restart.</text>
+    <text>Retryable reasons (N-11 retries without a card): crashed, killed_stall, killed_deadline, error_during_execution, no_result, killed_lease_lost. Reasons that count as the seat's own failure and retry with the verdict attached: schema_invalid, seat_blocked, output_rejected, error_max_turns, error_max_budget_usd. The reason is data on the record so N-11 branches on it by table, never by reading prose.</text>
+  </section>
+
+  <section id="many-agents" title="Many agents at once">
+    <text>Up to max_runs seats run at once, each a separate process group with its own cwd, bundle, session id and run directory; nothing is shared but the store and the mirror, and neither is written by a seat. The host's ~/.claude.json is written by Claude Code itself for every session; the launcher never writes it (the ensure_trust rewrite without a lock is retired, L11 F15), and -p sessions show no trust dialog, so the file is read-only from this node's side.</text>
+    <text>Collision 1, two launchers for one run_id (restart overlap, or the adopt path racing a fresh start): started.json is created with O_EXCL; the second creator loses and exits; an adopter never creates it, only reads it, so a fresh start cannot win against a run that already has started.json (section retries, adopt); seat.result is idempotent by run_id and the store refuses a second put with 409, which the loser ignores. Two adopters of one run (the launcher's single-instance lock in state-paths makes this a defect, not a state) would both signal the same pgid and both put the same seat.result; the process dies once and the second put is the same 409.</text>
+    <text>Collision 2, two runs for one ticket (a lease fencing failure upstream): every heartbeat renews with the token and generation the bundle carries; the lease service accepts only the current generation, so the stale run's renewal is refused and it kills itself with killed_lease_lost within one beat. The winner is the one the lease names, never the one that started first.</text>
+    <text>Collision 3, the stall timer (N-12) and the launcher both decide to kill: both write a kill record idempotent by (run_id, reason); the process is killed once; the seat.result names the first reason recorded.</text>
+    <text>Collision 4, the owner's kill from the Controls screen while a kill is in progress: the same kill record path; the owner's reason wins on the record only if it is first.</text>
+    <text>Collision 5, two seats on the host share one subscription: a rate-limited seat is bounded by its own stall and wall clock (section waits), never by the harness's retry; it ends error_during_execution, killed_stall or killed_deadline and N-11 backs off. The capacity formula bounds concurrent seats so RAM, not the subscription, is the first limit; a subscription that runs out (the 53 hour rime stop, rebuild/investigation/L09-earlier-factory-iterations.md section 5.2) shows as a streak of error_during_execution with api_error_status 401 or 429 on the Alerts screen, and N-28 posts one card after 3 dead tickets in a row with that status.</text>
+    <text>Collision 6, transcripts: Claude Code keys transcripts by cwd and session id; every run has its own slot directory and its own UUID, so no two runs share a transcript path. The launcher copies the transcript into the run directory at exit so cleanup of ~/.claude/projects by Claude Code's own retention cannot lose the evidence.</text>
+  </section>
+
+  <section id="codes" title="Status codes this node emits">
+    <code value="100" kind="seat.heartbeat">Alive with progress_at. Acts: N-12 reads; nobody else.</code>
+    <code value="200" kind="seat.result">Outcome done with validated structured output. Acts: the phase post step in the same call.</code>
+    <code value="423" kind="seat.result">Outcome blocked with a terminal_reason. Acts: N-11 by the reason table.</code>
+    <code value="412" kind="seat.result">Preflight refused: bundle_mismatch, workspace_mismatch, lease_expired. Acts: N-11; a bundle_mismatch is also a defect because something edited a bundle.</code>
+    <code value="500" kind="phase.failed">A post step (push, pull request, record put) failed 3 times after a done run. Acts: N-11; the run's work is on the branch, so attempt n+1 resumes from the branch, not from scratch.</code>
+    <code value="500" kind="launcher.defect">A process survived SIGKILL, a result put never landed, or two launchers disagreed. Acts: N-06 health; N-28 after 3.</code>
+  </section>
+
+  <section id="state-paths" title="State paths and the cleanup script for each">
+    <path dir="$COQ_STATE/seats/runs/&lt;run_id&gt;/" writes="started.json (the beat loop's whole input: pid, pgid, process start time, deadline_at, stall_seconds, heartbeat_seconds, lease token and generation, session_id, transcript_path, argv, env key names), result.json, result.pending (only until the seat.result put commits), stderr.log, heartbeat.json (latest), transcript.jsonl (copied at exit), provision.log (N-14), closeout.log (N-16)" cleanup="scheduler/host/bin/cleanup-seat-runs.sh" retention="7 days after seat.result; 30 days for runs whose ticket died, so a card's evidence survives">Dry run by default; --apply deletes; never deletes a run directory without result.json younger than its deadline plus 1 hour; registered in N-45's scheduler/config/cleanup.json as seat-runs.</path>
+    <path dir="$HOME/.claude/projects/&lt;encoded workspace path&gt;/&lt;session_id&gt;.jsonl" writes="the transcript Claude Code writes" cleanup="Claude Code's own retention plus scheduler/host/bin/cleanup-seat-runs.sh --transcripts" retention="the copy in the run directory is the evidence; the original may go at any time">The cleanup script removes transcripts of finished runs older than 7 days so the slot path's project directory does not grow without bound.</path>
+    <path dir="$COQ_STATE/seats/runs/.lock" writes="the launcher's single-instance lock" cleanup="released on exit; scheduler/host/bin/cleanup-seat-runs.sh --lock removes a stale lock whose pid is dead" retention="P0D when no launcher pid holds it"/>
+    <text>Nothing is written into a workspace by the launcher except what the seat itself writes inside its allow paths; nothing is written into the repository.</text>
+  </section>
+
+  <section id="permissions" title="Permissions">
+    <text>The launcher (Go service, the owner's user on the WSL host): spawn processes, read the bundle, read and write the run directory, gRPC to the store, signal its own process groups. The subscription credential is the host user's Claude login (claude setup-token performed once by the owner by hand, the one user-initiated step, recorded as a runbook item); the launcher never reads or copies the token and never writes ~/.claude.json.</text>
+    <text>A pod seat: ANTHROPIC_API_KEY in the pod environment set by the launcher's pod spec (the host holds the key under $COQ_STATE/secrets/anthropic.key, mode 0600, outside the repository, with its own cleanup entry), --bare, bypassPermissions inside the pod because the pod is the fence (D23: no secret access, egress to GitHub and GHCR only).</text>
+    <text>A seat may never: read another run's directory (COQ_RUN_ID is the only one it knows and the directory is not in its allow paths), spawn a background process that outlives it (the process group kill ends it, and a survivor is a 500 defect), or reach herdr (no socket variable is set).</text>
+  </section>
+
+  <section id="checklist" title="Checklist with proof">
+    <item proof="go test ./internal/launcher -run TestAlwaysResult: fixtures for success, max turns, non-zero exit, SIGKILL, result.json missing, launcher panic; each yields exactly one seat.result with the mapped reason">Every exit path ends in a seat.result.</item>
+    <item proof="go test TestStallKill with the fake clock: a process whose transcript mtime stops moving is SIGTERMed at stall_seconds and SIGKILLed 30 s later; the result reads killed_stall">The stall bound is enforced by the launcher.</item>
+    <item proof="go test TestDeadlineKill with the fake clock: killed_deadline at the dispatch deadline even when progress continues">The wall clock is enforced.</item>
+    <item proof="go test TestLeaseLost: a lease service that refuses the renewal makes the launcher kill the run within one beat; the result reads killed_lease_lost">A fenced-out run kills itself.</item>
+    <item proof="go test TestRecoverAdopt and TestRecoverCrashed: started.json without result.json and a live pid is adopted into beat(run); the test asserts a seat.heartbeat with adopted true within one heartbeat_seconds of the restart, then the process exits and the result is parsed with exit_code null; a dead pid yields blocked crashed">Restart recovery leaves no run without a result and re-enters the beat loop.</item>
+    <item proof="go test TestRecoverAdoptStall and TestRecoverAdoptDeadline with the fake clock: an adopted process whose transcript stops moving is SIGTERMed to its pgid at stall_seconds and SIGKILLed 30 s later with killed_stall; an adopted process with deadline_at in started.json already past is killed on the first beat with killed_deadline; a second adopt of the same started.json produces the same deadline_at">An adopted run has the same bound as a fresh one and the bound never grows across restarts.</item>
+    <item proof="probe on the test host: a marker-writing user hook and a user MCP server are installed; a seat launched by the exact command writes no marker and reports no MCP server">The command loads no user layer on a subscription login.</item>
+    <item proof="probe: a seat whose brief asks it to edit a file outside its allow paths ends with permission_denials naming the path and no change on disk">dontAsk plus the rendered fence refuses without a prompt.</item>
+    <item proof="go test TestIdempotentResult: two Run calls for one run_id commit one seat.result; the second sees 409 and exits 0">One result per run under concurrency.</item>
+    <item proof="scheduler/host/bin/cleanup-seat-runs.sh --dry-run lists finished runs older than 7 days and keeps a run with a dead ticket under 30 days; --apply removes the first set only">Cleanup exists and keeps card evidence.</item>
+    <item proof="scheduler status (gRPC) lists every live run with run_id, ticket, role, pid, started_at, last progress_at, cost so far">Monitoring is the system reporting on itself.</item>
+  </section>
+
+  <section id="monitoring" title="Monitoring">
+    <text>StatusResponse.seats (scheduler.proto SeatStatus, extended by its ticket with run_id, pid, progress_at, cost_usd, turns): one row per live run. Counters: runs_started, runs_done, runs_blocked_by_reason (a label per terminal_reason), runs_recovered_adopted, runs_recovered_crashed, heartbeats_skipped, cost_usd_total by role, turns_total by role. The Map screen (N-38) draws each live run as an inserter on the node's belt; the Machine screen (N-39) shows the run's progress_at age and cost; the Stats screen (N-40) binds to the counters; the Alerts screen (N-41) shows killed_stall, crashed and a 401 or 429 api_error_status streak.</text>
+    <text>Health line: live runs over capacity, the oldest progress_at age, the count of live adopted runs (each adopted run reports in the same seats row with adopted true, so the Machine screen shows it like any run), and the last seat.result at. A launcher with zero live runs while dispatches exist for longer than one tick is a health warning: capacity unused is a reconciler defect (D17).</text>
+  </section>
+
+  <section id="runbook" title="Runbook">
+    <text>See a run: ls $COQ_STATE/seats/runs/&lt;run_id&gt;/; the brief is in the bundle (N-13); result.json is the harness envelope; stderr.log carries the launcher's own lines prefixed launcher:; transcript.jsonl is the evidence.</text>
+    <text>Resume a done run's session by hand for inspection: claude --resume &lt;session_id&gt; in the slot directory, as the owner, read-only intent; never on a live run (the lease is held) and never to continue the work: the follow-up is a new dispatch.</text>
+    <text>Restart the service while seats run: nothing to do by hand; the adopt path (section retries) re-enters the beat loop for every run with started.json and no result.json, and the first heartbeat after the restart carries adopted true; a run whose deadline_at passed during the outage is killed on the first beat with killed_deadline and N-11 retries it.</text>
+    <text>Kill a run: a control.action record from the Controls screen (N-42) with kind kill and run_id; the launcher honours it within one beat. Never kill -9 by hand; if it happens, the next tick records blocked crashed and the system continues.</text>
+    <text>Credential: claude setup-token once on the host as the owner (user-initiated); the launcher reports api_error_status 401 as an alert when it lapses; no agent runs the login.</text>
+    <text>Cleanup: scheduler/host/bin/cleanup-seat-runs.sh [--apply] [--older-than 7d] [--transcripts]; registered in N-45.</text>
+    <text>Break glass: the owner's one-time break glass (N-42) can start a dispatch outside the tick; the launcher still runs it through this node, with every limit, so there is no launch path that skips the result.</text>
+  </section>
+
+  <section id="edges" title="DAG edges in and out">
+    <edge dir="in" from="../N-13/spec.xml#N-13" record="seat.bundle"/>
+    <edge dir="in" from="../N-14/spec.xml#N-14" record="workspace"/>
+    <edge dir="out" to="../N-16/spec.xml#N-16" record="the worker phase runs inside this node and its post step writes pr.opened"/>
+    <edge dir="out" to="../N-17/spec.xml#N-17" record="the spec-author phase runs inside this node and its post step writes ticket-set.draft"/>
+    <edge dir="out" to="../N-19/spec.xml#N-19" record="the reviewer phase runs inside this node and its post step writes review.passed or review.changes"/>
+    <edge dir="out" to="../N-12/spec.xml#N-12" record="seat.heartbeat"/>
+    <edge dir="out" to="../N-11/spec.xml#N-11" record="seat.result blocked 423 and 412, phase.failed 500 (failure records)"/>
+  </section>
+
+  <section id="sources" title="Sources cited">
+    <source href="rebuild/investigation/03-DECISIONS.md#4-d02-seat-contract">D02 option B, cost note on the wall clock</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#5-d03-seat-credential-and-billing">D03 option C</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#19-d17-the-one-minute-idle-rule">D17 option B</source>
+    <source href="rebuild/investigation/03-DECISIONS.md#13-d11-which-llm-roles-remain">D11 option B</source>
+    <source href="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#4-what-works">4.1 the contract table, 4.2 result from the harness, limits as fields, no prompts by flag, leases with liveness, resume by id</source>
+    <source href="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#5-what-broke-and-why">items 1 to 8</source>
+    <source href="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#8-what-to-carry-forward">items 1, 3, 4, 5, 7, 8, 10</source>
+    <source href="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#9-what-to-kill">items 1, 2, 3</source>
+    <source href="rebuild/investigation/02-MAPPING.md#4-in-the-field-untouched-here-steal">T01, T04, T06, T07 (ships dark), T13</source>
+    <source href="rebuild/investigation/02-MAPPING.md#3-dropped-by-the-field-still-carried-here-kill">K02, K03, K04, K10, K12</source>
+    <source href="rebuild/investigation/01-ROOT-CAUSES.md#3-root-causes">RC2, RC4</source>
+    <source href="rebuild/investigation/L11-governance-layer.md#52-findings-f1-to-f18">F9, F10, F13, F15</source>
+    <source href="rebuild/investigation/L06-owner-retros-and-plans.md#8-what-to-carry-forward">a seat exists only between its input and its output; seats as Jobs with TTL, leases and heartbeats</source>
+    <source href="rebuild/investigation/L09-earlier-factory-iterations.md#7-decisions-an-llm-makes-that-a-rule-could-make">whether a seat is alive: transcript proof plus heartbeat age</source>
+    <source href="specs/SPEC-04-herdr-seat-lifecycle.xml#s-seat">the env unset list, carried as an allow-list</source>
+    <source href="specs/SPEC-04-herdr-seat-lifecycle.xml#s-recovery">seat silent 900 s, resume 3 times then 423, the shape this node keeps as stall_seconds and N-11</source>
+    <source href="specs/SPEC-17-orchestrator-and-agent-health.xml#s-health">C1 alive, C2 stuck, C4 at capacity: replaced by heartbeat, stall and the capacity formula</source>
+    <source href="scheduler/api/scheduler/v1/scheduler.proto">SeatStatus, Stall, counters</source>
+    <source href="herdr/bin/seat.sh">ensure_trust, nudge_seat, herdr agent start: the mechanisms retired</source>
+    <source href="herdr/bin/testpane.sh">under bypassPermissions an allow rule restricts nothing</source>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C49</source>
+    <source href="~/.bearings/coq-stable/answers.jsonl">C36, C37, C38, C39</source>
+    <source href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md">rulings 20, 21, 24</source>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/herdr-crash-restart-order.md">a herdr core dump killed all seats: every seat is now its own process under the service</source>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/arm-herdr-idle-watch-on-every-resume.md">idle watches flooded the architect; retired</source>
+  </section>
+
+  <rejected id="rejected">
+    <item source="herdr/bin/seat.sh and specs/SPEC-04-herdr-seat-lifecycle.xml#s-seat" what="herdr agent start in a pane, typed brief, guard bind, ACK nudge, trust writer" reason="S04 section 9 item 1; D02; D08"/>
+    <item source="specs/SPEC-17-orchestrator-and-agent-health.xml#s-health C2" what="stuck repairs: nudge, Escape then nudge, retire and re-seat" reason="a one-shot run has no prompt to nudge; stall kills and N-11 retries with a fresh run"/>
+    <item source="specs/SPEC-04-herdr-seat-lifecycle.xml#s-recovery" what="resume_agents_on_restore, re-attach by label" reason="recovery is by run directory and pid, then by session id; labels and panes are the owner's window only"/>
+    <item source="line/bin/route-retry.sh and herdr/bin/patrolwatch.sh" what="pane reads and idle notes as liveness" reason="K04; progress_at from the transcript and heartbeats are the probe (V08)"/>
+    <item source="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#4-what-works claude --bg" what="background sessions read through claude agents --json" reason="the result must come from the launcher's own parse of the harness envelope; the supervisor's hour idle stop and shared quota make it a watch option for the owner, not the seat mechanism (D02 C allowed later)"/>
+    <item source="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#8-what-to-carry-forward item 6" what="OpenHands stuck detector over the transcript" reason="carried as T07 and ships dark: a later ticket adds the five patterns as a second kill condition; slice one kills on no progress only"/>
+    <item source="rebuild/investigation/S04-agent-frameworks-seat-contracts.md#8-what-to-carry-forward item 9" what="Claude Code self-hosted environments as the runner" reason="plan eligibility unverified (S04 section 10 question 2); the host launcher needs no vendor control plane"/>
+    <item source="roles/*.json max_seats" what="per-role concurrency caps" reason="capacity is one formula over RAM in seats.json; a role cap is a hand edit (S04 section 5 item 6)"/>
+    <item source="--fallback-model" what="a silent model fallback" reason="the role names the model; a fallback changes it without a record"/>
+  </rejected>
+</volume>

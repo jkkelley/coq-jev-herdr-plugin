@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-33/record.schema.json",
+  "title": "N-33 Rail panel: input and output records",
+  "description": "ledger.row (input, pushed), plan.step and plan.side (seeded, pushed), rail.panel (output frame, derived, not stored), plan.invalid and ledger.rejected (alerts). Envelope per shared/state-store.xml#envelope.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "recordId": { "type": "string", "minLength": 8, "maxLength": 64 },
+    "planId": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$" },
+    "stepId": { "type": "string", "pattern": "^[A-Z]-[0-9]{2}$" },
+    "rowStatus": { "enum": ["started", "complete", "blocked", "issue", "question", "checkpoint"] },
+    "stepState": { "enum": ["not-started", "running", "blocked", "done", "superseded"] },
+    "fifteenWords": { "type": "string", "minLength": 1, "maxLength": 200, "pattern": "^[^\\u2014]*$", "description": "fifteen words or fewer, checked by the CLI; no em dash" },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node"],
+      "properties": {
+        "id": { "$ref": "#/$defs/recordId" },
+        "kind": { "type": "string" },
+        "code": { "enum": [100, 200, 201, 204, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "const": "N-33" },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "maxLength": 128 }
+      }
+    },
+    "planStepBody": {
+      "type": "object",
+      "required": ["id", "t", "who", "gate", "owner"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/stepId" },
+        "t": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "who": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "gate": { "type": "boolean" },
+        "owner": { "type": "boolean" }
+      }
+    },
+    "ledgerRowBody": {
+      "type": "object",
+      "required": ["plan", "step", "status", "text", "by"],
+      "properties": {
+        "plan": { "$ref": "#/$defs/planId" },
+        "step": { "$ref": "#/$defs/stepId" },
+        "status": { "$ref": "#/$defs/rowStatus" },
+        "text": { "$ref": "#/$defs/fifteenWords" },
+        "by": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "ref": { "type": "string", "maxLength": 512 }
+      }
+    }
+  },
+  "oneOf": [
+    {
+      "title": "ledger.row (input and record)",
+      "properties": {
+        "kind": { "const": "ledger.row" },
+        "code": { "enum": [100, 200, 300, 423, 500] },
+        "idempotency_key": { "type": "string", "pattern": "^ledger:" }
+      },
+      "required": ["idempotency_key"],
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "$ref": "#/$defs/ledgerRowBody" },
+        { "if": { "properties": { "status": { "const": "complete" } } }, "then": { "properties": { "code": { "const": 200 } } } },
+        { "if": { "properties": { "status": { "const": "blocked" } } }, "then": { "properties": { "code": { "const": 423 } } } },
+        { "if": { "properties": { "status": { "const": "issue" } } }, "then": { "properties": { "code": { "const": 500 } } } },
+        { "if": { "properties": { "status": { "const": "question" } } }, "then": { "properties": { "code": { "const": 300 } } } },
+        { "if": { "properties": { "status": { "enum": ["started", "checkpoint"] } } }, "then": { "properties": { "code": { "const": 100 } } } }
+      ]
+    },
+    {
+      "title": "plan.step (seeded upsert keyed plan:<plan>:<step>)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "plan.step" },
+        "code": { "const": 100 },
+        "plan": { "$ref": "#/$defs/planId" },
+        "step": { "$ref": "#/$defs/planStepBody" },
+        "order": { "type": "integer", "minimum": 1 },
+        "source": { "type": "string", "description": "repository path of plan.json" },
+        "source_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "required": ["plan", "step", "order", "source", "source_hash", "version"]
+    },
+    {
+      "title": "plan.side (seeded upsert keyed plan:<plan>:side)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "const": "plan.side" },
+        "code": { "const": 100 },
+        "plan": { "$ref": "#/$defs/planId" },
+        "signal": { "type": "string", "pattern": "^[A-Z]{2,16}$" },
+        "folds": { "type": "array", "maxItems": 16, "items": { "type": "object", "required": ["title", "html"], "properties": { "title": { "type": "string", "maxLength": 80 }, "html": { "type": "string", "maxLength": 65536 } } } },
+        "source_hash": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      },
+      "required": ["plan", "signal", "folds", "source_hash", "version"]
+    },
+    {
+      "title": "rail.panel (output frame, derived on the page; not stored)",
+      "type": "object",
+      "required": ["plan", "current", "progress", "steps", "ledger", "approved", "built_at"],
+      "additionalProperties": false,
+      "properties": {
+        "plan": { "$ref": "#/$defs/planId" },
+        "current": { "type": "object", "properties": { "step": { "$ref": "#/$defs/stepId" }, "last": { "$ref": "#/$defs/ledgerRowBody" } } },
+        "progress": { "type": "object", "required": ["done", "total"], "properties": { "done": { "type": "integer", "minimum": 0 }, "total": { "type": "integer", "minimum": 1 } } },
+        "steps": { "type": "array", "items": { "type": "object", "required": ["step", "state"], "properties": { "step": { "$ref": "#/$defs/planStepBody" }, "state": { "$ref": "#/$defs/stepState" }, "last_at": { "$ref": "#/$defs/utc" } } } },
+        "ledger": { "type": "array", "maxItems": 200, "items": { "$ref": "#/$defs/ledgerRowBody" } },
+        "side": { "type": "array", "items": { "type": "object", "properties": { "title": { "type": "string" }, "html": { "type": "string" } } } },
+        "approved": { "type": "boolean" },
+        "built_at": { "$ref": "#/$defs/utc" },
+        "seq": { "type": "integer", "minimum": 0, "description": "the highest seq applied when the frame was derived" }
+      }
+    },
+    {
+      "title": "plan.invalid / ledger.rejected / rail.seed.failed (alerts)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "properties": {
+        "kind": { "enum": ["plan.invalid", "ledger.rejected", "rail.seed.failed"] },
+        "code": { "enum": [400, 500] },
+        "plan": { "$ref": "#/$defs/planId" },
+        "step": { "type": "string", "maxLength": 16 },
+        "reason": { "type": "string", "maxLength": 240 }
+      },
+      "required": ["plan", "reason"]
+    }
+  ]
+}

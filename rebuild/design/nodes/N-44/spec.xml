@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-44 Build-mode flag. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
+     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh. -->
+<volume id="N-44" kind="node-spec" node="N-44" group="G7" version="1.0.0" issued="2026-10-14" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, shared</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="mechanism">Mechanism in the Go service</entry>
+    <entry ref="effects">What the flag changes, node by node</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="shared-needs">What this volume needs from the shared volumes</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-44"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schema of this node</sibling>
+    <sibling href="../N-43/spec.xml#N-43" kind="node">Status code map loader, same group</sibling>
+    <sibling href="../N-51/spec.xml#N-51" kind="node">Exit test, same group</sibling>
+    <shared href="../../shared/principles.xml#build-mode">The build-mode principle this node mechanises</shared>
+    <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
+    <shared href="../../shared/state-store.xml#flags">The flags store table</shared>
+    <shared href="../../shared/seat-contract.xml#build-mode">What a seat bundle looks like under build mode</shared>
+    <shared href="../../dag.md#3-every-node">DAG row N-44</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>Turns the owner's build-mode rule from a note in an agent's memory into a flag the system reads: one record, on or off, with an expiry the system enforces, a card id, and a scope.</is>
+    <is>While the flag is on, old-line gates, hooks, guards, leases, watches and status rules are not rendered into rebuild seats (N-13), and a refusal that names an old rule is recorded as rule.bit and does not stop the ticket (factory-rebuild-plan.xml failure case governance-interference).</is>
+    <is-not>It is not a bypass of the gate: coq/gate on the head sha (N-08, N-25) and the reviewer record (N-19) still decide a merge under build mode. It is not a lift of permissions for the owner's break glass, which is N-42's one-time control.action.</is-not>
+    <why>L11 F1: build mode is a note, not a mechanism, and an agent switching rules off by hand is the pattern the owner rejected the same day. herdr/config/exemptions.json already has the right shape: rule, until, card_id, why (L11 section 8).</why>
+  </purpose>
+
+  <input id="input">
+    <record kind="ruling" from="N-29">A ruling record whose body names flag build-mode, state on or off, scope (rebuild or all), expires_at in UTC, and the card id or chat relay id it came from. Re-entry from N-32 (page) or N-42 (Controls screen control.action, re-entered through N-29).</record>
+    <record kind="tick" from="N-06">The scheduler tick; on every tick the node compares now with the live expiry.</record>
+    <schema href="record.schema.json#/$defs/input"/>
+  </input>
+
+  <output id="output">
+    <record kind="build-mode.state" code="200">The flag as the system now holds it: on or off, scope, expires_at, card id, the ruling id, and a reason (ruling, expired, start-reconcile).</record>
+    <record kind="build-mode.state" code="409">A ruling refused: same card id already applied, expiry in the past, expiry beyond the configured maximum, or a scope not in the table.</record>
+    <schema href="record.schema.json#/$defs/output"/>
+    <reads>N-13 (renders the seat bundle with the old-line layer off when on and the ticket is in scope), N-42 (Controls screen lamp and the control to turn it off early), N-28 (one card when the flag expires with rebuild tickets still open), N-51 (the exit test records the flag state of the day).</reads>
+  </output>
+
+  <mechanism id="mechanism">
+    <where>Go package flags inside the service; one row per flag name in the flags table, with version for compare-and-swap. build-mode is the first flag; hold (N-42) is the second and uses the same package.</where>
+    <step n="1">On a ruling record with body.flag = build-mode: validate (expires_at after now; expires_at minus now at most flags.build_mode.max_duration from config, default P7D; scope in {rebuild, all}; card_id not already applied).</step>
+    <step n="2">Put build-mode.state 200 with expected version = live version. On 409 from the store, re-read and re-validate once; a second 409 is reported as build-mode.state 409 with reason race.</step>
+    <step n="3">On every tick: if the live state is on and now is at or after expires_at, put build-mode.state 200 off with reason expired, by the system, card_id of the ruling it closes.</step>
+    <step n="4">On unit.start: run step 3 once before the first dispatch, so a flag that expired while the service was down is cleared before any seat renders.</step>
+    <step n="5">When the flag turns off by expiry and N-03 reports rebuild tickets still open (ticket.waiting or ready with scope rebuild), emit one owner-acts record (build-mode.state 200 off with open_rebuild_tickets greater than 0); N-28 turns it into one card with the recommendation to extend or to let the rules apply.</step>
+    <scope>Scope rebuild applies to tickets whose body.lane is rebuild (cut from this spec book by N-17 and N-18); scope all applies to every ticket. A ticket's scope is fixed at cut and read by N-13 from the dispatch record.</scope>
+    <diagram>
+      <mermaid><![CDATA[
+stateDiagram-v2
+  [*] --> off
+  off --> on : ruling on (card id, expiry) CAS ok
+  on --> on : ruling on with later expiry (extend) CAS ok
+  on --> off : ruling off
+  on --> off : tick at or after expires_at (system)
+  off --> off : expired-at-start reconcile (unit.start)
+      ]]></mermaid>
+    </diagram>
+  </mechanism>
+
+  <effects id="effects">
+    <effect node="N-13">With the flag on and the ticket in scope, the seat bundle omits every hook, guard and watch from the old line (compaction-guard binding, nudge, trust writer, idle watch, prettier PostToolUse, AutoMem) and renders settings from the role only; the bundle hash records build_mode=true.</effect>
+    <effect node="N-11">A failure record whose reason names an old rule (a refusal string in the old-rule table of shared/principles.xml#build-mode) is written as rule.bit 300 with the rule name, and the attempt is not counted against the ticket's three; the ticket is re-dispatched; a fix ticket request for the rule goes to N-03 once per rule name.</effect>
+    <effect node="N-28">rule.bit is not a card; the ledger and the Stats screen show it. The expiry-with-open-tickets record is one card.</effect>
+    <effect node="N-42">The Controls screen shows the lamp (on, scope, time left) and offers turn off now as a control.action that re-enters at N-29.</effect>
+    <effect node="N-08 N-09 N-19">None. The gate, the reviewer record and the machine merge apply under build mode; a rule that blocks a rebuild ticket is a defect in the rule, a failing test is not.</effect>
+  </effects>
+
+  <start id="start">
+    <s>The ruling arrives as a record from N-29 (the owner's card answer, a chat relay recorded by the system lane, or a Controls screen action). No agent edits a flag file; no seat reads a memory note.</s>
+    <s>Expiry is enforced by the tick (N-06) and reconciled at unit start; no one has to remember to turn it off.</s>
+  </start>
+
+  <waits id="waits">
+    <wait id="w1" what="store put with CAS" timeout="PT5S" fallback="one re-read and retry; then build-mode.state 409 reason race; the live state is unchanged and the next tick re-evaluates"/>
+    <wait id="w2" what="the flag itself" timeout="expires_at (at most max_duration, default P7D)" fallback="the system turns it off and posts one card if rebuild tickets remain open"/>
+    <wait id="w3" what="N-03 open-ticket count for the expiry card" timeout="PT5S" fallback="post the card with count unknown rather than skip it"/>
+    <cog-test>The cog that could stall this node is a human remembering to turn build mode off. The expiry removes that cog; the owner's only action is optional (extend early).</cog-test>
+  </waits>
+
+  <retries id="retries">
+    <policy attempts="3" backoff="2 s fixed">Store puts.</policy>
+    <recover>After three failures the node writes build-mode.state 409 with the reason and leaves the live state; nothing else waits on it, because readers read the live state, not the attempt.</recover>
+    <report>A ruling refused for an expiry beyond the maximum is reported back to the page as the card's answer status (N-29 re-asks with the maximum stated); never silently clipped.</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Twenty seats rendering at once read the flag from the dispatch record N-07 gave them (N-07 copies the live state and its version into dispatch), so a flip during a render cannot split one seat's bundle between two states.</readers>
+    <writers>Only the service writes build-mode.state; every write is compare-and-swap on the flag row's version; rulings are applied in store sequence order, so two rulings in the same second resolve deterministically and the later one wins.</writers>
+    <collision>The same card answered twice (page retry, chat relay plus page): the second ruling with the same card_id is refused 409 duplicate; the first stands.</collision>
+    <collision>An expiry tick and an extend ruling at the same moment: both CAS on the same version; one wins; the loser re-reads. If extend won, the flag is on with the later expiry; if expiry won, the extend applies on its retry as a fresh on with its own expiry, and the two records show the order.</collision>
+    <collision>A seat whose bundle was rendered under on while the flag turned off keeps its bundle for that run (one-shot, D02); the next attempt renders under the new state.</collision>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="200" kind="build-mode.state">State applied (on, off, expired); system acts; when body.open_rebuild_tickets is greater than 0 on an expiry, the owner acts through one card.</emits>
+    <emits code="409" kind="build-mode.state">Ruling refused (duplicate card, bad expiry, bad scope, race); N-29 acts by re-asking with the reason.</emits>
+    <emits code="300" kind="rule.bit">Written by N-11 on this node's rule; listed here because the flag defines when it may be written.</emits>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path id="N-44.log" glob="$COQ_STATE/logs/svc/flags/*.jsonl" retention="P14D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-44.log">Flag transitions as log lines; the store is the truth.</path>
+    <rule>herdr/config/exemptions.json is not written by this node; it is a source and is retired with the herdr config tree by N-49 once N-13 renders bundles from the flag.</rule>
+  </state-paths>
+
+  <edges id="edges">
+    <in ref="../N-29/spec.xml#N-29">ruling (flag build-mode)</in>
+    <in ref="../N-06/spec.xml#N-06">tick, unit.start</in>
+    <out ref="../N-13/spec.xml#N-13">build-mode.state (through the dispatch record of N-07)</out>
+    <out ref="../N-42/spec.xml#N-42">build-mode.state (lamp and turn-off control)</out>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>A ruling turns the flag on with its expiry and card id.</check><proof>A test ruling, then one build-mode.state 200 on with the same card_id and expires_at.</proof></item>
+    <item><check>The system turns it off at expiry without any ruling.</check><proof>Fake clock advanced past expires_at; one build-mode.state 200 off reason expired by N-44.</proof></item>
+    <item><check>An expired flag is cleared at unit start.</check><proof>Store seeded with an expired on; unit start; off record before the first dispatch record.</proof></item>
+    <item><check>A duplicate card id is refused.</check><proof>Second ruling with the same card_id; build-mode.state 409 reason duplicate; live state unchanged.</proof></item>
+    <item><check>N-13 renders a bundle without old-line hooks when on and in scope.</check><proof>N-13 test: bundle settings.json has no hooks key and build_mode true in the bundle hash input.</proof></item>
+    <item><check>A rule refusal under build mode does not count an attempt.</check><proof>N-11 test: failure record naming an old rule; rule.bit 300 written; the ticket's attempt counter unchanged; one fix ticket request.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <may role="owner" do="turn the flag on or off through a card, the Controls screen or a recorded chat relay"/>
+    <may role="system" do="apply rulings, expire the flag, write build-mode.state and rule.bit"/>
+    <may-not role="seat" do="write build-mode.state, rule.bit or any flag; read the flag from anywhere but its dispatch record"/>
+    <may-not role="architect" do="turn the flag on by editing a file, a memory note or a config"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="build_mode_on" kind="gauge">1 or 0 on the health record.</counter>
+    <counter name="build_mode_seconds_left" kind="gauge">Time to expiry; an alert record at one hour left while rebuild tickets are open.</counter>
+    <counter name="rule_bit_total" labels="rule">How often each old rule bit; the top rule is the next fix ticket.</counter>
+    <lamp screen="Controls" name="build mode">Lit while on, with scope and time left; the turn-off control beside it.</lamp>
+  </monitoring>
+
+  <runbook id="runbook">
+    <step n="1" when="a rebuild ticket is refused by an old rule">Nothing by hand. Read the rule.bit record and the fix ticket request; the ticket re-dispatched on its own.</step>
+    <step n="2" when="the flag expired mid-rebuild">Answer the card: extend (a new ruling with a new expiry) or let the rules apply.</step>
+    <step n="3" when="break glass">A ruling is recorded by the system lane from the owner's chat words (N-29 relay path); never by editing the store.</step>
+    <cleanup>line/bin/cleanup.sh --entry N-44.log.</cleanup>
+    <cold-start>The flag row is in the store; unit start reconciles expiry; nothing else to restore.</cold-start>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="#principles">Principle build-mode: old rules off for rebuild tickets, nodes ship dark, a blocking rule is a defect, the ledger records which rule bit</source>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="#failure-cases">Case governance-interference: proceed, cut the fix ticket, record which rule bit</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#15-d13-seat-governance-layer-and-the-build-mode-switch">D13 B: build mode as a flag with an expiry that the gates read, the shape of herdr/config/exemptions.json</source>
+    <source path="rebuild/investigation/L11-governance-layer.md" anchor="#52-findings-f1-to-f18">F1 build mode is a note, not a mechanism</source>
+    <source path="rebuild/investigation/L11-governance-layer.md" anchor="#8-what-to-carry-forward">Exemptions with an expiry and a card id as the shape of a build-mode switch</source>
+    <source path="herdr/config/exemptions.json" anchor="/exemptions/0">rule, until, card_id, why</source>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/build-mode-rule.md" anchor="Rule">The owner's words and the four statements</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C47">D13 ruled</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="#5-owner-rulings-this-session-in-order">Ruling 4 build mode</source>
+  </sources>
+
+  <rejected id="rejected">
+    <reject source="herdr/config/exemptions.json as the live flag file" reason="A file an agent edits is a hand step and lives in the repository; the flag is a store record with a ruling behind it. The file's shape is kept, its role is not."/>
+    <reject source="a flag without an expiry" reason="An open-ended exemption is how the old rules stayed half-on; the owner's D13 ruling names the expiry."/>
+    <reject source="build mode lifting the gate or the reviewer" reason="The owner's statement is about old governance rules, not tests; D15 keeps the machine verdict for every merge."/>
+    <reject source="~/.claude/hooks/no-hand-start.mjs and shell-lex.mjs" reason="Dead enforcement files referenced by no settings (L11 section 9); under build mode and the repo-owned seat layer they are not loaded; N-49 disposes of them."/>
+  </rejected>
+
+  <shared-needs id="shared-needs">
+    <need kind="principle">principles.xml#build-mode with the old-rule table: every old-line rule name and the refusal string it prints, so N-11 can match a refusal to a rule.</need>
+    <need kind="store-table">flags: name, state, scope, expires_at, card_id, ruling_id, version; unique on name.</need>
+    <need kind="record-kinds">ruling (body.flag, state, scope, expires_at, card_id), build-mode.state, rule.bit, ticket.request (fix ticket for a rule).</need>
+    <need kind="status-codes">300 for rule.bit (routed, informational, nobody acts), 409 duplicate ruling (N-29 acts).</need>
+    <need kind="seat-contract">A seat bundle under build mode: which layers are omitted; the bundle hash input includes build_mode and scope.</need>
+    <need kind="config">flags.build_mode.max_duration (P7D) and the scope enum.</need>
+    <need kind="n-07">The dispatch record copies build-mode.state and its version.</need>
+  </shared-needs>
+
+</volume>

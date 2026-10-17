@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Shared volume: the seat contract. What a seat is, how it starts and ends, what it may call and hold, and the
+     owner-side clauses (break glass, relay, lanes, standing policies). Validated by rebuild/design/check.sh. -->
+<volume id="seat-contract" kind="shared" version="1.0.0" issued="2026-10-14T06:30:00Z" timezone="UTC" title="Seat contract">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="run">The run: one shot, input to output, limits, result</entry>
+    <entry ref="store-access">Store access: lease token, ctl verbs, heartbeat, ticket shape</entry>
+    <entry ref="roles-and-llm">Roles, where an LLM appears, the reviewer</entry>
+    <entry ref="credentials">Credentials and the verdict a seat cannot edit</entry>
+    <entry ref="owner-side">Owner-side clauses: break glass, relay, lanes, halt, standing policies, keys</entry>
+    <entry ref="build-mode">Build mode as the seat sees it</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../index.xml#shared"/>
+    <sibling href="status-codes.xml#status-codes" kind="shared"/>
+    <sibling href="principles.xml#principles" kind="shared"/>
+    <sibling href="state-store.xml#state-store" kind="shared"/>
+    <sibling href="failure-cases.xml#failure-cases" kind="shared"/>
+    <sibling href="rejected-with-reason.xml#rejected-with-reason" kind="shared"/>
+    <sibling href="command-center.xml#command-center" kind="shared"/>
+    <dag href="../dag.md#3-every-node" row="N-15"/>
+    <shared href="../nodes/N-15/spec.xml#N-15" role="launcher">N-15 is the code that honours this contract</shared>
+    <shared href="../nodes/N-13/spec.xml#N-13" role="fence">N-13 renders the settings this contract names</shared>
+    <shared href="../nodes/N-30/spec.xml#N-30" role="lanes">N-30 holds the routing table the lanes clause summarises</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <s>A seat is one bounded process of a model between an input record and an output record (D02 C36, D17 C49); this contract is the whole of what it may rely on and the whole of what the system may expect of it.</s>
+    <s>Node volumes cite clauses by anchor; the launcher (N-15), the fence (N-13), the validator (N-18) and the audit (N-51) are the code that enforces them; a clause with no enforcing node is a defect.</s>
+  </purpose>
+
+  <run id="run">
+    <clause id="one-shot" title="One shot: bundle plus workspace in, seat.result out">
+      <rule>A seat is one bounded process between a seat.bundle plus workspace record and a seat.result record; no pane, no prompt, no nudge, no idle state, no second turn from outside.</rule>
+      <rule>A launcher restart adopts a live run into the same beat loop against the same absolute deadline_at, never a new bound (principles.xml#no-cog).</rule>
+      <rule>The seat exists only between the two records (dag.md section 1); a run that ends without a seat.result is written as blocked by the launcher with terminal_reason no_result.</rule>
+      <check>N-15 test: kill the launcher mid-run; the restarted launcher finds the pid, adopts it, and the deadline is unchanged.</check>
+    </clause>
+    <clause id="fresh-seat" title="A fresh seat per attempt">
+      <rule>Every attempt, rework or follow-up brings up a fresh seat (owner 2026-10-13 02:02Z: every agent is a cog and nobody is a gate); a rework of N-16 after review.changes resumes the session with --resume and a new brief carrying the verdict, and is still a new run with its own lease, deadline and seat.result.</rule>
+      <rule>Nothing is typed into a running seat; the verdict is in the brief, so no wake can be lost (S04 section 8 item 8).</rule>
+    </clause>
+    <clause id="brief" title="The brief is the input">
+      <rule>The brief (brief.md in the bundle) is the only input the model reads at start; it is rendered by N-13 from the ticket record, the role and the repository, never typed.</rule>
+      <rule>A brief names the input record that started the run and the output record that ends it; a seat that cannot produce the output posts a blocked object and leaves.</rule>
+    </clause>
+    <clause id="brief-shape" title="brief.md sections in order">
+      <rule>ticket (id and full title, never a bare id); input and output; files (the declared set, the fence); acceptance with observed exits on main; steps; rules (the principles anchors); verdict on a retry; limits once as information.</rule>
+      <check>N-13 test: the rendered brief has exactly these headings in this order; a role template with another heading fails render.</check>
+    </clause>
+    <clause id="limits-are-fields" title="Limits are fields, never prose">
+      <rule>max_turns, max_budget_usd, wall_clock_seconds and stall_seconds are role schema fields (rebuild/roles/*.json shape) and launcher arguments; the model never counts them; the launcher kills at the bound (killed_deadline, killed_stall).</rule>
+      <rule>Defaults by role live in the role file; a dispatch may lower, never raise, a limit.</rule>
+    </clause>
+    <clause id="launch-flags" title="The exact launch flag set">
+      <rule>claude -p "$(cat brief.md)" --model MODEL --settings BUNDLE/settings.json --setting-sources local --strict-mcp-config --mcp-config BUNDLE/mcp.json --permission-mode dontAsk --permission-prompts none --max-turns N --max-budget-usd X --output-format json --json-schema BUNDLE/output.schema.json --session-id ID (or --resume ID on a rework); pods add --bare.</rule>
+      <rule>Never --fallback-model (a silent model swap is an unrecorded decision); never --permission-mode bypassPermissions on the host (under bypass an allow rule restricts nothing, so the fence would be prose; dontAsk makes a miss a recorded denial).</rule>
+      <check>N-15 test: the argv the launcher builds equals the set above for each role fixture; a probe seat asked to edit outside its allow paths ends with permission_denials naming the path and no change on disk.</check>
+    </clause>
+    <clause id="structured-output" title="Structured output against the node's schema">
+      <rule>Every phase returns structured output against the node's record.schema.json through --json-schema; an optional blocked object carries reason, observations and repro.</rule>
+      <rule>The launcher validates structured_output again with its own validator; two disagreeing validators are launcher.defect 500 (status-codes.xml#code-500).</rule>
+    </clause>
+    <clause id="result-from-the-harness" title="seat.result comes from the harness">
+      <rule>seat.result is parsed by the launcher from the claude -p JSON envelope (type result, subtype, is_error, total_cost_usd, num_turns, session_id, structured_output, permission_denials); a seat never posts its own result; a model's claim is data to verify.</rule>
+      <rule>Outcomes: done 200 with validated structured output; blocked 423 with a terminal_reason from the table (success, error_max_turns, error_max_budget_usd, error_during_execution, error_max_structured_output_retries, killed_deadline, killed_stall, killed_lease_lost, killed_by_record, crashed, no_result, schema_invalid, output_rejected, seat_blocked); refused 412 on a preflight miss (bundle_mismatch, workspace_mismatch, lease_expired).</rule>
+    </clause>
+    <clause id="seat-result" title="What seat.result carries">
+      <rule>run_id, ticket, role, attempt, outcome, terminal_reason, cost_usd, turns, session_id, started_at, ended_at, lease_token, pr.opened (head_sha, head_repo, pr, ticket) for a worker, ticket-set.draft id for a spec author, review record id for a reviewer, denied_line_ops (count and command names) for every role.</rule>
+      <rule>N-11 reads it as the failure record when the outcome is not done; N-51 sums denied_line_ops into row A2.</rule>
+    </clause>
+  </run>
+
+  <store-access id="store-access">
+    <clause id="lease-token" title="Every put carries the lease token">
+      <rule>Every put a seat makes carries the lease token its launcher exported (COQ_LEASE_TOKEN); the seat never sees another seat's token; a stale token is 412 record.stale and is logged on the run; the seat does not retry it.</rule>
+      <rule>A seat put of a line-op kind (state-store.xml#record-kinds-registry, class line-op) is refused 403 by N-01 whatever the token.</rule>
+    </clause>
+    <clause id="ctl-verbs" title="The ctl verbs a seat may call">
+      <rule>record add (kinds seat.note and the node's own output kind only), record get, record list, ticket get, health; never the SQLite file, never the gRPC socket directly, never a verb that writes a lease, a flag, a ruling or a cleanup.</rule>
+      <rule>seat.heartbeat and seat.result are the launcher's puts, not the seat's.</rule>
+      <check>N-13 renders the allow list with exactly these verbs; N-01 refuses the rest by role (403).</check>
+    </clause>
+    <clause id="heartbeat" title="The launcher renews the lease">
+      <rule>The launcher (N-15), not the model, renews every lease.heartbeat_seconds 30 (lease.ttl_seconds 900 leaves room for a service restart; N-12 judges a launcher dead after 3 missed beats, 90 s); the heartbeat row carries lease token and generation, pid, progress_at, transcript_bytes and adopted.</rule>
+      <rule>The N-12 stall bound reads the same keys: no progress for stall_seconds kills the run (killed_stall) and revokes the lease; no launcher heartbeat for lease.ttl_seconds expires the lease (lease.expired 500) and N-12 kills the survivor.</rule>
+    </clause>
+    <clause id="ticket-shape" title="The ticket as data">
+      <rule>id, title (never a bare id), files, deps, role, acceptance commands with expected exit codes and observed_exit_on_main, input, output, priority, lane, set_id, hold_id when it is a fix ticket; the seat reads it with ticket get and never changes it.</rule>
+      <rule>A ticket is cut by N-17 as data and admitted only after N-18 ran its acceptance commands on main (D16 C48).</rule>
+    </clause>
+  </store-access>
+
+  <roles-and-llm id="roles-and-llm">
+    <clause id="roles" title="Roles">
+      <rule>worker (N-16), spec-author (N-17), reviewer (N-19), screenshot (N-48, no model). Tester, merger and verifier roles are retired: code does them (D11 C39; N-24, N-09, N-26).</rule>
+      <rule>The worker run ends with pr.opened (head_sha, head_repo, pr, ticket) inside seat.result; the reviewer posts review.passed or review.changes on the head sha independent of the gate; the spec author ends with ticket-set.draft.</rule>
+    </clause>
+    <clause id="llm-only-for-judgement" title="An LLM appears only for judgement">
+      <rule>An LLM appears only in N-16 (write code), N-17 (cut tickets as data) and N-19 (judge a diff); every mechanical step around it is code (principles.xml#code-does-mechanical-jobs).</rule>
+    </clause>
+    <clause id="separate-reviewer" title="The reviewer is a separate run">
+      <rule>The reviewer shares no session and no workspace with the writer, runs nothing (no build, no test), never holds the gh write, and reads the diff, the gate status and the ticket only.</rule>
+      <rule>Right-size: a role's model is the role file's model or Sonnet; no Opus or Fable seat without a ruling (memory right-size-agent-models).</rule>
+    </clause>
+    <clause id="review-record" title="The review record">
+      <rule>review.passed 201 or review.changes 422 carries pr, ticket, head_sha, lease_token, run_id and the findings; N-01 refuses it when the token is stale (412); N-09 merges only on review.passed for the current head sha.</rule>
+    </clause>
+    <clause id="local-proof" title="Local proof a worker may run">
+      <rule>A worker may run factory/bin/suites.sh plan, ci/bin/plan-units.sh --dry, ci/image/build.sh --no-push and bin/test-cases.sh locally; none touches a registry, Jenkins or the cluster; the gate's verdict is the pods', not the worker's.</rule>
+    </clause>
+    <clause id="mechanical-pr" title="A mechanical pull request">
+      <rule>A system-authored pull request that changes exactly one declared data file (the GitHub egress CIDR bump in homelab-gitops, N-22) merges on gate green without a reviewer record; any other PR needs review.passed.</rule>
+    </clause>
+  </roles-and-llm>
+
+  <credentials id="credentials">
+    <clause id="credential-by-placement" title="Credential by placement">
+      <rule>Host seats use the owner's subscription login (setup-token once, user-initiated, D03 C37); pod seats get ANTHROPIC_API_KEY from the launcher's pod spec; no seat ever reads, copies or prints a token.</rule>
+      <rule>The ghcr push token and the homelab-gitops deploy key live in Jenkins credentials and the Argo cluster; no seat and no Go service process holds them (N-35); the service's own tokens (Jenkins coq-reconciler, the kubeconfig, the fine-grained GitHub token) are read from the host keyring and never appear in a record.</rule>
+    </clause>
+    <clause id="forge-access" title="Forge access from a seat">
+      <rule>A seat pushes its branch and opens its PR with its own gh under its rendered permissions (N-13); it never writes the forge.snapshot and never reads the service token; N-04 sees the PR on the next poll.</rule>
+    </clause>
+    <clause id="verdict-read-only" title="The verdict is read-only (T04)">
+      <rule>Seats hold no Jenkins token, no kubeconfig, no GitHub token with status or administration write; the rendered settings deny gh api on statuses, kubectl, jenkins-mcp and the kubernetes MCP tools for every role and allow gh pr view and gh pr checks; a seat that tries is refused 412 in its seat.result.</rule>
+      <rule>The deny list also covers make serve, wait, stop, upgrade and front-door; systemctl --user; cleanup.sh apply; unlanded.sh apply; publish-drive.sh; promote.sh; Reload; git push to main; gh pr merge and close; branch delete; $COQ_STATE/secrets.</rule>
+    </clause>
+    <clause id="line-ops" title="Line operations are never a seat's">
+      <rule>A seat never writes code.table, build-mode.state, rule.bit, cleanup.run, disposition, cancel, pr.close, branch.delete, promotion, exit.verdict, freeze.state or any flag; a put of such a kind is 403; seat.result.denied_line_ops counts every denied command; N-51 row A1 must be zero for the day.</rule>
+    </clause>
+    <clause id="screenshot-seat" title="The screenshot seat">
+      <rule>The screenshot seat (N-48) holds only the viewer key, read-only, no action rendered; Playwright at 1440 and 430 widths; writes only under $COQ_STATE/map/screenshots/; its screenshot record is the proof a promotion carries (memory screenshot-every-page-change).</rule>
+    </clause>
+    <clause id="owner-key" title="Owner key and viewer key">
+      <rule>The owner key in the first URL becomes the cookie and is the only credential that renders an action; the viewer key draws read-only; no seat holds either key or writes a control.action, ruling, hold flag or token; a seat needing a ruling posts a card and leaves; the key is never in a record (memory bearings-restart-and-page-key).</rule>
+    </clause>
+  </credentials>
+
+  <owner-side id="owner-side">
+    <clause id="break-glass" title="Break glass: owner-only, one time">
+      <rule>Every break glass verb is owner-only and one time: a token minted by a ruling on a card (N-29), consumed by compare-and-swap, recorded as control.action with origin break-glass or as a cutover record; it refuses a caller with COQ_SEAT set (exit 4, control.refused 412); N-51 counts every such record as a hand line operation for that day (row A3).</rule>
+      <rule>The list: promote.sh --tier stable --sha; systemctl --user start coq-cutover@PAGE; rotate-key; cleanup-tier on stable; unlanded.sh apply; cleanup.sh apply outside a plan. When the page is unreachable the same record is posted through the Go service CLI on the host and read back before acting.</rule>
+    </clause>
+    <clause id="relay" title="An owner answer relayed from chat or the phone">
+      <rule>An answer the owner gives in chat or from the phone is recorded as owner.answer with source relay (origin chat-relay) and the owner's words verbatim before any gate reads it; the ruling N-29 writes names the relay; C42 was answered this way (owner: went recommended).</rule>
+      <rule>The one permitted caller is the owner's host CLI identity: coq owner answer --relay run on the WSL host under the owner's uid with COQ_SEAT unset and no seat bundle, by the owner or by the owner's own interactive architect session in the owner's terminal (which is not a dispatched seat, holds no lease and has no role file). N-29 reads the uid from the socket peer credentials and refuses any caller with COQ_SEAT set or a seat bundle (answer.rejected 400 reason relay-by-seat); the record's by field is owner-cli plus the --session label the relayer passes, so the audit names who typed it. No dispatched role (worker, spec-author, reviewer, screenshot) may relay; N-51 counts relays as owner acts, not as agent line operations.</rule>
+    </clause>
+    <clause id="lanes" title="Message lanes">
+      <rule>Lanes: control, ticket, card, sitrep, architect, system, unroutable. Rules in order (N-30): R01 USERHALT to control, N-29, 5 s; R02 USERGO to control, N-29, 5 s (refused before GOFACTORY with a reply naming the hold); R03 GOFACTORY to control, N-29, 5 s, one time; R04 a reply to a card id to card, N-29, 5 s; R05 cut: or ticket: to ticket, N-03, 60 s; R06 sitrep or status to sitrep, 30 s; R07 system: to system, N-06, 30 s; R08 a PR URL or ticket id to the architect digest, 1800 s; R99 anything else to the architect digest, 1800 s; the architect lane's consumer is the N-30 digest builder (code), which consumes at once and answers with a templated reply at the sla when no reply came (nodes/N-30/spec.xml#mechanism step 3).</rule>
+      <rule>A lane's SLA is a wait with a bounded fallback (the stale receipt for a node consumer, the templated reply for the architect lane); the architect is a digest lane and never a prompt target (K01, the 2026-10-13 flood); the owner's architect session reads the digest with coq inbox digest under the owner's host CLI identity (#relay).</rule>
+    </clause>
+    <clause id="halt-and-resume" title="Halt and resume">
+      <rule>USERHALT sets flag:hold; dispatch stops at the next tick; running seats finish their bound; ticks, health, backups, the poll, the push transport, the stable page, its watcher and its front door never stop; line.halted 503 and line.resumed 100 each become one card.</rule>
+    </clause>
+    <clause id="standing-policies" title="Standing policies a card builder applies">
+      <rule>No bare ticket id (always id dash full title); one question per card; a recommendation always named; a default and a deadline on every card (V17); the Krastorio look on the card; bad news first, 15 words a line, no semicolon in a bubble (STD-owner-comms-001).</rule>
+      <rule>Claimed items are never re-raised (CLAUDE.md: once I claim something, it is mine); a card about one is refused 400 by N-28's rule check.</rule>
+    </clause>
+  </owner-side>
+
+  <build-mode id="build-mode">
+    <clause id="build-mode-clause" title="Build mode as the seat sees it">
+      <rule>A seat reads build mode only from its dispatch record (build_mode, scope, version), never from a flag it queries; a seat bundle under build mode omits every old-line hook, guard, watch, AutoMem and prettier PostToolUse, and the bundle hash input includes build_mode and scope (N-13, N-44).</rule>
+      <rule>A refusal that names an old rule under build mode is rule.bit 300, not an attempt (principles.xml#build-mode).</rule>
+    </clause>
+  </build-mode>
+
+  <many-agents id="many-agents">
+    <readers>Every seat's brief carries the anchors of this contract it is bound by; twenty seats run under it at once because nothing in it is shared state: each has its own lease token, workspace slot, deadline and result key.</readers>
+    <writers>The launcher is the only writer of seat.heartbeat and seat.result, keyed by run_id; two launchers for one run (a restart race) are detected by the lease generation: the second heartbeat with an older generation is 412 and that launcher exits (launcher.defect two_launchers_disagree if both persist).</writers>
+    <collision>Two seats on one ticket cannot exist: the lease key ticket:phase:attempt admits one holder; a stale token on any put is 412; a second review on the same head sha is an idempotent replay of the first (key pr:head:verdict).</collision>
+  </many-agents>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="4-d02-seat-contract" note="D02 one-shot seats"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="5-d03-seat-credential-and-billing" note="D03"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="13-d11-which-llm-roles-remain" note="D11"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="18-d16-may-an-llm-decompose-work-into-tickets" note="D16"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="19-d17-the-one-minute-idle-rule" note="D17: one-shot plus a stall timer; the idle alarm is retired"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal" note="T01, T04, T07"/>
+    <source path="rebuild/investigation/S04-agent-frameworks-seat-contracts.md" anchor="" note="section 8: the verdict travels in the brief"/>
+    <source path="rebuild/investigation/L04-herdr.md" anchor="" note="herdr is the owner's window only (D08)"/>
+    <source path="rebuild/roles/rebuild-architect.json" anchor="" note="the role file shape limits are fields of"/>
+    <source path="herdr/bin/testpane.sh" anchor="" note="header: under bypass an allow rule restricts nothing"/>
+    <source path="tools/bearings/standards/STD-owner-comms-001.json" anchor="/rule" note="bubble and card wording"/>
+    <source path="tools/bearings/AGENTS.md" anchor="ask-wait-reply" note="the page's current ask, wait and reply contract"/>
+    <source href="~/.claude/CLAUDE.md" note="never name a ticket without its title; once claimed, closed to mention; owner surface"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/right-size-agent-models.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/screenshot-every-page-change.md"/>
+    <source href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/bearings-restart-and-page-key.md"/>
+    <source href="~/.bearings/coq-stable/answers.jsonl" note="C36, C37, C39, C42"/>
+  </sources>
+</volume>

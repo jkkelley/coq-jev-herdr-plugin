@@ -1,0 +1,135 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-01/record.schema.json",
+  "title": "N-01 State store records",
+  "description": "Input record.put and output record.committed, record.conflict, record.invalid, record.stale of node N-01. Parent volume: spec.xml#N-01. The record envelope is the one in shared/state-store.schema.json#/$defs/envelope (shared/state-store.xml#envelope); this file refers to it and adds only the put request fields (idempotency_key, lease_token, entity) and the replies. UTC everywhere.",
+  "$defs": {
+    "id": { "$ref": "../../shared/state-store.schema.json#/$defs/id" },
+    "at": { "$ref": "../../shared/state-store.schema.json#/$defs/at" },
+    "node": { "$ref": "../../shared/state-store.schema.json#/$defs/node" },
+    "code": { "$ref": "../../shared/state-store.schema.json#/$defs/code" },
+    "ticket": { "$ref": "../../shared/state-store.schema.json#/$defs/ticket" },
+    "sha256": { "$ref": "../../shared/state-store.schema.json#/$defs/sha256" },
+    "envelope": { "$ref": "../../shared/state-store.schema.json#/$defs/envelope" },
+    "entity_write": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "expected_version", "body"],
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-z]+:[A-Za-z0-9._:-]{1,120}$",
+          "description": "kind, colon, identity: ticket:WO-..., lease:WO-...:worker:1, claim:path, flag:hold"
+        },
+        "expected_version": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "0 means the key must not exist yet"
+        },
+        "body": { "type": "object" }
+      }
+    },
+    "record_put": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["idempotency_key", "record"],
+      "properties": {
+        "idempotency_key": { "$ref": "../../shared/state-store.schema.json#/$defs/idempotency_key" },
+        "record": { "$ref": "#/$defs/envelope" },
+        "entity": { "$ref": "#/$defs/entity_write" },
+        "lease_token": { "$ref": "../../shared/state-store.schema.json#/$defs/lease_token" }
+      }
+    },
+    "record_committed": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["seq", "hash", "replayed", "of"],
+          "properties": {
+            "kind": { "const": "record.committed" },
+            "code": { "enum": [200, 201] },
+            "node": { "const": "N-01" },
+            "seq": { "type": "integer", "minimum": 1 },
+            "of": {
+              "$ref": "#/$defs/id",
+              "description": "the id of the record that was committed"
+            },
+            "hash": { "$ref": "#/$defs/sha256" },
+            "version": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "entity version after the write, when an entity was written"
+            },
+            "replayed": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "record_conflict": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["key", "expected", "current", "of"],
+          "properties": {
+            "kind": { "const": "record.conflict" },
+            "code": { "const": 409 },
+            "node": { "const": "N-01" },
+            "of": { "$ref": "#/$defs/id" },
+            "key": { "type": "string" },
+            "expected": { "type": "integer", "minimum": 0 },
+            "current": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "record_invalid": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["of", "path", "reason"],
+          "properties": {
+            "kind": { "const": "record.invalid" },
+            "code": { "const": 400 },
+            "node": { "const": "N-01" },
+            "of": {
+              "type": "string",
+              "description": "the id the caller sent, which may itself be malformed"
+            },
+            "path": {
+              "type": "string",
+              "description": "JSON pointer of the failing field"
+            },
+            "reason": { "type": "string", "maxLength": 240 }
+          }
+        }
+      ]
+    },
+    "record_stale": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["of", "token_seen", "token_current"],
+          "properties": {
+            "kind": { "const": "record.stale" },
+            "code": { "const": 412 },
+            "node": { "const": "N-01" },
+            "of": { "$ref": "#/$defs/id" },
+            "token_seen": { "type": "integer", "minimum": 1 },
+            "token_current": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/record_put" },
+    { "$ref": "#/$defs/record_committed" },
+    { "$ref": "#/$defs/record_conflict" },
+    { "$ref": "#/$defs/record_invalid" },
+    { "$ref": "#/$defs/record_stale" }
+  ]
+}

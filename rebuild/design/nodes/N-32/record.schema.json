@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-32/record.schema.json",
+  "title": "N-32 Bearings page service: input and output records",
+  "description": "Input is the frame from N-31 (schema ../N-31/record.schema.json#/$defs/frame). Outputs: page.up, page.state, page.down, page.refused, page.bind.failed, file.stored, key.rotated. The owner's acts leave as owner.answer (../N-29/record.schema.json) and owner.message (../N-30/record.schema.json). Envelope per shared/state-store.xml#envelope.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "recordId": { "type": "string", "minLength": 8, "maxLength": 64 },
+    "page": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,63}$" },
+    "tier": { "enum": ["stable", "uat", "dev"] },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node"],
+      "properties": {
+        "id": { "$ref": "#/$defs/recordId" },
+        "kind": { "type": "string" },
+        "code": { "enum": [100, 200, 201, 204, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "const": "N-32" },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "maxLength": 128 },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 }
+      }
+    },
+    "tierFields": {
+      "type": "object",
+      "properties": {
+        "tier": { "$ref": "#/$defs/tier" },
+        "page": { "$ref": "#/$defs/page" },
+        "ticket": { "type": ["string", "null"], "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" }
+      },
+      "required": ["tier", "page"]
+    }
+  },
+  "oneOf": [
+    {
+      "title": "page.up (output)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "#/$defs/tierFields" }],
+      "properties": {
+        "kind": { "const": "page.up" },
+        "code": { "const": 100 },
+        "port": { "type": "integer", "minimum": 1024, "maximum": 65535 },
+        "pid": { "type": "integer", "minimum": 1 },
+        "unit": { "type": "string", "pattern": "^coq-bearings@[a-z0-9-]+\\.service$" },
+        "assets_hash": { "$ref": "#/$defs/sha256" },
+        "listen_host": { "const": "127.0.0.1" }
+      },
+      "required": ["port", "pid", "unit", "assets_hash", "listen_host"]
+    },
+    {
+      "title": "page.state (output, upsert keyed page:<page>, every second)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "#/$defs/tierFields" }],
+      "properties": {
+        "kind": { "const": "page.state" },
+        "code": { "const": 100 },
+        "seq_shown": { "type": "integer", "minimum": 0 },
+        "store_seq": { "type": "integer", "minimum": 0 },
+        "staleness_seconds": { "type": "integer", "minimum": 0 },
+        "state": { "enum": ["live", "stale", "disconnected"] },
+        "clients": { "type": "integer", "minimum": 0 },
+        "cards_open": { "type": "integer", "minimum": 0 },
+        "messages_unanswered": { "type": "integer", "minimum": 0 },
+        "watcher": { "enum": ["alive", "grace", "dead", "down", "none"] },
+        "assets_hash": { "$ref": "#/$defs/sha256" }
+      },
+      "required": ["seq_shown", "store_seq", "staleness_seconds", "state", "clients", "cards_open", "messages_unanswered", "watcher", "assets_hash", "version"]
+    },
+    {
+      "title": "page.down (output)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "#/$defs/tierFields" }],
+      "properties": {
+        "kind": { "const": "page.down" },
+        "code": { "enum": [100, 500] },
+        "reason": { "enum": ["stop", "crash", "bind"] }
+      },
+      "required": ["reason"]
+    },
+    {
+      "title": "page.refused (output: second instance)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "#/$defs/tierFields" }],
+      "properties": {
+        "kind": { "const": "page.refused" },
+        "code": { "const": 409 },
+        "holder_pid": { "type": "integer", "minimum": 1 },
+        "port": { "type": "integer" }
+      },
+      "required": ["holder_pid", "port"]
+    },
+    {
+      "title": "page.bind.failed (output, alert)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "#/$defs/tierFields" }],
+      "properties": {
+        "kind": { "const": "page.bind.failed" },
+        "code": { "const": 500 },
+        "port": { "type": "integer" },
+        "attempts": { "const": 3 },
+        "error": { "type": "string", "maxLength": 240 }
+      },
+      "required": ["port", "attempts", "error"]
+    },
+    {
+      "title": "file.stored (output)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "#/$defs/tierFields" }],
+      "properties": {
+        "kind": { "const": "file.stored" },
+        "code": { "const": 100 },
+        "file": { "type": "string", "pattern": "^f-[0-9]{17}-[a-z0-9]{5}$" },
+        "path": { "type": "string", "description": "under ${COQ_STATE}/bearings/<page>/files/" },
+        "bytes": { "type": "integer", "minimum": 1, "maximum": 26214400 },
+        "mime": { "type": "string", "maxLength": 128 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      },
+      "required": ["file", "path", "bytes", "mime", "sha256"]
+    },
+    {
+      "title": "key.rotated (output; carries no key)",
+      "allOf": [{ "$ref": "#/$defs/envelope" }, { "$ref": "#/$defs/tierFields" }],
+      "properties": {
+        "kind": { "const": "key.rotated" },
+        "code": { "const": 100 },
+        "by": { "const": "owner" }
+      },
+      "required": ["by"],
+      "not": { "required": ["key"] }
+    },
+    {
+      "title": "cutover.imported / cutover.swapped / cutover.refused / cutover.failed (output of cutover.sh, the one-shot unit)",
+      "properties": {
+        "kind": { "enum": ["cutover.imported", "cutover.swapped", "cutover.refused", "cutover.failed"] },
+        "code": { "enum": [100, 201, 412, 500] },
+        "legacy_pids": { "type": "array", "maxItems": 8, "items": { "type": "integer", "minimum": 1 } },
+        "pid": { "type": "integer", "minimum": 1 },
+        "port": { "type": "integer", "minimum": 1024, "maximum": 65535 },
+        "assets_hash": { "$ref": "#/$defs/sha256" },
+        "step": { "enum": ["a", "b", "c", "d", "e", "f", "g"] },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "error": { "type": "string", "maxLength": 240 },
+        "counts": { "type": "object", "description": "cutover.imported only: answers, messages, cards imported", "additionalProperties": { "type": "integer", "minimum": 0 } }
+      },
+      "required": ["tier", "page"],
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "$ref": "#/$defs/tierFields" },
+        { "if": { "properties": { "kind": { "const": "cutover.swapped" } } }, "then": { "properties": { "code": { "const": 201 } }, "required": ["legacy_pids", "pid", "port", "assets_hash"] } },
+        { "if": { "properties": { "kind": { "const": "cutover.failed" } } }, "then": { "properties": { "code": { "const": 500 } }, "required": ["step", "attempt", "error"] } },
+        { "if": { "properties": { "kind": { "const": "cutover.refused" } } }, "then": { "properties": { "code": { "const": 412 } }, "required": ["error"] } },
+        { "if": { "properties": { "kind": { "const": "cutover.imported" } } }, "then": { "properties": { "code": { "const": 100 } }, "required": ["counts"] } }
+      ],
+      "not": { "required": ["key"] }
+    }
+  ]
+}

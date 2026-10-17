@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-05 Backups. Node volume of the Factory Rebuild spec book, group G1 Store and leases.
+     Written 2026-10-14T04:34Z UTC by the G1 spec-author seat, round 1, against brief C.
+     Canonical by owner ruling C42; older specs cited below are sources, never authority (D14). -->
+<!-- N-05 round 2, 2026-10-14T05:01:33Z, by the G1 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers (verdict in
+     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-05):
+     every shared pointer (five per volume, into the shared directory) pointed at a directory no author had written and at anchors no volume declared.
+     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
+     The fix: shared needs are declared in <shared-needs> by volume and anchor with no href, so nothing points at a file
+     that does not exist, and the principles this node obeys point at dag.md sections 7 and 8, which do exist.
+     Rejected: writing shared/ from this seat (the brief gives shared/ to one shared author; two authors on one file is the
+     one-file, one-in-flight-ticket collision the book forbids) and leaving the hrefs to resolve later (a failing volume blocks the book now).
+     Cost: a declared need is not a live pointer until shared/ lands; check.sh matches each need's volume and anchor against the
+     shared volumes when they land, so no hand edit happens here. Cross-group edges point at volumes that now exist, and at
+     index.xml#<node-id> for a node whose volume has not landed, because the index entry is the one anchor every node is guaranteed. -->
+<volume id="N-05" kind="node-spec" node="N-05" group="G1" version="1.1.0" written="2026-10-14T05:01:33Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG and principles</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: backup.tick</entry>
+    <entry ref="output">Output record: backup or backup.failed</entry>
+    <entry ref="mechanism">Mechanism: online SQLite copy, verified, classed, mirrored</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-05"/>
+    <sibling href="record.schema.json" role="schema">JSON schema of backup.tick in and backup, backup.failed out</sibling>
+    <sibling href="../N-01/spec.xml#N-01" role="node">N-01 State store</sibling>
+    <sibling href="../N-02/spec.xml#N-02" role="node">N-02 Lease service</sibling>
+    <sibling href="../N-03/spec.xml#N-03" role="node">N-03 Ticket intake and readiness</sibling>
+    <sibling href="../N-04/spec.xml#N-04" role="node">N-04 GitHub poll</sibling>
+    <sibling href="../N-06/spec.xml#N-06" role="node">N-06 Service unit, clock and health</sibling>
+    <shared href="../../dag.md#3-every-node" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 4 (every state path has a cleanup script registered in N-45) and rule 3 (three attempts then one card)</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, 409 that reports</principle>
+    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <shared href="../../shared/cut-over.xml#step-system" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+  <shared-needs id="shared-needs">
+    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares. check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for backup.started 100; backup 201; backup.busy 423; backup.failed 500; backup.mirror_failed 500; backup.rotten 500; backup.disk 503. Owner-acts: backup.failed; backup.rotten; backup.disk after N-45 ran; backup.mirror_failed when it persists a day.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-backups">backups(id, at, class, path, bytes, checksum, inner_checksum, top_seq, verified, mirror_path, mirror_checksum, pruned_at); entities backup:latest (compare-and-swap) and backup:running (expected absent).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="artifacts-out-of-repo">Backups, logs and state live under the state root with a README and a cleanup script each (C35); the hand backup tree is disposed of by N-49.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="no-privileged-profile">No node selects the owner's privileged AWS profile; a cloud mirror is the owner's own user-initiated script (global hard rule).</need>
+    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">backup.interval_seconds 21600, backup.min_interval_seconds 60, backup.snapshot_seconds 300, backup.verify_seconds 600, backup.mirror_seconds 600, backup.min_free_mib 2048, backup.retention {tick 48h, daily 30d, monthly 12mo, manual until card}, backup.mirror_dir optional.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="crash">The service restarts mid-run: temps under tmp/ removed at start, backup:running cleared, a due backup runs at once; nothing is lost because the live store is never the thing being written.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="disk-full">Free space under backup.min_free_mib: backup.disk 503 once, run skipped, N-45 cleanup, then one card if still under.</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <is>N-05 is the answer to the catch the owner asked about on C34 ("whats the catch here?"): one store on one host is one box, so the store is copied on a schedule, verified, classed for retention, mirrored off the box when a mirror is configured, and every copy is a record.</is>
+    <is>It is the only path by which N-01's restore runbook gets a file to restore from, and it is what cleanup-store.sh checks before it may delete the live file.</is>
+    <is-not>It does not prune (N-45 does, from the retention class on each backup record), does not back up the repository (git is its own backup), and never uses the owner's privileged AWS profile or any credential the owner did not place in the unit's environment.</is-not>
+    <decisions>D10 (C34: one store, backups scheduled per the catch), D04 (C35: artifacts in the state root with cleanup scripts), D22 (the host's crash history: eleven bugchecks in seven weeks, L10 section 5.3).</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="tick" subkind="backup" from="N-06" schema="../N-06/record.schema.json#/$defs/tick">
+      <field name="class">tick (every backup.interval_seconds 21600), daily (the first tick after 03:00Z), monthly (the first daily of a UTC month). The class is decided by N-06's schedule, not here, so the retention class is data on the tick.</field>
+    </record>
+    <also kind="backup.now" from="N-50 before cut-over records, N-49 before each unlanded cleanup step (04-UNLANDED section 12 step 1), the restore runbook, and the ctl CLI" note="an extra backup of class manual; bounded by backup.min_interval_seconds 60"/>
+    <also kind="the live store" from="N-01 Snapshot RPC" note="the source; the backup never opens coq.db as a second writer"/>
+  </input>
+
+  <output id="output">
+    <record kind="backup" code="201" schema="record.schema.json#/$defs/backup">
+      <field name="path">STATE/backup/store/YYYY/MM/YYYYMMDDTHHMMSSZ-coq.db.zst</field>
+      <field name="checksum">sha256 of the compressed file; a second sha256 of the uncompressed database file inside.</field>
+      <field name="bytes">Compressed size.</field>
+      <field name="top_seq">The store's top seq at the moment of the snapshot, so a restore knows exactly which records it loses.</field>
+      <field name="retention_class">tick, daily, monthly, manual; N-45 keeps tick 48 h, daily 30 d, monthly 12 months, manual until the owner's cleanup card (backup.retention in config).</field>
+      <field name="verified">true: the copy was opened read-only, PRAGMA integrity_check returned ok, and its records count equals top_seq.</field>
+      <field name="mirror">The mirror path and its checksum when backup.mirror_dir is configured, else absent; a failed mirror is backup.mirror_failed 500 and the local backup still counts.</field>
+    </record>
+    <record kind="backup.failed" code="500" schema="record.schema.json#/$defs/backup_failed">After 3 attempts: the stage that failed (snapshot, compress, verify, write), the error, the attempts; one card through N-28 because a store with no fresh backup is an owner-acts state.</record>
+  </output>
+
+  <mechanism id="mechanism">
+    <component name="package">Go package scheduler/internal/backup: Run(class), Verify(path), Prune is not here. It calls N-01's Snapshot, which runs VACUUM INTO on a temp path inside the store directory (same filesystem, so the rename is atomic), under the writer's turn so the copy is one transaction-consistent image.</component>
+    <component name="compression">zstd level 3 (the Go zstd library pinned in the module; no shelling out), streaming, so a 1 GiB file needs no 1 GiB of memory.</component>
+    <component name="layout">STATE/backup/store/YYYY/MM/ by the UTC day of the snapshot; one file per backup; a README.md at STATE/backup/store/ names the writer, the classes, the retention and the cleanup script (owner, C35: cleanup scripts for every artifact).</component>
+    <component name="mirror">backup.mirror_dir, optional: a second directory on another filesystem (a Windows drive under /mnt, a network share, a USB disk). Copy then checksum compare; never the primary. No cloud target is built in: the owner's S3 bucket needs the privileged profile and that is user-initiated only (global hard rule), so a cloud mirror is a later owner-run script, not this node.</component>
+    <mermaid id="m-backup">flowchart LR
+  T[backup tick, class] --> S[N-01 Snapshot: VACUUM INTO tmp]
+  S --> Z[zstd stream to tmp.zst]
+  Z --> V[open tmp.zst read-only, integrity_check, count = top_seq]
+  V -- ok --> R[rename to final path, fsync dir]
+  V -- not ok --> F[attempt + 1, up to 3]
+  R --> C[sha256 both, write README if absent]
+  C --> M{mirror_dir set?}
+  M -- yes --> Y[copy, checksum compare]
+  M -- no --> B
+  Y --> B[append backup 201]
+  F --> B2[backup.failed 500 after 3]</mermaid>
+    <step n="1">Ask N-01 for Snapshot(tmp): the writer goroutine runs VACUUM INTO tmp between two transactions; the snapshot's top_seq is returned with it.</step>
+    <step n="2">Compress to tmp.zst; compute sha256 of the raw file while reading it.</step>
+    <step n="3">Verify: decompress to a second temp file, open read-only, PRAGMA integrity_check must be exactly ok, SELECT count(*) FROM records must equal top_seq, SELECT max(seq) must equal top_seq. Any difference is a failed attempt.</step>
+    <step n="4">Rename tmp.zst to the final path; fsync the directory; sha256 the compressed file.</step>
+    <step n="5">Mirror when configured: copy to mirror_dir with the same relative path, read it back, compare sha256; a mismatch deletes the mirror copy and reports backup.mirror_failed 500 (3 attempts); the primary record is still 201.</step>
+    <step n="6">Write the backups table row and append backup 201 with everything above; the entity backup:latest is CAS-updated so cleanup-store.sh and N-01's restore have one place to look.</step>
+    <step n="7">Delete every temp file in STATE/backup/store/tmp/ older than one hour at the start of every run (a crashed run leaves temps; this is their cleanup).</step>
+    <restore-drill>On the daily class, after the backup, run Verify on the newest backup of the previous day as well, so a backup that rotted on disk is found within a day and reported as backup.rotten 500.</restore-drill>
+  </mechanism>
+
+  <start id="start">
+    <rule>Nothing starts by an agent typing. N-06 emits the backup tick from the service clock; the schedule is config; the first tick after start runs at once when the newest backup is older than backup.interval_seconds (a restart never skips a due backup).</rule>
+    <step n="1">At start: create STATE/backup/store/ and tmp/ 0700; write README.md if absent; read the backups table for the newest verified row; if none or older than the interval, run a tick-class backup now.</step>
+    <step n="2">Check free space under STATE against backup.min_free_mib 2048; under it, backup.disk 503 once and the run is skipped until N-45 frees space.</step>
+    <step n="3">backup.started 100 with the newest backup's age.</step>
+  </start>
+
+  <waits id="waits">
+    <wait name="snapshot" on="N-01 VACUUM INTO" timeout="backup.snapshot_seconds 300" fallback="a failed attempt; the writer is released by context cancel; the store keeps serving"/>
+    <wait name="compress-verify" on="zstd and integrity_check" timeout="backup.verify_seconds 600" fallback="a failed attempt; temps are removed"/>
+    <wait name="mirror" on="the mirror filesystem" timeout="backup.mirror_seconds 600" fallback="backup.mirror_failed 500; the local backup stands; an unmounted mirror is reported once per transition, not per tick"/>
+    <wait name="disk" on="free space" timeout="checked before every run" fallback="backup.disk 503; N-45 runs cleanup; owner card if still under after cleanup"/>
+    <wait name="interval" on="the next tick" timeout="backup.interval_seconds 21600" fallback="N-06 reports tick.missed when a tick is late by two intervals; the next tick runs"/>
+  </waits>
+
+  <retries id="retries">
+    <rule>Every automated step retries up to 3 times, then recovers and reports.</rule>
+    <step name="run">Any stage failing restarts the run from the snapshot, 3 attempts with 30, 60, 120 s between; the fourth is backup.failed 500 with the stage and the error; one card through N-28; the next scheduled tick tries again regardless, because a transient disk error should not need the owner to re-arm anything.</step>
+    <step name="mirror">3 attempts inside the run; then backup.mirror_failed 500; the primary is not retried for a mirror failure.</step>
+    <step name="rotten">A previous day's backup failing Verify is reported once; the next backup is not affected; the owner's card says which file and that newer ones verified.</step>
+  </retries>
+
+  <many-agents id="many-agents">
+    <reading>Any node and the owner read the backups table and backup:latest; a seat never needs a backup; the restore runbook (N-01) reads the latest verified row.</reading>
+    <working>One backup runs at a time: the run takes the entity flag backup:running by CAS (expected absent) and releases it at the end; a backup.now while one runs returns backup.busy 423 and is not queued, because the next tick will cover it.</working>
+    <collision name="tick-vs-now">A scheduled tick and a backup.now in the same minute: the flag admits one; the other is 423; the one that ran is of the class that won; a manual class is never downgraded, so if the manual one lost, N-50 or N-49 retries after backup.min_interval_seconds and gets its manual copy.</collision>
+    <collision name="backup-vs-writes">The snapshot is one consistent image while Puts continue: VACUUM INTO in WAL mode reads a snapshot; writers are not blocked beyond the writer's single turn to start it; top_seq names the boundary exactly.</collision>
+    <collision name="backup-vs-cleanup">N-45 prunes while a backup writes: the new file is under tmp/ until rename, and N-45 prunes only rows in the backups table with a past retention date, so an in-progress backup is invisible to it.</collision>
+    <collision name="restart-mid-backup">The service restarts mid-run: the temp files are removed at the next start (step 7 of the mechanism), the flag backup:running is cleared by the start sequence, and the due check runs a backup at once.</collision>
+    <test>With the fake clock: 10 days of ticks with Puts between them, one backup.now storm of 5 calls, one injected verify failure and one injected disk-full: every record's class is right, exactly one run at a time, the failure retried 3 times and reported once, the disk-full skipped with one 503, and every surviving file verifies.</test>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="100" kind="backup.started" acts="nobody; monitoring"/>
+    <emits code="201" kind="backup" acts="N-45 (retention), N-01 runbook (restore), cleanup-store.sh (precondition)"/>
+    <emits code="423" kind="backup.busy" acts="the caller of backup.now, which may retry after min_interval"/>
+    <emits code="500" kind="backup.failed" acts="owner, one card from N-28"/>
+    <emits code="500" kind="backup.mirror_failed" acts="N-41 alert; owner card only when it persists a day"/>
+    <emits code="500" kind="backup.rotten" acts="owner, one card: a stored backup fails verification"/>
+    <emits code="503" kind="backup.disk" acts="N-45 cleanup, then owner through a card"/>
+    <rule>Every code above must exist in ../../shared/status-codes.xml#codes with the same meaning and actor.</rule>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path p="STATE/backup/store/YYYY/MM/*.zst" writer="N-05" readme="STATE/backup/store/README.md" cleanup="scheduler/host/bin/cleanup-backups.sh: --dry-run lists files whose backups row is past its retention class and files with no row (orphans); --apply deletes them and marks the rows pruned; it never deletes the newest verified backup of any class, whatever its age" registry="N-45"/>
+    <path p="STATE/backup/store/tmp/" writer="N-05" cleanup="removed by the run itself at start; cleanup-backups.sh --apply removes anything left over an hour old" registry="N-45"/>
+    <path p="backup.mirror_dir/store/YYYY/MM/*.zst (optional)" writer="N-05" cleanup="cleanup-backups.sh --mirror applies the same retention to the mirror; it refuses when the mirror is not mounted" registry="N-45"/>
+    <path p="STATE/store/coq.db (table backups, entities backup:latest, backup:running)" writer="N-05 through N-01" cleanup="rows are pruned with their files by cleanup-backups.sh" registry="N-45"/>
+    <rule>The hand backups under STATE/backup/2026/10/ (L02 S19) are a different tree: N-49 disposes of them; this node never writes there.</rule>
+  </state-paths>
+
+
+  <edges id="edges">
+    <in from="N-06" record="backup tick with class" href="../N-06/spec.xml#output"/>
+    <in from="N-01" record="the live store through Snapshot" href="../N-01/spec.xml#mechanism"/>
+    <out to="N-45" record="backup (retention class) for pruning" href="../N-45/spec.xml#input"/>
+    <re-entry from="N-49, N-50" note="backup.now of class manual before each cleanup or cut-over step" href="../../dag.md#4-re-entries"/>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>A tick-class run produces a .zst whose decompressed database passes integrity_check and whose counts equal top_seq.</check><proof>Go test backup/run_test.go against a store with 1000 records.</proof></item>
+    <item><check>The record carries path, both checksums, bytes, top_seq, retention_class and verified true.</check><proof>Golden record in the test.</proof></item>
+    <item><check>A verify failure is retried 3 times then reported once as backup.failed with the stage.</check><proof>Go test with an injected corrupt copy.</proof></item>
+    <item><check>Two runs cannot overlap: the second is 423.</check><proof>Go test with two goroutines.</proof></item>
+    <item><check>A restart mid-run leaves no temp file and runs a due backup at once.</check><proof>Test with a prepared tmp/ and a stale backups row.</proof></item>
+    <item><check>The daily class also re-verifies yesterday's newest backup and reports backup.rotten on failure.</check><proof>Go test with a bit-flipped file.</proof></item>
+    <item><check>Mirror copies compare equal; a mismatch deletes the mirror copy and reports once.</check><proof>Go test with a mirror dir on a tmpfs.</proof></item>
+    <item><check>cleanup-backups.sh never deletes the newest verified backup of any class.</check><proof>Script test in scheduler/host/tests.</proof></item>
+    <item><check>No credential and no cloud call exist in the package.</check><proof>grep for aws, s3, http in scheduler/internal/backup returns nothing.</proof></item>
+    <item><check>The restore runbook in N-01 restores from the newest record and prints the seq gap.</check><proof>Integration test: write 100 records after a backup, restore, assert the gap printed is 100.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <actor name="N-05 in-process" may="Snapshot, write under STATE/backup/store and the mirror, write the backups rows"/>
+    <actor name="N-49, N-50 (code)" may="call backup.now with class manual"/>
+    <actor name="seat (the model)" may="nothing here"/>
+    <actor name="owner" may="`scheduler ctl backup now`, `scheduler ctl backup list`, set backup.mirror_dir, run cleanup-backups.sh; any cloud copy is the owner's own script with the owner's own credential, user-initiated, never this node"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <gauge name="backup.age_seconds" alarm="over 2 x backup.interval_seconds"/>
+    <gauge name="backup.newest_verified_top_seq" note="compared with store.top_seq gives records at risk"/>
+    <gauge name="backup.bytes_total" by="class"/>
+    <gauge name="backup.free_mib" alarm="under backup.min_free_mib"/>
+    <counter name="backup.runs_total" by="class, result"/>
+    <counter name="backup.run_seconds" kind="histogram"/>
+    <gauge name="backup.mirror_ok" note="1 when the last mirror matched, 0 otherwise"/>
+    <surface>Map screen (N-38) shows the backup machine with a lamp (fresh, due, failed); Stats (N-40) shows age and bytes; Alerts (N-41) shows backup.failed and backup.rotten; the Controls screen (N-42) has the backup-now button, which is an owner control.action through N-29.</surface>
+  </monitoring>
+
+  <runbook id="runbook">
+    <task name="list backups">`scheduler ctl backup list` prints every row with class, verified, top_seq, bytes, path, pruned.</task>
+    <task name="backup now">`scheduler ctl backup now` (class manual); 423 means one is running; wait a minute.</task>
+    <task name="verify one">`scheduler ctl backup verify PATH` runs the same Verify as the run.</task>
+    <task name="restore">See ../N-01/spec.xml#runbook restore; it takes the path from `backup list`.</task>
+    <task name="configure a mirror">Set backup.mirror_dir in scheduler/config/scheduler.json through a ticket to a mounted directory on another device; `scheduler ctl reload`; the next run mirrors.</task>
+    <task name="cleanup">scheduler/host/bin/cleanup-backups.sh --dry-run, then --apply; --mirror for the mirror.</task>
+  </runbook>
+
+  <rejected id="rejected">
+    <item source="rebuild/investigation/L02-state-stores.md#3-where-it-lives" what="hand backups of state by the orchestrator and architect (S19: 17 directories, 25 MB, 5,902 files, read by nobody)" reason="L02 section 8 item 7: named, dated, reasoned backups of hand fixes should become an automated record kind; a backup is a scheduled record here, and the hand tree is disposed of by N-49"/>
+    <item source="~/.claude/skills/backup-home" what="the backup-home skill: tar of HOME to S3 with the minecraft-admin profile" reason="the profile is privileged and user-initiated only (global hard rule); a factory node may never select it; a cloud mirror is the owner's own script"/>
+    <item source="rebuild/investigation/L10-cluster-and-gitops.md#53-jenkins-is-the-one-platform-piece-that-is-not-gitops-and-is-tied-to-the-desktop" what="the suspended jenkins-backup CronJob and the SMB-mounted JENKINS_HOME as the pattern" reason="that is Jenkins' home (N-20 Longhorn home); the factory store is on the host and its backup is this node; a CronJob cannot reach the host file"/>
+    <item source="scheduler/config/scheduler.json" what="housekeeping.prune_seconds and jobs.keep_days as retention" reason="retention lives on each backup record as a class and N-45 prunes by it; one place, data, not two timers"/>
+    <item source="rebuild/investigation/S03-make-and-durable-queues.md#8-what-to-carry-forward" what="sqlite3 .backup through a shell" reason="no shelling out from the service; VACUUM INTO through the store's own connection is transaction-consistent and needs no second binary"/>
+  </rejected>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="12-d10-durable-queue-or-broker"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="6-d04-where-tickets-and-their-status-live"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="24-d22-which-steps-stay-on-the-wsl-host-and-which-go-to-pods" note="host crash history as the reason"/>
+    <source path="rebuild/investigation/L02-state-stores.md" anchor="3-where-it-lives" note="S19 hand backups"/>
+    <source path="rebuild/investigation/L02-state-stores.md" anchor="8-what-to-carry-forward" note="item 7"/>
+    <source path="rebuild/investigation/L10-cluster-and-gitops.md" anchor="53-jenkins-is-the-one-platform-piece-that-is-not-gitops-and-is-tied-to-the-desktop" note="eleven bugchecks; suspended jenkins-backup CronJob"/>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="12-ordering-and-trigger" note="step 1: back up first"/>
+    <source path="rebuild/investigation/S03-make-and-durable-queues.md" anchor="8-what-to-carry-forward" note="item 6: SQLite survives a process kill, host-side only"/>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="5-owner-rulings-this-session-in-order" note="ruling 18: one box, no free push, backups scheduled"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C34" note="whats the catch here?"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C35" note="cleanup scripts for that shit"/>
+    <source path="~/.claude/CLAUDE.md" anchor="hard-rule-owner-aliases-and-privileged-aws-profile"/>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/runtime-data-never-in-the-repo.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/scripts-live-in-the-project.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+  </sources>
+</volume>

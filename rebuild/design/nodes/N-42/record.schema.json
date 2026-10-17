@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-42/record.schema.json",
+  "title": "N-42 Controls screen: input and output records",
+  "description": "Input controls.frame (pushed by N-31 from hold.flag, build-mode.state, watcher.alive, health, card, ruling, break-glass.token) and output control.action (enters N-29). Shared envelope per shared/state-store.xml#record-envelope. UTC everywhere.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "nodeId": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+    "code": { "type": "integer", "minimum": 100, "maximum": 599 },
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "envelope": {
+      "type": "object",
+      "required": ["kind", "id", "at", "node", "status", "seq", "version", "idempotency_key"],
+      "properties": {
+        "kind": { "type": "string" },
+        "id": { "type": "string", "minLength": 8 },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "$ref": "#/$defs/nodeId" },
+        "status": { "$ref": "#/$defs/code" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "seq": { "type": "integer", "minimum": 1 },
+        "version": { "type": "integer", "minimum": 1 },
+        "idempotency_key": { "type": "string", "minLength": 8 },
+        "by": { "type": "string" }
+      }
+    },
+    "holdFlag": {
+      "type": "object",
+      "required": ["signal", "version", "merge_hold"],
+      "properties": {
+        "signal": { "enum": ["HOLD", "USERGO"] },
+        "version": { "type": "integer", "minimum": 1 },
+        "since": { "$ref": "#/$defs/utc" },
+        "ruling_id": { "type": "string" },
+        "stop_running": { "type": "boolean" },
+        "merge_hold": { "type": "boolean" },
+        "red_main_sha": { "$ref": "#/$defs/sha" }
+      }
+    },
+    "buildMode": {
+      "type": "object",
+      "required": ["on", "version"],
+      "properties": {
+        "on": { "type": "boolean" },
+        "version": { "type": "integer", "minimum": 1 },
+        "expires_at": { "$ref": "#/$defs/utc" },
+        "ruling_id": { "type": "string" }
+      }
+    },
+    "watcher": {
+      "type": "object",
+      "required": ["tier", "alive", "heartbeat_age_s"],
+      "properties": {
+        "tier": { "enum": ["stable", "uat", "dev"] },
+        "page": { "type": "string" },
+        "alive": { "type": "boolean" },
+        "pid": { "type": "integer", "minimum": 1 },
+        "heartbeat_age_s": { "type": "integer", "minimum": -1 },
+        "lock_path": { "type": "string" }
+      }
+    },
+    "health": {
+      "type": "object",
+      "required": ["serving", "tick_age_s", "store_seq"],
+      "properties": {
+        "serving": { "type": "boolean" },
+        "tick_age_s": { "type": "integer", "minimum": -1 },
+        "store_seq": { "type": "integer", "minimum": 0 },
+        "backup_last_at": { "$ref": "#/$defs/utc" },
+        "push_clients": { "type": "integer", "minimum": 0 },
+        "version": { "type": "string" }
+      }
+    },
+    "card": {
+      "type": "object",
+      "required": ["card_id", "about", "decide", "options", "recommended", "posted_at", "tier"],
+      "properties": {
+        "card_id": { "type": "string" },
+        "about": { "type": "string" },
+        "decide": { "type": "string" },
+        "options": { "type": "array", "minItems": 2, "maxItems": 4, "items": { "type": "object", "required": ["label", "then"], "properties": { "label": { "type": "string" }, "then": { "type": "string" } } } },
+        "recommended": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "posted_at": { "$ref": "#/$defs/utc" },
+        "tier": { "enum": ["stable", "uat", "dev"] },
+        "source_record_id": { "type": "string" }
+      }
+    },
+    "ruling": {
+      "type": "object",
+      "required": ["ruling_id", "subject", "pick", "at"],
+      "properties": {
+        "ruling_id": { "type": "string" },
+        "subject": { "type": "string", "description": "card id or action id" },
+        "action": { "enum": ["hold", "resume", "build-mode-on", "build-mode-off", "break-glass", "card-answer"] },
+        "pick": { "type": "string" },
+        "words": { "type": "string" },
+        "result": { "type": "string" },
+        "at": { "$ref": "#/$defs/utc" }
+      }
+    },
+    "breakGlassToken": {
+      "type": "object",
+      "required": ["state"],
+      "properties": {
+        "state": { "enum": ["none", "minted", "consumed"] },
+        "token_id": { "type": "string" },
+        "minted_by_ruling": { "type": "string" },
+        "minted_at": { "$ref": "#/$defs/utc" },
+        "consumed_at": { "$ref": "#/$defs/utc" },
+        "consumed_by_action": { "type": "string" },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "controls.frame": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["client_id", "full", "hold", "build_mode", "watchers", "health", "open_cards", "last_ruling", "break_glass"],
+      "properties": {
+        "kind": { "const": "controls.frame" },
+        "node": { "const": "N-31" },
+        "client_id": { "type": "string", "minLength": 8 },
+        "full": { "type": "boolean" },
+        "hold": { "$ref": "#/$defs/holdFlag" },
+        "build_mode": { "$ref": "#/$defs/buildMode" },
+        "watchers": { "type": "array", "items": { "$ref": "#/$defs/watcher" } },
+        "health": { "$ref": "#/$defs/health" },
+        "open_cards": { "type": "array", "items": { "$ref": "#/$defs/card" } },
+        "last_ruling": { "oneOf": [{ "$ref": "#/$defs/ruling" }, { "type": "null" }] },
+        "break_glass": { "$ref": "#/$defs/breakGlassToken" },
+        "stalled_machines": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "control.action": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["action_id", "action", "expected_version", "client_id", "words"],
+      "properties": {
+        "kind": { "const": "control.action" },
+        "node": { "const": "N-42" },
+        "by": { "const": "owner" },
+        "status": { "enum": [201, 409, 423] },
+        "action_id": { "type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$" },
+        "action": { "enum": ["hold", "resume", "build-mode-on", "build-mode-off", "break-glass"] },
+        "expected_version": { "type": "integer", "minimum": 1 },
+        "client_id": { "type": "string", "minLength": 8 },
+        "words": { "type": "string", "maxLength": 500 },
+        "stop_running": { "type": "boolean", "description": "hold only: stop running one-shots now, else let them finish" },
+        "expires_in": { "enum": ["PT1H", "PT6H", "PT24H", "P7D"], "description": "build-mode-on only" },
+        "target": {
+          "type": "object",
+          "description": "break-glass only",
+          "required": ["kind", "id"],
+          "properties": {
+            "kind": { "enum": ["merge.hold", "dead"] },
+            "id": { "type": "string", "description": "the held main sha or the dead ticket id" }
+          }
+        },
+        "result": {
+          "type": "object",
+          "required": ["new_version"],
+          "properties": {
+            "new_version": { "type": "integer", "minimum": 1 },
+            "ruling_id": { "type": "string" }
+          }
+        },
+        "conflict": {
+          "type": "object",
+          "required": ["reason"],
+          "properties": {
+            "reason": { "enum": ["version-changed", "token-consumed", "action-replayed", "no-token", "stale-page"] },
+            "current_version": { "type": "integer", "minimum": 1 },
+            "current_signal": { "enum": ["HOLD", "USERGO"] },
+            "merge_hold": { "type": "boolean" }
+          }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "action": { "const": "break-glass" } } }, "then": { "required": ["target"] } },
+        { "if": { "properties": { "action": { "const": "build-mode-on" } } }, "then": { "required": ["expires_in"] } },
+        { "if": { "properties": { "action": { "const": "hold" } } }, "then": { "required": ["stop_running"] } },
+        { "if": { "properties": { "status": { "const": 201 } } }, "then": { "required": ["result"] } },
+        { "if": { "properties": { "status": { "enum": [409, 423] } } }, "then": { "required": ["conflict"] } }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/controls.frame" },
+    { "$ref": "#/$defs/control.action" }
+  ]
+}

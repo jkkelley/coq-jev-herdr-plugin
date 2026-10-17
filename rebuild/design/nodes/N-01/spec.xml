@@ -1,0 +1,315 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-01 State store. Node volume of the Factory Rebuild spec book, group G1 Store and leases.
+     Written 2026-10-14T04:34Z UTC by the G1 spec-author seat, round 1, against brief C
+     (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+     Canonical by owner ruling C42; older specs cited below are sources, never authority (D14). -->
+<!-- N-01 round 2, 2026-10-14T05:01:33Z, by the G1 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers (verdict in
+     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-01):
+     every shared pointer (five per volume, into the shared directory) pointed at a directory no author had written and at anchors no volume declared.
+     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
+     The fix: shared needs are declared in <shared-needs> by volume and anchor with no href, so nothing points at a file
+     that does not exist, and the principles this node obeys point at dag.md sections 7 and 8, which do exist.
+     Rejected: writing shared/ from this seat (the brief gives shared/ to one shared author; two authors on one file is the
+     one-file, one-in-flight-ticket collision the book forbids) and leaving the hrefs to resolve later (a failing volume blocks the book now).
+     Cost: a declared need is not a live pointer until shared/ lands; check.sh matches each need's volume and anchor against the
+     shared volumes when they land, so no hand edit happens here. Cross-group edges point at volumes that now exist, and at
+     index.xml#<node-id> for a node whose volume has not landed, because the index entry is the one anchor every node is guaranteed. -->
+<!-- N-01 round 3, 2026-10-14T05:20:00Z, by the G1 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers again, at <mechanism><tables> (round 2 line 97):
+     prose named ../../shared/state-store-schema.xml#tables, a file no author writes (the shared volume is shared/state-store.xml)
+     and an anchor no need declares; a dead pointer left over from round 1.
+     Why it mattered: one unresolved pointer fails check.sh and the architect reads nothing until the book passes.
+     The fix: <tables> now carries the three table needs already declared in <shared-needs> (table-records, table-entities,
+     table-idempotency) as <table need="..."> children, and the entity columns are made identical in both places.
+     Rejected: deleting <tables> (the mechanism must name what this node owns) and adding an href into shared/ (it does not exist yet;
+     a need is the only pointer form that resolves once shared/ lands, see round 2 note above).
+     Cost: none; the volume grows by five lines and stays under the cap.
+     The round 2 verdict was attached to the seat task as data; the proofs file named in the round 2 note is written by the review seat. -->
+<volume id="N-01" kind="node-spec" node="N-01" group="G1" version="1.1.1" written="2026-10-14T05:20:00Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG and principles</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record: record.put</entry>
+    <entry ref="output">Output record: record.committed or 409 conflict</entry>
+    <entry ref="mechanism">Mechanism: SQLite in the Go service behind one gRPC socket</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries up to 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and the cleanup script for each</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="sources">Sources</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-01"/>
+    <sibling href="record.schema.json" role="schema">JSON schema of record.put and record.committed</sibling>
+    <sibling href="../N-02/spec.xml#N-02" role="node">N-02 Lease service</sibling>
+    <sibling href="../N-03/spec.xml#N-03" role="node">N-03 Ticket intake and readiness</sibling>
+    <sibling href="../N-04/spec.xml#N-04" role="node">N-04 GitHub poll</sibling>
+    <sibling href="../N-05/spec.xml#N-05" role="node">N-05 Backups</sibling>
+    <sibling href="../N-06/spec.xml#N-06" role="node">N-06 Service unit, clock and health</sibling>
+    <shared href="../../dag.md#3-every-node" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 4 (one store under the state root, every path with a cleanup script) and rule 3 (three attempts then report)</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">The collision answer every node gives: leases with fencing tokens, compare-and-swap, idempotent steps, 409 that reports</principle>
+    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <shared href="../../shared/cut-over.xml#step-system" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+  <shared-needs id="shared-needs">
+    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares. check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for store.opened 100; record.committed 200 (replayed) and 201; record.invalid 400; record.conflict 409; record.stale 412; store.corrupt 500; store.wal_large 500; store.busy 503; store.disk 503; store.unavailable 503; stream.slow 503. Owner-acts: store.corrupt, store.unavailable, store.disk after N-45 ran.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-records">records(seq INTEGER PRIMARY KEY, id UNIQUE, at, code, kind, node, ticket, attempt, body JSON, hash); append-only; seq strictly increasing.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-entities">entities(key PRIMARY KEY, kind, version, body JSON, updated_seq, updated_at); version grows by one per write; updated_seq is the seq of the record that last wrote it.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-idempotency">idempotency(key PRIMARY KEY, seq, response JSON, at); a seen key replays its response with code 200.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="migrations">The forward-only migration table and the rule that the node owning a table owns its migration.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="envelope">The record envelope every kind carries: id, at (UTC 2006-01-02T15:04:05Z), code, kind, node, attempt where one applies; canonical JSON by RFC 8785 for the hash.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="cas">Compare-and-swap: expected_version on an entity write; 409 with the current version on a miss; expected 0 inserts.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="one-store">One store, no broker, SQLite under the state root, never in the repository (D10 C34, D04 C35).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="multi-agent-first">Many agents at once from the first line: atomic writes, append-only records, leases with fencing tokens, compare-and-swap, idempotent retryable steps, conflicts that report.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="three-attempts">Every automated step retries up to 3 times with backoff, then recovers and reports as a record; a dead record becomes exactly one card.</need>
+    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="lease-token">Every Put a seat makes carries the lease token its launcher exported; the seat never sees another seat's token; a stale token is 412 and is logged.</need>
+    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="ctl-verbs">The ctl verbs a seat may call: record add (seat.result, heartbeat, note), record get, record list, ticket get, health; never the file or the socket directly.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="store-corrupt">quick_check not ok at open: NOT_SERVING, a prepared dry-run restore from the newest verified backup, one card; never an automatic restore over the live file.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="disk-full">Free space under store.min_free_mib: Puts refused 503 store.disk, N-45 cleanup first, then one card.</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <is>N-01 is the one durable store of the factory: every record any node writes, every entity any node claims or versions, lives in one SQLite file on the WSL host, owned by the Go service, reachable only through one gRPC socket.</is>
+    <is>It is the carrier of every edge in the DAG: an output record of any node is a Put here, and the sequence number it returns is what the push transport (N-31) fans out.</is>
+    <is-not>It is not a broker, a bus, a queue daemon or a second copy of anything: no broker (D10, C34), no records branch, no records tree in the repository (D04, C35, memory rule runtime-data-never-in-the-repo).</is-not>
+    <is-not>It does not decide anything: no routing, no retry policy, no verdict lives here; those are N-07, N-11 and the gate nodes.</is-not>
+    <decisions>D01 (Go service with gRPC owns state), D10 (one store, SQLite on the host, backups scheduled), D04 (tickets and all artifacts in the state root), D22 (the Go service on the WSL host).</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="record.put" schema="record.schema.json#/$defs/record_put">
+      <who>Any node of the Go service in-process, the ctl CLI run by the same user, a seat through the ctl CLI with its lease token, the push transport for acks.</who>
+      <field name="idempotency_key" required="true">Caller-chosen string, unique per intended effect: node id, colon, the input record id, colon, the step name. A second Put with the same key returns the first commit unchanged.</field>
+      <field name="record" required="true">The record body: id, at (UTC), code, kind, node, and the kind's own fields, valid against the kind's schema under its node directory.</field>
+      <field name="entity" required="false">An optional entity write in the same transaction: key, expected_version, body. Absent means append-only, no compare-and-swap.</field>
+      <field name="lease_token" required="false">Required when the caller holds a lease (N-02): the fencing token the lease granted. The store refuses a stale token (412).</field>
+    </record>
+    <rule>A Put is one transaction: the record row, the entity row and the idempotency row commit together or not at all.</rule>
+  </input>
+
+  <output id="output">
+    <record kind="record.committed" code="201" schema="record.schema.json#/$defs/record_committed">
+      <field name="seq">Monotonic store sequence, assigned at commit, never reused, the cursor of N-31 and of every List.</field>
+      <field name="id">The record id as the caller wrote it, form YYYYMMDDTHHMMSSZ-CODE-xxxxx (events/schema/event.schema.json#id).</field>
+      <field name="hash">sha256 of the canonical JSON body, so a replay can be compared byte for byte.</field>
+      <field name="version">The entity version after the write, when an entity was written; absent otherwise.</field>
+      <field name="replayed">true when the idempotency key was already committed and this answer is the stored one (code 200, not 201).</field>
+    </record>
+    <record kind="record.conflict" code="409" schema="record.schema.json#/$defs/record_conflict">
+      <field name="key">The entity key whose expected_version did not match.</field>
+      <field name="expected">What the caller expected.</field>
+      <field name="current">What the store holds, so the caller re-reads and decides.</field>
+    </record>
+    <rule>A 409 is itself appended to the log as a record (kind record.conflict) so a collision is visible, never silent.</rule>
+    <rule>A Put that fails validation is 400 record.invalid with the failing path; nothing is written except the 400 record.</rule>
+  </output>
+
+  <mechanism id="mechanism">
+    <component name="file">One SQLite database at the state root: STATE/store/coq.db with its -wal and -shm files. PRAGMA journal_mode=WAL, synchronous=FULL, busy_timeout=5000, foreign_keys=ON, wal_autocheckpoint=1000. Source: S03 section 8 item 6.</component>
+    <component name="package">Go package scheduler/internal/store in the small cut (D09, C41): Open, Put, Get, List, Tail, Snapshot, Close. Pure functions for canonical JSON and hashing; the clock is the core.Clock interface so tests set it (scheduler/internal/core/interfaces.go#Clock).</component>
+    <component name="socket">gRPC service coq.store.v1.Store on a unix socket XDG_RUNTIME_DIR/coq/store.sock, mode 0600, no TCP, same user only. RPCs: Put, Get, List, Tail (server stream to N-31 and the ctl CLI), Snapshot (N-05), Health (grpc.health.v1).</component>
+    <component name="writer">One writer goroutine owns every write transaction; callers queue on a bounded channel (store.put_queue 256). Readers use a pool of read connections; WAL lets them read while the writer writes.</component>
+    <tables>The table definitions live in the shared state-store volume, declared below as needs (shared need: shared/state-store.xml, anchors table-records, table-entities, table-idempotency); this node owns those three tables and their migrations.
+      <table need="table-records">records(seq INTEGER PRIMARY KEY, id UNIQUE, at, code, kind, node, ticket, attempt, body JSON, hash); append-only.</table>
+      <table need="table-entities">entities(key PRIMARY KEY, kind, version, body JSON, updated_seq, updated_at); compare-and-swap on version.</table>
+      <table need="table-idempotency">idempotency(key PRIMARY KEY, seq, response JSON, at); a seen key replays its response.</table>
+      <others>Other G1 nodes own leases (N-02), claims and tickets (N-03), forge (N-04), backups (N-05), ticks and health (N-06) rows in the same file; each declares its own table need in its own volume.</others>
+    </tables>
+    <mermaid id="m-put">sequenceDiagram
+  participant C as caller (node, ctl, seat with token)
+  participant S as Store gRPC
+  participant W as writer goroutine
+  participant DB as coq.db (WAL)
+  C->>S: Put(idempotency_key, record, entity?, lease_token?)
+  S->>S: validate body against kind schema
+  S->>W: enqueue (bounded, 5 s)
+  W->>DB: BEGIN IMMEDIATE
+  W->>DB: SELECT seq FROM idempotency WHERE key=?
+  alt key seen
+    W-->>C: 200 record.committed replayed=true
+  else new
+    W->>DB: check lease token current (412 if stale)
+    W->>DB: UPDATE entities SET version=version+1 WHERE key=? AND version=expected (409 if 0 rows)
+    W->>DB: INSERT records (seq assigned)
+    W->>DB: INSERT idempotency (key, seq, response)
+    W->>DB: COMMIT
+    W-->>C: 201 record.committed (seq, hash, version)
+    W->>S: notify Tail streams (seq)
+  end</mermaid>
+    <step n="1">Validate: envelope fields present, at is UTC form, code is in the shared map, kind has a schema; else 400.</step>
+    <step n="2">Idempotency: a committed key returns its stored response with code 200 and replayed true; the log gets no new row.</step>
+    <step n="3">Fencing: when lease_token is present, the leases table must hold that token for the record's ticket and attempt; else 412 record.stale, and the 412 is logged with the token seen.</step>
+    <step n="4">Compare-and-swap: when entity is present, UPDATE ... WHERE key AND version = expected; zero rows means 409 with the current version; a missing key with expected 0 is an insert.</step>
+    <step n="5">Append: INSERT the record; seq is the rowid of the records table, strictly increasing; hash computed over canonical JSON (sorted keys, no spaces).</step>
+    <step n="6">Commit with synchronous FULL, then notify Tail streams with the new seq; a stream that is not reading within 1 s is dropped and must reconnect with a full re-read (D21).</step>
+    <canonical>Canonical JSON: RFC 8785 ordering, UTF-8, no insignificant whitespace; the same function serves the hash, the backup checksum (N-05) and the replay comparison.</canonical>
+    <ids>Record id as today: UTC stamp, code, five-character suffix (events/schema/event.schema.json#id). The id is unique per writer; the store refuses a duplicate id with 409 record.conflict key=id.</ids>
+  </mechanism>
+
+  <start id="start">
+    <rule>Nothing starts by an agent typing. The systemd user unit of N-06 starts the binary; the store is opened in the binary's start sequence before any tick, and READY=1 is not sent to systemd until the store answers Health SERVING.</rule>
+    <step n="1">Resolve the state root with bin/state-root.sh (COQ_STATE, else XDG state home, coq, repo name). A relative root is exit 3 and the unit fails loudly.</step>
+    <step n="2">Create STATE/store/ 0700 when absent; open coq.db; apply the schema migration table (shared need: shared/state-store.xml, anchor migrations) forward only.</step>
+    <step n="3">Run PRAGMA quick_check with a 60 s bound. ok starts the service; anything else goes to the recovery path in retries.</step>
+    <step n="4">Replay is automatic: WAL frames since the last checkpoint are applied by SQLite on open. The store records store.opened 100 with the top seq and the file size.</step>
+    <step n="5">Expose the socket; answer Health SERVING; N-06 then starts the ticks.</step>
+  </start>
+
+  <waits id="waits">
+    <wait name="busy" on="SQLite lock" timeout="5000 ms (busy_timeout)" fallback="503 store.busy to the caller; the caller retries per retries; no row is written"/>
+    <wait name="put-queue" on="writer channel" timeout="5 s" fallback="503 store.busy; counter store.queue_full increments; health degrades at 3 in one minute"/>
+    <wait name="quick-check" on="integrity at open" timeout="60 s" fallback="treated as a failed open; recovery path"/>
+    <wait name="checkpoint" on="WAL checkpoint" timeout="every 1000 pages or 60 s, whichever first; PASSIVE, TRUNCATE at drain" fallback="a checkpoint that cannot complete 3 times in a row records store.wal_large 500 at 256 MiB"/>
+    <wait name="tail-send" on="a Tail stream reading" timeout="1 s per frame" fallback="the stream is closed with code 503 stream.slow; the client reconnects and re-reads from its last seq"/>
+    <wait name="disk" on="free space under STATE" timeout="checked every health tick" fallback="below store.min_free_mib 512 the store refuses Puts with 503 store.disk and health goes unhealthy"/>
+    <wait name="drain" on="in-flight transactions at SIGTERM" timeout="drain_seconds 30 (scheduler/config/scheduler.json#drain_seconds)" fallback="the process exits anyway; SQLite rolls back the open transaction on next open"/>
+  </waits>
+
+  <retries id="retries">
+    <rule>Every automated step retries up to 3 times, then recovers and reports (principles no-cog, three-attempts).</rule>
+    <step name="caller-put">A 503 from the store is retried by the caller 3 times with 1, 2, 4 s backoff and the same idempotency key, so a retry can never double-write; the fourth failure is the caller's own failure record with reason store.</step>
+    <step name="open">Open failing (lock, io, schema) is retried 3 times 5 s apart; then the unit stays up, Health answers NOT_SERVING, store.unavailable 503 goes to the N-06 health record and the journal, and N-28 raises one card from the owner-acts code. The unit does not crash-loop on a bad file.</step>
+    <step name="corrupt">quick_check not ok: 3 attempts of PRAGMA integrity_check then VACUUM INTO a fresh file; still not ok means restore from the newest verified backup (N-05 runbook restore) is prepared as a dry-run listing, store.corrupt 500 is reported, and the owner's card carries the restore command. The store never restores over the live file on its own, because the newest records since the backup would be lost silently.</step>
+    <step name="conflict">A 409 is never retried blindly by the store; the caller re-reads the entity and decides. A node that retries a 409 does so at most 3 times with a fresh read each time, then writes its own failure record.</step>
+  </retries>
+
+  <many-agents id="many-agents">
+    <reading>Twenty seats and every node read this volume and the store at once: reads are WAL snapshot reads on a pool of connections, never blocked by the writer; List and Get are pure reads keyed by seq or id, so N readers see one consistent version each.</reading>
+    <working>No agent touches coq.db. A seat writes only through the ctl CLI on the socket, with the lease token its run was given; a pod never reaches the host socket and reports through GitHub statuses (N-25) that N-04 reads.</working>
+    <collision name="same-record-twice">Two callers Put the same idempotency key: the writer serializes them; the first commits 201, the second gets the stored response with code 200 replayed true. No double row.</collision>
+    <collision name="same-entity-twice">Two callers write one entity with the same expected_version: the first commits and bumps the version; the second gets 409 with the current version and a logged record.conflict; it re-reads and re-decides.</collision>
+    <collision name="stale-holder">A seat whose lease expired and was re-granted to a fresh attempt still tries to write: its token is no longer current and the Put is 412 record.stale, logged, so the old run cannot overwrite the new one (fencing, T06).</collision>
+    <collision name="duplicate-id">Two writers mint the same record id in the same second: the UNIQUE index on id refuses the second with 409 key=id; the writer re-mints the suffix and retries, up to 3 times.</collision>
+    <collision name="reader-during-checkpoint">A reader holds a snapshot while a checkpoint runs: SQLite WAL guarantees the reader's view; the checkpoint is PASSIVE and simply does less work.</collision>
+    <test>Two processes (the service and the ctl CLI) and two goroutines Put 1000 records each with overlapping keys and entities; the proof is: exactly one row per key, every 409 logged, seq strictly increasing with no gap, hash recomputed equals stored.</test>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="100" kind="store.opened" acts="nobody; monitoring reads it"/>
+    <emits code="200" kind="record.committed" note="replayed=true: the idempotency key was already committed" acts="the caller, which proceeds"/>
+    <emits code="201" kind="record.committed" acts="the caller and N-31, which fans the seq out"/>
+    <emits code="400" kind="record.invalid" acts="the caller fixes its record; a node that sends 3 invalid records in a minute is reported by N-06 health"/>
+    <emits code="409" kind="record.conflict" acts="the caller re-reads the entity and re-decides"/>
+    <emits code="412" kind="record.stale" acts="nobody for the old holder; N-12 already handled the stall; the record is evidence"/>
+    <emits code="500" kind="store.corrupt" acts="owner, through one card from N-28 that carries the prepared restore"/>
+    <emits code="500" kind="store.wal_large" acts="N-06 health; the runbook checkpoint step"/>
+    <emits code="503" kind="store.busy" acts="the caller retries"/>
+    <emits code="503" kind="store.disk" acts="N-45 cleanup runs first; then the owner through a card"/>
+    <emits code="503" kind="store.unavailable" acts="owner, through one card; nothing else can run"/>
+    <emits code="503" kind="stream.slow" acts="the Tail client reconnects with a full re-read"/>
+    <rule>Every code above must exist in ../../shared/status-codes.xml#codes with the same meaning and actor; a code missing there fails check.sh.</rule>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path id="N-01.store" class="store" p="STATE/store/coq.db" plus="coq.db-wal, coq.db-shm" writer="N-01 only" readme="STATE/store/README.md written at first open" cleanup="scheduler/host/bin/cleanup-store.sh" registry="N-45"/>
+    <path p="XDG_RUNTIME_DIR/coq/store.sock" writer="N-01 at start" cleanup="removed at drain; scheduler/host/bin/cleanup-run.sh removes a stale one when no pid holds it" registry="N-45"/>
+    <path p="STATE/logs/service/store.jsonl" writer="N-01 structured log, one line per Put over 100 ms and per non-2xx" cleanup="scheduler/host/bin/cleanup-logs.sh (keep_days from config)" registry="N-45"/>
+    <rule>STATE is the state root from bin/state-root.sh; nothing under it is ever committed. Every cleanup script defaults to dry-run and prints what it would delete; --apply deletes; both exit 0 on nothing to do, 3 when the unit is running and the path is live.</rule>
+    <rule>cleanup-store.sh refuses --apply unless the unit is stopped and N-05 lists a verified backup newer than the newest seq; it prints the backup path it checked.</rule>
+  </state-paths>
+
+
+  <edges id="edges">
+    <in from="any node" record="record.put" href="../../dag.md#2-the-dag">every output of every node is a Put; the return writes are not drawn</in>
+    <out to="N-02" record="record.committed on ticket.ready and lease rows" href="../N-02/spec.xml#input"/>
+    <out to="N-03" record="record.committed on ticket records" href="../N-03/spec.xml#input"/>
+    <out to="N-05" record="the live file through Snapshot" href="../N-05/spec.xml#input"/>
+    <out to="N-31" record="record.committed seq over Tail" href="../N-31/spec.xml#input"/>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>coq.db opens in WAL mode with synchronous FULL and busy_timeout 5000.</check><proof>PRAGMA journal_mode, synchronous, busy_timeout printed by `scheduler ctl store pragmas` and saved in the test log.</proof></item>
+    <item><check>Put with a new idempotency key returns 201 with seq, hash and version.</check><proof>Go test store/put_test.go, golden response.</proof></item>
+    <item><check>Put with a seen key returns 200 replayed=true and adds no row.</check><proof>Go test, row count unchanged.</proof></item>
+    <item><check>Entity write with a wrong expected_version returns 409 and logs record.conflict.</check><proof>Go test, the 409 row exists in records.</proof></item>
+    <item><check>Put with a stale lease token returns 412.</check><proof>Go test with a lease re-granted to attempt 2.</proof></item>
+    <item><check>Two processes writing concurrently leave seq gapless and strictly increasing.</check><proof>scheduler/tests/store_concurrency.sh output: 2000 rows, max seq 2000.</proof></item>
+    <item><check>Tail delivers every committed seq in order; a slow client is dropped with 503 and re-reads.</check><proof>Go test with a blocked stream.</proof></item>
+    <item><check>quick_check runs at open within 60 s and a corrupt file leads to NOT_SERVING, not a crash loop.</check><proof>Test with a truncated file; journal shows one store.corrupt and the unit active.</proof></item>
+    <item><check>No path under the repository is written.</check><proof>`git status --porcelain` empty after the full test run, saved in the test log.</proof></item>
+    <item><check>Every state path above has its cleanup script, dry-run by default.</check><proof>Each script run with no flags prints a listing and exits 0; the N-45 registry lists them.</proof></item>
+    <item><check>Every emitted code is in the shared map.</check><proof>check.sh cross-reference passes.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <actor name="Go service (N-01 to N-12, N-28 to N-31, N-43 to N-51)" may="Put, Get, List, Tail, Snapshot in-process"/>
+    <actor name="ctl CLI, same user" may="Put, Get, List, Tail over the socket; Put of kinds the shared seat contract allows a seat (seat.result, heartbeat, note) only with a current lease token"/>
+    <actor name="seat (one-shot run)" may="only the ctl CLI verbs its rendered settings allow (N-13); never the file, never the socket directly"/>
+    <actor name="pod" may="nothing here; reports through GitHub statuses"/>
+    <actor name="owner" may="everything, through the ctl CLI and the break-glass path; a direct sqlite3 session on the live file is break glass and is recorded by the runbook step"/>
+    <rule>The socket is mode 0600 under the owner's user; there is no TCP listener (scheduler/api/scheduler/v1/scheduler.proto header, h-proto-sockets).</rule>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="store.puts_total" by="code"/>
+    <counter name="store.conflicts_total"/>
+    <counter name="store.replayed_total"/>
+    <counter name="store.put_latency_ms" kind="histogram" alarm="p99 over 500 ms for 3 health ticks"/>
+    <gauge name="store.top_seq"/>
+    <gauge name="store.db_bytes"/>
+    <gauge name="store.wal_bytes" alarm="over 256 MiB"/>
+    <gauge name="store.free_mib" alarm="under store.min_free_mib"/>
+    <gauge name="store.tail_clients"/>
+    <check name="store.health" every="health tick (N-06)" ok="a SELECT 1 under 100 ms and free space above the floor" else="503 store.unavailable or store.disk, latched: one record per transition"/>
+    <surface>Counters appear in the Status answer (N-06), on the Stats screen (N-40) and as a machine panel (N-39) bound to the health entity; alerts reach the Alerts screen (N-41) through their codes.</surface>
+  </monitoring>
+
+  <runbook id="runbook">
+    <task name="inspect">`scheduler ctl store status` prints top seq, db and wal bytes, tail clients, last checkpoint. Read-only.</task>
+    <task name="read a record">`scheduler ctl record get ID` or `scheduler ctl record list --since SEQ --kind KIND`.</task>
+    <task name="checkpoint by hand">`scheduler ctl store checkpoint` (PASSIVE); only when store.wal_large fired; it is a break-glass-free action because it changes no data.</task>
+    <task name="restore">Stop the unit (`systemctl --user stop coq-service`), run `scheduler/host/bin/restore-store.sh --from BACKUP --dry-run`, read the listing, then `--apply`; it moves the live file aside with a UTC stamp, copies the backup, runs integrity_check, and starts the unit. The newest records after the backup are lost and the script prints the seq gap; that gap is the card's content.</task>
+    <task name="cleanup">scheduler/host/bin/cleanup-store.sh, cleanup-run.sh, cleanup-logs.sh as listed in state-paths; dry-run first, always.</task>
+    <task name="break glass">A direct `sqlite3 STATE/store/coq.db` write session is owner-only, one time, recorded as break.glass before and after, with the unit stopped.</task>
+  </runbook>
+
+  <rejected id="rejected">
+    <item source="rebuild/investigation/03-DECISIONS.md#12-d10-durable-queue-or-broker" what="NATS JetStream as the store or wake bus" reason="C34 ruled no broker; the failure class was addressing, which a broker stores but does not fix (S03 F3)"/>
+    <item source="specs/scheduler/SPEC-16-scheduler-overview.xml#sh-state" what="one file per record and one file per job in the state root as the store" reason="a directory of files has no compare-and-swap, no sequence and no single-writer guarantee; the one-file-per-record log is kept as the record id form and the append-only principle (V01), the files are not"/>
+    <item source="specs/scheduler/SPEC-16-scheduler-overview.xml#l-writer" what="the scheduler never writes a record file itself; the executor runs events/bin/event.sh" reason="the store is the writer now; event.sh's validation (schema, code enum, exclusive create) moves into Put; event.sh becomes the ctl CLI's `record add` verb so the single-writer rule survives"/>
+    <item source="scheduler/api/scheduler/v1/scheduler.proto" what="no streaming call on the control plane (h-proto-stream)" reason="D21 (C52) rules push for everything; Tail is the one server stream, limited to seq fan-out, with full re-read on reconnect; the no-stream rule stays for every other RPC"/>
+    <item source="rebuild/investigation/L02-state-stores.md#3-where-it-lives" what="the repository copy of the record log (S2) and the three stranded roots (S11)" reason="two sources of truth (K07); N-49 reconciles them into this store once, then deletes"/>
+    <item source="rebuild/investigation/03-DECISIONS.md#12-d10-durable-queue-or-broker" what="PostgreSQL or Redis behind the service" reason="a second daemon on a host with eleven bugchecks; SQLite needs none and survives a process kill (S03 section 8 item 6)"/>
+    <item source="rebuild/investigation/L14-go-grpc-control-plane.md#45-drive-control_planeproto-bootstrap-with-agent-release-bwa-rel-2026-09-17-v010-status-proposed" what="the Drive control_plane.proto WorkOrderService as the store API" reason="its lease, version and receipt shapes are carried (N-02, this Put's expected_version); its fifteen WorkState values and four services are more than the small cut needs (D09)"/>
+  </rejected>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="3-d01-control-plane-shape"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="6-d04-where-tickets-and-their-status-live"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="12-d10-durable-queue-or-broker"/>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="24-d22-which-steps-stay-on-the-wsl-host-and-which-go-to-pods"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep" note="V01, V02, V13; T06"/>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="3-dropped-by-the-field-still-carried-here-kill" note="K05, K07, K08"/>
+    <source path="rebuild/investigation/L02-state-stores.md" anchor="8-what-to-carry-forward" note="items 1, 2, 3"/>
+    <source path="rebuild/investigation/L02-state-stores.md" anchor="9-what-to-kill" note="items 1, 2, 4"/>
+    <source path="rebuild/investigation/S03-make-and-durable-queues.md" anchor="8-what-to-carry-forward" note="items 3 and 6"/>
+    <source path="rebuild/investigation/L14-go-grpc-control-plane.md" anchor="8-what-to-carry-forward"/>
+    <source path="rebuild/investigation/01-ROOT-CAUSES.md" anchor="rc3-state-lives-in-many-copies-with-no-authority-joined-by-polling-and-by-hand"/>
+    <source path="scheduler/internal/core/interfaces.go" anchor="Clock" note="injected clock, kept"/>
+    <source path="scheduler/internal/core/record.go" anchor="AtLayout" note="UTC form of at, kept"/>
+    <source path="scheduler/api/scheduler/v1/scheduler.proto" anchor="h-proto-sockets" note="unix sockets 0600, no TCP, kept"/>
+    <source path="events/schema/event.schema.json" anchor="/properties/id" note="record id form and code enum, kept"/>
+    <source path="bin/state-root.sh" anchor="state" note="the one resolver, kept"/>
+    <source path="specs/scheduler/SPEC-16-scheduler-overview.xml" anchor="l-state"/>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="principles" note="no-cog, design-first"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C34" note="no broker, one store; the catch answered: backups scheduled"/>
+    <source path="~/.bearings/coq-stable/answers.jsonl" anchor="C35" note="artifacts out of git, cleanup scripts"/>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/runtime-data-never-in-the-repo.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/control-plane-go-grpc.md" note="one-page memory rule; no heading, so the pointer is the file"/>
+  </sources>
+</volume>

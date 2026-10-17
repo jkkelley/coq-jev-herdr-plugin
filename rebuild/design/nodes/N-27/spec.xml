@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-27 Watcher lamp. One volume of the Factory Rebuild spec book (R-03), group G5 Owner surface.
+  Written 2026-10-14 UTC by the G5 spec-author seat, round 1, against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  Validated by rebuild/design/check.sh against the XSD family in rebuild/design/schema/ once the shared author lands them.
+  No em dash appears in this file. Every time is UTC.
+-->
+<volume id="N-27" kind="node-spec" node="N-27" group="G5" version="1.0.0" issued="2026-10-14" timezone="UTC"
+        author="spec-author seat, group G5 Owner surface, round 1">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, edges</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="mechanism">Mechanism: the watcher unit and its lease</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup scripts</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="look">The lamp on every owner view</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-27"/>
+    <sibling href="record.schema.json" kind="schema">JSON schema of watcher.alive and the records beside it</sibling>
+    <sibling href="../N-28/spec.xml#N-28" relation="edge-out">System lane card builder, which refuses to post without this lamp</sibling>
+    <sibling href="../N-42/spec.xml#N-42" relation="edge-out">Controls screen, which draws the lamp</sibling>
+    <sibling href="../N-32/spec.xml#N-32" relation="same-tier">Bearings page service, the unit this watcher watches</sibling>
+    <sibling href="../N-29/spec.xml#N-29" relation="consumer">Owner answer intake, which the watcher feeds</sibling>
+    <sibling href="../N-30/spec.xml#N-30" relation="consumer">Go inbox with acks, which the watcher feeds</sibling>
+    <sibling href="../N-02/spec.xml#N-02" relation="depends">Lease service, which issues the lease behind the lamp</sibling>
+    <shared href="../../shared/status-codes.xml#owner-surface">Status codes</shared>
+    <shared href="../../shared/state-store.xml#envelope">Record envelope</shared>
+    <shared href="../../shared/principles.xml#no-cog">No cog</shared>
+    <shared href="../../shared/cut-over.xml#step-owner-surface" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>The watcher is the one process per bearings tier that proves the owner's input has a live consumer end to end, and the lamp is that proof made visible.</is>
+    <is>It replaces the old wait loop (tools/bearings/scripts/bearings.sh wait, which typed every owner line into one agent pane) with a supervised unit that moves the owner's answers and messages from the page into the intake nodes and acks each one.</is>
+    <is-not>It is not a monitor of agents, not a scheduler, and never an LLM; it holds a lease, tails a stream, calls two gRPC methods and heartbeats.</is-not>
+    <why>Card C32 was posted on 2026-10-14 while no wait loop belonged to the posting session; the owner answered at 03:31Z and nothing delivered it for 40 minutes (HANDOFF.md, defect found ~04:10Z). The system fix ruled there: a card cannot go up unwatched, and the Controls screen shows the watcher as a lamp.</why>
+    <decisions>D12 system lane (C40), D08 every system process its own supervised unit (C46), D21 push (C52), comms C58; V16 small file protocol with idempotent ids and a consumed set; K03 no agent polls; T06 lease with heartbeat, generation and compare-and-swap.</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="unit.start" code="100">
+      <field name="tier">stable, uat or dev</field>
+      <field name="page">the page name from tools/bearings/config/bearings.json tiers, for example coq-stable or coq-dev-WO-20261014-ab12</field>
+      <field name="unit">coq-watcher@&lt;page&gt;.service, the systemd user unit instance that started</field>
+      <field name="pid">the unit's main pid</field>
+      <field name="at">UTC</field>
+    </record>
+    <text>The input is the unit start itself: systemd starts the instance, the binary writes unit.start as its first record and the traversal begins. No other record starts this node.</text>
+  </input>
+
+  <output id="output">
+    <record kind="watcher.alive" code="100">
+      <field name="tier">the tier</field>
+      <field name="page">the page name</field>
+      <field name="lease">name watcher/&lt;page&gt;, token, generation, expiry (from N-02)</field>
+      <field name="pid">the unit pid</field>
+      <field name="unit">the unit instance name</field>
+      <field name="beat">UTC of this heartbeat</field>
+      <field name="state">alive, grace or dead (the lamp colour is a pure function of this)</field>
+      <field name="page_ok">true when the tier's page service answered GET /health within the last beat</field>
+      <field name="store_ok">true when the last Store.Put of this record committed</field>
+      <field name="delivered_seq">the highest store seq of an owner answer or message this watcher has handed to N-29 or N-30 and acked</field>
+    </record>
+    <text>watcher.alive is an upsert keyed on watcher/&lt;page&gt; (one row per tier, compare-and-swap on version), rewritten every heartbeat. It is the lock with heartbeat the DAG names: the lease in N-02 is the lock, this record is the heartbeat and the lamp. N-28 reads it before posting a card; N-42 draws it.</text>
+    <record kind="watcher.dead" code="500">
+      <field name="page">the page</field>
+      <field name="last_beat">UTC of the last heartbeat seen</field>
+      <field name="reason">lease expired, unit exited unclean, or page unreachable past the bound</field>
+    </record>
+    <text>watcher.dead is written by the Go service's stall tick (N-12 shape, same clock) when a lease expires without a release, so a watcher that dies silently still produces a record and an alert; the watcher never has to be alive to report its own death.</text>
+  </output>
+
+  <mechanism id="mechanism">
+    <where>A small Go binary in the same module as the control plane (D01, D09 small cut): package internal/owner/watcher, command coq-watcher. It runs as the owner user on the WSL host (D22), as the systemd user unit instance coq-watcher@&lt;page&gt;.service rendered from tools/bearings/units/coq-watcher@.service.</where>
+    <step n="1">On start, read tools/bearings/config/bearings.json through the same loader as the page service, resolve the tier and page name, and write unit.start 100.</step>
+    <step n="2">Acquire the lease watcher/&lt;page&gt; from N-02 with ttl 15 s and holder &lt;unit&gt;:&lt;pid&gt;. A refused lease (another live holder) means a second watcher for one tier: write watcher.refused 409 naming the holder and exit 3, so systemd does not restart it in a loop (RestartPreventExitStatus=3). This is the "one wait per page, or events are delivered twice" rule of tools/bearings/AGENTS.md made into a lease.</step>
+    <step n="3">Subscribe to the store stream (N-31's gRPC Push.Subscribe with filter tier=&lt;tier&gt;, kinds owner.answer and owner.message, since_seq = the delivered_seq of the last watcher.alive for this page, or 0). This is the consumed set of V16 as a seq watermark instead of delivered.json.</step>
+    <step n="4">For every owner.answer record, call Intake.Answer (N-29) with the lease token as the fencing token; for every owner.message, call Inbox.Message (N-30) the same way. Both calls are idempotent on the record id, so a repeated delivery after a crash is a no-op with the same reply. On success, advance delivered_seq.</step>
+    <step n="5">Every 5 s: renew the lease (a third of its ttl, T06), probe GET /health of the tier's page service on loopback with a 2 s timeout, and upsert watcher.alive with state alive, page_ok, store_ok and delivered_seq. The record's version is the compare-and-swap guard; a 409 means another watcher wrote it, which is the lease having been lost (step 7).</step>
+    <step n="6">On SIGTERM: release the lease, write watcher.down 100 with reason stop, exit 0. The lamp goes grey, not red, because a clean stop is not a death.</step>
+    <step n="7">On a lease renew that fails with a generation mismatch or on a 409 from step 5: this process no longer holds the lease (a newer generation exists). Write watcher.down 500 with reason fenced and exit 1; systemd restarts it and step 2 decides whether it may run.</step>
+    <text>Why a lease and not a pid file: the old wait.lock.json (tools/bearings/scripts/wait.mjs breadcrumb 2026-10-14) was a pid plus a grace window, checked by the server on every poll; it could not say whether the holder was the one consuming this tier's input, and a SIGKILLed holder left a dead pid that read as not alive only by luck. A lease with a generation says exactly one holder consumes, and expiry is the system's clock, not the reader's.</text>
+    <text>Why the watcher is its own unit and not a goroutine of the page service: the page service restarts on every promotion (N-48) and on every upgrade; the owner's intake must not stop when the page restarts (bearings-stable-is-the-only-always-on-monitor rule), and a card on the page must stay watched through a page restart. Two units, two lifetimes.</text>
+    <text>Why the watcher does not read the page's files: the page service (N-32) writes the owner's answer or message to the store first (through N-29 and N-30 directly, in the same request) and only then acks the browser; the watcher's stream subscription is the second consumer that proves the path and advances the watermark. If the page service's direct call fails, the record is still in the store as owner.answer or owner.message with no ruling or ack, and the watcher's pass through step 4 delivers it. That is the level-triggered safety net of D21 and T03 applied to the owner's words.</text>
+  </mechanism>
+
+  <start id="start">
+    <unit name="coq-watcher@.service" rendered-from="tools/bearings/units/coq-watcher@.service" installed-by="tools/bearings/bin/install-units.sh">
+      <line>[Unit] Description=coq bearings watcher for %i; Wants=coq.service; After=coq.service network-online.target; StartLimitIntervalSec=0</line>
+      <line>[Service] Type=simple; ExecStart=%h/.local/bin/coq-watcher --page %i; Restart=always; RestartSec=2; RestartPreventExitStatus=3; MemoryMax=128M; Environment=COQ_STATE=%h/.local/state/coq/coq-jev-herdr-plugin</line>
+      <line>[Install] WantedBy=default.target</line>
+    </unit>
+    <text>The stable instance is enabled once by the install script (systemctl --user enable --now coq-watcher@coq-stable) and loginctl enable-linger makes it start at boot with no login and no agent. uat and dev instances are started by the tier promotion node (N-48) when it brings a tier up and stopped when it tears the tier down; a seat never starts one.</text>
+    <text>Assumption, recorded: systemd runs in this WSL distribution (wsl.conf [boot] systemd=true). The check in the checklist proves it; if it is false, the fallback is a supervisor unit in Podman, and that is a ticket, not a hand start.</text>
+  </start>
+
+  <waits id="waits">
+    <wait what="lease acquire (N-02)" timeout="5 s" fallback="retry 3 times 2 s apart, then watcher.refused 409 or watcher.down 500 with reason store, exit 1; systemd restarts after RestartSec"/>
+    <wait what="store stream subscribe" timeout="10 s to first frame" fallback="reconnect with the same since_seq, 3 times with 2, 4, 8 s backoff, then exit 1 and let systemd restart; the lease is released first so a fresh instance can take it"/>
+    <wait what="Intake.Answer or Inbox.Message call" timeout="5 s" fallback="retry 3 times (2, 4, 8 s); then write delivery.failed 500 with the record id and keep going with the next record, because one bad record must not freeze the owner's channel; the failed record is picked up on the next pass since delivered_seq does not advance past it"/>
+    <wait what="page GET /health probe" timeout="2 s" fallback="page_ok=false in the next watcher.alive; three misses in a row set state grace, then the alive record still goes up (the page being down is the page's own alert, N-32 page.stale), the watcher keeps consuming"/>
+    <wait what="heartbeat upsert (Store.Put)" timeout="3 s" fallback="store_ok=false, retry next beat; two missed beats inside the lease ttl are tolerated (15 s ttl, 5 s beat); the third miss expires the lease and the stall tick writes watcher.dead"/>
+    <wait what="shutdown drain" timeout="5 s" fallback="forced exit; the lease expires by ttl"/>
+    <no-cog>The cog that could stall this node is the watcher itself being absent. The timeout is the lease ttl; the fallback is the stall tick writing watcher.dead, systemd restarting the unit, N-28 holding cards with 423 until a lamp is back, and the alert reaching the owner through N-41 and, once live, N-52.</no-cog>
+  </waits>
+
+  <retries id="retries">
+    <rule>Every automated step above retries up to 3 times with backoff, then recovers (exit for systemd, or skip and report) and writes a record that names what failed. Nothing loops without a bound and nothing fails silently.</rule>
+    <rule>systemd Restart=always with RestartSec=2 is the fourth and later attempt; the record trail shows each start as unit.start, so a crash loop is countable on the health line (N-06) and becomes an unhealthy alert after 3 starts in 5 minutes, which is an owner-acts code and a card from N-28 (which needs a watcher; see the fallback chain in the waits section).</rule>
+  </retries>
+
+  <many-agents-at-once id="many-agents-at-once">
+    <readers>Any number of seats read this volume at once; it is one file with stable anchors and nothing in it is edited at run time.</readers>
+    <workers>Build tickets cut from this node touch internal/owner/watcher, tools/bearings/units/coq-watcher@.service and tools/bearings/bin/install-units.sh and nothing else; N-32 and N-34 own different files, so three authors ship in parallel without a file clash (one file, one in-flight ticket).</workers>
+    <collision what="two watcher instances for one tier">Only one holds the lease watcher/&lt;page&gt;; the second gets lease.refused from N-02, writes watcher.refused 409 and exits 3. If the first dies, its lease expires by ttl (15 s) and the next start takes it with generation plus one; a late write from the old holder carries the old token and is refused by N-01 as 409, so it can never advance delivered_seq backwards.</collision>
+    <collision what="the page service and the watcher both deliver the same owner.answer">Intake.Answer is idempotent on the record id and rules once by compare-and-swap (N-29); the second call returns the existing ruling. The same holds for Inbox.Message. Double delivery is a no-op by design, never a double effect.</collision>
+    <collision what="a dev or uat watcher sees its page stop">Its page.down 100 (reason idle) is a record for that tier only; the architect digest lane (N-30) is fed by the stable watcher alone, so a throwaway tier's STOPPED never wakes the architect (nodes/N-32/spec.xml#tier-rules, rule wake-only-stable).</collision>
+    <collision what="two tiers at once">Each tier has its own lease name, its own watermark and its own units; a dev tier can never consume the stable page's records because the subscription filter carries the tier.</collision>
+    <collision what="N-28 reads the lamp while it is being rewritten">The read is of the last committed version; a card post checks state alive and beat within 15 s; a torn read is impossible because the store commits whole records.</collision>
+    <test>tests run two watcher binaries against one tier with a fake clock (scheduler/internal/testkit): exactly one alive record per beat, the loser exits 3, a kill of the winner yields watcher.dead within one ttl and a new generation within one RestartSec.</test>
+  </many-agents-at-once>
+
+  <status-codes id="status-codes">
+    <emits kind="unit.start" code="100" acts="nobody">the unit started</emits>
+    <emits kind="watcher.alive" code="100" acts="N-28 reads, N-42 draws">heartbeat upsert, state alive or grace</emits>
+    <emits kind="watcher.down" code="100" acts="N-42 draws grey">clean stop (SIGTERM)</emits>
+    <emits kind="watcher.down" code="500" acts="N-06 counts; N-28 holds cards">unclean exit: fenced or store unreachable</emits>
+    <emits kind="watcher.refused" code="409" acts="nobody; countable">a second instance for the tier, exit 3</emits>
+    <emits kind="watcher.dead" code="500" acts="N-41 alert, N-52 push, N-28 holds cards">lease expired without release (written by the stall tick, not by the watcher)</emits>
+    <emits kind="delivery.failed" code="500" acts="N-41 alert">a record could not be handed to N-29 or N-30 after 3 tries</emits>
+    <text>Codes are from the HTTP-shaped map (SPEC-17 s-codes, events/schema/event.schema.json code enum) carried into shared/status-codes.xml; the kinds above are new rows the shared author adds.</text>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path p="${COQ_STATE}/bearings/&lt;page&gt;/" what="the tier's state directory (shared with N-32 and N-34); the watcher writes nothing here, it reads server.json for the page port" cleanup="tools/bearings/bin/cleanup-tier.sh &lt;page&gt; [--dry-run]"/>
+    <path p="~/.config/systemd/user/coq-watcher@.service" what="the installed unit template" cleanup="tools/bearings/bin/install-units.sh --remove [--dry-run]"/>
+    <path p="journal (systemd user journal, unit coq-watcher@&lt;page&gt;)" what="the only log; one line per start, stop, refusal and delivery failure" cleanup="tools/bearings/bin/cleanup-journal.sh --unit 'coq-watcher@*' --older-than 30d [--dry-run]"/>
+    <path p="store rows watcher.alive (one per page) and the lease row watcher/&lt;page&gt;" what="in N-01; retention by the store's own policy" cleanup="registered with N-45 as store retention class owner-surface"/>
+    <text>Every path is registered with the cleanup registry (N-45) and listed in rebuild/README.md; every cleanup script lists first and deletes only with --yes (dry-run first, owner C35).</text>
+  </state-paths>
+
+  <edges id="edges">
+    <in from="unit.start" href="#start">systemd starts the instance; no DAG node precedes it</in>
+    <out to="N-28" href="../N-28/spec.xml#input">watcher.alive gates every card post</out>
+    <out to="N-42" href="../N-42/spec.xml#input">watcher.alive drawn as the lamp on the Controls screen</out>
+    <uses to="N-02" href="../N-02/spec.xml#output">lease watcher/&lt;page&gt;</uses>
+    <uses to="N-31" href="../N-31/spec.xml#mechanism">Push.Subscribe stream of owner.answer and owner.message</uses>
+    <uses to="N-29" href="../N-29/spec.xml#input">Intake.Answer</uses>
+    <uses to="N-30" href="../N-30/spec.xml#input">Inbox.Message</uses>
+    <uses to="N-12" href="../N-12/spec.xml#mechanism">the stall tick writes watcher.dead on lease expiry</uses>
+  </edges>
+
+  <look id="look">
+    <rule>The lamp is drawn in the Factorio lamp language on the Controls screen (N-42), the bearings page strip (N-32) and the alerts screen (N-41): a round lamp sprite in original art, lit green for alive, amber for grace, red for dead, unlit grey for a clean stop or no unit. Values only from the art inventory section 4.3: green #2BE327, red #DA4535, amber from the orange accent #FAA838, caption text #FFE6C0; no Wube or BiusArt pixel.</rule>
+    <check>A screenshot of each state on the dev tier, read by the architect and sent to the owner before the promotion card (screenshot-every-page-change), is the proof; the four states are produced by the test harness, not by waiting for a real death.</check>
+  </look>
+
+  <checklist id="checklist">
+    <item proof="systemctl --user is-active coq-watcher@coq-stable prints active; journal shows unit.start">The stable watcher runs as a systemd user unit with linger, no agent started it</item>
+    <item proof="store query: watcher.alive for coq-stable has beat within 10 s and state alive">The lamp heartbeats every 5 s</item>
+    <item proof="integration test two-watchers: second exits 3 with watcher.refused 409">One watcher per tier</item>
+    <item proof="integration test kill-watcher with fake clock: watcher.dead 500 within 15 s, new generation within 3 s">Death is reported without the dead process</item>
+    <item proof="integration test page-restart: systemctl --user restart coq-bearings@coq-stable leaves the watcher active and delivered_seq unchanged">A page restart never stops the watch</item>
+    <item proof="test owner-answer-with-page-call-failing: the answer still gets a ruling through the watcher within one beat">The watcher is the second consumer that proves the path</item>
+    <item proof="N-28 test: a card post with no alive lamp returns card.held 423">A card cannot post without the lamp</item>
+    <item proof="screenshots of the four lamp states on dev, sent to the owner">The lamp looks right</item>
+    <item proof="tools/bearings/bin/cleanup-tier.sh coq-dev-test --dry-run lists, --yes removes, both exit 0">Cleanup scripts exist and run</item>
+  </checklist>
+
+  <permissions id="permissions">
+    <runs-as>the owner user, no sudo, MemoryMax 128M</runs-as>
+    <may>acquire and renew the lease watcher/&lt;page&gt;; subscribe to records of its tier; call Intake.Answer and Inbox.Message with its fencing token; upsert watcher.alive for its page; read server.json of its tier for the loopback port</may>
+    <may-not>post cards, write rulings, reply to the owner, read another tier, call herdr, or touch the repository</may-not>
+    <socket>gRPC over the unix socket ${XDG_RUNTIME_DIR}/coq/control.sock, mode 0600 (scheduler.proto h-proto-sockets); no TCP</socket>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="watcher_beats_total" on="N-06 health line"/>
+    <counter name="watcher_delivered_total" on="N-06 health line"/>
+    <counter name="watcher_delivery_failed_total" on="N-06 health line"/>
+    <gauge name="watcher_state{page}" values="alive, grace, dead, down" on="N-42 lamp and N-40 stats"/>
+    <alert when="watcher.dead 500" to="N-41 alerts, N-52 phone push when live"/>
+    <alert when="3 unit.start in 5 min for one page" to="N-06 unhealthy, then N-28 card when a lamp is back"/>
+    <self-check>The system reports on itself: the lamp is computed by the reader from beat age, so a frozen writer shows as grace then dead with no human noticing it first (L08 finding 5).</self-check>
+  </monitoring>
+
+  <runbook id="runbook">
+    <op name="install">tools/bearings/bin/install-units.sh (idempotent): copies unit templates, systemctl --user daemon-reload, enables coq-watcher@coq-stable, prints the state. Run once per machine by the bring-up ticket, never by a seat during a run.</op>
+    <op name="status">systemctl --user status coq-watcher@coq-stable; coq owner lamp --page coq-stable (prints the last watcher.alive and its age)</op>
+    <op name="stop a tier">systemctl --user stop coq-watcher@&lt;page&gt;; stable is never stopped by hand (bearings-stable-is-the-only-always-on-monitor); N-48 stops dev and uat instances</op>
+    <op name="break glass">If a lease is wedged (holder dead, ttl not expiring because the clock node is down): coq lease break watcher/&lt;page&gt; is owner-only and one time (shared/seat-contract.xml#break-glass); the record names who and why.</op>
+    <op name="cleanup">tools/bearings/bin/cleanup-tier.sh &lt;page&gt; --dry-run, then --yes; tools/bearings/bin/cleanup-journal.sh; tools/bearings/bin/install-units.sh --remove on decommission</op>
+    <cost>One more process per tier (about 10 MB), five small store writes a minute per tier, and a 15 s window in which a dead watcher still reads alive.</cost>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/design/dag.md" anchor="3-every-node">N-27 row, re-entries and rules</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="defect-found-2026-10-14-0410z">C32 posted unwatched for 40 minutes; the system fix ruled</source>
+    <source path="tools/bearings/scripts/wait.mjs" anchor="breadcrumb-2026-10-14-watcher">wait.lock.json pid lock, the rejected heartbeat file, the SIGKILL cost</source>
+    <source path="tools/bearings/scripts/server.mjs" anchor="watcherNow">alive = pid exists or exited within watcher_grace_seconds</source>
+    <source path="tools/bearings/scripts/bearings.sh" anchor="wait">the old loop: wait.mjs, then herdr agent prompt, then sleep 1</source>
+    <source path="tools/bearings/AGENTS.md" anchor="never-examples">one wait per page, or events are delivered twice</source>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="5-what-broke-and-why">findings 1, 4 and 6: one agent reader, idle stop, delivery not acknowledged</source>
+    <source path="rebuild/investigation/L08-bearings-owner-surface.md" anchor="6-waits-polls-sleeps-and-leases">no lease on a card or an answer today</source>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep">V16 file protocol, V18 watchdog outside the line</source>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="4-in-the-field-untouched-here-steal">T06 lease with heartbeat, generation, compare-and-swap, renewed at a third</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="10-d08-herdrs-role-and-version">every system process its own systemd user unit with a memory limit</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="14-d12-owner-surface-who-produces-cards-and-who-reads-messages">the system lane</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C46">herdr is the owner window only</source>
+    <source path="specs/SPEC-17-orchestrator-and-agent-health.xml" anchor="s-owner">the page server and the wait loop never stop</source>
+    <source path="scheduler/api/scheduler/v1/scheduler.proto" anchor="h-proto-sockets">unix sockets only, mode 0600</source>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/bearings-stable-is-the-only-always-on-monitor.md" anchor="how-to-apply">never stop stable on a halt</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md" anchor="4-3-inherited-vanilla-palette">lamp colour values</source>
+  </sources>
+
+  <rejected id="rejected">
+    <item what="a heartbeat file touched every second (wait.mjs breadcrumb)" reason="a write per second per tier for no extra truth; the lease ttl and a 5 s beat say the same with a generation"/>
+    <item what="polling the herdr pane label to tell liveness" reason="a socket call per page poll and herdr is the owner's window only (D08)"/>
+    <item what="the watcher as a goroutine inside the page service" reason="the page restarts on every promotion; the watch must not"/>
+    <item what="the watcher typing into an agent pane (herdr agent prompt)" reason="the one-reader defect of L08 finding 1; the consumer is the store, not a context window"/>
+    <item what="an agent-held background wait inside a seat shell" reason="dies with every compaction and hides a process under an agent (bearings.sh breadcrumb 2026-10-10)"/>
+    <item what="pid file with grace window as the lamp" reason="cannot say who consumes; a SIGKILLed holder is only accidentally detected"/>
+  </rejected>
+</volume>

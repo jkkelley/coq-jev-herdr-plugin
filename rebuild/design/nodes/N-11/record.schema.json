@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-11/record.schema.json",
+  "title": "N-11 Retry and backoff: input and output records",
+  "description": "Input: any failure record (the common shape below; the kinds are owned by N-15, N-19, N-09, N-12, N-18, N-08 and N-07). Outputs: attempt and dead. Base shape as in ../N-07/record.schema.json#/$defs/base. Times are UTC. Written 2026-10-14 UTC by the G2 spec-author seat.",
+  "oneOf": [
+    { "$ref": "#/$defs/failure" },
+    { "$ref": "#/$defs/attempt" },
+    { "$ref": "#/$defs/dead" }
+  ],
+  "$defs": {
+    "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
+    "phase": { "$ref": "../N-07/record.schema.json#/$defs/phase" },
+    "role": { "$ref": "../N-07/record.schema.json#/$defs/role" },
+    "lane": { "$ref": "../N-07/record.schema.json#/$defs/lane" },
+    "base": { "$ref": "../N-07/record.schema.json#/$defs/base" },
+    "failure_kind": {
+      "type": "string",
+      "enum": ["seat.result", "phase.failed", "review.changes", "merge.conflict", "merge.failed", "stall", "validator.refused", "validator.failed", "gate.verdict", "dispatch.refused"]
+    },
+    "failure": {
+      "allOf": [{ "$ref": "#/$defs/base" }],
+      "description": "The fields every failure record carries in addition to its own; N-11 reads only these.",
+      "properties": {
+        "kind": { "$ref": "#/$defs/failure_kind" },
+        "code": { "type": "integer", "enum": [409, 412, 422, 423, 500] },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/phase" },
+        "attempt": { "type": "integer", "minimum": 0, "maximum": 3, "description": "0 for a failure before any dispatch" },
+        "outcome": { "type": "string", "enum": ["blocked", "changes", "red", "missing", "conflict", "failed", "stalled", "refused"], "description": "the sub-kind, so one table row matches" },
+        "terminal_reason": { "$ref": "../N-15/record.schema.json#/$defs/terminal_reason", "description": "present on seat.result; selects the table row" },
+        "run_id": { "type": "string" },
+        "lease_key": { "type": "string" },
+        "lease_token": { "type": "integer", "minimum": 1 },
+        "dispatch_id": { "type": "string" },
+        "handled_by": { "type": "string", "description": "empty when written; set by N-11 by compare-and-swap to the attempt or dead record id" },
+        "handled_generation": { "type": "integer", "minimum": 1 },
+        "detail": { "type": "object", "description": "the failure's own fields, copied into the next brief" }
+      },
+      "required": ["kind", "code", "ticket", "phase", "attempt", "outcome"]
+    },
+    "attempt": {
+      "allOf": [{ "$ref": "#/$defs/base" }],
+      "properties": {
+        "kind": { "const": "attempt" },
+        "code": { "const": 100 },
+        "node": { "const": "N-11" },
+        "idempotency_key": { "type": "string", "pattern": "^(WO-[0-9]{8}-[0-9a-f]{4}|CR-[a-z0-9._-]+):(worker|reviewer|spec|gate):[2-3]$" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/phase" },
+        "role": { "$ref": "#/$defs/role" },
+        "attempt": { "type": "integer", "minimum": 2, "maximum": 3 },
+        "not_before": { "$ref": "#/$defs/at" },
+        "backoff_seconds": { "type": "integer", "minimum": 10, "maximum": 300 },
+        "jitter_seconds": { "type": "integer", "minimum": -60, "maximum": 60 },
+        "failure_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "failure_kind": { "$ref": "#/$defs/failure_kind" },
+        "lane": { "$ref": "#/$defs/lane" }
+      },
+      "required": ["idempotency_key", "ticket", "phase", "role", "attempt", "not_before", "backoff_seconds", "failure_ids", "failure_kind", "lane"]
+    },
+    "dead": {
+      "allOf": [{ "$ref": "#/$defs/base" }],
+      "properties": {
+        "kind": { "const": "dead" },
+        "code": { "const": 500 },
+        "node": { "const": "N-11" },
+        "idempotency_key": { "type": "string", "pattern": "^(WO-[0-9]{8}-[0-9a-f]{4}|CR-[a-z0-9._-]+):(worker|reviewer|spec|gate):dead$" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/phase" },
+        "attempts": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "required": ["attempt", "failure_id", "failure_kind", "outcome", "at"],
+            "properties": {
+              "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+              "failure_id": { "type": "string" },
+              "failure_kind": { "$ref": "#/$defs/failure_kind" },
+              "outcome": { "type": "string" },
+              "at": { "$ref": "#/$defs/at" }
+            }
+          }
+        },
+        "owner_acts": { "const": true },
+        "recommendation": { "type": "string", "enum": ["split-the-ticket", "re-scope", "system-lane-fault", "leave-dead"] },
+        "policy_id": { "type": "string", "description": "the standing policy row, when one exists" },
+        "policy_deadline": { "$ref": "#/$defs/at" },
+        "policy_default": { "type": "string", "maxLength": 240 },
+        "lane": { "$ref": "#/$defs/lane" }
+      },
+      "required": ["idempotency_key", "ticket", "phase", "attempts", "owner_acts", "recommendation", "lane"]
+    }
+  }
+}

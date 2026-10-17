@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-14/record.schema.json",
+  "title": "N-14 Workspace provision: input and output records",
+  "description": "Input: dispatch, defined in ../N-13/record.schema.json#/$defs/dispatch and referenced here. Output: workspace, workspace.refused, workspace.failed.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "sha1": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node", "idempotency_key"],
+      "properties": {
+        "id": { "type": "string", "minLength": 8 },
+        "kind": { "type": "string" },
+        "code": { "type": "integer", "enum": [100, 200, 201, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "const": "N-14" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "idempotency_key": { "type": "string" },
+        "version": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "dispatch": { "$ref": "../N-13/record.schema.json#/$defs/dispatch" },
+    "claim": {
+      "type": "object",
+      "required": ["pattern", "prefix", "row_id"],
+      "properties": {
+        "pattern": { "type": "string", "minLength": 1 },
+        "prefix": { "type": "string", "description": "literal prefix before the first wildcard; trailing slash means the subtree" },
+        "row_id": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "workspace": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["run_id", "role", "path", "slot", "base_sha", "base_ref", "mode", "mirror_sha", "claims"],
+      "properties": {
+        "kind": { "const": "workspace" },
+        "code": { "const": 100 },
+        "run_id": { "type": "string" },
+        "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
+        "role": { "enum": ["worker", "spec-author", "reviewer", "validator"] },
+        "path": { "type": "string", "pattern": "/ws/[0-9]+/?$" },
+        "slot": { "type": "integer", "minimum": 1 },
+        "branch": { "type": "string", "pattern": "^wo/WO-[0-9]{8}-[0-9a-f]{4}$" },
+        "base_sha": { "$ref": "#/$defs/sha1" },
+        "base_ref": { "type": "string", "pattern": "^(origin/main|origin/wo/WO-[0-9]{8}-[0-9a-f]{4}|refs/pull/[0-9]+/head)$" },
+        "mode": { "enum": ["write", "read-only"] },
+        "mirror_sha": { "$ref": "#/$defs/sha1" },
+        "claims": { "type": "array", "items": { "$ref": "#/$defs/claim" } },
+        "expires_at": { "$ref": "#/$defs/utc", "description": "slot lease expiry: dispatch.deadline_at plus 600 s" }
+      }
+    },
+    "workspace.refused": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["run_id", "reason"],
+      "properties": {
+        "kind": { "const": "workspace.refused" },
+        "code": { "enum": [412, 429] },
+        "run_id": { "type": "string" },
+        "ticket": { "type": "string" },
+        "reason": { "enum": ["claim_overlap", "aggregate", "ticket_in_flight", "head_moved", "no_slot"] },
+        "overlaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["pattern", "held_by"],
+            "properties": {
+              "pattern": { "type": "string" },
+              "held_by": { "type": "string", "description": "the ticket id that holds the overlapping claim" },
+              "their_pattern": { "type": "string" }
+            }
+          }
+        },
+        "pool": {
+          "type": "object",
+          "properties": {
+            "size": { "type": "integer" },
+            "holders": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "expected_sha": { "$ref": "#/$defs/sha1" },
+        "observed_sha": { "$ref": "#/$defs/sha1" }
+      }
+    },
+    "workspace.failed": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["run_id", "step", "reason", "attempts"],
+      "properties": {
+        "kind": { "const": "workspace.failed" },
+        "code": { "const": 500 },
+        "run_id": { "type": "string" },
+        "step": { "enum": ["claims", "slot", "mirror", "worktree", "verify", "record"] },
+        "reason": { "enum": ["store_unreachable", "mirror_locked", "fetch_failed", "worktree_failed", "io"] },
+        "attempts": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "stderr_tail": { "type": "string", "maxLength": 2000 },
+        "log_path": { "type": "string" }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/dispatch" },
+    { "$ref": "#/$defs/workspace" },
+    { "$ref": "#/$defs/workspace.refused" },
+    { "$ref": "#/$defs/workspace.failed" }
+  ]
+}

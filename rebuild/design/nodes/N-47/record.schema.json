@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-47/record.schema.json",
+  "title": "N-47 Drive publish: input and output records",
+  "description": "Parent: ../../index.xml#N-47. Sibling: spec.xml. Envelope as in ../N-43/record.schema.json#/$defs/envelope.",
+  "oneOf": [ { "$ref": "#/$defs/input" }, { "$ref": "#/$defs/output" } ],
+  "$defs": {
+    "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "semver": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "envelope": { "$ref": "../N-43/record.schema.json#/$defs/envelope" },
+    "input": {
+      "title": "merge (from N-09) touching rebuild/design",
+      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "properties": {
+        "kind": { "const": "merge" },
+        "body": {
+          "type": "object",
+          "required": ["pr", "merge_sha", "changed_paths"],
+          "properties": {
+            "pr": { "type": "integer" },
+            "branch": { "type": "string" },
+            "merge_sha": { "$ref": "#/$defs/sha" },
+            "ticket": { "type": "string" },
+            "changed_paths": { "type": "array", "items": { "type": "string" }, "contains": { "pattern": "^rebuild/design/" } }
+          }
+        }
+      }
+    },
+    "file-row": {
+      "type": "object",
+      "required": ["path", "title", "result"],
+      "properties": {
+        "path": { "type": "string", "pattern": "^rebuild/design/" },
+        "title": { "type": "string" },
+        "file_id": { "type": "string" },
+        "bytes_repo": { "type": "integer", "minimum": 0 },
+        "bytes_drive": { "type": "integer", "minimum": 0 },
+        "result": { "type": "string", "enum": ["uploaded", "present", "mismatch-retried", "failed", "foreign"] },
+        "attempts": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "error": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "output": {
+      "title": "drive.copy",
+      "allOf": [ { "$ref": "#/$defs/envelope" } ],
+      "properties": {
+        "kind": { "const": "drive.copy" },
+        "code": { "enum": [201, 204, 423, 503] },
+        "body": {
+          "type": "object",
+          "required": ["merge_sha", "book_version"],
+          "properties": {
+            "merge_sha": { "$ref": "#/$defs/sha" },
+            "book_version": { "$ref": "#/$defs/semver" },
+            "folder_id": { "type": "string" },
+            "folder_title": { "type": "string" },
+            "rows": { "type": "array", "items": { "$ref": "#/$defs/file-row" } },
+            "manifest_file_id": { "type": "string" },
+            "reason": { "type": "string", "enum": ["unchecked", "auth", "network", "mismatch", "not-set-up", "lease-timeout"] },
+            "owner_acts": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}

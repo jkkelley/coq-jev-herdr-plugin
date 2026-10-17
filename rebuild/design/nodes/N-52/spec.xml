@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  N-52 Phone push bridge. One volume of the Factory Rebuild spec book (R-03), group G5 Owner surface.
+  Written 2026-10-14 UTC by the G5 spec-author seat, round 1, against brief C
+  (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  No em dash appears in this file. Every time is UTC.
+-->
+<volume id="N-52" kind="node-spec" node="N-52" group="G5" version="1.0.0" issued="2026-10-14" timezone="UTC"
+        author="spec-author seat, group G5 Owner surface, round 1">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, edges</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="mechanism">Mechanism: the bridge, the provider, the dark flag</entry>
+    <entry ref="provider">Provider choice: self-hosted ntfy on the cluster</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents-at-once">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup scripts</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="look">What the push says</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-52"/>
+    <sibling href="record.schema.json" kind="schema">JSON schema of push.receipt, push.failed and push.skipped</sibling>
+    <sibling href="../N-28/spec.xml#N-28" relation="edge-in">System lane card builder: the card record</sibling>
+    <sibling href="../N-30/spec.xml#N-30" relation="gated-by">Go inbox: this node ships dark until the inbox is live</sibling>
+    <sibling href="../N-34/spec.xml#N-34" relation="uses">Tailnet front door: the link the push carries opens through it</sibling>
+    <sibling href="../N-41/spec.xml#N-41" relation="also-in">Alerts screen: owner-acts alerts may also push</sibling>
+    <sibling href="../N-02/spec.xml#N-02" relation="depends">Lease service: one sender at a time</sibling>
+    <shared href="../../shared/status-codes.xml#owner-surface">Status codes</shared>
+    <shared href="../../shared/state-store.xml#envelope">Record envelope</shared>
+    <shared href="../../shared/cut-over.xml#step-phone" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>The bridge tells the owner's phone that a card is waiting (and, by config, that an owner-acts alert fired) with a short push that opens the bearings page, and records a receipt per card so the system knows the phone was told.</is>
+    <is-not>It is not a second surface: the push carries no decision and takes no answer; the page is where he decides. It never carries the key.</is-not>
+    <why>Cards sat on a page the owner could not see while he was away from the desk (C32, 40 minutes; the 2026-10-14 ~03:55Z phone message about bureaucracy); the ruling on C58 added a phone push channel bridged after the Go inbox with acks.</why>
+    <decisions>C58 comms (phone push after the inbox), D20 one surface (the push is a doorbell, not mail: V13), D23 pods with no secret access (the provider token lives on the host), build-mode rule (ships dark, goes live by its own ticket).</decisions>
+  </purpose>
+
+  <input id="input">
+    <record kind="card" code="300">
+      <field name="card, tier, about, decide, rec, options, deadline">from N-28; only tier stable pushes by default (config phone_push.tiers)</field>
+    </record>
+    <record kind="owner-acts alert (optional, by config)" code="500 or 503">
+      <field name="kinds">card.unwatched, watcher.dead, page.down 500 on stable, front-door.failed, push.stalled, line.halted: the states in which the page itself may not be able to tell him</field>
+    </record>
+    <text>The card is the traversal's start. Alerts are a second, configurable input because they are exactly the cases where the page cannot carry the news; the list is phone_push.alert_kinds in the service config, reviewed as a pull request.</text>
+  </input>
+
+  <output id="output">
+    <record kind="push.receipt" code="200">
+      <field name="card">the card id (or the alert record id)</field>
+      <field name="provider">ntfy</field>
+      <field name="provider_id">the message id ntfy returned</field>
+      <field name="topic_hash">sha256 of the topic name, so the record proves which topic without naming it</field>
+      <field name="sent_at">UTC</field>
+      <field name="attempt">1 to 3</field>
+    </record>
+    <record kind="push.failed" code="500"><field name="card, attempts, error">after 3 attempts; an alert on N-41; the card is unaffected</field></record>
+    <record kind="push.skipped" code="100"><field name="card, reason">dark (phone_push.enabled false), tier not pushed, card already done before the send, quiet hours (config, owner-set), or duplicate</field></record>
+    <text>One receipt per card at most (idempotency key push:&lt;card&gt;); a card that closes before the send is skipped; the receipt says the phone was told, not that he read it (the page's ruling says that).</text>
+  </output>
+
+  <mechanism id="mechanism">
+    <where>Go service (D01), package internal/owner/pushbridge inside coq.service; a subscriber (class tail) on N-31 with filter kinds card plus phone_push.alert_kinds and tiers phone_push.tiers.</where>
+    <step n="1">Hold the lease pushbridge from N-02 (ttl 15 s, renew every 5 s) so exactly one sender runs even if two service instances overlap during an upgrade; a non-holder subscribes and does nothing but count (shadow), ready to take the lease on expiry.</step>
+    <step n="2">On a card record: check phone_push.enabled (dark flag), the tier, quiet hours, whether card.done already exists, and whether card.shown already exists for the card on its tier (the owner's page drew it, nodes/N-31/spec.xml#output); write push.skipped 100 with the reason (dark, tier, quiet, done, seen, duplicate) when any says no.</step>
+    <step n="3">Compose the push (look section): title from about, body from decide with the recommended label, priority from the cause code (500 and 503 high, 422 and 423 default, 300 low), a click action to the tailnet page URL without the key (the phone holds the cookie from its first open; N-34 security), tags by kind. Run the comms checker (N-30's commscheck: sentences of 15 words or fewer, ticket ids with full titles, no key pattern, no em dash); a violation is a system defect written as push.refused 400 and an alert, and the push is not sent.</step>
+    <step n="4">POST to the provider with the token from ${COQ_STATE}/owner/push/token (mode 0600) and a 10 s timeout; retries 3 (10, 30, 90 s, the coqGate ladder's first three rungs, V05) on a network or 5xx error; a 4xx is not retried (a bad token or topic is a config defect) and is push.failed at once with the reason.</step>
+    <step n="5">Store.Put push.receipt 200 with idempotency key push:&lt;card&gt; (a 409 means the other instance sent it first: fine, stop). On failure after 3, push.failed 500.</step>
+    <step n="6">On card.done within 60 s of the receipt (the owner answered quickly), nothing; the push is already delivered. No push is ever recalled or edited; the page is the truth.</step>
+    <text>Why dark until the inbox is live: the owner's reply to a push is a message or an answer on the page, and without the inbox's acks he would be pushed toward a channel that still has one reader. The dark flag flips by the go-live ticket whose proof is N-30's ack ladder working on stable for a day.</text>
+    <text>Why a receipt record: the owner's complaint is not knowing whether he was told; the receipt is countable on the health line and shown on the card (a small phone mark) so he sees the system told him.</text>
+  </mechanism>
+
+  <provider id="provider">
+    <choice>Self-hosted ntfy on the owner's cluster, deployed by the existing homelab-gitops path (the feat/ntfy-alerts branch of homelab-gitops already carries it, L10 section 3), reached from the host over the tailnet or WireGuard, with the ntfy app on the iPhone subscribed to one private topic with an access token.</choice>
+    <why>No app to build (APNs direct needs a signed app), no third party holding the owner's decisions (ntfy.sh public topics would), one HTTP POST per push, a click action that opens the page, priorities and tags, and the deployment path the owner already trusts (map-hosting-and-feel-rules: nothing new). The topic and token are config and a secret file; the topic name is never in a record.</why>
+    <fallback>If the cluster ntfy is down (3 failed attempts), the bridge writes push.failed and N-41 shows it; a second provider (ntfy.sh with a long random topic) is a config option phone_push.fallback_url that is off by default and is the owner's call, because it leaks card titles to a third party.</fallback>
+  </provider>
+
+  <start id="start">
+    <text>The bridge is a goroutine set of coq.service; it subscribes at service start; nothing is typed. It ships dark (phone_push.enabled false) and goes live by its own ticket after N-30's go-live proof, with its own proof: one card on stable produces one push on the owner's phone within 10 s, the push opens the page, and the receipt is on the card.</text>
+  </start>
+
+  <waits id="waits">
+    <wait what="lease acquire and renew" timeout="5 s" fallback="shadow mode (count, do not send); the lease expires by ttl and the next holder sends; a card whose receipt is missing after 60 s is found by the level-triggered scan (step 7 below) and sent then"/>
+    <wait what="provider POST" timeout="10 s per attempt; 3 attempts at 10, 30, 90 s" fallback="push.failed 500, alert on N-41; the card is already on the page, so nothing waits on the push"/>
+    <wait what="the level-triggered scan" timeout="every 60 s" fallback="lists cards without a receipt, skip or failed record older than 60 s and sends them, so a push dropped by a crash is sent after the restart; bounded by the idempotency key"/>
+    <wait what="comms checker" timeout="200 ms" fallback="push.refused 400; a template fix ticket; the card is unaffected"/>
+    <no-cog>The cog that could stall this node is the provider. Timeout: 3 attempts over 130 s. Fallback: the failed record, the alert, and the page itself, which never depended on the push. The push is a doorbell; the mail is on the page.</no-cog>
+  </waits>
+
+  <retries id="retries">
+    <rule>Network and 5xx errors retry 3 times with the 10, 30, 90 s ladder; 4xx never retries (a config defect); after 3 the failure is a record and an alert; the 60 s scan is the recovery after a crash; the idempotency key makes every retry safe.</rule>
+  </retries>
+
+  <many-agents-at-once id="many-agents-at-once">
+    <readers>Any number of seats read this volume.</readers>
+    <workers>Build tickets touch internal/owner/pushbridge, the phone_push section of the service config and its schema, and the gitops app entry for ntfy (a separate repository, its own ticket); nothing else.</workers>
+    <collision what="two service instances during an upgrade">The lease pushbridge admits one sender; the other shadows; a push sent by both anyway (lease handover race) is caught by the receipt's idempotency key: the second Store.Put gets 409 and stops. At worst the phone gets two pushes for one card once per upgrade, which the receipt count shows and which is acceptable because the push is a doorbell.</collision>
+    <collision what="a card closes while the push is in flight">The push lands; the page shows the card done; no recall. The skip check before the send narrows the window to the POST's duration.</collision>
+    <collision what="a storm of cards">The per-tick cap in N-28 bounds the deck; the bridge adds a rate cap (phone_push.max_per_minute, default 6) and folds the rest into one summary push ("4 more cards waiting") with one receipt per folded card marked folded=true, so the phone never buzzes sixty times.</collision>
+    <collision what="the owner answers from the push before the receipt is written">The ruling and the receipt are independent records; order does not matter; the card's phone mark appears when the receipt lands.</collision>
+    <test>tests run two bridge goroutines against a fake provider under the fake clock: one receipt per card, the loser shadows, a provider 503 twice then 200 yields one receipt with attempt 3, a 401 yields push.failed with no retry, ten cards in a minute yield six pushes plus one summary.</test>
+  </many-agents-at-once>
+
+  <status-codes id="status-codes">
+    <emits kind="push.receipt" code="200" acts="the page shows the phone mark; N-40 counts">delivered to the provider</emits>
+    <emits kind="push.failed" code="500" acts="N-41 alert">3 attempts failed or a 4xx</emits>
+    <emits kind="push.skipped" code="100" acts="nobody; countable">dark, tier, quiet hours, done, duplicate</emits>
+    <emits kind="push.refused" code="400" acts="N-41 alert; a template fix">comms checker violation (system defect)</emits>
+    <emits kind="push.folded" code="100" acts="nobody; countable">a card folded into a summary push under the rate cap</emits>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path p="${COQ_STATE}/owner/push/token" what="the ntfy access token, mode 0600, written once by the owner through coq owner push-token (reads from a prompt, never from an argument that lands in shell history)" cleanup="tools/bearings/bin/cleanup-push.sh --token [--dry-run] (owner-only)"/>
+    <path p="store rows push.receipt, push.failed, push.skipped, push.refused, push.folded" what="in N-01; receipts for the life of the card; others 30 days" cleanup="registered with N-45 as store retention class owner-surface"/>
+    <path p="journal of coq.service, lines prefixed push-bridge:" what="one line per send, failure, skip; never the topic, never the token" cleanup="tools/bearings/bin/cleanup-journal.sh --unit coq --older-than 30d [--dry-run]"/>
+    <path p="cluster: the ntfy deployment's cache volume" retention="never" acts="owner" what="owned by the gitops app, not this node; its retention is the ntfy config (cache-duration 12h)" cleanup="kept by its own system: ntfy expires the cache after 12 h; removing the volume is the owner's gitops change; named here so N-45 can list it"/>
+  </state-paths>
+
+  <edges id="edges">
+    <in from="N-28" href="../N-28/spec.xml#output">card</in>
+    <in from="N-41" href="../N-41/spec.xml#input">owner-acts alert records (by config)</in>
+    <out to="the owner's phone" href="#look">the push (no DAG node; the owner is the sink; his act returns through N-32)</out>
+    <uses to="N-02" href="../N-02/spec.xml#output">lease pushbridge</uses>
+    <uses to="N-31" href="../N-31/spec.xml#mechanism">tail-class subscription</uses>
+    <uses to="N-34" href="../N-34/spec.xml#security">the tailnet URL without the key</uses>
+    <gated-by href="../N-30/spec.xml#start">dark until the inbox is live</gated-by>
+  </edges>
+
+  <look id="look">
+    <rule>Title: the card's about line (at most 60 chars, cut at a word). Body: the decide question, then one line "Recommended: &lt;label&gt;", then the ticket id and full title on its own line when there is one; every sentence 15 words or fewer; no record id, pid, pane or path; no key. Priority high for 500 and 503 causes, default otherwise. Tags: a card, a lamp, or a stop sign by cause class (ntfy emoji tags; the page itself carries the Krastorio look, the push is the phone's own notification style). Click: opens the page over the tailnet.</rule>
+    <check>The fixture test renders one push per cause class and asserts the word counts, the absence of the key pattern and the presence of the full ticket title; a screenshot of a real push on the owner's phone is the go-live proof.</check>
+  </look>
+
+  <checklist id="checklist">
+    <item proof="test: a stable card with phone_push.enabled true yields one POST to the fake provider and one push.receipt 200 within 1 s">A card becomes one push</item>
+    <item proof="test: with enabled false the same card yields push.skipped dark and no POST">Ships dark</item>
+    <item proof="test: provider 503 twice then 200 yields one receipt at attempt 3; 401 yields push.failed with no retry">The ladder and the 4xx rule hold</item>
+    <item proof="test: two bridge goroutines yield one receipt; the loser's put gets 409">One sender</item>
+    <item proof="test: 10 cards in a minute yield 6 pushes and one summary; 10 receipts, 4 folded">The rate cap folds</item>
+    <item proof="test: a push body with a key pattern or a 16-word sentence is refused 400 and not sent">The checker gates the push</item>
+    <item proof="ntfy app entry merged in homelab-gitops, Argo synced, topic subscribed on the phone with a token; coq owner push-token stored the token with mode 0600">The provider is up on the owner's path</item>
+    <item proof="stable: one real card pushes to the phone within 10 s, the push opens the page, the card shows the phone mark; screenshot from the phone sent to the owner">Go-live proof</item>
+    <item proof="N-30 ack ladder proof recorded before this node's enabled flag flips">Ordered after the inbox</item>
+  </checklist>
+
+  <permissions id="permissions">
+    <runs-as>inside coq.service as the owner user; reads the token file; egress to the ntfy host only (the service's outbound allow-list names it)</runs-as>
+    <may>subscribe to cards and the configured alert kinds; POST to the provider; write push.* records</may>
+    <may-not>send anything but a card or a configured alert; include the key, a record id or a path; take an answer back (the push has no reply action); run in a pod (the token stays on the host, D23)</may-not>
+    <owner-only>storing or rotating the token; enabling the fallback provider; setting quiet hours</owner-only>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="push_sent_total{kind}" on="N-40 stats"/>
+    <counter name="push_failed_total" on="N-06; any increase is an alert"/>
+    <counter name="push_skipped_total{reason}" on="N-40"/>
+    <counter name="push_folded_total" on="N-40"/>
+    <histogram name="push_card_to_receipt_seconds" on="N-40"/>
+    <gauge name="push_bridge_lease" values="holder, shadow" on="N-42 Controls"/>
+  </monitoring>
+
+  <runbook id="runbook">
+    <op name="store the token">coq owner push-token (prompts; writes ${COQ_STATE}/owner/push/token with mode 0600; writes push.token.set 100 with no token in it)</op>
+    <op name="test the channel">coq owner push-test (sends "bearings test" to the topic; writes a receipt with card=test)</op>
+    <op name="go live">flip phone_push.enabled in the service config by the go-live ticket after N-30's proof; coq reload</op>
+    <op name="quiet hours">phone_push.quiet (UTC window) by the owner's ruling, set by pull request</op>
+    <op name="the phone gets nothing">read push.failed or push.skipped for the card; failed names the provider error; skipped names the reason; the page is unaffected either way</op>
+    <op name="cleanup">tools/bearings/bin/cleanup-push.sh --token (owner-only), cleanup-journal.sh; store retention by N-45</op>
+    <cost>An ntfy deployment on the cluster and an app on the phone; a token file on the host; a doubled push once per upgrade at worst.</cost>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/design/dag.md" anchor="3-every-node">N-52 row: ships dark until the Go inbox is live</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C58">phone push channel added after as a bridge; source note names the ntfy branch</source>
+    <source path="rebuild/investigation/L10-cluster-and-gitops.md" anchor="3-where-it-lives">homelab-gitops branch feat/ntfy-alerts, the real cluster gitops repo</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="defect-found-2026-10-14-0410z">C32 unwatched for 40 minutes</source>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/no-bureaucracy-creep.md" anchor="rule">from the phone, while a card sat on a page he could not reach: the question comes to him where he is</source>
+    <source path="rebuild/investigation/02-MAPPING.md" anchor="2-validated-keep">V05 infrastructure failures retried, never test failures (the 4xx rule); V13 the doorbell is not the mail</source>
+    <source path="rebuild/investigation/L07-ci-and-pods.md" anchor="4-what-works">the coqGate ladder 10, 30, 90, 300 s</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="25-d23-factory-pods-on-a-shared-cluster-isolation-and-quota">no secret access for pods; the token stays on the host</source>
+    <source path="tools/bearings/standards/STD-owner-comms-001.json" anchor="/rule">15 words; ticket with full title; no artifact links</source>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md" anchor="1">use the existing Jenkins, ghcr, gitops, Argo path; nothing new</source>
+    <source path="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/bearings-restart-and-page-key.md" anchor="rule">key never in records</source>
+  </sources>
+
+  <rejected id="rejected">
+    <item what="APNs direct or a native app" reason="needs a signed app and an Apple developer account for a doorbell"/>
+    <item what="SMS or email" reason="no click-to-open with the cookie, no priority, a third party in the path"/>
+    <item what="ntfy.sh public topics by default" reason="card titles would leave the owner's infrastructure; kept as an owner-enabled fallback only"/>
+    <item what="a reply action in the push (answer from the notification)" reason="D20: the page is the one surface; an answer must be a durable POST with a receipt, not a notification tap"/>
+    <item what="pushing every owner-facing record (replies, acks)" reason="the phone would buzz constantly; cards and owner-acts alerts only"/>
+    <item what="putting the key in the click URL" reason="the key in a push log is the L08 finding 11 again; the cookie from the first open suffices"/>
+    <item what="going live together with the inbox" reason="C58 ordered it after; a push to a one-reader channel repeats the old defect"/>
+  </rejected>
+</volume>

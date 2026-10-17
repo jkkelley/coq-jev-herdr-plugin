@@ -1,0 +1,238 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- N-49 Unlanded cleanup. Node volume of the factory rebuild spec book, group G7 Governance and cut-over.
+     Written 2026-10-14 UTC by the G7 spec-author seat, round 1, against brief C. Validated by rebuild/design/check.sh. -->
+<volume id="N-49" kind="node-spec" node="N-49" group="G7" version="1.0.0" issued="2026-10-14" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, shared</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="entries">The entry set: every table of 04-UNLANDED.md, one disposition each</entry>
+    <entry ref="order">The seven steps and their triggers</entry>
+    <entry ref="mechanism">Mechanism: a generated plan, a dry run on the card, an apply per step</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries, recovery and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup</entry>
+    <entry ref="edges">DAG edges in and out</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources</entry>
+    <entry ref="rejected">Rejected with reason</entry>
+    <entry ref="shared-needs">What this volume needs from the shared volumes</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-49"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schema of this node</sibling>
+    <sibling href="../N-45/spec.xml#N-45" kind="node">Cleanup registry and runs, which executes the supersede and close dispositions</sibling>
+    <sibling href="../N-50/spec.xml#N-50" kind="node">Cut-over records, which handles PR 35, the fourteen tickets and the design branch</sibling>
+    <shared href="../../shared/principles.xml#everything-on-main">Everything on main, nothing left lying around (owner, 2026-10-14)</shared>
+    <shared href="../../shared/status-codes.xml#status-codes">Status codes</shared>
+    <shared href="../../shared/failure-cases.xml#stall">Stall and bad-output cases</shared>
+    <shared href="../../dag.md#4-re-entries">Re-entry N-49 to N-03 (land tickets)</shared>
+    <shared href="../../shared/cut-over.xml#step-gofactory" role="cut-over">Where this node goes live in the one cut-over order of the book</shared>
+  </pointers>
+
+  <purpose id="purpose">
+    <is>Turns every row of rebuild/investigation/04-UNLANDED.md into one disposition record (land, supersede, close, keep) and executes the supersede and close rows in the section 12 order, dry run first, as the first slice after GOFACTORY (D25 A).</is>
+    <is>Land rows become ticket requests to N-03 (re-entry), one per LAND row, so the landing goes through the normal path (cut, validate, worker, gate, review, merge) and never by hand.</is>
+    <is-not>It never deletes anything itself; N-45 deletes from disposition records, after the same dry-run contract. It never reads a verdict from an agent; the verdict column is the source, and the D-rulings resolve the DECIDE rows.</is-not>
+    <why>Owner, 2026-10-14T02:49Z: everything needs to get on main too, dont leave that shit laying around; then 02:52Z nothing starts again till GOFACTORY. D25 A: the later, broader order wins; the owner sees exactly what will be deleted before saying go.</why>
+  </purpose>
+
+  <input id="input">
+    <record kind="ruling" from="N-29">The GOFACTORY ruling record (card id or chat relay id, words). Before it arrives, the plan verb may run on the daily tick and its dry-run listing is attached to the GOFACTORY card (N-28).</record>
+    <record kind="tick" from="N-06">The daily tick: re-plans while no GOFACTORY ruling exists, so the dry run on the card is never older than a day.</record>
+    <record kind="merge" from="N-09" via="N-45">For LAND rows: the merge of the land ticket closes the row's disposition (state done).</record>
+    <schema href="record.schema.json#/$defs/input"/>
+  </input>
+
+  <output id="output">
+    <record kind="disposition" code="100">One per entry, state planned: entry id, section, the row's key (branch name, worktree path, issue number, file path), verdict from the table, action resolved (land, supersede, close, keep, re-verdict), step number, what will be done, the sha or size it has now.</record>
+    <record kind="disposition" code="200">State done: what was done, the N-45 cleanup.run id or the land ticket's merge id, the issue closing comment id.</record>
+    <record kind="disposition" code="423">Three attempts failed on the entry; the last error; owner acts when the entry is in another repository the service has no write to (section 10 rows) or a KEEP row whose trigger never arrives by the timeout.</record>
+    <record kind="ticket.request" code="100">One per LAND row, to N-03: title from the row, files declared, acceptance commands from the row's reason column where they exist, lane rebuild, scope build-mode.</record>
+    <schema href="record.schema.json#/$defs/output"/>
+  </output>
+
+  <entries id="entries">
+    <section n="2" name="Open pull requests">PR 35: DECIDE D14 then CLOSE; D14 is ruled (C42); the close is N-50's record; this node's entry points at it and completes when N-50 reports.</section>
+    <section n="3" name="Remote branches (34)">28 CLOSE, 1 SUPERSEDE (tag then delete), 5 for a decision: chore/seat-deny (D13 ruled B, now CLOSE: the fence is a launch property, N-13), PR 35's branch (N-50), go-scheduler-design (N-50 after the small cut harvests files), interface-agent (D12 ruled B, now SUPERSEDE: tag, delete; the owner-lane design is N-28 and N-30), replay-fixtures (D09 ruled B, now KEEP until the small cut's contract-test ticket consumes or rejects it, timeout 14 days then re-verdict as SUPERSEDE). Also: set delete_branch_on_merge true (gh api PATCH).</section>
+    <section n="4" name="Stale remote refs">Remove the remote named pr (6 refs); CLOSE.</section>
+    <section n="5" name="Local-only branches, gone branches and the stash">SUPERSEDE rows: tag then delete (backup/4db1 x2, backup/8fb3), archive to the state root backup tree then delete (backup/ceea x2 and stash@{0}); CLOSE rows: delete (chore/approve-ba08, chore/cut-cause-ab, chore/reindex-main, chore/roadmap-a3-split, feat/recover-sh-..., chore/dd47-cap-test, chore/system-loop-tickets, pr88, tmp-668a, tmp-WO-20261012-9f5d, the 8 gone branches). The stash saved by HANDOFF 03:51Z (stash@{0} sha 81e2905, patch unlanded/20261014-main-checkout-dirty-edits.patch) is a newer entry: KEEP until step 4 lands the page edits, then CLOSE.</section>
+    <section n="6" name="Worktrees (88)">KEEP the owner checkout and the treehouse pool (release slot 2 with PR 35, set max_trees to the count that exists or prune the ninth); KEEP wt-sched and wt-sched-w3 until their branches resolve; CLOSE start-1e9f, start-77c0 with their branches; CLOSE verify-b7a3c5d after the next verify; CLOSE the other 73 (git worktree remove --force then prune).</section>
+    <section n="7" name="Owner checkout">LAND fast-forward (the checkout is behind origin); CLOSE the WO-20261014-539a residue (discard); LAND the page.html and theme.css edits through one ticket with the formatter churn removed (ticket request to N-03, files tools/bearings/assets/page.html and theme.css); CLOSE backlog/now (3 files, already issues 76, 77, 78); SUPERSEDE the 5,812 untracked event copies (reconcile ids missing from the state root, then delete, under WO-20261012-99d6 - Roadmap A4 - events/ and factory/state leave git: cut over under USERHALT, records copied to the state root, merging main strips events/ from a branch, rollback written, which is a LAND ticket request); LAND the removal of 179 tracked events/ files and 341 changelog/ files (the same A4 ticket and card C13).</section>
+    <section n="8" name="Runtime and scripts outside the repository">LAND patrol-tick.sh probes into line/ (WO-20261013-9617 - The patrol saw eight line processes dead 56 times but only queued them for an architect who was dead, and posts no card on the owner page, re-cut at line/bin/patrol-tick.sh; under D01 the probes become N-06 health rows, so the ticket request names N-06 as the home); LAND watchdog.sh with the count fixed (WO-20261013-bf70 - The dead man's switch counts the patrol's own notes as records, so it never fired in a 9.5h outage, re-cut at line/bin/watchdog.sh; home N-06 and N-27); CLOSE the rest of ~/.cache/coq-watch, ~/.cache/coq-held-records; SUPERSEDE the stranded roots (reconcile into the canonical root, delete), the legacy seat root (426 directories), the ids/SOP.counter third root (move under state-root.sh); KEEP the 877 MB herdr core until D08's upgrade lands (N-06 and the herdr window ticket), then CLOSE; the dead hooks no-hand-start.mjs and shell-lex.mjs: D13 ruled B, CLOSE (not re-wired; the seat layer is repo-owned).</section>
+    <section n="9" name="Merged but dark, ruled or ready but unbuilt">Each row resolves by the ruled decision: merge.sh and verify-main.sh LAND as N-09 and N-10 actions (their tickets are cut from those nodes, not from here); d93a, 7f99, 3dae, 48f2, 612d SUPERSEDE by D01 B and D02 B (cancel records through N-03 with the reason); 3217, aff2, 3eac LAND with the trigger changed to the tick (D06 C), as ticket requests naming N-08, N-10 and N-07; Jenkins JCasC LAND under N-20; the hook units DECIDE D06 ruled C, SUPERSEDE (accelerators later); coq-supervisor template SUPERSEDE by D08 B units; board.sh wiring LAND under N-28; a1c6 capacity SUPERSEDE by N-07 caps; 8e0c LAND under N-27 and N-42 (the halt flag keeps stable alive); d1cd, 9189, 5dce CLOSE (acceptance already passes on main); be64 LAND (decision nodes, a docs ticket).</section>
+    <section n="10" name="Other repositories">KEEP rime frozen (D09 ruled: the small cut; a re-verdict at the small cut's merge: harvest the transition table tests and the SQLite store as sources, then archive); CLOSE stale local checkouts of rime and rime-gate-proof; SUPERSEDE rime-bootstrap (harvest the decision table into shared/rejected-with-reason.xml sources, archive); DECIDE getting-my-bearings Hold items: owner card once, default archive after 14 days; CLOSE bearings-core-wk091 and the stale ~/.bearings pages; LAND fast-forward of local-k8s-docs, DECIDE its untracked files by one card; DECIDE dropship-01-gitops, crypto-max-gitops, homelab-gitops branch by one bundled card (low priority, default keep); KEEP forge-* as D18 reference; KEEP software-factory as a contract reference. Rows in other repositories the service has no write access to are owner-acts 423 after the attempts, never a silent skip.</section>
+    <section n="11" name="Open GitHub issues (33)">CLOSE now 11 with the named commit in the closing comment; CLOSE on a ruling 8 (every named decision is now ruled, so these close with the ruling id in the comment); FOLD 12: the disposition stays open and closes by Closes #N from the merge of the named build item (N-09 writes Closes #N from the ticket's issue field); KEEP-OPEN 2 (47 product, 52 owner infrastructure) labelled.</section>
+    <rule>The entry set is generated from the tables, keyed by section and row key; a row the parser cannot key fails the plan (400) and is a fix ticket for the parser, never a skipped row. The count of entries is in every disposition record so the owner can see 100 percent coverage on the card.</rule>
+  </entries>
+
+  <order id="order">
+    <step n="1" trigger="GOFACTORY ruling">Back up first: the page.html and theme.css diffs, the 539a residue diff and the three backlog/now files into $COQ_STATE/backup/unlanded/&lt;date&gt;/ (the HANDOFF patch already holds the page edits; the step verifies it and copies it too).</step>
+    <step n="2" trigger="step 1 done and the hold flag present">Records: the A4 ticket request (LAND) is cut; this step completes when its merge record arrives; its reconcile of the 5,812 copies and the removal of tracked events/ and changelog/ files are inside that ticket. If the hold flag is absent, the step waits for it up to 24 hours then posts one card (the owner's USERHALT is the ticket's own precondition).</step>
+    <step n="3" trigger="step 2 done">Checkout: discard the 539a residue, delete backlog/now, fast-forward the owner checkout (git -C &lt;owner checkout&gt; merge --ff-only origin/main, refused if dirty beyond the known three files).</step>
+    <step n="4" trigger="step 3 done">Owner page: the page-edits ticket request (LAND, one small ticket, formatter churn removed); completes on its merge and N-48's stable promotion 201.</step>
+    <step n="5" trigger="step 4 done">Git clutter: disposition records for sections 3 to 6 to N-45 (tag-then-delete, delete, archive, worktree remove, remote remove, slot return), then delete_branch_on_merge true.</step>
+    <step n="6" trigger="step 5 done">Issues: the 11 CLOSE-now and the 8 CLOSE-on-ruling with comments; FOLD rows stay open with their build item named; KEEP-OPEN labelled.</step>
+    <step n="7" trigger="step 6 done">Off-repo runtime and dark code: sections 8, 9 and 10 dispositions; LAND rows as ticket requests; SUPERSEDE and CLOSE rows to N-45; DECIDE rows as bundled cards with defaults.</step>
+    <s>Each step is a disposition group; a step starts on the previous step's success record; a step with a 423 entry does not block the next step unless the next step's rows depend on it (only step 2 to 3 and 3 to 4 depend).</s>
+  </order>
+
+  <mechanism id="mechanism">
+    <where>rebuild/bin/unlanded.sh in the repository (BI09), with verbs plan (parse the tables at a sha into the entry set JSON and the dry-run listing), apply --step N --plan &lt;hash&gt; (emit disposition and ticket.request records for that step), and status; run by the service as an Executor.Run verb unlanded; deletions go through N-45 by disposition record; GitHub writes (issue comments, PR close, repository settings) go through the service's forge auth with the same three-attempt rule.</where>
+    <step n="1">plan: parse 04-UNLANDED.md at the main sha from the mirror; resolve every DECIDE row against the rulings table (C34 to C58 records); write the entry set with resolved actions and the dry-run listing (what would be deleted, what would be tagged, which issues would close with which comment, which tickets would be requested); the listing hash is the plan hash; the service writes disposition 100 per entry and attaches the listing to the GOFACTORY card through N-28.</step>
+    <step n="2">On the GOFACTORY ruling: re-plan; if the hash differs from the one on the card, the apply refuses (409) and the new listing goes on a fresh card: the owner always sees what runs.</step>
+    <step n="3">apply per step in order: emit records; wait for completion records (N-45 cleanup.run 200, merge records for ticket requests, forge responses) with the timeouts below; write disposition 200 or 423 per entry.</step>
+    <diagram>
+      <mermaid><![CDATA[
+flowchart TD
+  T[daily tick] --> P[plan: entry set + dry-run listing]
+  P --> C[N-28: listing on the GOFACTORY card]
+  G[GOFACTORY ruling] --> R{replan hash == card hash?}
+  R -- no --> C2[fresh card with the new listing]
+  R -- yes --> S1[step 1 backups]
+  S1 --> S2[step 2 A4 ticket, needs hold flag]
+  S2 --> S3[step 3 checkout]
+  S3 --> S4[step 4 page edits ticket + stable promotion]
+  S4 --> S5[step 5 git clutter via N-45]
+  S5 --> S6[step 6 issues]
+  S6 --> S7[step 7 off-repo and dark code]
+      ]]></mermaid>
+    </diagram>
+  </mechanism>
+
+  <start id="start">
+    <s>The daily tick plans; the GOFACTORY ruling record applies; LAND rows enter N-03 as ticket requests and come back as merge records; no agent runs a cleanup command and no agent decides a row.</s>
+  </start>
+
+  <waits id="waits">
+    <wait id="w1" class="owner-decision" what="GOFACTORY ruling" timeout="none; the plan refreshes daily" fallback="nothing runs; the card carries the latest listing; D25 A"/>
+    <wait id="w2" what="the hold flag for step 2" timeout="PT24H" fallback="one card: the A4 cut-over needs USERHALT; default after another 24 h is to run the ticket's reconcile-only half (copy ids missing from the state root, delete nothing) so the record set is safe even if the deletion waits"/>
+    <wait id="w3" what="a LAND ticket's merge" timeout="P7D per ticket" fallback="the disposition stays planned with reason ticket-late and N-11's dead path for the ticket posts the card; the step does not block later steps except 2 to 3 and 3 to 4"/>
+    <wait id="w4" what="N-45 cleanup.run for a step's dispositions" timeout="PT1H" fallback="423 rows from N-45 are copied into the dispositions; the step completes with partial, the next step starts, the rows retry on N-45's next trigger"/>
+    <wait id="w5" what="forge calls (issue comment, close, settings)" timeout="PT30S each" fallback="ladder 10, 30, 90 s; then 423 on the entry"/>
+    <wait id="w6" what="the owner's bundled DECIDE cards (sections 10)" timeout="P14D" fallback="the default named on the card applies (archive or keep as stated per row) and is recorded as a ruling with reason default"/>
+    <cog-test>The cog that could stall this node is the owner answering 33 issue verdicts and 34 branch verdicts one by one. The table already carries every verdict; the owner sees one listing and says go once; the only cards left are the three bundled DECIDE rows with defaults.</cog-test>
+  </waits>
+
+  <retries id="retries">
+    <policy attempts="3" backoff="min(10 s x 2^(n-1), 5 min)">Per entry; successful entries are never redone (every action is idempotent: a deleted branch is already-gone, a closed issue is already-closed, a tag that exists at the same sha is present).</policy>
+    <recover>After three failures the entry is 423 with the last error and the step completes partial; a daily tick re-applies 423 entries whose error class is transient (network, rate limit) for up to 7 days, then stops and the alert stays.</recover>
+    <report>Progress is the Stats screen counter (entries done over total) and the rail panel row for R-04; the owner gets a card only for owner-acts 423 rows and for the DECIDE bundles.</report>
+  </retries>
+
+  <many-agents id="many-agents">
+    <readers>Landing seats (R-04 of the plan) read their LAND ticket, never this volume's entry set; the entry set is a store table every screen can read.</readers>
+    <writers>One run at a time under lease unlanded:run; the plan verb is read-only and may run while an apply runs (it only changes the next card).</writers>
+    <collision>A LAND ticket's worker and the step-5 branch deletion naming the same branch (for example a branch a ticket re-uses): refused upstream, because a ticket request names its files and N-14 claims them; branches are deleted only after the ticket that referenced them is done or when no ticket references them.</collision>
+    <collision>N-45's merge trigger and a step-5 disposition deleting the same branch: both idempotent; the second records already-gone.</collision>
+    <collision>Two GOFACTORY rulings (a page answer and a chat relay): the second is refused 409 duplicate by N-29's one-answer-per-card rule.</collision>
+    <collision>The owner editing the checkout during step 3: the fast-forward refuses a dirty tree beyond the known files (409 dirty) and the step retries on the next daily tick; nothing is reset.</collision>
+  </many-agents>
+
+  <status-codes id="status-codes">
+    <emits code="100" kind="disposition">Planned; system acts (waits for GOFACTORY or executes in order).</emits>
+    <emits code="200" kind="disposition">Done; nobody acts.</emits>
+    <emits code="409" kind="disposition">Plan hash changed since the card, or a dirty checkout; system acts (fresh card or daily retry).</emits>
+    <emits code="400" kind="disposition">A table row the parser cannot key; system acts (fix ticket request for the parser).</emits>
+    <emits code="423" kind="disposition">Failed after 3; system acts (daily transient retry) or owner acts (other repositories, DECIDE bundles past default).</emits>
+    <emits code="100" kind="ticket.request">A LAND row's ticket, to N-03.</emits>
+  </status-codes>
+
+  <state-paths id="state-paths">
+    <path id="N-49.plan" glob="$COQ_STATE/unlanded/plan-*.json" retention="P90D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-49.plan">Entry sets and dry-run listings by hash.</path>
+    <path id="N-49.backup" glob="$COQ_STATE/backup/unlanded/*/" retention="P365D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-49.backup" acts="owner">Step 1 backups and the archived WIP branches; deleted only by owner disposition.</path>
+    <path id="N-49.log" glob="$COQ_STATE/logs/unlanded/*.jsonl" retention="P90D" trigger="timer" cleanup="line/bin/cleanup.sh --entry N-49.log">Run output.</path>
+    <path id="N-49.handoff-patch" glob="$COQ_STATE/rebuild/2026/10/unlanded/*.patch" retention="P365D" trigger="disposition" cleanup="line/bin/cleanup.sh --entry N-49.handoff-patch" acts="owner">The 2026-10-14 dirty-edits patch; never dropped (HANDOFF 03:51Z).</path>
+  </state-paths>
+
+  <edges id="edges">
+    <in ref="../N-29/spec.xml#N-29">ruling (GOFACTORY)</in>
+    <in ref="../N-06/spec.xml#N-06">tick (daily plan refresh)</in>
+    <out ref="../N-45/spec.xml#N-45">disposition (supersede, close)</out>
+    <out ref="../../dag.md#4-re-entries">ticket.request to N-03 (land rows), one per LAND row</out>
+  </edges>
+
+  <checklist id="checklist">
+    <item><check>Every row of every table in 04-UNLANDED.md has exactly one entry.</check><proof>unlanded.sh plan on main prints the entry count per section and the table row count per section, equal; a fixture with an unkeyable row exits 1 with 400.</proof></item>
+    <item><check>Every DECIDE row resolves to a ruled action.</check><proof>The plan's entry set has no action decide for a D-number in rulings-r02.jsonl or answers.jsonl; only the three bundled cards remain.</proof></item>
+    <item><check>Nothing runs before GOFACTORY.</check><proof>A test world with no ruling: daily ticks produce only disposition 100 records and no N-45 disposition input; git and gh fakes record zero writes.</proof></item>
+    <item><check>The dry-run listing on the card equals the plan that runs.</check><proof>A test that changes a branch between card and ruling; apply exits 409; a fresh card record exists.</proof></item>
+    <item><check>The seven steps run in order with the stated dependencies.</check><proof>A test world where step 2's ticket merge is delayed; step 3 does not start; a step-5 entry 423 does not stop step 6.</proof></item>
+    <item><check>Backups exist before any deletion.</check><proof>Step 1 record with file paths and sha256 before any step-5 cleanup.run.</proof></item>
+    <item><check>R-04's exit proof is produced from the records.</check><proof>rebuild/bin/unlanded.sh status writes R-04-branch-disposition.tsv and R-04-unmerged-after.txt under the proofs directory from disposition records and git branch -r --no-merged.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <may role="system" do="plan at any time; apply after the GOFACTORY ruling; write dispositions and ticket requests; call the forge for comments, closes and settings; fast-forward the owner checkout"/>
+    <may role="owner" do="GOFACTORY; answer the bundled DECIDE cards; rule a row kept (a ruling that re-verdicts an entry)"/>
+    <may-not role="seat" do="run unlanded.sh apply; delete branches, worktrees or files outside its ticket; close issues"/>
+    <may-not role="system" do="reset or checkout in the owner checkout (fast-forward only); delete a KEEP row; delete the backup tree; act on another repository without that repository's entry naming the write"/>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <counter name="unlanded_entries" labels="state">planned, done, failed, kept.</counter>
+    <counter name="unlanded_step" kind="gauge">Current step 1 to 7 and its start time.</counter>
+    <counter name="unmerged_branches" kind="gauge">git branch -r --no-merged origin/main count; the exit proof wants every remaining one named in a KEEP disposition.</counter>
+    <panel screen="Rail">R-04 row moves only when a disposition 200 lands.</panel>
+  </monitoring>
+
+  <runbook id="runbook">
+    <step n="1" when="before GOFACTORY">Read the listing on the card; a row the owner wants kept is answered as words on the card and becomes a ruling that re-verdicts the entry; no edit to the table by hand.</step>
+    <step n="2" when="a 423 names another repository">Answer the card: do it (the owner's own command, recorded by N-42) or rule it kept.</step>
+    <step n="3" when="the owner checkout is dirty beyond the known files">Commit or stash the owner's own change; the daily retry fast-forwards.</step>
+    <step n="4" when="break glass">rebuild/bin/unlanded.sh plan and apply --step N by the owner; records are written the same way.</step>
+    <cleanup>line/bin/cleanup.sh --entry N-49.plan, N-49.log; N-49.backup and N-49.handoff-patch only by owner disposition.</cleanup>
+    <cold-start>Dispositions are in the store; status shows the current step; apply resumes at the first entry not done.</cold-start>
+  </runbook>
+
+  <sources id="sources">
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#1-verdict-codes">LAND, SUPERSEDE, CLOSE, KEEP, DECIDE and who acts</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#12-ordering-and-trigger">The seven steps, three attempts then a record, dry-run first, the dry run attached to the GOFACTORY card</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#2-open-pull-requests">PR 35</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#3-remote-branches-not-merged-to-main">Branch verdicts, delete_branch_on_merge</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#5-local-only-branches-gone-branches-and-the-stash">Local branches and the stash</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#6-worktrees-88">Worktrees</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#7-uncommitted-and-untracked-changes-in-the-owner-checkout">Checkout, events copies, page edits</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#8-runtime-and-scripts-outside-the-repository">Off-repo runtime</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#9-merged-but-dark-and-ruled-or-ready-but-unbuilt">Dark code and ready tickets</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#10-other-repositories">Other repositories</source>
+    <source path="rebuild/investigation/04-UNLANDED.md" anchor="#11-open-github-issues-33">Issue verdicts and Closes #N from the ticket's issue field</source>
+    <source path="rebuild/investigation/03-DECISIONS.md" anchor="#27-d25-is-the-cleanup-in-04-unlandedmd-exempt-from-the-gofactory-hold">D25 A</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl" anchor="C57">D25 ruled; C47 D13, C55 D18, C46 D08, C44 D06, C45 D07, C48 D16 resolve the DECIDE rows</source>
+    <source path="rebuild/investigation/00-INVENTORY.md" anchor="#5-build-items-named-by-this-inventory">BI09</source>
+    <source path="rebuild/factory-rebuild-plan.xml" anchor="#steps">Step R-04 Land main: exit proofs R-04-branch-disposition.tsv and R-04-unmerged-after.txt</source>
+    <source path="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/HANDOFF.md" anchor="Checkpoint 2026-10-14T03:51Z">The dirty edits patch and stash; never drop</source>
+    <source path="rebuild/investigation/L05-git-state.md" anchor="#9-what-to-kill">Branch verdicts with file counts; the carry-branch pattern should not exist in the next design</source>
+  </sources>
+
+  <rejected id="rejected">
+    <reject source="04-UNLANDED.md section 12 option B (partly exempt, reversible steps now) and C (fully exempt)" reason="D25 ruled A."/>
+    <reject source="landing seats deciding dispositions (R-04 owner-role text)" reason="The table decides; seats do only the LAND tickets' code work; the plan's R-04 proof is generated from records."/>
+    <reject source="work-order.sh cleanup and hand git in the owner checkout" reason="Fails across worktrees (L11 F4) and is a hand line operation the exit test counts."/>
+    <reject source="closing FOLD issues at GOFACTORY" reason="They close by Closes #N when their build item merges, so the close is evidence (04-UNLANDED section 11)."/>
+    <reject source="deleting the 5,812 event copies without reconciling ids into the state root" reason="3,015 ids exist in the state root and the rest may not (L02 section 5 item 3); the A4 ticket reconciles first."/>
+  </rejected>
+
+  <shared-needs id="shared-needs">
+    <need kind="principle">principles.xml#everything-on-main with the two owner orders and D25 A.</need>
+    <need kind="store-table">dispositions: entry_id, section, key, verdict, action, step, state, attempt, result_ref; leases unlanded:run.</need>
+    <need kind="record-kinds">disposition, ticket.request (title, files, acceptance, lane, scope, home node), ruling (GOFACTORY, re-verdict), merge, cleanup.run.</need>
+    <need kind="status-codes">100 planned, 200 done, 409 plan changed or dirty, 400 unkeyable row, 423 failed after 3 (owner acts for other repositories and DECIDE defaults).</need>
+    <need kind="n-28">Card attachments: a listing file path and a count line on a card; the dedupe window for bundled DECIDE cards; a card with a default and a deadline (V17 standing policies).</need>
+    <need kind="n-03">ticket.request as a valid intake with lane rebuild and home node; N-18 validates its acceptance commands on main.</need>
+    <need kind="n-29">One answer per card; a ruling may re-verdict a disposition entry by id.</need>
+    <need kind="config">unlanded.owner_checkout path, unlanded.known_dirty_files, unlanded.decide_default_days 14, forge auth with repo admin for delete_branch_on_merge.</need>
+    <need kind="executor-verb">unlanded with plan and apply.</need>
+    <need kind="rail">The R-04 rail row binds to dispositions done over total.</need>
+  </shared-needs>
+
+</volume>

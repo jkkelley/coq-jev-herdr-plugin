@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-13/record.schema.json",
+  "title": "N-13 Seat layer render: input and output records",
+  "description": "Input: dispatch (from N-07). Output: seat.bundle, seat.bundle.refused, seat.bundle.failed. The envelope repeats the shared store envelope so this file is whole on its own; the shared store volume declared in spec.xml#shared-needs (state-store.xml, anchor table-records) is canonical.",
+  "$defs": {
+    "utc": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node", "idempotency_key"],
+      "properties": {
+        "id": { "type": "string", "minLength": 8 },
+        "kind": { "type": "string" },
+        "code": { "type": "integer", "enum": [100, 200, 201, 300, 400, 409, 412, 422, 423, 429, 500, 503] },
+        "at": { "$ref": "#/$defs/utc" },
+        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "idempotency_key": { "type": "string" },
+        "version": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "lease": {
+      "type": "object",
+      "required": ["holder", "token", "generation", "expires_at"],
+      "properties": {
+        "holder": { "type": "string" },
+        "token": { "type": "string" },
+        "generation": { "type": "integer", "minimum": 1 },
+        "expires_at": { "$ref": "#/$defs/utc" }
+      }
+    },
+    "build_mode": {
+      "type": "object",
+      "required": ["on"],
+      "properties": {
+        "on": { "type": "boolean" },
+        "expires_at": { "$ref": "#/$defs/utc" },
+        "ruling_ref": { "type": "string" }
+      }
+    },
+    "dispatch": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["role", "phase", "attempt", "deadline_at", "lease", "repo", "build_mode", "repo_sha"],
+      "properties": {
+        "kind": { "const": "dispatch" },
+        "code": { "const": 100 },
+        "node": { "const": "N-07" },
+        "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
+        "role": { "enum": ["worker", "spec-author", "reviewer"] },
+        "phase": { "enum": ["worker", "spec-author", "reviewer"] },
+        "deadline_at": { "$ref": "#/$defs/utc" },
+        "lease": { "$ref": "#/$defs/lease" },
+        "repo": {
+          "type": "object",
+          "required": ["slug", "origin"],
+          "properties": { "slug": { "type": "string" }, "origin": { "type": "string" } }
+        },
+        "repo_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$", "description": "origin/main at dispatch time; the role file and templates are read at this sha" },
+        "build_mode": { "$ref": "#/$defs/build_mode" },
+        "target": {
+          "type": "object",
+          "properties": {
+            "pr": { "type": "integer", "minimum": 1 },
+            "head_sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "anchor": { "type": "string", "description": "rebuild/design/nodes/N-xx/spec.xml#section for a spec-author" },
+            "group": { "type": "string", "pattern": "^G[1-7]$" },
+            "verdict_ref": { "type": "string", "description": "record id of the failure attached on a retry" },
+            "resume_session_id": { "type": "string" }
+          }
+        }
+      }
+    },
+    "limits": {
+      "type": "object",
+      "required": ["max_turns", "max_budget_usd", "wall_clock_seconds", "stall_seconds"],
+      "properties": {
+        "max_turns": { "type": "integer", "minimum": 1 },
+        "max_budget_usd": { "type": "number", "exclusiveMinimum": 0 },
+        "wall_clock_seconds": { "type": "integer", "minimum": 60 },
+        "stall_seconds": { "type": "integer", "minimum": 60 }
+      }
+    },
+    "seat.bundle": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["run_id", "role", "phase", "bundle_dir", "settings_path", "mcp_path", "brief_path", "schema_path", "model", "limits", "allow_paths", "build_mode", "hashes", "session_id", "lease"],
+      "properties": {
+        "kind": { "const": "seat.bundle" },
+        "code": { "const": 100 },
+        "node": { "const": "N-13" },
+        "run_id": { "type": "string" },
+        "ticket": { "type": "string" },
+        "role": { "enum": ["worker", "spec-author", "reviewer"] },
+        "phase": { "enum": ["worker", "spec-author", "reviewer"] },
+        "bundle_dir": { "type": "string" },
+        "settings_path": { "type": "string" },
+        "mcp_path": { "type": "string" },
+        "brief_path": { "type": "string" },
+        "schema_path": { "type": "string" },
+        "model": { "type": "string", "pattern": "^claude-" },
+        "limits": { "$ref": "#/$defs/limits" },
+        "allow_paths": { "type": "array", "items": { "type": "string" }, "description": "the ticket's declared files; everything else is denied for Edit and Write; empty for a reviewer or spec-author" },
+        "build_mode": { "$ref": "#/$defs/build_mode" },
+        "hashes": {
+          "type": "object",
+          "required": ["settings", "mcp", "brief", "schema", "bundle"],
+          "properties": {
+            "settings": { "$ref": "#/$defs/sha256" },
+            "mcp": { "$ref": "#/$defs/sha256" },
+            "brief": { "$ref": "#/$defs/sha256" },
+            "schema": { "$ref": "#/$defs/sha256" },
+            "bundle": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "session_id": { "type": "string", "format": "uuid" },
+        "lease": { "$ref": "#/$defs/lease" }
+      }
+    },
+    "seat.bundle.refused": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["run_id", "reason"],
+      "properties": {
+        "kind": { "const": "seat.bundle.refused" },
+        "code": { "const": 412 },
+        "node": { "const": "N-13" },
+        "run_id": { "type": "string" },
+        "reason": { "enum": ["role_schema_invalid", "no_files_declared", "no_template_for_phase", "ticket_missing"] },
+        "detail": { "type": "string", "maxLength": 1000 }
+      }
+    },
+    "seat.bundle.failed": {
+      "allOf": [{ "$ref": "#/$defs/envelope" }],
+      "type": "object",
+      "required": ["run_id", "step", "reason"],
+      "properties": {
+        "kind": { "const": "seat.bundle.failed" },
+        "code": { "const": 500 },
+        "node": { "const": "N-13" },
+        "run_id": { "type": "string" },
+        "step": { "type": "integer", "minimum": 1, "maximum": 7 },
+        "reason": { "enum": ["role_unreadable", "store_unreachable", "bundle_io", "hash_mismatch"] },
+        "stderr_tail": { "type": "string", "maxLength": 2000 }
+      }
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/dispatch" },
+    { "$ref": "#/$defs/seat.bundle" },
+    { "$ref": "#/$defs/seat.bundle.refused" },
+    { "$ref": "#/$defs/seat.bundle.failed" }
+  ]
+}

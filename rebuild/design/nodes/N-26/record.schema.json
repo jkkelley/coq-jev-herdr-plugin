@@ -1,0 +1,96 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-26/record.schema.json",
+  "title": "N-26 Main verify pipeline: input merge and output main.gate.status",
+  "description": "Written 2026-10-14T04:39Z UTC by the G4 spec-author seat. Envelope repeated from N-20 until shared/state-store.schema.json lands. The main.plan record uses N-23's output schema with kind main.plan and pr 0.",
+  "oneOf": [
+    { "$ref": "#/$defs/input" },
+    { "$ref": "#/$defs/output" }
+  ],
+  "$defs": {
+    "envelope": {
+      "type": "object",
+      "required": ["id", "kind", "code", "at", "node", "attempt", "key", "version"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^r-[0-9]{17}-[a-z0-9]{5}$" },
+        "kind": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)+$" },
+        "code": { "type": "integer", "enum": [100, 200, 201, 300, 400, 409, 410, 412, 422, 423, 429, 500, 503] },
+        "at": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+        "node": { "type": "string", "pattern": "^N-[0-9]{2}$" },
+        "attempt": { "type": "integer", "minimum": 0, "maximum": 3 },
+        "key": { "type": "string", "minLength": 3 },
+        "version": { "type": "integer", "minimum": 1 },
+        "lease_token": { "type": "string" },
+        "note": { "type": "string", "maxLength": 240 }
+      }
+    },
+    "sha40": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "merge_ref": {
+      "type": "object",
+      "required": ["sha", "pr"],
+      "properties": {
+        "sha": { "$ref": "#/$defs/sha40" },
+        "pr": { "type": "integer", "minimum": 0 },
+        "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" }
+      }
+    },
+    "input": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["merge_sha", "pr", "parent_main"],
+          "properties": {
+            "kind": { "const": "merge" },
+            "code": { "const": 200 },
+            "node": { "enum": ["N-09", "N-07"] },
+            "merge_sha": { "$ref": "#/$defs/sha40" },
+            "pr": { "type": "integer", "minimum": 0 },
+            "ticket": { "type": "string", "pattern": "^WO-[0-9]{8}-[0-9a-f]{4}$" },
+            "parent_main": { "$ref": "#/$defs/sha40" }
+          }
+        }
+      ]
+    },
+    "output": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["main_sha", "state", "range_from", "merges", "plan_attempt", "counts", "gate_run"],
+          "properties": {
+            "kind": { "const": "main.gate.status" },
+            "code": { "enum": [201, 422, 500, 410] },
+            "node": { "const": "N-26" },
+            "main_sha": { "$ref": "#/$defs/sha40" },
+            "state": { "type": "string", "enum": ["success", "failure", "error"] },
+            "range_from": { "oneOf": [ { "$ref": "#/$defs/sha40" }, { "const": "unknown" } ] },
+            "merges": { "type": "array", "items": { "$ref": "#/$defs/merge_ref" } },
+            "plan_attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+            "counts": {
+              "type": "object",
+              "required": ["pass", "fail", "timeout", "infra", "superseded", "spec_check_pass", "spec_check_fail"],
+              "properties": {
+                "pass": { "type": "integer", "minimum": 0 }, "fail": { "type": "integer", "minimum": 0 },
+                "timeout": { "type": "integer", "minimum": 0 }, "infra": { "type": "integer", "minimum": 0 },
+                "superseded": { "type": "integer", "minimum": 0 },
+                "spec_check_pass": { "type": "integer", "minimum": 0 }, "spec_check_fail": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "first_failure": { "type": "object", "properties": { "name": { "type": "string" }, "log": { "type": "string" } } },
+            "gate_run": { "type": "string", "pattern": "^r-[0-9]{17}-[a-z0-9]{5}$" },
+            "superseded_by": { "$ref": "#/$defs/sha40" },
+            "reason": { "type": "string", "enum": ["infrastructure", "range-unavailable", "newer-main"] },
+            "range_log": { "type": "string" }
+          },
+          "allOf": [
+            { "if": { "properties": { "state": { "const": "success" } } }, "then": { "properties": { "code": { "const": 201 } }, "not": { "properties": { "range_from": { "const": "unknown" } } } } },
+            { "if": { "properties": { "state": { "const": "failure" } } }, "then": { "properties": { "code": { "const": 422 } }, "required": ["first_failure"] } },
+            { "if": { "properties": { "code": { "const": 410 } } }, "then": { "required": ["superseded_by"], "properties": { "reason": { "const": "newer-main" } } } },
+            { "if": { "properties": { "code": { "const": 500 } } }, "then": { "required": ["reason"] } }
+          ]
+        }
+      ]
+    }
+  }
+}

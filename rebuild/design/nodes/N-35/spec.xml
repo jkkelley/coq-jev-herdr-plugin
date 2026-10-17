@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Node volume N-35 Hello page deploy. Spec-author seat, group G6 Command center map, round 1, 2026-10-14 UTC.
+  Written against brief C (~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/briefs/20261014-brief-C-design-spec-book.md).
+  Every pointer is a path plus an anchor id. No em dash appears in this file.
+-->
+<!-- N-35 round 3, 2026-10-14T05:09:51Z, by the G6 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers (verdict in
+     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-35):
+     the pointers element carried shared hrefs into rebuild/design/shared/, a directory no author had written,
+     at anchors no volume declared (record-envelope where N-01 declares envelope; record-kinds where N-18 declares
+     record-kinds-registry; and anchors only this group needed, never declared as needs).
+     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
+     The fix: every shared dependency is a <need volume= anchor=> in a shared-needs element with no href, using the anchor
+     name the owning node declares; the pointers element points at dag.md sections 3, 7 and 8 and at #shared-needs, all of which exist;
+     the status-codes map attribute points at #shared-needs for the same reason; prose that named a shared anchor now names the need.
+     Rejected: writing shared/ from this seat (one shared author owns it; two authors on one file is the collision the book forbids)
+     and leaving the hrefs to resolve later (a failing volume blocks the book now).
+     Cost: a need is not a live pointer until shared/ lands; check.sh matches each need against the shared volumes then. -->
+<volume id="N-35" kind="node-spec" node="N-35" group="G6" version="1.1.0" issued="2026-10-14" written="2026-10-14T05:09:51Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG edges</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="mechanism">Mechanism: the path the map ships on</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries: 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup scripts</entry>
+    <entry ref="look">The look: hello page carries the Krastorio frame</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-35"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schemas of this node</sibling>
+    <sibling href="../N-36/spec.xml#N-36">N-36 Art pipeline</sibling>
+    <sibling href="../N-37/spec.xml#N-37">N-37 Panel binding registry</sibling>
+    <sibling href="../N-38/spec.xml#N-38">N-38 Map screen</sibling>
+    <sibling href="../N-39/spec.xml#N-39">N-39 Machine screen</sibling>
+    <sibling href="../N-40/spec.xml#N-40">N-40 Stats screen</sibling>
+    <sibling href="../N-41/spec.xml#N-41">N-41 Alerts screen</sibling>
+    <sibling href="../N-42/spec.xml#N-42">N-42 Controls screen</sibling>
+    <shared href="../../dag.md#3-every-node" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 3 (three attempts then report) and rule 4 (every state path under the state root with a cleanup script); nothing starts by an agent typing</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">Compare-and-swap on the deploy record keyed by sha plus attempt; 409 recorded, never swallowed</principle>
+    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <dag href="../../dag.md#2-the-dag">
+      <in node="N-22" href="../N-22/spec.xml#N-22" record="image record (ghcr digest, pinned in config)"/>
+      <in node="N-09" kind="trigger" href="../N-09/spec.xml#N-09" record="merge record touching tools/map/** (the map app commit on main)"/>
+      <in node="N-04" kind="observed" href="../N-04/spec.xml#N-04" record="forge.snapshot carrying the coq/map-image commit status"/>
+      <out node="N-38" href="../N-38/spec.xml#N-38" record="deploy record (the public name serves the bundle)"/>
+      <out node="N-48" kind="shared-trigger" href="../N-48/spec.xml#N-48" record="merge record touching the map app (tier promotion with screenshot)"/>
+    </dag>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares, using the anchor name of the node that owns the thing (envelope and cas from N-01, record-kinds-registry from N-18, codes from N-43, break-glass from N-27). check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for deploy.building 100; deploy.superseded 200; deploy.verified 201; deploy.prereq 201; deploy.record-conflict 409; deploy.build-failed 500; deploy.front-door-unreachable 502; deploy.timeout 504. Owner-acts: deploy.front-door-unreachable after 3 attempts.</need>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="lamp">A lamp column per code (green, amber or red) so a screen draws a code without a table of its own; N-37 generates bindings from it and the deploy lamp on the Controls screen reads it.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="envelope">The record envelope every kind carries: id, at (UTC), code, kind, node, attempt where one applies; this node reads and writes records only inside it.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="cas">Compare-and-swap: expected_version on an entity write; 409 with the current version on a miss; expected 0 inserts.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-idempotency">idempotency(key PRIMARY KEY, seq, response JSON, at); a seen key replays its response with code 200.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="record-kinds-registry">The record kinds registry (every kind with its code set, writer node and schema path, loaded by N-43 with the code table) carries the kinds this node reads and writes: map.commit (the N-09 merge record touching tools/map/**), image (N-22, ghcr digest), forge.snapshot (N-04), deploy.record.</need>
+    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="credential-by-placement">The ghcr push token and the homelab-gitops deploy key live in Jenkins credentials and the Argo cluster; no seat and no Go service process ever holds them.</need>
+    <need kind="failure-case" volume="shared/failure-cases.xml" anchor="forge-unreachable">GitHub unreachable during the gitops manifest push: the bounded pull-rebase-push loop stops at 3, writes 504 deploy.timeout, and the next merge record retries; never a hand push.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="no-cog">No cog: every wait has a timeout and a fallback, nothing starts by an agent typing, no agent is a gate; the system drives (brief C rule 3).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="three-attempts">Every automated step retries up to 3 times with backoff, then recovers and reports as a record; a dead record becomes exactly one card.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="artifacts-out-of-repo">Every state path this node names lives under $COQ_STATE, never in the repository, and has a cleanup script registered with N-45 (brief C rule 6, C35).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="monitor-never-stops">The owner's always-on monitor never stops on a halt; a HOLD dims actions, never the screens (brief C, command center volume).</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <s>Prove the plumbing before any map code is deployed: a commit under tools/map/ on main becomes an image on ghcr.io/jkkelley, a tag bump in homelab-gitops, an Argo auto-sync, a HAProxy route and a public answer of 200 at https://map.gatehouse.click, with no new hosting machinery.</s>
+    <s>The first traversal of this node ships a hello page (one HTML file and a healthz document); every later map bundle (N-38) ships through the identical path.</s>
+    <s>Owner notes 4 and 5 bind this node: "where is this going to live, in my k8s cluster? ... we have gatehouse.click ... with my lightsail instance ... so i get this every where" and "the plumbing needs to work first, i already have this working, i already have pipelines that work with jenkins i have ghcr lets not make this hard" (build-notes.md section 2, notes 4 and 5).</s>
+    <s>Decisions written against: D07 Jenkins as code (C45), D22 builds as pods (C38), D23 factory namespace fence (C53), D06 poll each tick (C44), D05 status on the sha (C43), D04 artifacts in the state root with cleanup scripts (C35).</s>
+  </purpose>
+
+  <input id="input" record="map.commit" schema="record.schema.json#/$defs/map.commit">
+    <s>The input is the merge record (N-09) whose changed paths include tools/map/**: the map app commit on main.</s>
+    <field name="sha">Merge sha on main, 40 hex characters.</field>
+    <field name="paths">Changed paths; at least one under tools/map/.</field>
+    <field name="jenkinsfile">tools/map/Jenkinsfile, which loads jenkins-shared-lib and calls updateGitOpsManifest with the digest N-22 built (L10 section 4, "Image tag is the interface"); the shared library's buildKaniko runs in N-22's coq-image job, so the map ships on the same two library calls as yieldpoint-ai (owner note 5).</field>
+    <field name="image">ghcr.io/jkkelley/coq-map, built by N-22 as the images.json entry coq-map (nodes/N-22/spec.xml#mechanism) and read from its image record by digest.</field>
+    <field name="gitops_entry">homelab-gitops/apps/coq-map (Helm chart, values.yaml with a literal imageTag) plus argocd-apps/coq-map.yaml.</field>
+    <s>The record is written by N-09 under the record envelope (shared need: shared/state-store.xml#envelope, declared in #shared-needs); this node never creates its own input.</s>
+  </input>
+
+  <output id="output" record="deploy.record" schema="record.schema.json#/$defs/deploy.record">
+    <s>The output is one deploy record per input sha with status 201 deploy.verified, or 500, 502 or 504 with the failing stage after three attempts.</s>
+    <field name="sha">The merge sha the deploy was for.</field>
+    <field name="image_digest">sha256 digest of the image on ghcr.io, read from N-22's image record for coq-map at the merge sha.</field>
+    <field name="image_tag">The tag written into homelab-gitops.</field>
+    <field name="argo_synced_at">UTC time the public healthz first answered with this sha, which is the only sync proof the host can read without cluster credentials.</field>
+    <field name="haproxy_route">The host the Ingress routes, map.gatehouse.click.</field>
+    <field name="public_200_at">UTC time GET https://map.gatehouse.click/ answered 200 with the hello marker.</field>
+    <field name="status">201, or 500 build-failed, 502 front-door-unreachable, 504 build-timeout or sync-timeout.</field>
+    <field name="attempt">1 to 3.</field>
+    <s>A 2xx deploy record is the input of N-38 (the public name serves the bundle) and the evidence N-48 attaches its screenshot record to.</s>
+  </output>
+
+  <mechanism id="mechanism">
+    <s>No new hosting machinery (owner note 5). The map ships exactly like yieldpoint-ai, with one more name on the existing Nginx server block of the Lightsail VPS.</s>
+    <diagram format="mermaid"><![CDATA[
+flowchart LR
+  A[merge on main touching tools/map/**] --> C[N-22 coq-image job: buildKaniko in namespace jenkins with the ESO secret, image record coq-map with its digest]
+  C --> B[Go service starts job coq-map by the Jenkins API: job.run SHA, IMAGE_DIGEST, ATTEMPT]
+  B --> E[tools/map/Jenkinsfile: updateGitOpsManifest, homelab-gitops apps/coq-map values.yaml imageTag]
+  E --> F[Argo CD auto-sync, prune, selfHeal]
+  F --> G[Deployment nginx-unprivileged pinned by digest, readiness on /healthz]
+  G --> H[HAProxy Ingress host map.gatehouse.click]
+  H --> I[WireGuard to k8s-worker-01, DNAT]
+  I --> J[Lightsail VPS 44.194.240.148 Nginx, Let's Encrypt]
+  J --> K[Route 53 A map.gatehouse.click]
+  K --> L[Go service tick probe: healthz sha equals merge sha, GET / is 200]
+  L --> M[deploy record 201 in the store]
+]]></diagram>
+    <step n="1" where="repo">
+      <s>tools/map/Containerfile builds the dist in its first stage (the node image pinned by digest runs make -C tools/map build, which copies the pinned art atlas from N-36 and writes dist/healthz.json with the sha and the UTC build time) and serves it from nginx-unprivileged in its second; N-22 builds it as the images.json entry coq-map. tools/map/Jenkinsfile: @Library('jenkins-shared-lib'); parameters SHA, IMAGE_DIGEST, ATTEMPT; one stage GitOps (updateGitOpsManifest with the digest); it posts nothing to GitHub, because the Go service follows the build by the Jenkins API (nodes/N-24/spec.xml#m-mirror shape).</s>
+      <s>Job timeout 20 minutes, set from measurement, never a fixed guess (L10 section 5.1: the 15 minute budget aborted 54 builds unseen). Every container declares resources (L10 section 5.1: the lint container had none).</s>
+    </step>
+    <step n="2" where="jenkins">
+      <s>Job coq-map is registered by configuration through N-20 (JCasC job definition, pinned agent image, resources, Longhorn home), never clicked in the UI (L10 section 5.3).</s>
+      <s>Trigger: none in Jenkins. No job has a trigger and the Go service is the only caller (nodes/N-20/spec.xml#m-jobs): when N-22's image record 201 for coq-map at the merge sha lands, the service writes job.run (job coq-map, SHA, IMAGE_DIGEST, ATTEMPT 1) and calls buildWithParameters; a re-run after a failure is the next job.run with attempt n+1, never a click and never an SCM poll (D06: no inbound webhook; GitHub cannot reach Jenkins, L10 section 5.2).</s>
+      <s>Placement: the image is built by N-22's coq-image job with Kaniko in namespace jenkins and the one ESO-synced push secret (nodes/N-22/spec.xml#mechanism; per-build push secrets are the leak class N-22 removes); the coq-map job's agent pod also runs in namespace jenkins (N-20's second cloud entry) because updateGitOpsManifest needs the homelab-gitops deploy key from Jenkins credentials; nothing of this node runs in the factory namespace, which has no secret access (D23, N-21).</s>
+    </step>
+    <step n="3" where="homelab-gitops">
+      <s>apps/coq-map: Helm chart with Deployment (image nginxinc/nginx-unprivileged pinned by digest as the base, the dist baked in at build; readinessProbe GET /healthz; resources requests cpu 50m memory 64Mi, limits cpu 250m memory 128Mi), Service, Ingress class haproxy host map.gatehouse.click path /.</s>
+      <s>argocd-apps/coq-map.yaml: Application in AppProject coq (sourceRepos limited to homelab-gitops, destinations limited to namespace coq-map), syncPolicy automated with prune and selfHeal, as the other 12 live applications (L10 section 4).</s>
+      <s>Namespace coq-map carries its own ResourceQuota and LimitRange; it is a served tenant app, not a factory job pod, so it is separate from N-21's job namespace.</s>
+    </step>
+    <step n="4" where="owner-infrastructure" once="true">
+      <s>Route 53 A record map.gatehouse.click to 44.194.240.148; Nginx server block for map.gatehouse.click on the VPS with a Let's Encrypt certificate, proxying over the existing WireGuard tunnel to the DNAT that reaches HAProxy (runbook ~/Documents/local-k8s-docs/runbooks/yieldpoint-ai-ingress/yieldpoint-ai-ingress.md).</s>
+      <s>These two steps are the owner's infrastructure, done once, and recorded as deploy.prereq records with their proof (dig answer, curl -I). The aws-lightsail-k8s-router design is not used (build-notes.md note 5). No agent uses the minecraft-admin AWS profile for them (global rule).</s>
+    </step>
+    <step n="5" where="go-service">
+      <s>The verification probe lives in the Go service's tick handler (N-06): while a map.commit record has no terminal deploy record, each tick reads N-22's image record and the outcome of the coq-map job.run (followed by the Jenkins API), then GETs https://map.gatehouse.click/healthz and https://map.gatehouse.click/ from the host.</s>
+      <s>A pod cannot write the store or reach the host (D23: egress to GitHub and GHCR only): the Go service follows the Jenkins builds by the Jenkins API from the host (N-24 step 6 shape) and probes the public name over HTTPS; both directions start on the host. For the same reason the public name serves a static bundle with no live stream and no owner key (nodes/N-38/spec.xml#mechanism step 2, the ruling); live state is on the bearings tiers over the tailnet.</s>
+      <s>Package placement inside the small Go cut (D09) is the G1 author's call; this node needs one probe function on the tick and one record kind, nothing more (shared need).</s>
+    </step>
+    <step n="6" where="repo">
+      <s>tools/map/bin/deploy-verify.sh is the same probe as a script with --dry-run, used by the runbook and the tests; it is not how the node runs.</s>
+    </step>
+  </mechanism>
+
+  <start id="start">
+    <s>The node starts when N-09 writes a merge record whose paths include tools/map/**. N-22 builds the image on that record, the Go service starts the coq-map job on the image record (job.run), Argo picks the gitops commit up by its own poll (default 180 s plus jitter, L10 section 5.4), and the Go tick probe runs every tick without anyone asking.</s>
+    <s>No agent types a build command, a sync command or a curl. The hello page ticket is the only thing a seat writes, and it writes files, never runs the pipeline.</s>
+  </start>
+
+  <waits id="waits">
+    <wait name="image-and-gitops" timeout="PT15M" fallback="504 build-timeout record, next attempt window">
+      <s>From the merge record until N-22's image record for coq-map and the coq-map job.run both end. Covers a measured image build of about three minutes and the gitops push with headroom; no poll interval is in it, because nothing waits for a poll.</s>
+    </wait>
+    <wait name="build-result" timeout="PT0S" fallback="500 build-failed record with the Jenkins build url from the status target">
+      <s>A failed image record or a failed coq-map job.run ends the attempt at once; the retry is the next job.run record with attempt n plus 1, which the Go service turns into a fresh buildWithParameters call (nodes/N-20/spec.xml#m-jobs), never an agent clicking Build Now; an image failure retries through N-22's own attempts first.</s>
+    </wait>
+    <wait name="argo-sync-and-rollout" timeout="PT10M" fallback="504 sync-timeout record">
+      <s>From a success status until /healthz answers with the merge sha. Covers Argo's poll, the rolling update and the readiness probe. A broken image never goes live: readiness fails, the old pod keeps serving, and this wait expires into the fallback.</s>
+    </wait>
+    <wait name="front-door" timeout="PT30S" per="request" fallback="502 front-door-unreachable after 3 consecutive failed probes">
+      <s>Each probe request has a 30 s client timeout. DNS failure, TLS failure or a connection refusal counts as unreachable; a 5xx from Nginx counts as unreachable too, because it means the tunnel or HAProxy is down.</s>
+    </wait>
+    <wait name="owner-prerequisite" timeout="PT24H" fallback="one card (N-28) naming the missing prerequisite with the proof command; no repeat card">
+      <s>Until deploy.prereq records exist for the DNS record and the VPS server block. The pipeline does not wait on them: the image and the gitops entry land anyway, and only the public probe waits.</s>
+    </wait>
+  </waits>
+
+  <retries id="retries">
+    <s>Three attempts per map.commit. Attempt n ends with a terminal code or a timeout; the next attempt starts after a backoff of min(60 s x 2^(n-1), 5 min), consistent with N-11's shape.</s>
+    <s>After the third attempt the node writes the deploy record with the last failing code and stage, and N-28 builds exactly one card from it (status code maps to owner-acts). The hello page or the last good bundle keeps serving the whole time, because the old pod is replaced only by a ready new one.</s>
+    <s>Recovery is level-triggered: a restart of the Go service re-reads map.commit records with no terminal deploy record and resumes the probe from the store, never from memory.</s>
+  </retries>
+
+  <many-agents id="many-agents">
+    <s>Readers: any number of seats read this volume by its anchors; a build seat reads #mechanism and #checklist, a reviewer reads #waits and #many-agents, the runbook reader reads #runbook.</s>
+    <s>Writers of the repo files: the one-file, one-in-flight-ticket rule applies; tools/map/Jenkinsfile, tools/map/Containerfile and the gitops chart are declared files of the ticket that touches them, refused at N-14 when claimed twice.</s>
+    <s>Two merges touching tools/map/** close together: each merge record starts its own traversal keyed by sha; Jenkins builds both in order; gitops receives two imageTag bumps, and updateGitOpsManifest's pull-rebase-push loop of five tries (L10 section 4) resolves the push race; Argo converges on the newest tag; the probe for the older sha sees healthz report the newer sha and ends that traversal with 200 deploy.superseded, never a false 504.</s>
+    <s>Store writes: the deploy record is a compare-and-swap put keyed by sha and attempt with an idempotency key of sha plus attempt; a second probe tick that races the first on the same attempt gets a 409 from N-01 and drops its write, so two Go service instances during a restart overlap cannot double-record.</s>
+    <s>Conflict reporting: a 409 on the deploy record is itself logged as a record with code 409 so the overlap is visible on the Alerts screen; it is never swallowed.</s>
+  </many-agents>
+
+  <status-codes id="status-codes" map="spec.xml#shared-needs">
+    <code value="100" name="deploy.building" kind="deploy.record" lamp="green">Image build or sync in progress for this sha and attempt; the system watches the wait.</code>
+    <code value="200" name="deploy.superseded" kind="deploy.record" lamp="green">A newer sha reached the public name first; this traversal ends with nothing to do.</code>
+    <code value="201" name="deploy.verified" kind="deploy.record" lamp="green">Public name answered 200 with this sha; N-38 and N-48 act.</code>
+    <code value="409" name="deploy.record-conflict" kind="deploy.record" lamp="amber">Two probes raced on one attempt; the loser dropped its write; nobody acts, it is shown.</code>
+    <code value="500" name="deploy.build-failed" kind="deploy.record" lamp="red">Jenkins reported failure; the system retries, then after 3 the owner gets one card.</code>
+    <code value="502" name="deploy.front-door-unreachable" kind="deploy.record" lamp="red">DNS, TLS, tunnel or HAProxy did not answer; the system retries, then one card.</code>
+    <code value="504" name="deploy.timeout" kind="deploy.record" lamp="red">Build or sync wait expired; stage named in the record; the system retries, then one card.</code>
+    <code value="201" name="deploy.prereq" kind="deploy.prereq" lamp="green">An owner infrastructure prerequisite is proven (DNS, server block).</code>
+  </status-codes>
+
+  <state-paths id="state-paths" cleanup-registry="../N-45/spec.xml#N-45">
+    <path p="$COQ_STATE/map/deploy/probe/YYYY/MM/&lt;sha&gt;-&lt;attempt&gt;.log" cleanup="tools/map/bin/cleanup.sh --deploy-logs --older-than 30d">Probe request and response log per attempt, written by the Go probe.</path>
+    <path p="$COQ_STATE/map/deploy/prereq/*.json" cleanup="tools/map/bin/cleanup.sh --prereq (refuses unless --force; prerequisites are long lived)">Proof files behind deploy.prereq records (dig and curl output).</path>
+    <path p="store table deploy_records" cleanup="N-45 retention class: keep the newest 50 per app, delete older by timer">Deploy records in the SQLite store (shared need: table).</path>
+    <path p="Jenkins home (Longhorn) build logs for job coq-map" cleanup="JCasC buildDiscarder set by N-20 (30 days or 200 builds per job); ci/bin/cleanup-cluster.sh --what jenkins-builds forces a sweep">Outside the state root; owned by N-20.</path>
+    <path p="ghcr.io/jkkelley/coq-map tags" cleanup="tools/map/bin/cleanup.sh --ghcr-tags --keep 20 --dry-run (deletion requires the owner's ghcr token, never run by a seat)">Image tags accumulate one per build.</path>
+    <s>$COQ_STATE is ~/.local/state/coq/coq-jev-herdr-plugin. Every path above is listed in the cleanup registry (N-45) and documented in tools/map/README.md so cleanup commands exist (owner, C35).</s>
+  </state-paths>
+
+  <look id="look" requirement="owner 2026-10-14 ~04:45Z: all views shown to me better have that krastorio look to it">
+    <s>The hello page is an owner-facing view, so it carries the Krastorio 2 and Factorio GUI frame from the art inventory section 4 (values only, original art): dark steel panel #313031 with an outer edge #4D4643 and a darkest ring #231C19, nine-slice corner 8 px, caption text #FFE6C0 in Titillium Web Bold 18 px, body text #FFFFFF 14 px, one orange accent #FAA838, a single green lamp #2BE327 that reads "map.gatehouse.click answering", and the UTC build time in a mono face.</s>
+    <s>Check: tools/map/bin/look-check.mjs samples the rendered panel centre and edge colours and the loaded font family against the token table and exits 1 on a miss; the screenshot pair (desktop 1440 and mobile 430) is attached to the promotion record (N-48) and read by the architect before any card.</s>
+  </look>
+
+  <checklist id="checklist">
+    <item><check>tools/map/Jenkinsfile loads jenkins-shared-lib and calls buildKaniko and updateGitOpsManifest; job timeout 20 min; every container declares resources.</check><proof>The file on main plus one Jenkins build log showing both calls and the timeout line.</proof></item>
+    <item><check>Job coq-map exists by configuration (N-20), not by UI.</check><proof>The JCasC job entry in gitops and a jenkins config export showing the job with the same hash.</proof></item>
+    <item><check>Image ghcr.io/jkkelley/coq-map exists for the merge sha, built by N-22, with a trivy scan recorded.</check><proof>N-22's image record 201 for coq-map with the digest; the ghcr manifest digest matches.</proof></item>
+    <item><check>The coq-map job has no trigger and runs only from a job.run record.</check><proof>The jobs.groovy entry with no trigger block and a job.run record per build in the store; a re-run after a forced failure is job.run attempt 2.</proof></item>
+    <item><check>homelab-gitops has apps/coq-map and argocd-apps/coq-map.yaml with auto-sync, prune and selfHeal, in AppProject coq fenced to namespace coq-map.</check><proof>The gitops commit sha and the Application manifest lines.</proof></item>
+    <item><check>Argo reports Synced and Healthy for coq-map.</check><proof>healthz answered with the sha (the host-readable proof) and an argocd app get output saved by the owner's cluster monitor pane, read-only.</proof></item>
+    <item><check>HAProxy routes host map.gatehouse.click to the Service.</check><proof>curl -H "Host: map.gatehouse.click" against the HAProxy LAN address returns 200.</proof></item>
+    <item><check>DNS and the VPS server block exist (owner prerequisites).</check><proof>deploy.prereq records with dig and curl -I output.</proof></item>
+    <item><check>https://map.gatehouse.click/ answers 200 with the hello marker and /healthz carries the merge sha.</check><proof>The deploy record with status 201, public_200_at and argo_synced_at filled.</proof></item>
+    <item><check>The hello page carries the Krastorio frame.</check><proof>look-check.mjs exit 0 and the screenshot pair on the promotion record.</proof></item>
+    <item><check>A failed image never goes live.</check><proof>A test deploy with a broken healthz leaves the previous page serving and ends in a 504 record and one card (recorded once in the proofs folder).</proof></item>
+    <item><check>Every state path has a cleanup script in the registry.</check><proof>N-45 registry entries for each path in #state-paths and a dry-run output.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <s>Build seat (worker, N-16): writes tools/map/Jenkinsfile, tools/map/Containerfile, tools/map/Makefile, tools/map/public/index.html, tools/map/README.md, and the gitops chart files in homelab-gitops through a pull request; declared at cut, refused on overlap.</s>
+    <s>No seat runs Jenkins, Argo, kubectl or curl against the public name as a gate; the Go probe does.</s>
+    <s>No seat touches Route 53, the VPS or any AWS profile; minecraft-admin is owner-initiated only and never selected by an agent.</s>
+    <s>Build pods: the image is N-22's (Kaniko in namespace jenkins with the one ESO-synced push secret; the per-build secret leak of L10 section 5.4 is what N-22 removes); the coq-map job's pod runs in namespace jenkins with the gitops deploy key from Jenkins credentials; the factory namespace, which has no secret access (D23), runs nothing of this node.</s>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <s>The Go tick probe is the monitor: every tick it writes nothing while healthy and a record whenever a state changes; the Map screen draws N-35 as a machine whose lamp is the latest deploy record's code and whose heartbeat is the last probe time.</s>
+    <s>A public probe failure while no deploy is in flight (the name stops answering) is written as 502 with the stage front-door and raises an alert record (N-41), because the owner reaches the page from anywhere through this name.</s>
+    <s>Stale: no probe tick for more than two tick intervals marks the machine stale (503) on the Map screen; the cause is the Go service, not this node, and N-06 health owns the card.</s>
+  </monitoring>
+
+  <runbook id="runbook">
+    <s>Dry run of the probe by hand (break glass, reading only): tools/map/bin/deploy-verify.sh --sha &lt;sha&gt; --dry-run prints each request and the code it would record.</s>
+    <s>Cleanup commands: tools/map/bin/cleanup.sh --deploy-logs --older-than 30d; tools/map/bin/cleanup.sh --ghcr-tags --keep 20 --dry-run; tools/map/bin/cleanup.sh --prereq --force (owner only). Each prints its listing first and deletes only with --apply.</s>
+    <s>Rollback: revert the imageTag commit in homelab-gitops through a pull request; Argo syncs the previous tag; the probe records 200 deploy.superseded for the reverted sha and 201 for the restored one.</s>
+    <s>Owner prerequisites: follow ~/Documents/local-k8s-docs/runbooks/yieldpoint-ai-ingress/yieldpoint-ai-ingress.md with the name map.gatehouse.click; then run tools/map/bin/deploy-verify.sh --prereq to write the deploy.prereq records with their proofs.</s>
+    <s>Template to copy: ~/projects/yieldpoint-ai's Jenkinsfile and its gitops app entry (L10 section 4); the aws-lightsail-k8s-router design is not used.</s>
+  </runbook>
+
+  <sources id="sources">
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-notes.md#2-notes-in-order">Notes 4 and 5: hosting ruling, no new machinery, hello page first.</src>
+    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md">Hosting path, map.gatehouse.click, owner key.</src>
+    <src href="rebuild/investigation/L10-cluster-and-gitops.md#4-what-works">GitOps pattern: image tag is the interface, app-of-apps, AppProject fence, auto-sync; updateGitOpsManifest retry loop.</src>
+    <src href="rebuild/investigation/L10-cluster-and-gitops.md#5-what-broke-and-why">5.1 fixed timeout and no status; 5.2 unregistered library and no webhook; 5.3 Jenkins not gitops; 5.4 leaked kaniko secrets and Argo poll default.</src>
+    <src href="rebuild/investigation/03-DECISIONS.md#9-d07-ci-executor">D07 Jenkins as code.</src>
+    <src href="rebuild/investigation/03-DECISIONS.md#24-d22-which-steps-stay-on-the-wsl-host-and-which-go-to-pods">D22 builds as pods, Go service on the host.</src>
+    <src href="rebuild/investigation/03-DECISIONS.md#25-d23-factory-pods-on-a-shared-cluster-isolation-and-quota">D23 namespace fence.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/plan/rulings-r02.jsonl">C43, C44, C45, C53 rulings.</src>
+    <src href="rebuild/factory-rebuild-plan.xml#principles">no-cog, build-mode, shelf-first.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md#4-gui-style-extraction">GUI tokens for the hello page frame.</src>
+    <src href="~/.claude/CLAUDE.md">Hard rule: minecraft-admin is owner-initiated only.</src>
+  </sources>
+
+  <rejected id="rejected">
+    <item reason="owner note 5: no new hosting machinery; the existing Nginx server block gets one more name">The aws-lightsail-k8s-router design (~/projects/aws-lightsail-k8s-router, "designed and proven, not built").</item>
+    <item reason="D23: pods have egress to GitHub and GHCR only, so a pod cannot write the host store; the status on the sha is the trusted channel (D05)">Having the Jenkins pod post the deploy record to the Go service directly.</item>
+    <item reason="D06: no inbound webhook, GitHub and the cluster cannot reach each other (L10 section 5.2)">A GitHub or Argo webhook to start the build or to signal sync.</item>
+    <item reason="D22: the Go service and anything needing the owner's display stay on the host; the map pod serves static files only">Running the Go service or the push transport inside the map pod.</item>
+    <item reason="the hello page must prove the path first (note 5); serving the map from a bearings tier alone leaves the public name unproven">Skipping the hello page and deploying the map bundle as the first traversal.</item>
+    <item reason="Jenkins cluster-admin binding and secret reads are N-20's fix (L10 section 5.3); duplicating it here would make two tickets edit one config">Fixing the Jenkins controller role inside this node.</item>
+  </rejected>
+
+</volume>

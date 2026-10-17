@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Node volume N-38 Map screen. Spec-author seat, group G6 Command center map, round 1, 2026-10-14 UTC.
+  The reactor command center: every DAG node a machine, every queue a belt, every seat an inserter, every state a lamp.
+  Written against brief C, build-notes.md notes 1 to 6, build-plan.json (50 frames, C32 approved) and the art inventory. No em dash appears in this file.
+-->
+<!-- N-38 round 3, 2026-10-14T05:09:51Z, by the G6 spec-author seat.
+     What broke: the R-03 review seat failed this volume on pointers (verdict in
+     ~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/proofs/R-03-no-cog-review.md, node N-38):
+     the pointers element carried shared hrefs into rebuild/design/shared/, a directory no author had written,
+     at anchors no volume declared (record-envelope where N-01 declares envelope; record-kinds where N-18 declares
+     record-kinds-registry; and anchors only this group needed, never declared as needs).
+     Why it mattered: a volume with an unresolved pointer fails check.sh, and the architect reads nothing until the book passes.
+     The fix: every shared dependency is a <need volume= anchor=> in a shared-needs element with no href, using the anchor
+     name the owning node declares; the pointers element points at dag.md sections 3, 7 and 8 and at #shared-needs, all of which exist;
+     the status-codes map attribute points at #shared-needs for the same reason; prose that named a shared anchor now names the need.
+     Rejected: writing shared/ from this seat (one shared author owns it; two authors on one file is the collision the book forbids)
+     and leaving the hrefs to resolve later (a failing volume blocks the book now).
+     Cost: a need is not a live pointer until shared/ lands; check.sh matches each need against the shared volumes then. -->
+<volume id="N-38" kind="node-spec" node="N-38" group="G6" version="1.1.0" issued="2026-10-14" written="2026-10-14T05:09:51Z" timezone="UTC">
+
+  <contents id="contents">
+    <entry ref="pointers">Pointers: parent, siblings, DAG edges</entry>
+    <entry ref="shared-needs">Shared needs: what the shared author declares for this node</entry>
+    <entry ref="purpose">Purpose</entry>
+    <entry ref="input">Input record</entry>
+    <entry ref="output">Output record</entry>
+    <entry ref="panels">Panels of this screen (bound by N-37)</entry>
+    <entry ref="mechanism">Mechanism: bundle, stream, renderer, frame budget</entry>
+    <entry ref="states">The five states: default, empty, loading, error, offline</entry>
+    <entry ref="mobile">Mobile first: iPhone 16 Pro Max</entry>
+    <entry ref="start">How it starts without an agent typing</entry>
+    <entry ref="waits">Every wait, its timeout and its fallback</entry>
+    <entry ref="retries">Retries: 3, then recover and report</entry>
+    <entry ref="many-agents">Many agents at once</entry>
+    <entry ref="status-codes">Status codes this node emits</entry>
+    <entry ref="state-paths">State paths and their cleanup scripts</entry>
+    <entry ref="look">The look: Krastorio on web and mobile alike</entry>
+    <entry ref="acceptance">Acceptance: owner notes 1 to 6 and the visual bar</entry>
+    <entry ref="checklist">Checklist with proofs</entry>
+    <entry ref="permissions">Permissions</entry>
+    <entry ref="monitoring">Monitoring</entry>
+    <entry ref="runbook">Runbook</entry>
+    <entry ref="sources">Sources cited</entry>
+    <entry ref="rejected">Rejected, with reason</entry>
+  </contents>
+
+  <pointers id="pointers">
+    <parent href="../../index.xml#N-38"/>
+    <sibling href="record.schema.json" kind="json-schema">Input and output record schemas of this node</sibling>
+    <sibling href="../N-35/spec.xml#N-35">N-35 Hello page deploy</sibling>
+    <sibling href="../N-36/spec.xml#N-36">N-36 Art pipeline</sibling>
+    <sibling href="../N-37/spec.xml#N-37">N-37 Panel binding registry</sibling>
+    <sibling href="../N-39/spec.xml#N-39">N-39 Machine screen</sibling>
+    <sibling href="../N-40/spec.xml#N-40">N-40 Stats screen</sibling>
+    <sibling href="../N-41/spec.xml#N-41">N-41 Alerts screen</sibling>
+    <sibling href="../N-42/spec.xml#N-42">N-42 Controls screen</sibling>
+    <shared href="../../dag.md#3-every-node" role="dag"/>
+    <principle href="../../dag.md#7-rules-every-node-obeys" role="principle">Rule 3 and rule 4; the page starts from CI, the tier unit and the pod, never from a seat</principle>
+    <principle href="../../dag.md#8-many-agents-at-once" role="principle">Per-client stream state; one inserter per lease row; selection and frame.report idempotent by client id plus counter</principle>
+    <needs href="spec.xml#shared-needs" role="shared-needs">The shared anchors this volume relies on, declared as needs until shared/ lands</needs>
+    <dag href="../../dag.md#2-the-dag">
+      <in node="N-31" href="../N-31/spec.xml#N-31" record="pushed.frame (DAG nodes with status and heartbeat, queues with depth, seats in flight, HOLD or USERGO lamp)"/>
+      <in node="N-35" href="../N-35/spec.xml#N-35" record="deploy record (the public name serves the bundle)"/>
+      <in node="N-36" href="../N-36/spec.xml#N-36" record="sprite.sheet (pinned atlas)"/>
+      <in node="N-37" href="../N-37/spec.xml#N-37" record="binding record (panels bound, machines registered)"/>
+      <out node="N-39" href="../N-39/spec.xml#N-39" record="selection record"/>
+      <out kind="store" href="../N-01/spec.xml#N-01" record="frame.report (sampled frame times and staleness, the system reporting on itself)"/>
+    </dag>
+  </pointers>
+
+  <shared-needs id="shared-needs">
+    <rule>shared/ belongs to the shared author (brief C, "What R-03 produces"); this volume never writes it and never points into it before it exists. Each need names the volume and the anchor the shared author declares, using the anchor name of the node that owns the thing (envelope and cas from N-01, record-kinds-registry from N-18, codes from N-43, break-glass from N-27). check.sh (N-46) resolves a need by volume and anchor once the shared volume lands, so a need becomes a live pointer without a hand edit. The same needs are returned to the shared author as data by the seat that wrote this volume.</rule>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="codes">Rows for map.rendered 200; selection.recorded 201; map.degraded 206; frame.invalid 422; map.offline 502; map.stale 503; map.first-frame-timeout 504. Owner-acts: none; every one is drawn as a state of the page.</need>
+    <need kind="status-codes" volume="shared/status-codes.xml" anchor="lamp">A lamp column per code (green, amber or red) so a screen draws a code without a table of its own; N-37 generates bindings from it and every machine and lamp on the map takes its colour from it.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="envelope">The record envelope every kind carries: id, at (UTC), code, kind, node, attempt where one applies; this node reads and writes records only inside it.</need>
+    <need kind="store-rule" volume="shared/state-store.xml" anchor="cas">Compare-and-swap: expected_version on an entity write; 409 with the current version on a miss; expected 0 inserts.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-idempotency">idempotency(key PRIMARY KEY, seq, response JSON, at); a seen key replays its response with code 200.</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="record-kinds-registry">The record kinds registry (every kind with its code set, writer node and schema path, loaded by N-43 with the code table) carries the kinds this node reads and writes: pushed.frame (N-31), selection, frame.report (the page reporting on itself), sprite.sheet (N-36), deploy.record (N-35), binding.record (N-37), promotion (N-48).</need>
+    <need kind="store-table" volume="shared/state-store.xml" anchor="table-leases">leases(key, holder, token, expires_at): one inserter is drawn per live lease row with its fencing token, never per seat the page believes is running.</need>
+    <need kind="config" volume="shared/state-store.xml" anchor="config-keys">owner_key and viewer_key (N-32), map.frame_budget_ms (16 at 60 fps), map.stale_after_s (the staleness bound a panel turns amber at).</need>
+    <need kind="seat-contract" volume="shared/seat-contract.xml" anchor="screenshot-seat">The screenshot seat (N-48) holds only the viewer key: read-only, no action ever rendered for it, opens the page with Playwright at 1440 and 430 widths, writes only under $COQ_STATE/map/screenshots/, and its screenshot record is the proof a promotion carries.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="no-cog">No cog: every wait has a timeout and a fallback, nothing starts by an agent typing, no agent is a gate; the system drives (brief C rule 3).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="multi-agent-first">Many agents at once from the first line: append-only records, compare-and-swap, idempotent retryable steps, conflicts that report as 409 (brief C rule 2).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="three-attempts">Every automated step retries up to 3 times with backoff, then recovers and reports as a record; a dead record becomes exactly one card.</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="monitor-never-stops">The owner's always-on monitor never stops on a halt; a HOLD dims actions, never the screens (brief C, command center volume).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="level-triggered">Push transport for everything; a client re-reads full state on reconnect and drops any frame older than the one it holds (D21).</need>
+    <need kind="principle" volume="shared/principles.xml" anchor="artifacts-out-of-repo">Every state path this node names lives under $COQ_STATE, never in the repository, and has a cleanup script registered with N-45 (brief C rule 6, C35).</need>
+  </shared-needs>
+
+  <purpose id="purpose">
+    <s>See the whole factory at a glance as a Factorio base: every DAG node is a machine, every queue a belt, every seat an inserter, every idle worktree a crate, every state a lamp, and the HOLD or USERGO signal lamp over it all (wireframe-brief.json screen Map; C32 approved).</s>
+    <s>It replaces the factory board at /board on every bearings tier (owner: "yah replace it"; memory factorio-map-replaces-board) and is served from the cluster at map.gatehouse.click (N-35) so the owner has the factory in his pocket.</s>
+    <s>The bar: visually stunning, 1 to 1 Factorio style and format down to the images, smooth as in 60 fps with pushed state and no polling, Krastorio 2 look on web and mobile alike (command-center-visual-bar; build-notes notes 1, 2, 3, 6).</s>
+  </purpose>
+
+  <input id="input" record="pushed.frame" schema="record.schema.json#/$defs/pushed.frame">
+    <s>The push transport (N-31) delivers a pushed.frame per client: a full state on connect and on every reconnect, then deltas keyed by store seq. The map reads from it the map.state view: nodes (id, latest status code, heartbeat age, attempt, lease holder), queues (ticket.waiting, ticket.ready, review, merge, with depth), seats in flight (lease records with holder and node), crates (workspace records idle), the hold flag (HOLD or USERGO, merge.hold), and the newest open alert count.</s>
+    <s>Also read at build time: the pinned atlas (N-36) and the registry (N-37) that places each node on the grid.</s>
+  </input>
+
+  <output id="output" record="map.frame and selection" schema="record.schema.json#/$defs/selection">
+    <s>map.frame is the rendered frame on the client's canvas, drawn at the frame budget; it is not a store record. What the node writes to the store is two things: a selection record when the owner selects a machine (the input of N-39), and a frame.report every 10 s per client (fps p50 and p95, dropped frames, degrade level, delivered seq, staleness) so the system measures its own smoothness.</s>
+    <field name="selection">client id, node id, at UTC, delivered seq at the time of the click; idempotency key client id plus a client counter.</field>
+    <field name="frame.report">client id, device class (desktop, phone), fps_p50, fps_p95, frame_ms_p95, dropped, degrade level 0 to 2, delivered_seq, stale_seconds, at UTC.</field>
+  </output>
+
+  <panels id="panels" registry="../N-37/spec.xml#panels">
+    <panel id="nav.top" kind="page.state" staleness="60" frame="wf-map/map/default">Title, tier name, the as-of stamp slot, the key state (owner or viewer).</panel>
+    <panel id="nav.tabs" kind="page.state" staleness="60" frame="wf-map/map/default">Map, Machine, Stats, Alerts, Controls; the alert chip count sits on Alerts, the signal lamp sits on Controls.</panel>
+    <panel id="stamp.as-of" kind="pushed.frame" staleness="10" frame="wf-map/map/offline">UTC time of the delivered seq; turns into the stale chip past 10 s and the offline banner past 60 s.</panel>
+    <panel id="map.canvas" kind="map.state" staleness="10" frame="wf-map/map/default">The base: seven group regions G1 to G7 laid out as the DAG's topological bands, machines on a tile grid, belts along drawn edges carrying item sprites per record, inserters on leases, crates for idle worktrees, lamps per node.</panel>
+    <panel id="map.ore" kind="source.inventory" staleness="86400" frame="wf-map/map/default">Ore patches for the investigation sources with their note counts (approved in the wireframe); rarely changing, pulled from the index volume's sources.</panel>
+    <panel id="map.tally" kind="map.state" staleness="10" frame="wf-map/map/default">Counts of running, waiting, stalled, never ran; machines, crates, ghosts; the signal state in one sentence.</panel>
+    <panel id="map.legend" kind="code.table" staleness="86400" frame="wf-map/map/default">Lamp legend from the code table's lamp attribute; belt equals queue with depth, inserter equals seat, crate equals idle worktree, ore equals source.</panel>
+    <panel id="map.selection" kind="selection" staleness="86400" frame="wf-map/map/default">What is selected and the hint text; click a machine to open its panel.</panel>
+    <panel id="map.signal-lamp" kind="hold.flag" staleness="10" frame="wf-map/map/default">HOLD (red) or USERGO (green), plus merge.hold (amber) when main is red; click opens Controls.</panel>
+    <panel id="map.alert-chip" kind="alert" staleness="10" frame="wf-map/map/default">Open alert count by colour; click opens Alerts.</panel>
+    <panel id="map.frame-report" kind="frame.report" staleness="30" frame="wf-map/map/default">A small fps and degrade readout in the corner, hidden unless the owner taps the stamp; the same numbers the client posts.</panel>
+  </panels>
+
+  <mechanism id="mechanism">
+    <diagram format="mermaid"><![CDATA[
+flowchart LR
+  S[N-01 store seq] --> P[N-31 push transport]
+  P -->|server-sent events on the tier's /events, full state then deltas| C[map client: state module]
+  C --> R[renderer: canvas 2D, fixed-step 60 Hz sim, rAF draw]
+  A[pinned atlas N-36] --> R
+  G[registry machines.json N-37] --> R
+  R --> F[map.frame on screen]
+  C -->|POST every 10 s| Q[frame.report record]
+  C -->|owner click, POST| L[selection record] --> M[N-39 Machine screen]
+  B[bearings tier /board, live state] --> C
+  K[map.gatehouse.click N-35, static: no stream] -.-> C
+]]></diagram>
+    <step n="1" where="repo: tools/map/">
+      <s>One TypeScript bundle, built by make -C tools/map build in the pinned node image (a pod in CI, D22), output dist/ with index.html, app.js, the pinned atlas pages, look.json, bindings.json and healthz.json. No framework beyond the renderer: the DOM panels are plain elements styled from look.json, the base is a canvas.</s>
+      <s>Served two ways from the same dist: every bearings tier serves it at /board behind the tier's key and cookie (tools/bearings config map_dist_dir replaces board_dir; the old 503 board not built answer stays for a missing dist), and the cluster pod serves it at map.gatehouse.click (N-35).</s>
+    </step>
+    <step n="2" where="stream">
+      <s>Transport: the one decision is nodes/N-31/spec.xml#transport-choice, server-sent events for every browser client, the map included; this volume does not reopen it. On a bearings tier the client opens one EventSource on the tier page service's /events with class map (N-32 serves it behind the tier's key and cookie; N-31 cuts map frames at 16 ms) and sends what it writes as plain POSTs to the same service: /selection, /frame-report and /ack (N-32 routes), each idempotent by client id plus counter. WebSocket is opened only by the measurement N-31 names (a p95 frame-time miss on the phone caused by text framing), as a ticket of its own.</s>
+      <s>The public name is static until a tunnel node exists (ruling of this volume, 2026-10-14, gap review R-03): the pod at map.gatehouse.click (N-35) serves the bundle with stream_url empty, so the client draws the base from machines.json in the empty state (every machine a ghost) with a banner that live state is on the bearings page over the tailnet, and the tailnet /board link without a key. Why: D23 gives cluster pods egress to GitHub and GHCR only, so a pod cannot reach the host's push transport; N-34 is the bearings page's tailnet forwarder and not a public ingress; and the owner key's cookie has no issuer on a static nginx pod. The owner's phone gets live state everywhere it has the tailnet, which is the pocket path N-34 already gives (owner note 4). A live public map needs its own node (a cluster to host tunnel with the owner key's auth); it is listed as later in shared/rejected-with-reason.xml#public-map-stream and is not a ticket of this node.</s>
+      <s>Protocol: on open the server sends full state as of seq S (the map.state view, nodes/N-31/spec.xml#views); then deltas each carrying seq as the event id; EventSource resends the last id as Last-Event-ID on reconnect and the server replies with full state when the gap is not replayable (D21: full state re-read on reconnect). The client's own writes never ride the stream; they are POSTs that retry by their idempotency key.</s>
+    </step>
+    <step n="3" where="renderer">
+      <s>Canvas 2D with the atlas pages as ImageBitmaps, device pixel ratio capped at 2, tile size 32 CSS px at zoom 1. Simulation runs at a fixed 60 Hz step (belt chevron phase, inserter arm angle, lamp glow pulse) driven by the clock, not by the stream; the stream changes state, the clock animates it. Draw on requestAnimationFrame with interpolation between steps.</s>
+      <s>Layout: machines.json gives each node a cell inside its group region; regions are seven bands in the DAG's topological order so belts run left to right; the old base from the wireframe (two LLMs, five stores, route.sh, merge.sh) is drawn as a ghost region until N-49 and N-50 record its cleanup, then it disappears from machines.json by the generator.</s>
+      <s>Frame budget: 16.6 ms per frame, draw budget 12 ms measured by performance.now around the draw; p95 over a 3 s window. Degrade ladder when p95 exceeds 16.6 ms for 3 s: level 1 drops belt item sprites and lamp glow, level 2 stops belt and inserter animation and redraws only on state change. Recover one level after 10 s under budget. The level is in frame.report so the system sees it.</s>
+      <s>WebGL is not the default. The ticket measures canvas 2D on the owner's iPhone 16 Pro Max and the desktop; only a measured p95 miss at level 0 on the phone moves the draw to WebGL, and that measurement goes in the ticket's proof (command-center-visual-bar: a measured frame-time budget in the ticket).</s>
+    </step>
+    <step n="4" where="interaction">
+      <s>Tap or click a machine: the client POSTs a selection record (/selection on the tier's page service) and switches to the Machine screen (N-39) with that node; the Machine panel reads the node's state frame from the same stream. Tap the alert chip: Alerts. Tap the signal lamp: Controls. Pinch and wheel zoom from 0.5 to 2, pan by drag; the zoom and pan are per client and never written.</s>
+      <s>prefers-reduced-motion stops belt and inserter animation (equivalent to degrade level 2) and keeps lamps static; the owner can override in the stamp menu.</s>
+    </step>
+    <step n="5" where="key">
+      <s>Access by the owner key, the same model as the bearings page (build-notes note 4): on a bearings tier the page service (N-32) turns the key in the first URL into the cookie; a viewer key (read-only) exists for the screenshot seat (N-48) and never carries actions (shared needs: config-keys viewer_key and the screenshot-seat clause, declared in #shared-needs). The static public build carries no owner data and no action, so it needs no key (mechanism step 2).</s>
+    </step>
+  </mechanism>
+
+  <states id="states" source="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/plan.md#per-state-content-requirement">
+    <state name="default">Populated base at realistic volume, including one longest-plausible machine name to expose truncation; the tally, legend and selection panels filled.</state>
+    <state name="empty">No node has ever written a record (a fresh store): the base shows every machine as a grey ghost with the one-line explanation and the primary recovery action as a real button, Open Controls, where the USERGO signal is given.</state>
+    <state name="loading">Skeleton blocks in the shape of the default content (region outlines, grey machine blocks, empty belts), no centred spinner; shown until the first full state arrives or the first-frame timeout fires.</state>
+    <state name="error">Named failure class: not-found (the tier has no dist, 503 board not built), timeout (first frame did not arrive), validation (a frame failed its schema); what the owner can do next and a Retry button that reconnects.</state>
+    <state name="offline">The last delivered frame stays drawn with the as-of stamp and an offline banner; a queued-action indicator shows selections and acks waiting to send; reconnect runs on its own.</state>
+  </states>
+
+  <mobile id="mobile" source="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-notes.md#2-notes-in-order">
+    <s>Built for the owner's iPhone 16 Pro Max first (note 2): 430 CSS px wide, safe areas from env(safe-area-inset-top) for the status bar and Dynamic Island and env(safe-area-inset-bottom) for the home indicator, viewport-fit cover.</s>
+    <s>Extra gutter (note 3): content sits 12 CSS px inside the safe area on each side beyond Apple's minimum, so nothing touches the edge or sits under the home bar; the wireframe frames stay at 390 as drawn and are not edited ("keep that shit").</s>
+    <s>Same product on both widths (note 6): the same panels, lamps, sprites and type; only layout changes. On the phone the base scrolls and zooms inside a full-height canvas, the tabs sit in a bottom sheet above the home indicator, the tally and legend collapse into chips; nothing is a plainer version.</s>
+    <s>Acceptance: a reviewer holding the phone next to the desktop page sees one product; the screenshot pair on every promotion record is the proof (N-48).</s>
+  </mobile>
+
+  <start id="start">
+    <s>The bundle is built in CI on a commit touching tools/map/** (N-23 map suite, N-22 image build) and served by supervised units: the bearings tier server (N-32, its own unit) and the Argo-synced pod (N-35). The client runs when the owner opens the page; its stream connects on load; nothing is typed.</s>
+    <s>Promotion dev to uat to stable is N-48, triggered by the pr.opened and merge records, with the screenshot pair attached; a map change merges on the machine verdict and the owner sees an after-the-fact card with the pictures (only the owner-locked page assets wait for a confirm, nodes/N-48/spec.xml#owner-confirm), never a seat asking in chat.</s>
+  </start>
+
+  <waits id="waits">
+    <wait name="stream-connect" timeout="PT5S" fallback="retry with backoff 1 s, 2 s, 4 s; after 3 the offline state with the cached frame, then a reconnect every 15 s that never stops">
+      <s>The owner's monitor is always on; the page never gives up and never shows a dead end.</s>
+    </wait>
+    <wait name="first-frame" timeout="PT10S" fallback="error state class timeout with Retry; automatic retry continues underneath">
+      <s>From open to the full state. Counted separately from connect so a connected but silent server is reported as what it is.</s>
+    </wait>
+    <wait name="staleness" timeout="PT10S" fallback="stale chip (503) on the stamp; at 60 s the offline banner; the last frame stays drawn">
+      <s>A delta or a heartbeat from N-31 arrives at least every 5 s when idle (shared need: N-31 idle heartbeat); silence past 10 s is stale.</s>
+    </wait>
+    <wait name="atlas-load" timeout="PT15S" fallback="draw with vector placeholder shapes from look.json and show a 503 chip; retry the atlas 3 times then keep placeholders until reload">
+      <s>The atlas is pinned by hash and served next to the bundle, so a miss means the dist is incomplete; the chip names it.</s>
+    </wait>
+    <wait name="selection-ack" timeout="PT5S" fallback="resend with the same idempotency key up to 3 times; then the queued-action indicator holds it and resends on reconnect">
+      <s>The Machine screen opens at once from the local state; the record is for the system's trail, not for the screen to proceed.</s>
+    </wait>
+    <wait name="frame-budget" timeout="PT3S" fallback="degrade one level; report in frame.report; recover after 10 s under budget">
+      <s>Measured p95 over a 3 s window against 16.6 ms.</s>
+    </wait>
+  </waits>
+
+  <retries id="retries">
+    <s>Every client-side step retries up to 3 times with backoff, then recovers into a visible state (offline, placeholders, queued action) and reports it in frame.report or the stamp; nothing loops silently and nothing stops the page.</s>
+    <s>Server-side, a build failure of the bundle is a red gate and N-11 retries the ticket with a fresh seat; a promotion failure is N-48's three attempts and one card.</s>
+  </retries>
+
+  <many-agents id="many-agents">
+    <s>Readers: the owner on the phone and on the desktop, the screenshot seat, and any monitoring pane may all have the page open; each is one stream client with its own delivered_seq, zoom, pan and selection; N clients cost N connections on N-31 and nothing else, and the renderer never shares state between clients.</s>
+    <s>Many seats on the belt: the map draws one inserter per lease record, so twenty seats on one queue show as twenty arms on that belt (multi-agent-first-design: many inserters on one belt, not one worker); the data is the lease table, never a count a seat reports.</s>
+    <s>Writes from the client: selection and frame.report records carry the client id and a client counter as the idempotency key; a retried send is a no-op 409 at N-01 that the client treats as delivered. Two clients selecting at once write two records; selection is per client and never a shared cursor.</s>
+    <s>Two builds of the bundle in flight on two branches: each pins its own atlas and registry hashes; the tier serves the dist its promotion record names; a race between promotions is N-48's compare-and-swap on the tier's current dist pointer.</s>
+    <s>Conflict detection: a frame that fails schema validation on the client is reported as a 422 frame.report with the seq, never drawn, and the client asks for a full state; the server-side cause is visible on the Alerts screen.</s>
+  </many-agents>
+
+  <status-codes id="status-codes" map="spec.xml#shared-needs">
+    <code value="200" name="map.rendered" kind="frame.report" lamp="green">Frames drawn under budget; delivered seq current.</code>
+    <code value="201" name="selection.recorded" kind="selection" lamp="green">A selection record landed.</code>
+    <code value="206" name="map.degraded" kind="frame.report" lamp="amber">Degrade level 1 or 2 active; shown on the stamp menu; nobody acts unless it persists a day, then a card (N-28 rule).</code>
+    <code value="422" name="frame.invalid" kind="frame.report" lamp="red">A frame failed schema; full state requested; alert raised by the transport.</code>
+    <code value="503" name="map.stale" kind="frame.report" lamp="amber">No delta or heartbeat within 10 s; stale chip.</code>
+    <code value="504" name="map.first-frame-timeout" kind="frame.report" lamp="red">Connected but no full state in 10 s; error state, retrying.</code>
+    <code value="502" name="map.offline" kind="frame.report" lamp="red">Stream unreachable after 3 tries; offline state, reconnect loop.</code>
+  </status-codes>
+
+  <state-paths id="state-paths" cleanup-registry="../N-45/spec.xml#N-45">
+    <path p="$COQ_STATE/map/dist/&lt;sha&gt;/" cleanup="tools/map/bin/cleanup.sh --dist --keep-current (keeps the dist each tier's promotion record points at)">Built bundles served by the bearings tiers at /board.</path>
+    <path p="$COQ_STATE/map/screenshots/YYYY/MM/&lt;sha&gt;-&lt;tier&gt;-&lt;device&gt;.png" cleanup="tools/map/bin/cleanup.sh --screenshots --older-than 90d">Screenshot pairs attached to promotion records (N-48).</path>
+    <path p="store table frame_reports" cleanup="N-45 retention class: keep 7 days, then hourly aggregates only">Frame reports from clients.</path>
+    <path p="store table selections" cleanup="N-45 retention class: keep 30 days">Selection records.</path>
+    <path p="browser localStorage key coq-map" class="client" retention="never" acts="owner" cleanup="lives in the owner's browser, not on the host; cleared by the stamp menu's Reset view; holds zoom, pan and the reduced-motion override only">Client preference, never records.</path>
+  </state-paths>
+
+  <look id="look" requirement="owner notes 1 and 6, command-center-visual-bar, 04:45Z all views carry the Krastorio look">
+    <s>Ground: dusty ochre to dark brown tiles with a faint grid (original art); nothing pure black or white. Machines: Krastor class 1 bodies with shadows; each DAG group uses one machine family so the base reads as columns and rows. Belts: original yellow with dark edges and moving chevrons; inserters: original small yellow arms; lamps: the only saturated light, green #2BE327 running, amber #FAA838 waiting, red #DA4535 stalled, grey #B3B3B3 never ran, with a soft glow at level 0; blueprint ghosts: translucent blue #80CEF0 outlines for machines that have never run.</s>
+    <s>GUI: panels from look.json (#313031 nine-slice corner 8, inside shallow #403F40, deep #242324, caption #FFE6C0 Titillium Web Bold 18, body 14, mono numbers IBM Plex Mono 13); the tabs are tool buttons 108 x 28 minimum with the orange selected state #F1BE64; the signal lamp is a 40 px slot.</s>
+    <s>Check: look-check.mjs samples the rendered page (panel centre, edge, caption colour, lamp colours, loaded fonts) against look.json and exits 1 on a miss; binding-check rule look-token forbids literal colours in source; the screenshot pair is read by the architect before any card (screenshot-every-page-change).</s>
+  </look>
+
+  <acceptance id="acceptance" source="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-notes.md#2-notes-in-order">
+    <criterion note="1">Krastorio 2 look and feel applies to the map, not only the panels: the base, belts, machines and lamps pass look-check and the architect's read of the screenshot pair.</criterion>
+    <criterion note="2">Built for the iPhone 16 Pro Max first: 430 CSS px, safe areas honoured; the phone screenshot shows nothing under the Dynamic Island or the home indicator.</criterion>
+    <criterion note="3">Extra gutter beyond Apple's minimum: 12 CSS px inside the safe area, measured in the phone screenshot; the wireframe frames stay at 390 and are untouched.</criterion>
+    <criterion note="4">Served from the cluster and reached from anywhere: the public name answers 200 with the bundle (N-35 deploy record) and draws the static base with the tailnet banner; live state is drawn at /board on every bearings tier, which the owner's phone reaches anywhere over the tailnet (N-34). A live public map is a later node (shared/rejected-with-reason.xml#public-map-stream).</criterion>
+    <criterion note="5">No new hosting machinery: the bundle ships on the same Jenkinsfile, image, gitops entry and ingress as the hello page.</criterion>
+    <criterion note="6">Same product on web and mobile: same panels, lamps, sprites and type; a reviewer sees one product in the screenshot pair.</criterion>
+    <criterion note="visual-bar">60 fps pushed state: frame.report p95 under 16.6 ms at level 0 on the owner's phone and desktop for a one-hour window, recorded in the ticket's proof.</criterion>
+    <criterion note="C32">Every screen in every state matches its approved wireframe frame in structure (build-plan.json frame ids in bindings.json).</criterion>
+  </acceptance>
+
+  <checklist id="checklist">
+    <item><check>The bundle builds in CI from tools/map/ with the pinned atlas and registry and binding-check 201.</check><proof>A pod.run record for the map suite and the binding record on the sha.</proof></item>
+    <item><check>Every bearings tier serves /board from map_dist_dir behind the tier's key; a missing dist answers 503 board not built.</check><proof>make -C tools/bearings test cases for /board on dev, uat and stable, green.</proof></item>
+    <item><check>The stream delivers full state on connect and deltas by seq; reconnect with a stale seq gets full state.</check><proof>A test that drops the socket mid-run and asserts the next frame is full and the drawn state equals the store.</proof></item>
+    <item><check>Every machine in machines.json is drawn once; every edge is a belt; every lease is an inserter; every idle workspace is a crate.</check><proof>A test rendering a fixture store with 52 nodes, 97 edges, 20 leases and 10 workspaces and counting drawn sprites.</proof></item>
+    <item><check>The lamp colour follows the code table's lamp attribute; no colour is literal in source.</check><proof>binding-check rule look-token exit 0 and a test over every code value.</proof></item>
+    <item><check>Frame budget met at level 0 on the owner's phone and desktop; the degrade ladder works.</check><proof>One hour of frame.report records with p95 under 16.6 ms, and a test forcing a slow draw that reaches level 2 and recovers.</proof></item>
+    <item><check>All five states exist on desktop and mobile and match the approved frames.</check><proof>Ten screenshots (five states, two widths) attached to the promotion record and read by the architect.</proof></item>
+    <item><check>Safe areas and the extra gutter are honoured on the phone.</check><proof>The phone screenshot with the measured insets and a Playwright test with the iPhone 16 Pro Max viewport and insets.</proof></item>
+    <item><check>Stale, offline and first-frame timeout behave as specified and never stop reconnecting.</check><proof>Tests that silence the stream for 10 s and 60 s and that refuse the connection, asserting the chip, the banner and the retry cadence.</proof></item>
+    <item><check>The public name serves the static base and the tailnet page draws live state.</check><proof>A phone screenshot of map.gatehouse.click showing the ghost base and the tailnet banner, and a phone screenshot of /board over the tailnet with the stamp showing a current UTC time.</proof></item>
+    <item><check>Every state path has a cleanup script in the registry.</check><proof>N-45 entries and a dry-run listing.</proof></item>
+  </checklist>
+
+  <permissions id="permissions">
+    <s>Build seat: writes tools/map/src/map/**, tools/map/src/renderer/**, tools/map/src/stream/**, the Map #panels of this volume, and tests; declared at cut; never the registry by hand, never the atlas.</s>
+    <s>Screenshot seat (N-48, contract clause shared/seat-contract.xml#screenshot-seat declared in #shared-needs): read-only viewer key; opens the page with Playwright at 1440 and 430 widths; writes only under $COQ_STATE/map/screenshots/.</s>
+    <s>Owner key: the only key that carries actions (selection is allowed on both keys; acks and controls are owner only, see N-41 and N-42).</s>
+    <s>No seat edits tools/bearings/assets/page.html or theme.css for the map; the map is its own bundle served at /board.</s>
+  </permissions>
+
+  <monitoring id="monitoring">
+    <s>The system monitors the map through frame.report: p95 frame time, degrade level, staleness and delivered seq per client. A client stuck at level 2 or stale for a day produces one card (N-28 rule for owner-acts codes); a 422 frame.invalid is an alert at once.</s>
+    <s>The map monitors the system: every machine's lamp is the latest record code; a stalled node is red; the stamp shows the page's own staleness, so the owner never reads old data as current (D12: the page shows its own staleness).</s>
+  </monitoring>
+
+  <runbook id="runbook">
+    <s>Serve locally for a test: make -C tools/map build then make -C tools/bearings serve TIER=dev TICKET=&lt;id&gt; and open /board; the stream URL is in the tier config.</s>
+    <s>Screenshots: node tools/map/bin/screenshot.mjs --url &lt;url&gt; --key &lt;viewer&gt; --out $COQ_STATE/map/screenshots/ (desktop 1440 x 1024 and iPhone 16 Pro Max 430 x 932 with insets).</s>
+    <s>Cleanup: tools/map/bin/cleanup.sh --dist --keep-current; tools/map/bin/cleanup.sh --screenshots --older-than 90d; listing first, --apply to delete.</s>
+    <s>Frame budget by hand (reading only): open the stamp menu, read fps p50 and p95 and the degrade level; the same numbers are in frame_reports.</s>
+  </runbook>
+
+  <sources id="sources">
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-notes.md#2-notes-in-order">Notes 1 to 6.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/wireframe-brief.json">Screen Map: purpose, data, primary action, flow.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/build-plan.json">Frames wf-map/map/* desktop and mobile; per-state content; density tokens.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/plan.md#per-state-content-requirement">Per-state content requirement; out of scope list (final pixel art, live socket and 60 fps renderer, Kubernetes deployment were out of scope for the wireframe and are in scope here).</src>
+    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/command-center-visual-bar.md">The bar: stunning, 1 to 1, 60 fps pushed, k8s if needed, original art.</src>
+    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/factorio-map-replaces-board.md">Replaces /board on every tier; wireframe then dev, uat, stable.</src>
+    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/map-hosting-and-feel-rules.md">Hosting and feel; mobile first.</src>
+    <src href="~/.claude/projects/-home-luna-projects-coq-jev-herdr-plugin/memory/multi-agent-first-design.md">Many inserters on one belt.</src>
+    <src href="rebuild/investigation/03-DECISIONS.md#23-d21-page-transport-polling-or-push">D21 push for everything, full state on reconnect, transport chosen from a measured frame budget.</src>
+    <src href="rebuild/investigation/03-DECISIONS.md#22-d20-one-owner-surface-or-two-bearings-and-the-execution-rail">D20 bearings is the one surface.</src>
+    <src href="rebuild/investigation/L08-bearings-owner-surface.md#5-what-broke-and-why">The board froze six hours and reported 17 lines; the page must show its own staleness.</src>
+    <src href="tools/bearings/AGENTS.md">The factory board section (board_dir, 503 board not built) this node replaces; tiers and keys it keeps.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/README.md#3-what-the-references-establish">Visual idiom.</src>
+    <src href="~/.local/state/coq/coq-jev-herdr-plugin/rebuild/2026/10/map/reference/krastorio-art-inventory.md#4-gui-style-extraction">GUI tokens and fonts.</src>
+  </sources>
+
+  <rejected id="rejected">
+    <item reason="D21: 2 s polling cannot meet the smoothness bar and re-reads the whole state every poll (L08 section 5)">Polling /board/data.json every 2 s as the old board did.</item>
+    <item reason="D20 and L08 section 9: artifact-link pages are refused for status; one surface">Publishing the map as a claude.ai artifact.</item>
+    <item reason="the owner's bar is 1 to 1 Factorio with original art; a chart library's look is not that">A generic dashboard library for the base.</item>
+    <item reason="nothing exists outside the panel; a second data path would let a node exist off the map">A separate health endpoint the map reads beside the store.</item>
+    <item reason="WebGL first adds a shader pipeline before a measurement says canvas 2D misses; the visual bar asks for a measured budget">WebGL as the default renderer.</item>
+    <item reason="the old board was built by report/loop and served from board_dir (tools/bearings/AGENTS.md); it is replaced, not kept beside">Keeping /board as the old report beside the map at another path.</item>
+    <item reason="a plainer phone build makes two products (note 6)">A mobile list view instead of the base.</item>
+  </rejected>
+
+</volume>

@@ -1,0 +1,235 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "rebuild/design/nodes/N-02/record.schema.json",
+  "title": "N-02 Lease service records",
+  "description": "Input ticket.ready (defined in ../N-03/record.schema.json), lease.renew and lease.release; output lease.granted, lease.refused, lease.expired, lease.renewed, lease.released, lease.stale, lease.recovered, lease.failed of node N-02. Parent volume: spec.xml#N-02. UTC everywhere.",
+  "$defs": {
+    "envelope": { "$ref": "../N-01/record.schema.json#/$defs/envelope" },
+    "at": { "$ref": "../N-01/record.schema.json#/$defs/at" },
+    "ticket": { "$ref": "../N-01/record.schema.json#/$defs/ticket" },
+    "phase": { "enum": ["worker", "reviewer", "spec", "gate"] },
+    "role": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,31}$" },
+    "lease_key": {
+      "type": "string",
+      "pattern": "^(WO-[0-9]{8}-[0-9a-f]{4}:(worker|reviewer|gate)|CR-[a-z0-9._-]+:spec):[1-3]$"
+    },
+    "token": { "type": "integer", "minimum": 1 },
+    "lease_body": {
+      "type": "object",
+      "required": [
+        "key",
+        "ticket",
+        "phase",
+        "attempt",
+        "role",
+        "holder",
+        "token",
+        "generation",
+        "granted_at",
+        "expires_at",
+        "heartbeat_seconds"
+      ],
+      "properties": {
+        "key": { "$ref": "#/$defs/lease_key" },
+        "ticket": { "$ref": "#/$defs/ticket" },
+        "phase": { "$ref": "#/$defs/phase" },
+        "attempt": { "type": "integer", "minimum": 1, "maximum": 3 },
+        "role": { "$ref": "#/$defs/role" },
+        "holder": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "token": { "$ref": "#/$defs/token" },
+        "generation": { "type": "integer", "minimum": 1 },
+        "granted_at": { "$ref": "#/$defs/at" },
+        "expires_at": { "$ref": "#/$defs/at" },
+        "heartbeat_seconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "ticket_ready": {
+      "$ref": "../N-03/record.schema.json#/$defs/ticket_ready"
+    },
+    "lease_renew": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "token", "at"],
+      "properties": {
+        "key": { "$ref": "#/$defs/lease_key" },
+        "token": { "$ref": "#/$defs/token" },
+        "at": { "$ref": "#/$defs/at" }
+      }
+    },
+    "lease_release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "token", "result"],
+      "properties": {
+        "key": { "$ref": "#/$defs/lease_key" },
+        "token": { "$ref": "#/$defs/token" },
+        "result": {
+          "$ref": "../N-01/record.schema.json#/$defs/id",
+          "description": "the seat.result or merge record id that ends the holder's work"
+        }
+      }
+    },
+    "lease_granted": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        { "$ref": "#/$defs/lease_body" },
+        {
+          "type": "object",
+          "properties": {
+            "kind": { "const": "lease.granted" },
+            "code": { "const": 201 },
+            "node": { "const": "N-02" }
+          }
+        }
+      ]
+    },
+    "lease_refused": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["key", "reason"],
+          "properties": {
+            "kind": { "const": "lease.refused" },
+            "code": { "enum": [423, 429] },
+            "node": { "const": "N-02" },
+            "key": { "$ref": "#/$defs/lease_key" },
+            "reason": { "enum": ["held", "cap", "hold", "phase"] },
+            "holder": { "type": "string" },
+            "expires_at": { "$ref": "#/$defs/at" },
+            "cap": { "type": "integer", "minimum": 0 },
+            "live": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "lease_expired": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": [
+            "key",
+            "holder",
+            "token",
+            "generation",
+            "heartbeat_at",
+            "expires_at"
+          ],
+          "properties": {
+            "kind": { "const": "lease.expired" },
+            "code": { "const": 500 },
+            "node": { "const": "N-02" },
+            "key": { "$ref": "#/$defs/lease_key" },
+            "holder": { "type": "string" },
+            "token": { "$ref": "#/$defs/token" },
+            "generation": { "type": "integer", "minimum": 1 },
+            "heartbeat_at": { "$ref": "#/$defs/at" },
+            "expires_at": { "$ref": "#/$defs/at" },
+            "release_tried_by": {
+              "$ref": "../N-01/record.schema.json#/$defs/id"
+            }
+          }
+        }
+      ]
+    },
+    "lease_renewed": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["key", "token", "expires_at"],
+          "properties": {
+            "kind": { "const": "lease.renewed" },
+            "code": { "const": 200 },
+            "node": { "const": "N-02" },
+            "key": { "$ref": "#/$defs/lease_key" },
+            "token": { "$ref": "#/$defs/token" },
+            "expires_at": { "$ref": "#/$defs/at" }
+          }
+        }
+      ]
+    },
+    "lease_released": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["key", "token", "result"],
+          "properties": {
+            "kind": { "const": "lease.released" },
+            "code": { "const": 204 },
+            "node": { "const": "N-02" },
+            "key": { "$ref": "#/$defs/lease_key" },
+            "token": { "$ref": "#/$defs/token" },
+            "result": { "$ref": "../N-01/record.schema.json#/$defs/id" }
+          }
+        }
+      ]
+    },
+    "lease_stale": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["key", "token_seen", "token_current", "op"],
+          "properties": {
+            "kind": { "const": "lease.stale" },
+            "code": { "const": 412 },
+            "node": { "const": "N-02" },
+            "key": { "$ref": "#/$defs/lease_key" },
+            "token_seen": { "$ref": "#/$defs/token" },
+            "token_current": { "type": "integer", "minimum": 0 },
+            "op": { "enum": ["renew", "release"] }
+          }
+        }
+      ]
+    },
+    "lease_recovered": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["swept", "kept"],
+          "properties": {
+            "kind": { "const": "lease.recovered" },
+            "code": { "const": 100 },
+            "node": { "const": "N-02" },
+            "swept": { "type": "integer", "minimum": 0 },
+            "kept": { "type": "integer", "minimum": 0 }
+          }
+        }
+      ]
+    },
+    "lease_failed": {
+      "allOf": [
+        { "$ref": "#/$defs/envelope" },
+        {
+          "type": "object",
+          "required": ["key", "reason", "attempts"],
+          "properties": {
+            "kind": { "const": "lease.failed" },
+            "code": { "const": 500 },
+            "node": { "const": "N-02" },
+            "key": { "$ref": "#/$defs/lease_key" },
+            "reason": { "type": "string", "maxLength": 240 },
+            "attempts": { "const": 3 }
+          }
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/$defs/ticket_ready" },
+    { "$ref": "#/$defs/lease_renew" },
+    { "$ref": "#/$defs/lease_release" },
+    { "$ref": "#/$defs/lease_granted" },
+    { "$ref": "#/$defs/lease_refused" },
+    { "$ref": "#/$defs/lease_expired" },
+    { "$ref": "#/$defs/lease_renewed" },
+    { "$ref": "#/$defs/lease_released" },
+    { "$ref": "#/$defs/lease_stale" },
+    { "$ref": "#/$defs/lease_recovered" },
+    { "$ref": "#/$defs/lease_failed" }
+  ]
+}
